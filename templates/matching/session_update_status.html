@@ -1,0 +1,18 @@
+{% extends "registration/base.html" %}
+{% block title %}Update Session{% endblock %}
+{% block content %}
+<div class="card">
+  <h1>Update Session</h1>
+  <p>
+    Mentor: <strong>{{ session.mentor.user.username }}</strong><br>
+    Mentee: <strong>{{ session.mentee.user.username }}</strong><br>
+    Time: <strong>{{ session.scheduled_at }}</strong>
+  </p>
+  <p>Mark this session as <strong>{{ status }}</strong>?</p>
+  <form method="post">
+    {% csrf_token %}
+    <button type="submit" class="btn-primary">Confirm</button>
+    <a href="{% url 'sessions_list' %}" class="btn-primary secondary">Cancel</a>
+  </form>
+</div>
+{% endblock %}

@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Session scheduled</title>
+</head>
+<body style="margin:0; padding:0; background:#f1f5f9; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; color:#1e293b;">
+  <div style="max-width:520px; margin:0 auto; padding:32px 16px;">
+    <div style="background:#ffffff; border-radius:16px; box-shadow:0 4px 24px rgba(0,0,0,0.06); overflow:hidden;">
+      <div style="background:linear-gradient(135deg, #4f46e5 0%, #4338ca 100%); padding:24px 28px; text-align:center;">
+        <h1 style="margin:0; font-size:22px; font-weight:700; color:#ffffff;">Session scheduled</h1>
+        <p style="margin:8px 0 0; font-size:14px; color:rgba(255,255,255,0.9);">Academic mentoring system</p>
+      </div>
+      <div style="padding:28px;">
+        <p style="margin:0 0 20px; font-size:15px; line-height:1.6; color:#475569;">
+          Hi {{ recipient_name }}, a mentoring session has been scheduled with the following details.
+        </p>
+        <table style="width:100%; border-collapse:collapse; font-size:14px;">
+          <tr><td style="padding:8px 0; color:#64748b; border-bottom:1px solid #f1f5f9;">Mentor</td><td style="padding:8px 0; border-bottom:1px solid #f1f5f9;">{{ mentor_username }}</td></tr>
+          <tr><td style="padding:8px 0; color:#64748b; border-bottom:1px solid #f1f5f9;">Mentee</td><td style="padding:8px 0; border-bottom:1px solid #f1f5f9;">{{ mentee_username }}</td></tr>
+          <tr><td style="padding:8px 0; color:#64748b; border-bottom:1px solid #f1f5f9;">Subject</td><td style="padding:8px 0; border-bottom:1px solid #f1f5f9;">{{ subject_name|default:"—" }}</td></tr>
+          <tr><td style="padding:8px 0; color:#64748b; border-bottom:1px solid #f1f5f9;">Topic</td><td style="padding:8px 0; border-bottom:1px solid #f1f5f9;">{{ topic_name|default:"—" }}</td></tr>
+          <tr><td style="padding:8px 0; color:#64748b; border-bottom:1px solid #f1f5f9;">Date &amp; time</td><td style="padding:8px 0; border-bottom:1px solid #f1f5f9;">{{ scheduled_at }}</td></tr>
+          <tr><td style="padding:8px 0; color:#64748b; border-bottom:1px solid #f1f5f9;">Duration</td><td style="padding:8px 0; border-bottom:1px solid #f1f5f9;">{{ duration_minutes }} minutes</td></tr>
+          {% if notes %}<tr><td style="padding:8px 0; color:#64748b;">Notes</td><td style="padding:8px 0;">{{ notes }}</td></tr>{% endif %}
+        </table>
+        <p style="margin:20px 0 0; color:#64748b; font-size:13px;">
+          View and manage your sessions in the dashboard.
+        </p>
+      </div>
+    </div>
+    <p style="margin:16px 0 0; text-align:center; color:#94a3b8; font-size:12px;">
+      Academic mentoring system
+    </p>
+  </div>
+</body>
+</html>

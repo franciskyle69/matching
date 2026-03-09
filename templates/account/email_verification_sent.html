@@ -1,0 +1,12 @@
+{% extends "registration/base.html" %}
+{% block title %}Verify Email{% endblock %}
+{% block content %}
+<div class="card">
+  <h1>Verify your email</h1>
+  <p style="color: var(--text-muted);">
+    We sent a verification email to your inbox. Click the link in that email to activate your account.
+    If you don’t see it, check your spam folder.
+  </p>
+  <a href="{% url 'login' %}" class="btn-primary secondary">Back to login</a>
+</div>
+{% endblock %}

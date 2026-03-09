@@ -1,0 +1,88 @@
+{% extends "registration/base.html" %}
+{% block title %}Sessions{% endblock %}
+{% block content %}
+<div class="card" style="max-width: 820px;">
+  <h1>Mentoring Sessions</h1>
+  {% if is_mentor %}
+    <a href="{% url 'sessions_create' %}" class="btn-primary secondary">Schedule session</a>
+  {% endif %}
+
+  <h2 style="margin:1.5rem 0 .5rem; font-size:1.1rem;">Upcoming</h2>
+  {% if upcoming %}
+    <table style="width:100%; border-collapse: collapse;">
+      <thead>
+        <tr>
+          <th style="text-align:left; padding:.5rem; border-bottom:1px solid var(--border);">Mentor</th>
+          <th style="text-align:left; padding:.5rem; border-bottom:1px solid var(--border);">Mentee</th>
+          <th style="text-align:left; padding:.5rem; border-bottom:1px solid var(--border);">Subject</th>
+          <th style="text-align:left; padding:.5rem; border-bottom:1px solid var(--border);">Topic</th>
+          <th style="text-align:left; padding:.5rem; border-bottom:1px solid var(--border);">Time</th>
+          <th style="text-align:left; padding:.5rem; border-bottom:1px solid var(--border);">Duration</th>
+          <th style="text-align:left; padding:.5rem; border-bottom:1px solid var(--border);">Status</th>
+          {% if is_mentor %}
+            <th style="text-align:left; padding:.5rem; border-bottom:1px solid var(--border);">Actions</th>
+          {% endif %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for s in upcoming %}
+        <tr>
+          <td style="padding:.5rem; border-bottom:1px solid var(--border);">{{ s.mentor.user.username }}</td>
+          <td style="padding:.5rem; border-bottom:1px solid var(--border);">{{ s.mentee.user.username }}</td>
+          <td style="padding:.5rem; border-bottom:1px solid var(--border);">{{ s.subject.name|default:"—" }}</td>
+          <td style="padding:.5rem; border-bottom:1px solid var(--border);">{{ s.topic.name|default:"—" }}</td>
+          <td style="padding:.5rem; border-bottom:1px solid var(--border);">{{ s.scheduled_at }}</td>
+          <td style="padding:.5rem; border-bottom:1px solid var(--border);">{{ s.duration_minutes }} mins</td>
+          <td style="padding:.5rem; border-bottom:1px solid var(--border);">{{ s.get_status_display }}</td>
+          {% if is_mentor %}
+            <td style="padding:.5rem; border-bottom:1px solid var(--border);">
+              <a href="{% url 'sessions_reschedule' s.id %}" class="btn-primary secondary" style="padding:.35rem .6rem; font-size:.8rem; text-decoration:none;">Reschedule</a>
+              <form method="post" action="{% url 'sessions_update_status' s.id 'completed' %}" style="display:inline;">
+                {% csrf_token %}
+                <button type="submit" class="btn-primary secondary" style="padding:.35rem .6rem; font-size:.8rem;">Complete</button>
+              </form>
+              <form method="post" action="{% url 'sessions_update_status' s.id 'cancelled' %}" style="display:inline;">
+                {% csrf_token %}
+                <button type="submit" class="btn-primary secondary" style="padding:.35rem .6rem; font-size:.8rem;">Cancel</button>
+              </form>
+            </td>
+          {% endif %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p style="color: var(--text-muted);">No upcoming sessions.</p>
+  {% endif %}
+
+  <h2 style="margin:1.5rem 0 .5rem; font-size:1.1rem;">History</h2>
+  {% if history %}
+    <table style="width:100%; border-collapse: collapse;">
+      <thead>
+        <tr>
+          <th style="text-align:left; padding:.5rem; border-bottom:1px solid var(--border);">Mentor</th>
+          <th style="text-align:left; padding:.5rem; border-bottom:1px solid var(--border);">Mentee</th>
+          <th style="text-align:left; padding:.5rem; border-bottom:1px solid var(--border);">Subject</th>
+          <th style="text-align:left; padding:.5rem; border-bottom:1px solid var(--border);">Topic</th>
+          <th style="text-align:left; padding:.5rem; border-bottom:1px solid var(--border);">Time</th>
+          <th style="text-align:left; padding:.5rem; border-bottom:1px solid var(--border);">Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for s in history %}
+        <tr>
+          <td style="padding:.5rem; border-bottom:1px solid var(--border);">{{ s.mentor.user.username }}</td>
+          <td style="padding:.5rem; border-bottom:1px solid var(--border);">{{ s.mentee.user.username }}</td>
+          <td style="padding:.5rem; border-bottom:1px solid var(--border);">{{ s.subject.name|default:"—" }}</td>
+          <td style="padding:.5rem; border-bottom:1px solid var(--border);">{{ s.topic.name|default:"—" }}</td>
+          <td style="padding:.5rem; border-bottom:1px solid var(--border);">{{ s.scheduled_at }}</td>
+          <td style="padding:.5rem; border-bottom:1px solid var(--border);">{{ s.get_status_display }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p style="color: var(--text-muted);">No past sessions.</p>
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,66 @@
+{% extends "registration/base.html" %}
+{% block title %}Reschedule Session{% endblock %}
+{% block content %}
+<div class="card">
+  <h1>Reschedule Session</h1>
+  <p style="color: var(--text-muted);">
+    Mentor: {{ session.mentor.user.username }} · Mentee: {{ session.mentee.user.username }}
+  </p>
+  <form method="post">
+    {% csrf_token %}
+    <div class="form-group">
+      <label for="id_subject">Subject</label>
+      {{ form.subject }}
+    </div>
+    <div class="form-group">
+      <label for="id_topic">Topic</label>
+      <select name="topic" id="id_topic" required>
+        <option value="">---------</option>
+        {% for topic in form.fields.topic.queryset %}
+          <option value="{{ topic.id }}" data-subject="{{ topic.subject.id }}"
+            {% if form.topic.value|stringformat:"s" == topic.id|stringformat:"s" %}selected{% endif %}>
+            {{ topic.name }}
+          </option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="form-group">
+      <label for="id_scheduled_at">Date & Time</label>
+      {{ form.scheduled_at }}
+    </div>
+    <div class="form-group">
+      <label for="id_duration_minutes">Duration (minutes)</label>
+      {{ form.duration_minutes }}
+    </div>
+    <div class="form-group">
+      <label for="id_notes">Notes</label>
+      {{ form.notes }}
+    </div>
+    <button type="submit" class="btn-primary">Save changes</button>
+  </form>
+</div>
+<script>
+  (function() {
+    const subjectSelect = document.getElementById("id_subject");
+    const topicSelect = document.getElementById("id_topic");
+    if (!subjectSelect || !topicSelect) return;
+
+    function filterTopics() {
+      const subjectId = subjectSelect.value;
+      let hasVisible = false;
+      Array.from(topicSelect.options).forEach((opt) => {
+        if (!opt.value) return;
+        const match = opt.getAttribute("data-subject") === subjectId;
+        opt.hidden = !match;
+        if (match) hasVisible = true;
+      });
+      if (!hasVisible) {
+        topicSelect.value = "";
+      }
+    }
+
+    subjectSelect.addEventListener("change", filterTopics);
+    filterTopics();
+  })();
+</script>
+{% endblock %}

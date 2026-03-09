@@ -1,0 +1,17 @@
+{% extends "registration/base.html" %}
+{% block title %}Confirm Email{% endblock %}
+{% block content %}
+<div class="card">
+  <h1>Confirm your email</h1>
+  {% if confirmation %}
+    <p>Please confirm that <strong>{{ confirmation.email_address.email }}</strong> belongs to you.</p>
+    <form method="post" action="{% url 'account_confirm_email' confirmation.key %}">
+      {% csrf_token %}
+      <button type="submit" class="btn-primary">Confirm email</button>
+    </form>
+  {% else %}
+    <p style="color: var(--text-muted);">This confirmation link is invalid or has expired.</p>
+    <a href="{% url 'home' %}" class="btn-primary secondary">Back to home</a>
+  {% endif %}
+</div>
+{% endblock %}

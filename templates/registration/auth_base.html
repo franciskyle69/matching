@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Capstone{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: 'DM Sans', 'Segoe UI', system-ui, sans-serif;
+      background: #000;
+      color: #fff;
+      line-height: 1.6;
+    }
+    .auth-page-wrap {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      position: relative;
+      overflow: hidden;
+    }
+    .auth-page-wrap::before {
+      content: "";
+      position: absolute;
+      bottom: -25%;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 2000px;
+      height: 2000px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(55, 42, 172, 0) 0%, rgba(55, 42, 172, 0.1) 40%, rgba(55, 42, 172, 0.3) 55%, rgba(55, 42, 172, 0.6) 70%, rgba(55, 42, 172, 0.9) 85%, rgba(55, 42, 172, 1) 100%);
+      z-index: 0;
+      pointer-events: none;
+    }
+    .auth-page-wrap::after {
+      content: "";
+      position: absolute;
+      bottom: -20%;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 1600px;
+      height: 1600px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(79, 70, 229, 0.2) 0%, rgba(79, 70, 229, 0.1) 50%, transparent 80%);
+      z-index: 0;
+      pointer-events: none;
+    }
+    .auth-card-standalone {
+      position: relative;
+      z-index: 10;
+      width: 100%;
+      max-width: 420px;
+      background: rgba(15, 23, 42, 0.5);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-radius: 20px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+      padding: 32px;
+    }
+    .auth-card-standalone h1 {
+      margin: 0 0 8px;
+      font-size: 24px;
+      font-weight: 700;
+      color: #fff;
+    }
+    .auth-card-standalone .subtitle {
+      margin: 0 0 24px;
+      font-size: 14px;
+      color: rgba(255, 255, 255, 0.8);
+    }
+    .auth-card-standalone label {
+      display: block;
+      font-size: 13px;
+      font-weight: 500;
+      color: rgba(255, 255, 255, 0.95);
+      margin-bottom: 8px;
+    }
+    .auth-card-standalone input[type="text"],
+    .auth-card-standalone input[type="email"],
+    .auth-card-standalone input[type="password"] {
+      width: 100%;
+      padding: 12px 16px;
+      font-size: 14px;
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      background: rgba(15, 23, 42, 0.4);
+      color: #fff;
+      margin-bottom: 16px;
+    }
+    .auth-card-standalone input::placeholder {
+      color: rgba(255, 255, 255, 0.5);
+    }
+    .auth-card-standalone input:focus {
+      outline: none;
+      border-color: rgba(79, 70, 229, 0.6);
+      box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15);
+    }
+    .auth-card-standalone .btn-primary {
+      width: 100%;
+      padding: 12px 16px;
+      font-size: 15px;
+      font-weight: 600;
+      color: #fff;
+      background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%);
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      margin-top: 8px;
+    }
+    .auth-card-standalone .btn-primary:hover {
+      background: linear-gradient(135deg, #4338ca 0%, #312e81 100%);
+    }
+    .auth-card-standalone .auth-link {
+      margin-top: 20px;
+      text-align: center;
+      font-size: 13px;
+    }
+    .auth-card-standalone .auth-link a {
+      color: rgba(182, 171, 255, 1);
+      text-decoration: none;
+    }
+    .auth-card-standalone .auth-link a:hover {
+      text-decoration: underline;
+    }
+    .auth-card-standalone .form-group {
+      margin-bottom: 4px;
+    }
+    .auth-card-standalone .errornote {
+      font-size: 13px;
+      color: #fca5a5;
+      background: rgba(220, 38, 38, 0.2);
+      padding: 10px 12px;
+      border-radius: 10px;
+      margin-bottom: 16px;
+    }
+    .auth-card-standalone .success-note {
+      font-size: 13px;
+      color: #86efac;
+      background: rgba(34, 197, 94, 0.2);
+      padding: 10px 12px;
+      border-radius: 10px;
+      margin-bottom: 16px;
+    }
+    .auth-card-standalone ul.errorlist { margin: 0 0 12px; padding-left: 1.25rem; font-size: 13px; color: #fca5a5; }
+    {% block extra_css %}{% endblock %}
+  </style>
+</head>
+<body>
+  <div class="auth-page-wrap">
+    <div class="auth-card-standalone">
+      {% if messages %}
+        {% for message in messages %}
+          <div class="{% if message.tags == 'error' or message.tags == 'warning' %}errornote{% else %}success-note{% endif %}" style="margin-bottom:12px;">
+            {{ message }}
+          </div>
+        {% endfor %}
+      {% endif %}
+      {% block content %}{% endblock %}
+    </div>
+  </div>
+</body>
+</html>

@@ -1,0 +1,52 @@
+{% extends "registration/base.html" %}
+{% block title %}Home{% endblock %}
+{% block content %}
+{% if user.is_authenticated %}
+<div class="card">
+  <h1>Welcome, {{ user.username }}</h1>
+  <p style="color: var(--text-muted); margin-bottom: 1.5rem;">
+    You are signed in. Use the actions below to explore the matching system.
+  </p>
+  {% if stats %}
+  <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap:.75rem; margin: 1rem 0 1.25rem;">
+    <div style="padding:.75rem; border:1px solid var(--border); border-radius:10px; background:var(--surface);">
+      <div style="color:var(--text-muted); font-size:.85rem;">Total mentors</div>
+      <div style="font-size:1.2rem; font-weight:700; color:var(--text);">{{ stats.total_mentors }}</div>
+    </div>
+    <div style="padding:.75rem; border:1px solid var(--border); border-radius:10px; background:var(--surface);">
+      <div style="color:var(--text-muted); font-size:.85rem;">Total mentees</div>
+      <div style="font-size:1.2rem; font-weight:700; color:var(--text);">{{ stats.total_mentees }}</div>
+    </div>
+    <div style="padding:.75rem; border:1px solid var(--border); border-radius:10px; background:var(--surface);">
+      <div style="color:var(--text-muted); font-size:.85rem;">Sessions scheduled</div>
+      <div style="font-size:1.2rem; font-weight:700; color:var(--text);">{{ stats.total_sessions }}</div>
+    </div>
+    <div style="padding:.75rem; border:1px solid var(--border); border-radius:10px; background:var(--surface);">
+      <div style="color:var(--text-muted); font-size:.85rem;">Completion rate</div>
+      <div style="font-size:1.2rem; font-weight:700; color:var(--text);">{{ stats.completion_rate }}%</div>
+    </div>
+  </div>
+  {% endif %}
+  {% if is_mentor %}
+    <a href="{% url 'mentor_questionnaire' %}" class="btn-primary" style="margin-bottom: .75rem;">Complete mentor questionnaire</a>
+  {% elif is_mentee %}
+    <a href="{% url 'mentee_questionnaire' %}" class="btn-primary" style="margin-bottom: .75rem;">Complete mentee questionnaire</a>
+  {% endif %}
+  <a href="/app/#matching" class="btn-primary" style="margin-bottom: .75rem;">Open matching dashboard</a>
+  <a href="/api/health/" class="btn-primary secondary">API health (JSON)</a>
+</div>
+{% else %}
+<div class="card" style="text-align:center;">
+  <div style="width:90px;height:90px;border-radius:50%;background:var(--accent-light);margin:0 auto 1rem;display:flex;align-items:center;justify-content:center;font-weight:700;color:var(--accent);">
+    ITE
+  </div>
+  <h1 style="margin-bottom:.25rem;">Mentor–Mentee Matching</h1>
+  <p style="color: var(--text-muted); margin-bottom: 1.5rem;">
+    Select your role to continue
+  </p>
+  <a href="{% url 'select_role' 'mentor' %}" class="btn-primary" style="margin-bottom:.75rem;">Mentor</a>
+  <a href="{% url 'select_role' 'mentee' %}" class="btn-primary" style="margin-bottom:.75rem;">Mentee</a>
+  <a href="{% url 'register' %}" class="btn-primary secondary">Create account</a>
+</div>
+{% endif %}
+{% endblock %}

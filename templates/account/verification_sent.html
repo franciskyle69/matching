@@ -1,0 +1,32 @@
+{% extends "registration/base.html" %}
+
+{% block title %}Verify your email{% endblock %}
+
+{% block content %}
+<div class="card" style="max-width: 520px; margin-inline: auto;">
+  <h1 class="page-title" style="margin-bottom: 0.25rem;">Verify your email</h1>
+  <p class="page-subtitle" style="margin-bottom: 1.5rem;">
+    We have sent a verification link to <strong>{{ email }}</strong>.
+  </p>
+
+  <p style="margin-bottom: 1rem; color: var(--slate-600); font-size: 0.95rem;">
+    Please open your inbox and click the link in that email to finish creating your account.
+    If you do not see the email within a few minutes, check your spam or promotions folder.
+  </p>
+
+  <ul style="margin: 0 0 1.25rem 1.1rem; padding: 0; color: var(--slate-600); font-size: 0.9rem;">
+    <li>Used the wrong address? You can go back and sign up again with a different email.</li>
+    <li>The link will expire after a short time for security reasons.</li>
+  </ul>
+
+  <div class="btn-row" style="margin-top: 1.5rem; justify-content: flex-start; gap: 0.5rem;">
+    <a href="{% url 'react_app' %}#signin" class="btn-primary">
+      Back to sign in
+    </a>
+    <a href="{% url 'react_app' %}#signup" class="btn-primary secondary">
+      Use a different email
+    </a>
+  </div>
+</div>
+{% endblock %}
+

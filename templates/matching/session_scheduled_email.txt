@@ -1,0 +1,16 @@
+Hi {{ recipient_name }},
+
+A mentoring session has been scheduled with the following details:
+
+Mentor: {{ mentor_username }}
+Mentee: {{ mentee_username }}
+Subject: {{ subject_name|default:"—" }}
+Topic: {{ topic_name|default:"—" }}
+Date & time: {{ scheduled_at }}
+Duration: {{ duration_minutes }} minutes
+{% if notes %}Notes: {{ notes }}{% endif %}
+
+You can view and manage your sessions in the dashboard.
+
+—
+Academic mentoring system

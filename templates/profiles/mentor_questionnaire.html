@@ -1,0 +1,236 @@
+{% extends "registration/base.html" %}
+{% block title %}Mentor Questionnaire{% endblock %}
+{% block main_class %}questionnaire-main{% endblock %}
+{% block extra_css %}
+  <style>
+    .questionnaire-main { max-width: 680px; padding: 2rem 1.5rem; }
+    .questionnaire-page .card {
+      padding: 2.25rem 2.5rem;
+      box-shadow: var(--shadow-lg), 0 0 0 1px rgba(0,0,0,.03);
+      border-radius: 16px;
+      border: 1px solid var(--border);
+    }
+    .questionnaire-page .card h1 {
+      font-size: 1.625rem;
+      font-weight: 700;
+      margin: 0 0 0.35rem 0;
+      color: var(--text);
+      letter-spacing: -0.02em;
+    }
+    .questionnaire-page .card .page-subtitle {
+      font-size: 1rem;
+      color: var(--text-muted);
+      margin: 0 0 2rem 0;
+      line-height: 1.5;
+    }
+    .questionnaire-section {
+      margin-bottom: 2rem;
+    }
+    .questionnaire-section-title {
+      font-size: 0.8125rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      margin: 0 0 0.875rem 0;
+      padding: 0.5rem 0 0.5rem 0.875rem;
+      border-left: 3px solid var(--accent);
+      background: linear-gradient(90deg, var(--accent-light) 0%, transparent 100%);
+      border-radius: 0 8px 8px 0;
+    }
+    .questionnaire-checkbox-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 0.625rem 1rem;
+    }
+    .questionnaire-checkbox-grid label,
+    .questionnaire-radio-row label {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      gap: 0;
+      padding: 0.75rem 1rem 0.75rem 2.75rem;
+      border: 1.5px solid var(--border);
+      border-radius: 12px;
+      cursor: pointer;
+      font-size: 0.9375rem;
+      font-weight: 500;
+      color: var(--text);
+      background: var(--surface);
+      transition: border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease;
+    }
+    .questionnaire-checkbox-grid label:hover,
+    .questionnaire-radio-row label:hover {
+      border-color: var(--accent);
+      background: var(--accent-light);
+      box-shadow: 0 2px 8px rgba(79, 70, 229, 0.12);
+    }
+    .questionnaire-checkbox-grid label:has(input:checked),
+    .questionnaire-radio-row label:has(input:checked) {
+      border-color: var(--accent);
+      background: var(--accent-light);
+      box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.25);
+    }
+    .questionnaire-checkbox-grid input,
+    .questionnaire-radio-row input {
+      position: absolute;
+      left: 1rem;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 20px;
+      height: 20px;
+      margin: 0;
+      opacity: 0;
+      cursor: pointer;
+      z-index: 1;
+    }
+    .questionnaire-checkbox-grid label::before {
+      content: "";
+      position: absolute;
+      left: 1rem;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 20px;
+      height: 20px;
+      border: 2px solid var(--border);
+      border-radius: 6px;
+      background: var(--surface);
+      transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+    }
+    .questionnaire-checkbox-grid label:has(input:checked)::before {
+      background: var(--accent);
+      border-color: var(--accent);
+      box-shadow: inset 0 0 0 2px var(--surface);
+    }
+    .questionnaire-checkbox-grid label:has(input:checked)::after {
+      content: "";
+      position: absolute;
+      left: 1.35rem;
+      top: 50%;
+      transform: translateY(-55%) rotate(45deg);
+      width: 5px;
+      height: 10px;
+      border: solid var(--surface);
+      border-width: 0 2px 2px 0;
+    }
+    .questionnaire-radio-row label::before {
+      content: "";
+      position: absolute;
+      left: 1rem;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 20px;
+      height: 20px;
+      border: 2px solid var(--border);
+      border-radius: 50%;
+      background: var(--surface);
+      transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+    }
+    .questionnaire-radio-row label:has(input:checked)::before {
+      border-color: var(--accent);
+      background: var(--surface);
+      box-shadow: 0 0 0 2px var(--accent);
+    }
+    .questionnaire-radio-row label:has(input:checked)::after {
+      content: "";
+      position: absolute;
+      left: 1.5rem;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--accent);
+    }
+    .questionnaire-radio-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.625rem;
+    }
+    .questionnaire-submit {
+      margin-top: 1.75rem;
+      padding: 0.875rem 2rem;
+      font-size: 1rem;
+      font-weight: 600;
+      border-radius: 12px;
+      min-width: 220px;
+      box-shadow: 0 2px 10px rgba(79, 70, 229, 0.3);
+      transition: transform 0.15s ease, box-shadow 0.2s ease;
+    }
+    .questionnaire-submit:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 14px rgba(79, 70, 229, 0.35);
+    }
+    .questionnaire-page .errornote {
+      margin-bottom: 1rem;
+      border-radius: 12px;
+    }
+    .questionnaire-page .form-group .errornote {
+      margin-top: 0.5rem;
+      margin-bottom: 0;
+    }
+  </style>
+{% endblock %}
+{% block content %}
+<div class="questionnaire-page">
+  <div class="card">
+    <h1>Mentor Questionnaire</h1>
+    <p class="page-subtitle">Tell us your expertise so we can match you with the right mentees.</p>
+    {% if form.errors %}
+    <p class="errornote">Please correct the errors below.</p>
+    {% endif %}
+    <form method="post">
+      {% csrf_token %}
+      <div class="form-group questionnaire-section">
+        <label class="questionnaire-section-title">Your role</label>
+        <div class="questionnaire-radio-row">
+          {% for radio in form.role %}
+            <label>{{ radio.tag }} {{ radio.choice_label }}</label>
+          {% endfor %}
+        </div>
+        {% if form.role.errors %}
+        <p class="errornote">{{ form.role.errors.0 }}</p>
+        {% endif %}
+      </div>
+
+      <div class="form-group questionnaire-section">
+        <label class="questionnaire-section-title">Subjects you have expertise in</label>
+        <div class="questionnaire-checkbox-grid">
+          {% for checkbox in form.subjects %}
+            <label>{{ checkbox.tag }} {{ checkbox.choice_label }}</label>
+          {% endfor %}
+        </div>
+        {% if form.subjects.errors %}
+        <p class="errornote">{{ form.subjects.errors.0 }}</p>
+        {% endif %}
+      </div>
+
+      <div class="form-group questionnaire-section">
+        <label class="questionnaire-section-title">Topics you can help with</label>
+        <div class="questionnaire-checkbox-grid">
+          {% for checkbox in form.topics %}
+            <label>{{ checkbox.tag }} {{ checkbox.choice_label }}</label>
+          {% endfor %}
+        </div>
+        {% if form.topics.errors %}
+        <p class="errornote">{{ form.topics.errors.0 }}</p>
+        {% endif %}
+      </div>
+
+      <div class="form-group questionnaire-section">
+        <label class="questionnaire-section-title">Your expertise level (1–5)</label>
+        <div class="questionnaire-radio-row">
+          {% for radio in form.expertise_level %}
+            <label>{{ radio.tag }} {{ radio.choice_label }}</label>
+          {% endfor %}
+        </div>
+        {% if form.expertise_level.errors %}
+        <p class="errornote">{{ form.expertise_level.errors.0 }}</p>
+        {% endif %}
+      </div>
+
+      <button type="submit" class="btn-primary questionnaire-submit">Save mentor answers</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

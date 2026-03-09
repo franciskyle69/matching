@@ -1,0 +1,12 @@
+Hi {{ user.username }},
+
+Please activate your account by clicking the link below:
+
+{{ protocol }}://{{ domain }}{% url 'activate_account' uid token %}
+
+Only enter this code on an official website or app. Don't share it with anyone. We'll never ask for it outside an official platform.
+
+If you did not request this, you can ignore this email.
+
+—
+Academic mentoring system

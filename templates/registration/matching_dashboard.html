@@ -1,0 +1,138 @@
+{% extends "registration/base.html" %}
+{% block title %}Mentor–Mentee Matching{% endblock %}
+{% block extra_css %}
+  <style>
+    .layout-wide { max-width: 960px; }
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      padding: .15rem .5rem;
+      border-radius: 999px;
+      font-size: .75rem;
+      background: var(--accent-light);
+      color: var(--accent-hover);
+      margin-right: .25rem;
+      margin-bottom: .15rem;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: .9rem;
+    }
+    th, td {
+      padding: .5rem .75rem;
+      border-bottom: 1px solid var(--border);
+      text-align: left;
+    }
+    th {
+      font-weight: 600;
+      color: var(--text-muted);
+      background: #f9fafb;
+    }
+    .score-pill {
+      display: inline-flex;
+      align-items: center;
+      padding: .125rem .5rem;
+      border-radius: 999px;
+      font-size: .8rem;
+      font-weight: 600;
+      background: var(--accent-light);
+      color: var(--accent-hover);
+    }
+    .toolbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+      gap: .5rem;
+      flex-wrap: wrap;
+    }
+    .toolbar h1 {
+      margin: 0;
+      font-size: 1.35rem;
+    }
+    .status-text {
+      font-size: .875rem;
+      color: var(--text-muted);
+    }
+  </style>
+{% endblock %}
+{% block content %}
+<div class="card layout-wide">
+  <div class="toolbar">
+    <div>
+      <h1>Mentor–Mentee Matching</h1>
+      <p class="status-text" id="status-text">Click "Run matching" to fetch current pairs.</p>
+    </div>
+    <button type="button" class="btn-primary" id="run-matching-btn">Run matching</button>
+  </div>
+  <div id="results-empty" style="font-size:.9rem; color:var(--text-muted);">
+    No matches loaded yet.
+  </div>
+  <div id="results-container" style="display:none;">
+    <table>
+      <thead>
+        <tr>
+          <th>Mentor</th>
+          <th>Mentee</th>
+          <th>Score</th>
+        </tr>
+      </thead>
+      <tbody id="results-body">
+      </tbody>
+    </table>
+  </div>
+</div>
+<script>
+  const btn = document.getElementById("run-matching-btn");
+  const statusEl = document.getElementById("status-text");
+  const bodyEl = document.getElementById("results-body");
+  const emptyEl = document.getElementById("results-empty");
+  const tableContainer = document.getElementById("results-container");
+
+  async function runMatching() {
+    btn.disabled = true;
+    btn.textContent = "Running…";
+    statusEl.textContent = "Requesting matches from the server…";
+    try {
+      const resp = await fetch("/api/matching/run/");
+      if (!resp.ok) {
+        throw new Error("Server returned " + resp.status);
+      }
+      const data = await resp.json();
+      const results = data.results || [];
+      bodyEl.innerHTML = "";
+      for (const row of results) {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${row.mentor_username || "—"} <span class="chip">Mentor</span></td>
+          <td>${row.mentee_username || "—"} <span class="chip" style="background:#eff6ff;color:#1d4ed8;">Mentee</span></td>
+          <td><span class="score-pill">${row.score.toFixed(3)}</span></td>
+        `;
+        bodyEl.appendChild(tr);
+      }
+      if (results.length === 0) {
+        emptyEl.style.display = "block";
+        tableContainer.style.display = "none";
+        statusEl.textContent = "No matches could be generated. Check that you have mentors, mentees, and capacities set.";
+      } else {
+        emptyEl.style.display = "none";
+        tableContainer.style.display = "block";
+        statusEl.textContent = `Showing ${results.length} match${results.length === 1 ? "" : "es"}.`;
+      }
+    } catch (err) {
+      console.error(err);
+      statusEl.textContent = "Something went wrong while running matching.";
+      emptyEl.style.display = "block";
+      emptyEl.textContent = "Error: " + err.message;
+      tableContainer.style.display = "none";
+    } finally {
+      btn.disabled = false;
+      btn.textContent = "Run matching";
+    }
+  }
+
+  btn.addEventListener("click", runMatching);
+</script>
+{% endblock %}
+

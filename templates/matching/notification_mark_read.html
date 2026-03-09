@@ -1,0 +1,13 @@
+{% extends "registration/base.html" %}
+{% block title %}Mark Read{% endblock %}
+{% block content %}
+<div class="card">
+  <h1>Mark Notification as Read</h1>
+  <p>{{ item.message }}</p>
+  <form method="post">
+    {% csrf_token %}
+    <button type="submit" class="btn-primary">Confirm</button>
+    <a href="{% url 'notifications_list' %}" class="btn-primary secondary">Cancel</a>
+  </form>
+</div>
+{% endblock %}

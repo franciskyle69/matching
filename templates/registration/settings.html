@@ -1,0 +1,93 @@
+{% extends "registration/base.html" %}
+{% block title %}Settings{% endblock %}
+{% block extra_css %}
+  <style>
+    .settings-grid {
+      display: grid;
+      gap: 1rem;
+    }
+    .settings-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      padding: .75rem 1rem;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: var(--surface);
+    }
+    .settings-row .label {
+      font-weight: 600;
+      color: var(--text);
+    }
+    .settings-row .value {
+      color: var(--text-muted);
+    }
+    .settings-actions {
+      display: grid;
+      gap: .5rem;
+      margin-top: .5rem;
+    }
+    .settings-actions a,
+    .settings-actions form button {
+      width: 100%;
+    }
+  </style>
+{% endblock %}
+{% block content %}
+<div class="card">
+  <h1>Settings</h1>
+  <div class="settings-grid">
+    <div class="settings-row">
+      <div class="label">Role</div>
+      <div class="value">{{ role }}</div>
+    </div>
+    {% if is_mentor %}
+    <div class="settings-row">
+      <div class="label">Mentor Approval</div>
+      <div class="value">
+        {% if user.mentor_profile.approved %}
+          Approved
+        {% else %}
+          Pending approval
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+  <form method="post" style="margin-top: 1.25rem;">
+    {% csrf_token %}
+    <div class="form-group">
+      <label for="id_username">Username</label>
+      <input type="text" name="username" id="id_username" value="{{ form.username.value|default:'' }}" required>
+      {% if form.username.errors %}
+      <p class="errornote" style="margin-top:.5rem;">{{ form.username.errors.0 }}</p>
+      {% endif %}
+    </div>
+    <div class="form-group">
+      <label for="id_email">Email</label>
+      <input type="email" name="email" id="id_email" value="{{ form.email.value|default:'' }}" placeholder="you@example.com">
+      {% if form.email.errors %}
+      <p class="errornote" style="margin-top:.5rem;">{{ form.email.errors.0 }}</p>
+      {% endif %}
+    </div>
+    <button type="submit" class="btn-primary">Save changes</button>
+  </form>
+
+  <div class="settings-actions">
+    {% if is_mentor %}
+      <a href="{% url 'mentor_questionnaire' %}" class="btn-primary secondary">Edit mentor questionnaire</a>
+    {% elif is_mentee %}
+      <a href="{% url 'mentee_questionnaire' %}" class="btn-primary secondary">Edit mentee questionnaire</a>
+    {% endif %}
+    <a href="{% url 'password_change' %}" class="btn-primary secondary">Change password</a>
+    <a href="/app/#matching" class="btn-primary secondary">Open matching dashboard</a>
+    <a href="{% url 'home' %}" class="btn-primary secondary">Change role</a>
+    <form method="post" action="{% url 'logout' %}">
+      {% csrf_token %}
+      <button type="submit" class="btn-primary">Log out</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

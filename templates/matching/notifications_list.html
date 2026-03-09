@@ -1,0 +1,34 @@
+{% extends "registration/base.html" %}
+{% block title %}Notifications{% endblock %}
+{% block content %}
+<div class="card" style="max-width: 720px;">
+  <h1>Notifications</h1>
+  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: .75rem;">
+    <span style="color:var(--text-muted); font-size:.9rem;">
+      Unread: {{ unread_notifications_count }}
+    </span>
+    <form method="post" action="{% url 'notifications_mark_all_read' %}">
+      {% csrf_token %}
+      <button type="submit" class="btn-primary secondary">Mark all as read</button>
+    </form>
+  </div>
+  {% if items %}
+    <ul style="list-style:none; padding:0; margin:0;">
+      {% for n in items %}
+      <li style="padding:.75rem 1rem; border:1px solid var(--border); border-radius:10px; margin-bottom:.75rem; background:{% if n.is_read %}#f8fafc{% else %}#fff7ed{% endif %};">
+        <div style="font-weight:600;">{{ n.message }}</div>
+        <div style="color:var(--text-muted); font-size:.85rem;">{{ n.created_at }}</div>
+        {% if not n.is_read %}
+          <form method="post" action="{% url 'notification_mark_read' n.id %}" style="margin-top:.5rem;">
+            {% csrf_token %}
+            <button type="submit" class="btn-primary secondary">Mark as read</button>
+          </form>
+        {% endif %}
+      </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p style="color: var(--text-muted);">No notifications yet.</p>
+  {% endif %}
+</div>
+{% endblock %}

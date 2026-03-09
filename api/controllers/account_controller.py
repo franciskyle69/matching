@@ -1,0 +1,772 @@
+from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth.tokens import default_token_generator
+from django.contrib.sites.shortcuts import get_current_site
+from django.contrib.auth.decorators import login_required
+from django.core.mail import EmailMultiAlternatives
+from django.http import JsonResponse
+from django.views.decorators.http import require_GET, require_http_methods
+from django.template.loader import render_to_string
+from django.utils.encoding import force_bytes
+from django.utils.http import urlsafe_base64_encode
+
+from django.utils import timezone
+
+from matching.models import MentoringSession
+from profiles.models import MentorProfile, MenteeProfile
+
+from accounts.forms import AccountSettingsForm, RegisterForm
+from accounts.views import ROLE_SESSION_KEY
+
+from ..views import (
+    _get_payload,
+    _get_int,
+    _get_str,
+    _get_role_flags,
+    _rate_limit,
+    audit_log,
+    _require_role,
+    _serialize_session,
+    _serialize_notification,
+    _serialize_subject,
+    _serialize_topic,
+    _serialize_mentee,
+    _maybe_send_due_session_reminders,
+    get_mentor_approved,
+    get_mentee_approved,
+    logger,
+)
+from matching.models import Notification, Subject, Topic
+from django.middleware.csrf import get_token
+from django.views.decorators.csrf import csrf_exempt
+
+
+def _parse_hhmm_to_minutes(value):
+    text = str(value or "").strip()
+    parts = text.split(":")
+    if len(parts) != 2:
+        return None
+    try:
+        hour = int(parts[0])
+        minute = int(parts[1])
+    except (TypeError, ValueError):
+        return None
+    if hour < 0 or hour > 23 or minute < 0 or minute > 59:
+        return None
+    return hour * 60 + minute
+
+
+def _normalise_availability_slots(value):
+    if value is None:
+        return []
+    if isinstance(value, (list, tuple)):
+        raw_slots = list(value)
+    elif isinstance(value, str):
+        raw_slots = [part.strip() for part in value.split(",") if part.strip()]
+    else:
+        return []
+
+    out = []
+    seen = set()
+    min_minutes = 8 * 60
+    max_minutes = 20 * 60
+    for raw in raw_slots:
+        if not isinstance(raw, str):
+            continue
+        parts = raw.split("-")
+        if len(parts) != 2:
+            continue
+        start = _parse_hhmm_to_minutes(parts[0])
+        end = _parse_hhmm_to_minutes(parts[1])
+        if start is None or end is None or start >= end:
+            continue
+        if start < min_minutes or end > max_minutes:
+            continue
+        slot = f"{start // 60:02d}:{start % 60:02d}-{end // 60:02d}:{end % 60:02d}"
+        if slot in seen:
+            continue
+        seen.add(slot)
+        out.append(slot)
+    return out
+
+
+def _normalise_mentor_gender(value, default=""):
+    text = str(value or "").strip().lower()
+    if text in ("male", "female"):
+        return text
+    return default
+
+
+def _normalise_preferred_gender(value, default="no_preference"):
+    text = str(value or "").strip().lower()
+    if text in ("male", "female", "no_preference"):
+        return text
+    return default
+
+
+@require_http_methods(["GET"])
+def health(request):
+    return JsonResponse({"status": "ok"})
+
+
+@require_http_methods(["GET"])
+def csrf(request):
+    return JsonResponse({"csrfToken": get_token(request)})
+
+
+@require_http_methods(["POST"])
+def auth_login(request):
+    payload = _get_payload(request)
+    if not _rate_limit(f"login:{request.META.get('REMOTE_ADDR')}", 8, 60):
+        return JsonResponse(
+            {"error": "Too many login attempts. Try again later."}, status=429
+        )
+
+    username = _get_str(payload, "username")
+    password = _get_str(payload, "password")
+    if not username or not password:
+        return JsonResponse(
+            {"error": "Username and password are required."}, status=400
+        )
+
+    user = authenticate(request, username=username, password=password)
+    if not user:
+        logger.warning("auth_login_failed", extra={"username": username})
+        return JsonResponse({"error": "Invalid credentials."}, status=401)
+    if not user.is_active:
+        return JsonResponse(
+            {"error": "Please verify your email before logging in."}, status=401
+        )
+
+    is_mentor = hasattr(user, "mentor_profile")
+    is_mentee = hasattr(user, "mentee_profile")
+    if is_mentor:
+        request.session[ROLE_SESSION_KEY] = "mentor"
+    elif is_mentee:
+        request.session[ROLE_SESSION_KEY] = "mentee"
+    login(request, user)
+    logger.info("auth_login_success", extra={"user_id": user.id})
+    audit_log(user, "login", "auth")
+    return JsonResponse({"status": "ok"})
+
+
+@login_required
+@require_http_methods(["POST"])
+def auth_logout(request):
+    user = request.user
+    logout(request)
+    audit_log(user, "logout", "auth")
+    return JsonResponse({"status": "ok"})
+
+
+@require_http_methods(["POST"])
+def auth_register(request):
+    payload = _get_payload(request)
+    if not _rate_limit(f"register:{request.META.get('REMOTE_ADDR')}", 5, 300):
+        return JsonResponse(
+            {"error": "Too many signups. Try again later."}, status=429
+        )
+
+    role = payload.get("role")
+    from ..views import _validate_role  # avoid circular import at top
+
+    if not _validate_role(role):
+        return JsonResponse({"error": "Role is required."}, status=400)
+
+    form = RegisterForm(payload)
+    if not form.is_valid():
+        return JsonResponse({"errors": form.errors}, status=400)
+
+    user = form.save(commit=False)
+    user.is_active = False
+    user.save()
+
+    if role == "mentor":
+        MentorProfile.objects.create(
+            user=user,
+            program="BSIT",
+            year_level=4,
+        )
+    else:
+        MenteeProfile.objects.create(
+            user=user,
+            program="BSIT",
+            year_level=1,
+            campus="",
+            student_id_no="",
+            contact_no="",
+            admission_type="",
+            sex="",
+        )
+
+    current_site = get_current_site(request)
+    subject = "Activate your account"
+    text_message = render_to_string(
+        "registration/activation_email.txt",
+        {
+            "user": user,
+            "domain": current_site.domain,
+            "uid": urlsafe_base64_encode(force_bytes(user.pk)),
+            "token": default_token_generator.make_token(user),
+            "protocol": "https" if request.is_secure() else "http",
+        },
+    )
+    html_message = render_to_string(
+        "registration/activation_email.html",
+        {
+            "user": user,
+            "domain": current_site.domain,
+            "uid": urlsafe_base64_encode(force_bytes(user.pk)),
+            "token": default_token_generator.make_token(user),
+            "protocol": "https" if request.is_secure() else "http",
+        },
+    )
+    email = EmailMultiAlternatives(subject, text_message, to=[user.email])
+    email.attach_alternative(html_message, "text/html")
+    email.send()
+
+    logger.info("auth_register", extra={"user_id": user.id, "role": role})
+    return JsonResponse(
+        {
+            "status": "ok",
+            "message": "Check your email to activate your account.",
+        }
+    )
+
+
+@login_required
+@require_GET
+def me(request):
+    role_error = _require_role(request)
+    if role_error:
+        return role_error
+
+    role_flags = _get_role_flags(request.user)
+
+    # Fire-and-forget check for any due session reminders whenever user hits /api/me/
+    _maybe_send_due_session_reminders()
+    mentor = getattr(request.user, "mentor_profile", None)
+    mentee = getattr(request.user, "mentee_profile", None)
+
+    # Global stats
+    total_mentors = MentorProfile.objects.count()
+    total_mentees = MenteeProfile.objects.count()
+    total_sessions = MentoringSession.objects.count()
+    completed_sessions = MentoringSession.objects.filter(status="completed").count()
+    completion_rate = 0
+    if total_sessions > 0:
+        completion_rate = round((completed_sessions / total_sessions) * 100)
+
+    now = timezone.now()
+    # Define "this week" as Monday 00:00 -> now
+    start_of_week = now - timezone.timedelta(days=now.weekday())
+    start_of_week = start_of_week.replace(hour=0, minute=0, second=0, microsecond=0)
+    week_sessions_qs = MentoringSession.objects.filter(scheduled_at__gte=start_of_week)
+    week_sessions = week_sessions_qs.count()
+    week_completed_sessions = week_sessions_qs.filter(status="completed").count()
+
+    # Simple academic term heuristic: Aug 1 for Aug–Dec, Jan 1 for Jan–Jul
+    if now.month >= 8:
+        term_start = timezone.datetime(
+            now.year, 8, 1, tzinfo=timezone.get_current_timezone()
+        )
+    else:
+        term_start = timezone.datetime(
+            now.year, 1, 1, tzinfo=timezone.get_current_timezone()
+        )
+    term_qs = MentoringSession.objects.filter(scheduled_at__gte=term_start)
+    term_sessions = term_qs.count()
+    term_completed_sessions = term_qs.filter(status="completed").count()
+
+    avatar_url = ""
+    if mentor and getattr(mentor, "avatar_url", ""):
+        avatar_url = mentor.avatar_url
+    elif mentee and getattr(mentee, "avatar_url", ""):
+        avatar_url = mentee.avatar_url
+
+    # Questionnaire completion flags: treat questionnaire as completed when
+    # key preference fields have been filled out.
+    mentor_q_completed = False
+    if mentor:
+        mentor_subj = (
+            mentor.subjects
+            if isinstance(mentor.subjects, list)
+            else ([mentor.subjects] if mentor.subjects else [])
+        )
+        mentor_topics = (
+            mentor.topics
+            if isinstance(mentor.topics, list)
+            else ([mentor.topics] if mentor.topics else [])
+        )
+        mentor_q_completed = bool(
+            mentor_subj or mentor_topics or mentor.expertise_level is not None
+        )
+
+    mentee_q_completed = False
+    if mentee:
+        mentee_subj = (
+            mentee.subjects
+            if isinstance(mentee.subjects, list)
+            else ([mentee.subjects] if mentee.subjects else [])
+        )
+        mentee_topics = (
+            mentee.topics
+            if isinstance(mentee.topics, list)
+            else ([mentee.topics] if mentee.topics else [])
+        )
+        mentee_q_completed = bool(
+            mentee_subj or mentee_topics or mentee.difficulty_level is not None
+        )
+
+    mentee_info = {}
+    if mentee:
+        mentee_info = {
+            "program": mentee.program,
+            "year_level": mentee.year_level,
+            "campus": getattr(mentee, "campus", ""),
+            "student_id_no": getattr(mentee, "student_id_no", ""),
+            "contact_no": getattr(mentee, "contact_no", ""),
+            "admission_type": getattr(mentee, "admission_type", ""),
+            "sex": getattr(mentee, "sex", ""),
+        }
+    mentee_general_info_completed = bool(
+        mentee
+        and mentee.program
+        and mentee.year_level
+        and getattr(mentee, "campus", "")
+        and getattr(mentee, "student_id_no", "")
+        and getattr(mentee, "contact_no", "")
+        and getattr(mentee, "admission_type", "")
+        and getattr(mentee, "sex", "")
+    )
+
+    mentor_info = {}
+    if mentor:
+        mentor_subs = (
+            mentor.subjects
+            if isinstance(mentor.subjects, list)
+            else ([mentor.subjects] if mentor.subjects else [])
+        )
+        mentor_tops = (
+            mentor.topics
+            if isinstance(mentor.topics, list)
+            else ([mentor.topics] if mentor.topics else [])
+        )
+        mentor_info = {
+            "program": mentor.program or "",
+            "year_level": mentor.year_level or 0,
+            "subjects": list(mentor_subs) if mentor_subs else [],
+            "topics": list(mentor_tops) if mentor_tops else [],
+            "expertise_level": mentor.expertise_level,
+            "gender": getattr(mentor, "gender", "") or "",
+            "availability": _normalise_availability_slots(
+                getattr(mentor, "availability", [])
+            ),
+        }
+
+    # Per-user progress stats (for mentors/mentees)
+    user_sessions = MentoringSession.objects.none()
+    if mentor:
+        user_sessions = MentoringSession.objects.filter(mentor=mentor)
+    elif mentee:
+        user_sessions = MentoringSession.objects.filter(mentee=mentee)
+
+    user_completed_sessions = user_sessions.filter(status="completed").count()
+    user_upcoming_sessions = user_sessions.filter(
+        status="scheduled", scheduled_at__gte=now
+    ).count()
+
+    first_session = user_sessions.order_by("scheduled_at").first()
+    days_to_first_session = None
+    if first_session:
+        delta = first_session.scheduled_at - request.user.date_joined
+        # Guard against negative values if old data has sessions before signup
+        days_to_first_session = max(delta.days, 0)
+
+    # Streak: how many consecutive calendar weeks (including current)
+    # have at least one completed session for this user.
+    completed_dates = [
+        s.scheduled_at for s in user_sessions.filter(status="completed").only("scheduled_at")
+    ]
+    week_keys = {
+        (d.isocalendar()[0], d.isocalendar()[1]) for d in completed_dates
+    }
+    current_streak_weeks = 0
+    if week_keys:
+        year, week, _ = now.isocalendar()
+        tz = timezone.get_current_timezone()
+        while (year, week) in week_keys:
+            current_streak_weeks += 1
+            # Go to previous week
+            monday_this_week = timezone.datetime.fromisocalendar(year, week, 1).replace(
+                tzinfo=tz
+            )
+            prev_monday = monday_this_week - timezone.timedelta(days=7)
+            year, week, _ = prev_monday.isocalendar()
+
+    mentee_matching = {}
+    if mentee:
+        mentee_subs = (
+            mentee.subjects
+            if isinstance(mentee.subjects, list)
+            else ([mentee.subjects] if mentee.subjects else [])
+        )
+        mentee_tops = (
+            mentee.topics
+            if isinstance(mentee.topics, list)
+            else ([mentee.topics] if mentee.topics else [])
+        )
+        mentee_matching = {
+            "subjects": list(mentee_subs) if mentee_subs else [],
+            "topics": list(mentee_tops) if mentee_tops else [],
+            "difficulty_level": mentee.difficulty_level,
+            "preferred_gender": _normalise_preferred_gender(
+                getattr(mentee, "preferred_gender", "no_preference")
+            ),
+            "availability": _normalise_availability_slots(
+                getattr(mentee, "availability", [])
+            ),
+        }
+
+    return JsonResponse(
+        {
+            "id": request.user.id,
+            "username": request.user.username,
+            "email": request.user.email,
+            "is_staff": request.user.is_staff,
+            "role": "mentor"
+            if role_flags["is_mentor"]
+            else "mentee"
+            if role_flags["is_mentee"]
+            else "staff"
+            if request.user.is_staff
+            else None,
+            "avatar_url": avatar_url,
+            "mentor_approved": get_mentor_approved(mentor) if mentor else None,
+            "mentee_approved": get_mentee_approved(mentee) if mentee else None,
+            "mentor_questionnaire_completed": mentor_q_completed if mentor else None,
+            "mentee_questionnaire_completed": mentee_q_completed if mentee else None,
+            "questionnaire_completed": mentor_q_completed
+            if role_flags["is_mentor"]
+            else mentee_q_completed
+            if role_flags["is_mentee"]
+            else False,
+            "mentee_info": mentee_info,
+            "mentee_general_info_completed": mentee_general_info_completed,
+            "mentor_info": mentor_info,
+            "mentee_matching": mentee_matching,
+            "stats": {
+                "total_mentors": total_mentors,
+                "total_mentees": total_mentees,
+                "total_sessions": total_sessions,
+                "completed_sessions": completed_sessions,
+                "completion_rate": completion_rate,
+                "week": {
+                    "start": start_of_week.isoformat(),
+                    "sessions": week_sessions,
+                    "completed_sessions": week_completed_sessions,
+                },
+                "term": {
+                    "start": term_start.isoformat(),
+                    "sessions": term_sessions,
+                    "completed_sessions": term_completed_sessions,
+                },
+                "user_progress": {
+                    "role": "mentor"
+                    if role_flags["is_mentor"]
+                    else "mentee"
+                    if role_flags["is_mentee"]
+                    else None,
+                    "sessions_completed": user_completed_sessions,
+                    "sessions_upcoming": user_upcoming_sessions,
+                    "days_to_first_session": days_to_first_session,
+                    "current_streak_weeks": current_streak_weeks,
+                },
+            },
+            "unread_notifications": Notification.objects.filter(
+                user=request.user, is_read=False
+            ).count(),
+        }
+    )
+
+
+@login_required
+@require_http_methods(["POST"])
+def update_account(request):
+    raw = _get_payload(request)
+    if not raw or not isinstance(raw, dict):
+        return JsonResponse(
+            {
+                "errors": {
+                    "__all__": [
+                        "Request body must be JSON with username and email."
+                    ]
+                }
+            },
+            status=400,
+        )
+    # Merge with current user so partial updates (e.g. username only) don't clear email
+    payload = {
+        "username": raw.get("username")
+        if raw.get("username") is not None
+        else request.user.username,
+        "email": raw.get("email")
+        if raw.get("email") is not None
+        else (request.user.email or ""),
+    }
+    form = AccountSettingsForm(payload, instance=request.user)
+    if not form.is_valid():
+        errors = {k: list(v) for k, v in form.errors.items()}
+        return JsonResponse({"errors": errors}, status=400)
+    form.save()
+    logger.info("account_updated", extra={"user_id": request.user.id})
+    return JsonResponse(
+        {
+            "id": request.user.id,
+            "username": request.user.username,
+            "email": request.user.email,
+        }
+    )
+
+
+@login_required
+@require_http_methods(["POST"])
+def upload_avatar(request):
+    """Handle profile picture upload and return its URL."""
+    import os
+    import uuid
+    from io import BytesIO
+
+    from django.core.files.storage import default_storage
+    from django.core.files.base import ContentFile
+    from PIL import Image
+
+    from ..views import _avatar_url
+
+    file = request.FILES.get("avatar")
+    if not file:
+        return JsonResponse({"error": "No file uploaded."}, status=400)
+
+    # Limit basic file types by extension
+    name, ext = os.path.splitext(file.name)
+    ext = ext.lower()
+    if ext not in [".jpg", ".jpeg", ".png", ".gif", ".webp"]:
+        return JsonResponse({"error": "Unsupported file type."}, status=400)
+
+    # Compress / resize image before saving (aim for < 2MB)
+    try:
+        img = Image.open(file)
+        # Convert to RGB to avoid issues with PNG / GIF modes
+        if img.mode not in ("RGB", "L"):
+            img = img.convert("RGB")
+        # Resize to a reasonable max size while keeping aspect ratio
+        img.thumbnail((512, 512))
+
+        buffer = BytesIO()
+        # Prefer JPEG for better compression, fall back to original format
+        save_format = (
+            "JPEG" if ext in [".jpg", ".jpeg", ".png"] else img.format or "JPEG"
+        )
+        img.save(buffer, format=save_format, quality=80, optimize=True)
+        image_bytes = buffer.getvalue()
+    except Exception:
+        return JsonResponse(
+            {"error": "Could not process image. Please upload a valid picture."},
+            status=400,
+        )
+
+    max_bytes = 2 * 1024 * 1024
+    if len(image_bytes) > max_bytes:
+        return JsonResponse(
+            {
+                "error": "Image is too large even after compression. Please choose a smaller file."
+            },
+            status=400,
+        )
+
+    filename = f"avatars/user_{request.user.id}_{uuid.uuid4().hex}.jpg"
+    saved_path = default_storage.save(filename, ContentFile(image_bytes))
+    url = default_storage.url(saved_path)
+
+    mentor = getattr(request.user, "mentor_profile", None)
+    mentee = getattr(request.user, "mentee_profile", None)
+    if mentor:
+        mentor.avatar_url = url
+        mentor.save(update_fields=["avatar_url"])
+    if mentee:
+        mentee.avatar_url = url
+        mentee.save(update_fields=["avatar_url"])
+
+    return JsonResponse({"avatar_url": url})
+
+
+@login_required
+@require_http_methods(["POST"])
+def update_mentee_profile(request):
+    from ..views import _require_mentee  # avoid circular import at top
+
+    mentee_profile, error = _require_mentee(request)
+    if error:
+        return error
+    payload = _get_payload(request)
+    mentee_profile.program = _get_str(payload, "program", mentee_profile.program)
+    year_level = _get_int(payload, "year_level", mentee_profile.year_level)
+    mentee_profile.year_level = year_level or mentee_profile.year_level
+    mentee_profile.campus = _get_str(
+        payload, "campus", getattr(mentee_profile, "campus", "")
+    )
+    raw_student_id = _get_str(
+        payload, "student_id_no", getattr(mentee_profile, "student_id_no", "")
+    )
+    raw_contact = _get_str(
+        payload, "contact_no", getattr(mentee_profile, "contact_no", "")
+    )
+    student_id_digits = "".join(c for c in raw_student_id if c.isdigit())[:10]
+    contact_digits = "".join(c for c in raw_contact if c.isdigit())[:11]
+    if raw_student_id and not student_id_digits:
+        return JsonResponse(
+            {"error": "Student ID must contain only numbers (max 10 digits)."},
+            status=400,
+        )
+    if raw_contact and not contact_digits:
+        return JsonResponse(
+            {"error": "Contact number must contain only numbers (max 11 digits)."},
+            status=400,
+        )
+    mentee_profile.student_id_no = student_id_digits
+    mentee_profile.contact_no = contact_digits
+    mentee_profile.admission_type = _get_str(
+        payload, "admission_type", getattr(mentee_profile, "admission_type", "")
+    )
+    mentee_profile.sex = _get_str(
+        payload, "sex", getattr(mentee_profile, "sex", "")
+    )
+    mentee_profile.save()
+
+    return JsonResponse(
+        {
+            "program": mentee_profile.program,
+            "year_level": mentee_profile.year_level,
+            "campus": mentee_profile.campus,
+            "student_id_no": mentee_profile.student_id_no,
+            "contact_no": mentee_profile.contact_no,
+            "admission_type": mentee_profile.admission_type,
+            "sex": mentee_profile.sex,
+        }
+    )
+
+
+@login_required
+@require_http_methods(["POST"])
+def update_mentee_matching_profile(request):
+  from ..views import _require_mentee  # avoid circular import at top
+
+  mentee_profile, error = _require_mentee(request)
+  if error:
+      return error
+  payload = _get_payload(request)
+  raw_subjects = payload.get("subjects")
+  if raw_subjects is not None:
+      mentee_profile.subjects = (
+          list(raw_subjects) if isinstance(raw_subjects, list) else []
+      )
+  raw_topics = payload.get("topics")
+  if raw_topics is not None:
+      mentee_profile.topics = (
+          list(raw_topics) if isinstance(raw_topics, list) else []
+      )
+  difficulty = _get_int(payload, "difficulty_level")
+  if difficulty is not None and 1 <= difficulty <= 5:
+      mentee_profile.difficulty_level = difficulty
+  if "preferred_gender" in payload:
+      mentee_profile.preferred_gender = _normalise_preferred_gender(
+          payload.get("preferred_gender"),
+          default=getattr(mentee_profile, "preferred_gender", "no_preference"),
+      )
+  if "availability" in payload:
+      mentee_profile.availability = _normalise_availability_slots(
+          payload.get("availability")
+      )
+  mentee_profile.save()
+
+  mentee_subs = (
+      mentee_profile.subjects
+      if isinstance(mentee_profile.subjects, list)
+      else ([mentee_profile.subjects] if mentee_profile.subjects else [])
+  )
+  mentee_tops = (
+      mentee_profile.topics
+      if isinstance(mentee_profile.topics, list)
+      else ([mentee_profile.topics] if mentee_profile.topics else [])
+  )
+  return JsonResponse(
+      {
+          "subjects": list(mentee_subs),
+          "topics": list(mentee_tops),
+          "difficulty_level": mentee_profile.difficulty_level,
+          "preferred_gender": _normalise_preferred_gender(
+              getattr(mentee_profile, "preferred_gender", "no_preference")
+          ),
+          "availability": _normalise_availability_slots(
+              getattr(mentee_profile, "availability", [])
+          ),
+      }
+  )
+
+
+@login_required
+@require_http_methods(["POST"])
+def update_mentor_profile(request):
+    from ..views import _require_mentor
+
+    mentor_profile, error = _require_mentor(request)
+    if error:
+        return error
+    payload = _get_payload(request)
+    raw_subjects = payload.get("subjects")
+    if raw_subjects is not None:
+        mentor_profile.subjects = (
+            list(raw_subjects) if isinstance(raw_subjects, list) else []
+        )
+    raw_topics = payload.get("topics")
+    if raw_topics is not None:
+        mentor_profile.topics = (
+            list(raw_topics) if isinstance(raw_topics, list) else []
+        )
+    expertise = _get_int(payload, "expertise_level")
+    if expertise is not None and 1 <= expertise <= 5:
+        mentor_profile.expertise_level = expertise
+    if "gender" in payload:
+        mentor_profile.gender = _normalise_mentor_gender(
+            payload.get("gender"),
+            default=getattr(mentor_profile, "gender", ""),
+        )
+    if "availability" in payload:
+        mentor_profile.availability = _normalise_availability_slots(
+            payload.get("availability")
+        )
+    mentor_profile.save()
+
+    mentor_subs = (
+        mentor_profile.subjects
+        if isinstance(mentor_profile.subjects, list)
+        else ([mentor_profile.subjects] if mentor_profile.subjects else [])
+    )
+    mentor_tops = (
+        mentor_profile.topics
+        if isinstance(mentor_profile.topics, list)
+        else ([mentor_profile.topics] if mentor_profile.topics else [])
+    )
+    return JsonResponse(
+        {
+            "program": mentor_profile.program,
+            "year_level": mentor_profile.year_level,
+            "subjects": list(mentor_subs),
+            "topics": list(mentor_tops),
+            "expertise_level": mentor_profile.expertise_level,
+            "gender": getattr(mentor_profile, "gender", "") or "",
+            "availability": _normalise_availability_slots(
+                getattr(mentor_profile, "availability", [])
+            ),
+        }
+    )
+
