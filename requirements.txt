@@ -8,6 +8,9 @@ gunicorn>=21.2.0
 whitenoise>=6.6.0
 requests
 PyJWT
+cloudinary>=1.36
+google-auth>=2.0
+google-api-python-client>=2.0
 cryptography
 xgboost>=2.0
 scikit-learn>=1.3

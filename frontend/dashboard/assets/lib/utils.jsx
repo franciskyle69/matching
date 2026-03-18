@@ -39,16 +39,40 @@
   function LoadingSpinner({ inline = false }) {
     return (
       <div
-        className={`sk-chase loading-spinner-spinkit ${inline ? "loading-spinner-inline" : ""}`}
+        className={`loading-spinner-spinkit ${inline ? "loading-spinner-inline" : ""}`}
         role="status"
         aria-label="Loading"
       >
-        <div className="sk-chase-dot" />
-        <div className="sk-chase-dot" />
-        <div className="sk-chase-dot" />
-        <div className="sk-chase-dot" />
-        <div className="sk-chase-dot" />
-        <div className="sk-chase-dot" />
+        <div className="loading-spinner-glow" />
+        <div className="loading-spinner-ring" />
+        <div className="loading-spinner-ring loading-spinner-ring-inner" />
+      </div>
+    );
+  }
+
+  function OrbitingDotsLoader({ size = 50, speed = 1 }) {
+    const dots = [0, 1, 2, 3, 4];
+    const sizePx = typeof size === "number" ? `${size}px` : size;
+    const duration = 1.2 / Math.max(0.25, Math.min(2, speed));
+    return (
+      <div
+        className="orbiting-dots-loader"
+        style={{
+          "--orbiting-size": sizePx,
+          "--orbiting-duration": `${duration}s`,
+        }}
+        role="status"
+        aria-label="Loading"
+      >
+        <div className="orbiting-dots-loader__track">
+          {dots.map((i) => (
+            <span
+              key={i}
+              className="orbiting-dots-loader__dot"
+              style={{ "--orbiting-angle": `${i * 72}deg`, "--orbiting-delay": `${-i * 0.15}s` }}
+            />
+          ))}
+        </div>
       </div>
     );
   }
@@ -110,6 +134,7 @@
     fetchJSON,
     formatDate,
     LoadingSpinner,
+    OrbitingDotsLoader,
     MatchingLoadingAnimation,
   };
 })();

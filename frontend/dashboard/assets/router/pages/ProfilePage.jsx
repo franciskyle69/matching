@@ -3,8 +3,9 @@
   const React = window.React;
   const { useContext, useState, useEffect, useRef } = React;
   const AppContext = window.DashboardApp.AppContext;
-  const { getCookie, fetchJSON, formatDate } = window.DashboardApp.Utils || {};
+  const { getCookie, fetchJSON, formatDate, LoadingSpinner } = window.DashboardApp.Utils || {};
   const PLACEHOLDER_AVATAR = window.DashboardApp.PLACEHOLDER_AVATAR || "";
+  const Spinner = LoadingSpinner;
 
   function relativeTime(iso) {
     if (!iso) return "";
@@ -25,6 +26,26 @@
   const CATEGORY_ICONS = { achievement: "\u{1F3C6}", project: "\u{1F4BB}", update: "\u{1F4DD}" };
   const MAX_FILE_SIZE = 10 * 1024 * 1024;
   const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp", "image/svg+xml"];
+  const CAPTION_TRUNCATE_LENGTH = 150;
+
+  /* ── Caption "See more" (Facebook-style) ── */
+  function ExpandableCaption({ text, maxLength }) {
+    const len = maxLength ?? CAPTION_TRUNCATE_LENGTH;
+    const [expanded, setExpanded] = useState(false);
+    if (!text || !text.trim()) return null;
+    const isLong = text.length > len;
+    const display = isLong && !expanded ? text.slice(0, len).trim() + (text.length > len ? "\u2026" : "") : text;
+    return (
+      <p className="sp-post-text">
+        {display}
+        {isLong && (
+          <button type="button" className="sp-see-more-btn" onClick={(e) => { e.stopPropagation(); setExpanded((v) => !v); }}>
+            {expanded ? " See less" : " See more"}
+          </button>
+        )}
+      </p>
+    );
+  }
 
   /* ── Shared sub-components ── */
 
@@ -131,7 +152,7 @@
           <span className={"sp-post-category-badge sp-cat-" + post.category}>{CATEGORY_ICONS[post.category]} {CATEGORY_LABELS[post.category]}</span>
         </div>
         <div className="sp-post-clickable" onClick={() => onOpen && onOpen(post)}>
-          {post.text && <p className="sp-post-text">{post.text}</p>}
+          {post.text && <ExpandableCaption text={post.text} maxLength={CAPTION_TRUNCATE_LENGTH} />}
           {post.image_url && <div className="sp-post-image-wrap"><img src={post.image_url} alt="Post" className="sp-post-image" loading="lazy" /></div>}
         </div>
         <div className="sp-post-actions">
@@ -262,7 +283,7 @@
           <span className={"sp-post-category-badge sp-cat-" + post.category}>{CATEGORY_ICONS[post.category]} {CATEGORY_LABELS[post.category]}</span>
         </div>
 
-        {post.text && <p className="sp-pm-text">{post.text}</p>}
+        {post.text && <ExpandableCaption text={post.text} maxLength={9999} />}
 
         <div className="sp-pm-actions">
           <button type="button" className={"sp-post-action-btn" + (post.liked_by_me ? " liked" : "")} onClick={() => onLike(post.id)}>
@@ -545,20 +566,37 @@
     const [posts, setPosts] = useState([]);
     const [galleryImages, setGalleryImages] = useState([]);
     const [postsLoaded, setPostsLoaded] = useState(false);
+    const [postsLoading, setPostsLoading] = useState(false);
+    const [postsHasMore, setPostsHasMore] = useState(false);
+    const [postsLoadingMore, setPostsLoadingMore] = useState(false);
     const [galleryLoaded, setGalleryLoaded] = useState(false);
+    const [galleryLoading, setGalleryLoading] = useState(false);
     const [lightboxImage, setLightboxImage] = useState(null);
     const [openPost, setOpenPost] = useState(null);
     const [commentsCache, setCommentsCache] = useState({});
 
     const userId = profile.id;
 
-    async function loadPosts() {
-      const res = await fetchJSON(`/api/posts/?user_id=${userId}`);
-      if (res.ok) { setPosts(res.data.posts || []); setPostsLoaded(true); }
+    async function loadPosts(offset = 0) {
+      if (offset === 0) setPostsLoading(true);
+      else setPostsLoadingMore(true);
+      const res = await fetchJSON(`/api/posts/?user_id=${userId}&limit=10&offset=${offset}`);
+      if (res.ok) {
+        const list = res.data.posts || [];
+        if (offset === 0) setPosts(list);
+        else setPosts((prev) => [...prev, ...list]);
+        setPostsHasMore(!!res.data.has_more);
+      }
+      setPostsLoaded(true);
+      setPostsLoading(false);
+      setPostsLoadingMore(false);
     }
     async function loadGallery() {
-      const res = await fetchJSON(`/api/gallery/?user_id=${userId}`);
-      if (res.ok) { setGalleryImages(res.data.images || []); setGalleryLoaded(true); }
+      setGalleryLoading(true);
+      try {
+        const res = await fetchJSON(`/api/gallery/?user_id=${userId}`);
+        if (res.ok) { setGalleryImages(res.data.images || []); setGalleryLoaded(true); }
+      } finally { setGalleryLoading(false); }
     }
 
     useEffect(() => { loadPosts(); }, [userId]);
@@ -683,11 +721,34 @@
             <div className="sp-main-body">
               {tab === "posts" && (
                 <>
-                  {posts.length === 0 && postsLoaded && <p className="muted" style={{ textAlign: "center", padding: "32px 0" }}>No posts yet.</p>}
-                  {posts.map((p) => <PostCard key={p.id} post={p} onLike={handleLike} onDelete={() => {}} isOwner={false} onOpen={setOpenPost} />)}
+                  {postsLoading && (
+                    <div className="loading-block" style={{ minHeight: "200px" }}>
+                      {Spinner && <Spinner />}
+                      <p className="muted">Loading posts…</p>
+                    </div>
+                  )}
+                  {!postsLoading && posts.length === 0 && postsLoaded && <p className="muted" style={{ textAlign: "center", padding: "32px 0" }}>No posts yet.</p>}
+                  {!postsLoading && posts.map((p) => <PostCard key={p.id} post={p} onLike={handleLike} onDelete={() => {}} isOwner={false} onOpen={setOpenPost} />)}
+                  {!postsLoading && postsHasMore && (
+                    <div className="sp-load-more-wrap">
+                      <button type="button" className="sp-load-more-btn" onClick={() => loadPosts(posts.length)} disabled={postsLoadingMore}>
+                        {postsLoadingMore ? (<><Spinner inline /> Loading…</>) : "See more posts"}
+                      </button>
+                    </div>
+                  )}
                 </>
               )}
-              {tab === "gallery" && <GalleryGrid images={galleryImages} onImageClick={handleGalleryImageClick} />}
+              {tab === "gallery" && (
+                <>
+                  {galleryLoading && (
+                    <div className="loading-block" style={{ minHeight: "200px" }}>
+                      {Spinner && <Spinner />}
+                      <p className="muted">Loading gallery…</p>
+                    </div>
+                  )}
+                  {!galleryLoading && <GalleryGrid images={galleryImages} onImageClick={handleGalleryImageClick} />}
+                </>
+              )}
             </div>
           </main>
         </div>
@@ -718,7 +779,7 @@
       viewedMentorProfile, setViewedMentorProfile, mentorProfileHashId, setMentorProfileHashId,
       setActiveTab, chooseMentor, chosenMentorId, loadMe,
       viewedUserProfile, setViewedUserProfile,
-      postsFeed, postsFeedLoaded, loadPostsFeed, setPostsFeed,
+      postsFeed, postsFeedLoaded, postsFeedLoading, loadPostsFeed, setPostsFeed, postsFeedHasMore, postsFeedLoadingMore,
     } = ctx;
 
     const isMentor = user.role === "mentor";
@@ -731,13 +792,20 @@
     const [posting, setPosting] = useState(false);
     const [postsLoaded, setPostsLoaded] = useState(false);
     const [galleryLoaded, setGalleryLoaded] = useState(false);
+    const [galleryLoading, setGalleryLoading] = useState(false);
     const [lightboxImage, setLightboxImage] = useState(null);
     const [coverUploading, setCoverUploading] = useState(false);
     const [openPost, setOpenPost] = useState(null);
     const [showComposerModal, setShowComposerModal] = useState(false);
     const [commentsCache, setCommentsCache] = useState({});
 
-    async function loadGallery() { const res = await fetchJSON("/api/gallery/"); if (res.ok) { setGalleryImages(res.data.images || []); setGalleryLoaded(true); } }
+    async function loadGallery() {
+      setGalleryLoading(true);
+      try {
+        const res = await fetchJSON("/api/gallery/");
+        if (res.ok) { setGalleryImages(res.data.images || []); setGalleryLoaded(true); }
+      } finally { setGalleryLoading(false); }
+    }
     async function loadStats() { const res = await fetchJSON("/api/profile-stats/"); if (res.ok) setProfileStats(res.data || {}); }
 
     useEffect(() => {
@@ -853,12 +921,35 @@
             <div className="sp-main-body">
               {tab === "posts" && (
                 <>
-                  <PostComposerTrigger avatarUrl={avatarUrl} username={user.username} onClick={() => setShowComposerModal(true)} />
-                  {posts.length === 0 && postsLoaded && <p className="muted" style={{ textAlign: "center", padding: "32px 0" }}>No posts yet. Share your first achievement or update!</p>}
-                  {posts.map((p) => <PostCard key={p.id} post={p} onLike={handleLike} onDelete={handleDelete} isOwner={p.author_id === user.id} onOpen={setOpenPost} />)}
+                  {(posting || postsFeedLoading) && (
+                    <div className="loading-block sp-posting-overlay">
+                      {Spinner && <Spinner />}
+                      <p className="muted">{posting ? "Posting…" : "Loading posts…"}</p>
+                    </div>
+                  )}
+                  {!postsFeedLoading && <PostComposerTrigger avatarUrl={avatarUrl} username={user.username} onClick={() => setShowComposerModal(true)} />}
+                  {!postsFeedLoading && posts.length === 0 && postsLoaded && !posting && <p className="muted" style={{ textAlign: "center", padding: "32px 0" }}>No posts yet. Share your first achievement or update!</p>}
+                  {!postsFeedLoading && posts.map((p) => <PostCard key={p.id} post={p} onLike={handleLike} onDelete={handleDelete} isOwner={p.author_id === user.id} onOpen={setOpenPost} />)}
+                  {!postsFeedLoading && postsFeedHasMore && (
+                    <div className="sp-load-more-wrap">
+                      <button type="button" className="sp-load-more-btn" onClick={() => loadPostsFeed(posts.length)} disabled={postsFeedLoadingMore}>
+                        {postsFeedLoadingMore ? (<><Spinner inline /> Loading…</>) : "See more posts"}
+                      </button>
+                    </div>
+                  )}
                 </>
               )}
-              {tab === "gallery" && <GalleryGrid images={galleryImages} onImageClick={handleGalleryImageClick} />}
+              {tab === "gallery" && (
+                <>
+                  {galleryLoading && (
+                    <div className="loading-block" style={{ minHeight: "200px" }}>
+                      {Spinner && <Spinner />}
+                      <p className="muted">Loading gallery…</p>
+                    </div>
+                  )}
+                  {!galleryLoading && <GalleryGrid images={galleryImages} onImageClick={handleGalleryImageClick} />}
+                </>
+              )}
             </div>
           </main>
         </div>
@@ -874,11 +965,11 @@
               </div>
               <div className="sp-composer-modal-body">
                 <PostComposer
-                  onPost={async (payload) => {
-                    const success = await handlePost(payload);
-                    if (success) setShowComposerModal(false);
+                  onPost={(payload) => {
+                    setShowComposerModal(false);
+                    handlePost(payload);
                   }}
-                  posting={posting}
+                  posting={false}
                 />
               </div>
             </div>

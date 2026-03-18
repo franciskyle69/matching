@@ -13,7 +13,7 @@ ENV/
 *.log
 local_settings.py
 db.sqlite3
-db.sqlite3-journal1
+*.sqlite3-journal
 staticfiles/
 media/
 backups/
@@ -23,6 +23,10 @@ data.json
 .env
 .env.local
 .env.*.local
+
+# Google service account keys (never commit; copy to each device manually)
+service-account*.json
+capstone-489112-919fe6d12123.json
 
 # IDE
 .vscode/
@@ -39,10 +43,21 @@ Thumbs.db
 dist/
 build/
 *.egg-info/
+*.egg
 *.rar
 
-# Frontend (if building separately)
+# Python testing / type-checking
+.coverage
+htmlcov/
+.pytest_cache/
+.mypy_cache/
+
+# Frontend
 node_modules/
+.vite/
+.cache/
+.eslintcache
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+pnpm-debug.log*

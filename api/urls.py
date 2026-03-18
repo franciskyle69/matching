@@ -55,6 +55,11 @@ from .controllers.backup_controller import (
     backup_restore_by_id,
     backup_delete,
 )
+from .controllers.drive_controller import (
+    drive_upload,
+    drive_list,
+    drive_connected,
+)
 from .controllers.activity_controller import activity_logs_list
 from .controllers.search_controller import search, user_public_profile
 from .controllers.posts_controller import (
@@ -136,6 +141,9 @@ urlpatterns = [
     path('backup/<str:backup_id>/download/', backup_download, name='api-backup-download'),
     path('backup/<str:backup_id>/restore/', backup_restore_by_id, name='api-backup-restore-by-id'),
     path('backup/<str:backup_id>/delete/', backup_delete, name='api-backup-delete'),
+    path('drive/connected/', drive_connected, name='api-drive-connected'),
+    path('drive/upload/', drive_upload, name='api-drive-upload'),
+    path('drive/files/', drive_list, name='api-drive-list'),
     path('activity-logs/', activity_logs_list, name='api-activity-logs'),
     path('search/', search, name='api-search'),
     path('users/<int:user_id>/profile/', user_public_profile, name='api-user-public-profile'),

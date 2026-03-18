@@ -52,17 +52,35 @@ def _serialize_comment(comment):
     }
 
 
+POSTS_PAGE_SIZE = 10
+POSTS_MAX_PAGE_SIZE = 50
+
+
 @login_required
 @require_GET
 def posts_list(request):
-    """List posts for a user. ?user_id= for specific user, else current user's feed."""
+    """List posts for a user. ?user_id= for specific user, else current user. Supports limit & offset (Facebook-style pagination)."""
+    try:
+        limit = min(int(request.GET.get("limit", POSTS_PAGE_SIZE)), POSTS_MAX_PAGE_SIZE)
+        offset = max(0, int(request.GET.get("offset", 0)))
+    except (TypeError, ValueError):
+        limit, offset = POSTS_PAGE_SIZE, 0
+
     user_id = request.GET.get("user_id")
     if user_id:
-        posts = UserPost.objects.filter(author_id=int(user_id)).select_related("author")[:50]
+        qs = UserPost.objects.filter(author_id=int(user_id)).select_related("author").order_by("-created_at")
     else:
-        posts = UserPost.objects.filter(author=request.user).select_related("author")[:50]
+        qs = UserPost.objects.filter(author=request.user).select_related("author").order_by("-created_at")
+
+    total = qs.count()
+    posts = list(qs[offset : offset + limit + 1])
+    has_more = len(posts) > limit
+    if has_more:
+        posts = posts[:limit]
     return JsonResponse({
         "posts": [_serialize_post(p, request.user) for p in posts],
+        "has_more": has_more,
+        "total": total,
     })
 
 
@@ -93,13 +111,26 @@ def posts_feed(request):
         )
         connected_ids.update(mentor_user_ids)
 
-    posts = (
+    qs = (
         UserPost.objects.filter(author_id__in=connected_ids)
         .select_related("author")
-        .order_by("-created_at")[:50]
+        .order_by("-created_at")
     )
+    try:
+        limit = min(int(request.GET.get("limit", POSTS_PAGE_SIZE)), POSTS_MAX_PAGE_SIZE)
+        offset = max(0, int(request.GET.get("offset", 0)))
+    except (TypeError, ValueError):
+        limit, offset = POSTS_PAGE_SIZE, 0
+
+    total = qs.count()
+    posts = list(qs[offset : offset + limit + 1])
+    has_more = len(posts) > limit
+    if has_more:
+        posts = posts[:limit]
     return JsonResponse({
         "posts": [_serialize_post(p, user) for p in posts],
+        "has_more": has_more,
+        "total": total,
     })
 
 

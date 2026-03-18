@@ -4,7 +4,7 @@
   const { useContext, useState } = React;
   const AppContext = window.DashboardApp.AppContext;
   const Utils = window.DashboardApp.Utils || {};
-  const { formatDate, LoadingSpinner } = Utils;
+  const { formatDate, LoadingSpinner, OrbitingDotsLoader } = Utils;
 
   const CommentThread = window.DashboardApp.CommentThread || function CommentThreadPlaceholder() { return null; };
 
@@ -276,6 +276,10 @@
         )}
         {sessionsLoading && (
           <>
+            <div className="loading-block" style={{ minHeight: "12rem" }}>
+              {OrbitingDotsLoader && <OrbitingDotsLoader size={60} speed={1} />}
+              <p className="muted">Loading sessions…</p>
+            </div>
             <div className="sessions-section">
               <h3 className="sessions-section-title">Upcoming</h3>
               {[1, 2, 3].map((i) => (

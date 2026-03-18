@@ -583,51 +583,51 @@ def upload_avatar(request):
     if ext not in [".jpg", ".jpeg", ".png", ".gif", ".webp"]:
         return JsonResponse({"error": "Unsupported file type."}, status=400)
 
-    # Compress / resize image before saving (aim for < 2MB)
     try:
-        img = Image.open(file)
-        # Convert to RGB to avoid issues with PNG / GIF modes
-        if img.mode not in ("RGB", "L"):
-            img = img.convert("RGB")
-        # Resize to a reasonable max size while keeping aspect ratio
-        img.thumbnail((512, 512))
+        # Compress / resize image before saving (aim for < 2MB)
+        try:
+            img = Image.open(file)
+            if img.mode not in ("RGB", "L"):
+                img = img.convert("RGB")
+            img.thumbnail((512, 512))
+            buffer = BytesIO()
+            save_format = (
+                "JPEG" if ext in [".jpg", ".jpeg", ".png"] else img.format or "JPEG"
+            )
+            img.save(buffer, format=save_format, quality=80, optimize=True)
+            image_bytes = buffer.getvalue()
+        except Exception:
+            return JsonResponse(
+                {"error": "Could not process image. Please upload a valid picture."},
+                status=400,
+            )
 
-        buffer = BytesIO()
-        # Prefer JPEG for better compression, fall back to original format
-        save_format = (
-            "JPEG" if ext in [".jpg", ".jpeg", ".png"] else img.format or "JPEG"
-        )
-        img.save(buffer, format=save_format, quality=80, optimize=True)
-        image_bytes = buffer.getvalue()
-    except Exception:
+        max_bytes = 2 * 1024 * 1024
+        if len(image_bytes) > max_bytes:
+            return JsonResponse(
+                {"error": "Image is too large even after compression. Please choose a smaller file."},
+                status=400,
+            )
+
+        filename = f"avatars/user_{request.user.id}_{uuid.uuid4().hex}.jpg"
+        saved_path = default_storage.save(filename, ContentFile(image_bytes))
+        url = default_storage.url(saved_path)
+
+        mentor = getattr(request.user, "mentor_profile", None)
+        mentee = getattr(request.user, "mentee_profile", None)
+        if mentor:
+            mentor.avatar_url = url
+            mentor.save(update_fields=["avatar_url"])
+        if mentee:
+            mentee.avatar_url = url
+            mentee.save(update_fields=["avatar_url"])
+
+        return JsonResponse({"avatar_url": url})
+    except Exception as e:
         return JsonResponse(
-            {"error": "Could not process image. Please upload a valid picture."},
-            status=400,
+            {"error": f"Profile picture upload failed: {str(e)}"},
+            status=500,
         )
-
-    max_bytes = 2 * 1024 * 1024
-    if len(image_bytes) > max_bytes:
-        return JsonResponse(
-            {
-                "error": "Image is too large even after compression. Please choose a smaller file."
-            },
-            status=400,
-        )
-
-    filename = f"avatars/user_{request.user.id}_{uuid.uuid4().hex}.jpg"
-    saved_path = default_storage.save(filename, ContentFile(image_bytes))
-    url = default_storage.url(saved_path)
-
-    mentor = getattr(request.user, "mentor_profile", None)
-    mentee = getattr(request.user, "mentee_profile", None)
-    if mentor:
-        mentor.avatar_url = url
-        mentor.save(update_fields=["avatar_url"])
-    if mentee:
-        mentee.avatar_url = url
-        mentee.save(update_fields=["avatar_url"])
-
-    return JsonResponse({"avatar_url": url})
 
 
 @login_required
@@ -667,8 +667,14 @@ def upload_cover(request):
         return JsonResponse({"error": "Cover image too large."}, status=400)
 
     filename = f"covers/user_{request.user.id}_{uuid.uuid4().hex}.jpg"
-    saved_path = default_storage.save(filename, ContentFile(image_bytes))
-    url = default_storage.url(saved_path)
+    try:
+        saved_path = default_storage.save(filename, ContentFile(image_bytes))
+        url = default_storage.url(saved_path)
+    except Exception as e:
+        return JsonResponse(
+            {"error": f"Storage upload failed: {str(e)}"},
+            status=500,
+        )
 
     mentor = getattr(request.user, "mentor_profile", None)
     mentee = getattr(request.user, "mentee_profile", None)

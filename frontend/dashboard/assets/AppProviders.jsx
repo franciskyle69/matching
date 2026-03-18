@@ -85,6 +85,9 @@
     const [globalSearchResults, setGlobalSearchResults] = useState([]);
     const [postsFeed, setPostsFeed] = useState([]);
     const [postsFeedLoaded, setPostsFeedLoaded] = useState(false);
+    const [postsFeedLoading, setPostsFeedLoading] = useState(false);
+    const [postsFeedHasMore, setPostsFeedHasMore] = useState(false);
+    const [postsFeedLoadingMore, setPostsFeedLoadingMore] = useState(false);
     const [viewedMentorProfile, setViewedMentorProfile] = useState(null);
     const [mentorProfileHashId, setMentorProfileHashId] = useState(null);
     const [viewedUserProfile, setViewedUserProfile] = useState(null);
@@ -509,14 +512,26 @@
       setSessionsLoading(false);
     }
 
-    async function loadPostsFeed() {
-      const result = await fetchJSON("/api/posts/feed/");
+    async function loadPostsFeed(offset = 0) {
+      if (offset === 0) setPostsFeedLoading(true);
+      else setPostsFeedLoadingMore(true);
+      const result = await fetchJSON(`/api/posts/feed/?limit=10&offset=${offset}`);
       if (result.ok) {
-        setPostsFeed(result.data.posts || []);
+        const list = result.data.posts || [];
+        const hasMore = !!result.data.has_more;
+        if (offset === 0) {
+          setPostsFeed(list);
+        } else {
+          setPostsFeed((prev) => [...prev, ...list]);
+        }
+        setPostsFeedHasMore(hasMore);
       } else {
-        setPostsFeed([]);
+        if (offset === 0) setPostsFeed([]);
+        setPostsFeedHasMore(false);
       }
       setPostsFeedLoaded(true);
+      setPostsFeedLoading(false);
+      setPostsFeedLoadingMore(false);
     }
 
     async function loadNotifications() {
@@ -1063,7 +1078,7 @@
       approvalsLoading, approvalActionKey, pendingMentors, pendingMentees, loadApprovals, handleApproveMentor, handleRejectMentor, handleApproveMentee, handleRejectMentee,
       backups, backupDir, backupsLoading, backupCreateLoading, backupRestoreLoading, loadBackups, createBackup, restoreBackup, restoreBackupById, deleteBackup, downloadBackup,
       activityLogs, activityLogsLoading, loadActivityLogs,
-      postsFeed, postsFeedLoaded, loadPostsFeed, setPostsFeed,
+      postsFeed, postsFeedLoaded, postsFeedLoading, loadPostsFeed, setPostsFeed, postsFeedHasMore, postsFeedLoadingMore,
       chosenMentorId,
       announcements, announcementsLoading, announcementMessage, setAnnouncementMessage, announcementMenteeOptions, announcementTargetType, setAnnouncementTargetType, announcementRecipientIds, setAnnouncementRecipientIds, postAnnouncementLoading, loadAnnouncements, postAnnouncement, handleDeleteAnnouncement,
       commentsByKey, commentKey, loadComments, addComment,

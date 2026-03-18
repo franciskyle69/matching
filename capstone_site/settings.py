@@ -173,8 +173,24 @@ STATICFILES_DIRS = [
 MEDIA_URL = 'media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
-# WhiteNoise for serving static files in production
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+# Default file storage: Cloudinary (if set) else Google Drive else filesystem
+STORAGES = {
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+    },
+}
+if os.environ.get("CLOUDINARY_CLOUD_NAME"):
+    STORAGES["default"] = {"BACKEND": "api.cloudinary_storage.CloudinaryStorage"}
+elif os.environ.get("DRIVE_SERVICE_ACCOUNT_JSON"):
+    STORAGES["default"] = {"BACKEND": "api.drive_storage.GoogleDriveStorage"}
+else:
+    STORAGES["default"] = {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+        "OPTIONS": {"location": MEDIA_ROOT, "base_url": MEDIA_URL},
+    }
+
+# WhiteNoise for serving static files in production (legacy setting, STORAGES used above)
+STATICFILES_STORAGE = STORAGES["staticfiles"]["BACKEND"]
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field
@@ -212,6 +228,7 @@ SOCIALACCOUNT_PROVIDERS = {
             "profile",
             "email",
             "https://www.googleapis.com/auth/calendar.events",
+            "https://www.googleapis.com/auth/drive.file",  # Create/access app-created Drive files
         ],
         "AUTH_PARAMS": {"prompt": "select_account", "access_type": "offline"},
         "APP": {
