@@ -11,8 +11,8 @@ from django.utils.http import urlsafe_base64_encode
 
 from django.utils import timezone
 
-from matching.models import MentoringSession
-from profiles.models import MentorProfile, MenteeProfile
+from matching.models import MentoringSession, MenteeMentorRequest
+from profiles.models import MentorProfile, MenteeProfile, InterestTag
 
 from accounts.forms import AccountSettingsForm, RegisterForm
 from accounts.views import ROLE_SESSION_KEY
@@ -96,13 +96,6 @@ def _normalise_mentor_gender(value, default=""):
     return default
 
 
-def _normalise_preferred_gender(value, default="no_preference"):
-    text = str(value or "").strip().lower()
-    if text in ("male", "female", "no_preference"):
-        return text
-    return default
-
-
 @require_http_methods(["GET"])
 def health(request):
     return JsonResponse({"status": "ok"})
@@ -116,6 +109,9 @@ def csrf(request):
 @require_http_methods(["POST"])
 def auth_login(request):
     payload = _get_payload(request)
+    role = payload.get("role")
+    if isinstance(role, str):
+        mentor_profile.role = role.strip()
     if not _rate_limit(f"login:{request.META.get('REMOTE_ADDR')}", 8, 60):
         return JsonResponse(
             {"error": "Too many login attempts. Try again later."}, status=429
@@ -283,6 +279,24 @@ def me(request):
     elif mentee and getattr(mentee, "avatar_url", ""):
         avatar_url = mentee.avatar_url
 
+    cover_url = ""
+    if mentor and getattr(mentor, "cover_url", ""):
+        cover_url = mentor.cover_url
+    elif mentee and getattr(mentee, "cover_url", ""):
+        cover_url = mentee.cover_url
+
+    bio = ""
+    if mentor and getattr(mentor, "bio", ""):
+        bio = mentor.bio
+    elif mentee and getattr(mentee, "bio", ""):
+        bio = mentee.bio
+
+    tags = []
+    if mentor:
+        tags = list(mentor.interest_tags.values_list("name", flat=True))
+    elif mentee:
+        tags = list(mentee.interest_tags.values_list("name", flat=True))
+
     # Questionnaire completion flags: treat questionnaire as completed when
     # key preference fields have been filled out.
     mentor_q_completed = False
@@ -354,9 +368,11 @@ def me(request):
         mentor_info = {
             "program": mentor.program or "",
             "year_level": mentor.year_level or 0,
+            "role": mentor.role or "",
             "subjects": list(mentor_subs) if mentor_subs else [],
             "topics": list(mentor_tops) if mentor_tops else [],
             "expertise_level": mentor.expertise_level,
+            "capacity": getattr(mentor, "capacity", 1),
             "gender": getattr(mentor, "gender", "") or "",
             "availability": _normalise_availability_slots(
                 getattr(mentor, "availability", [])
@@ -419,9 +435,6 @@ def me(request):
             "subjects": list(mentee_subs) if mentee_subs else [],
             "topics": list(mentee_tops) if mentee_tops else [],
             "difficulty_level": mentee.difficulty_level,
-            "preferred_gender": _normalise_preferred_gender(
-                getattr(mentee, "preferred_gender", "no_preference")
-            ),
             "availability": _normalise_availability_slots(
                 getattr(mentee, "availability", [])
             ),
@@ -441,6 +454,9 @@ def me(request):
             if request.user.is_staff
             else None,
             "avatar_url": avatar_url,
+            "cover_url": cover_url,
+            "bio": bio,
+            "tags": tags,
             "mentor_approved": get_mentor_approved(mentor) if mentor else None,
             "mentee_approved": get_mentee_approved(mentee) if mentee else None,
             "mentor_questionnaire_completed": mentor_q_completed if mentor else None,
@@ -480,6 +496,21 @@ def me(request):
                     "sessions_upcoming": user_upcoming_sessions,
                     "days_to_first_session": days_to_first_session,
                     "current_streak_weeks": current_streak_weeks,
+                    "mentees_count": MenteeMentorRequest.objects.filter(
+                        mentor=mentor, accepted=True
+                    )
+                    .values("mentee_id")
+                    .distinct()
+                    .count()
+                    if role_flags["is_mentor"] and mentor
+                    else None,
+                    "has_mentor": bool(
+                        MenteeMentorRequest.objects.filter(
+                            mentee=mentee, accepted=True
+                        ).exists()
+                    )
+                    if role_flags["is_mentee"] and mentee
+                    else False,
                 },
             },
             "unread_notifications": Notification.objects.filter(
@@ -601,6 +632,58 @@ def upload_avatar(request):
 
 @login_required
 @require_http_methods(["POST"])
+def upload_cover(request):
+    """Handle cover photo upload and return its URL."""
+    import os
+    import uuid
+    from io import BytesIO
+
+    from django.core.files.storage import default_storage
+    from django.core.files.base import ContentFile
+    from PIL import Image
+
+    file = request.FILES.get("cover")
+    if not file:
+        return JsonResponse({"error": "No file uploaded."}, status=400)
+
+    name, ext = os.path.splitext(file.name)
+    ext = ext.lower()
+    if ext not in [".jpg", ".jpeg", ".png", ".gif", ".webp"]:
+        return JsonResponse({"error": "Unsupported file type."}, status=400)
+
+    try:
+        img = Image.open(file)
+        if img.mode not in ("RGB", "L"):
+            img = img.convert("RGB")
+        img.thumbnail((1920, 600))
+        buffer = BytesIO()
+        save_format = "JPEG" if ext in [".jpg", ".jpeg", ".png"] else img.format or "JPEG"
+        img.save(buffer, format=save_format, quality=82, optimize=True)
+        image_bytes = buffer.getvalue()
+    except Exception:
+        return JsonResponse({"error": "Could not process image."}, status=400)
+
+    if len(image_bytes) > 5 * 1024 * 1024:
+        return JsonResponse({"error": "Cover image too large."}, status=400)
+
+    filename = f"covers/user_{request.user.id}_{uuid.uuid4().hex}.jpg"
+    saved_path = default_storage.save(filename, ContentFile(image_bytes))
+    url = default_storage.url(saved_path)
+
+    mentor = getattr(request.user, "mentor_profile", None)
+    mentee = getattr(request.user, "mentee_profile", None)
+    if mentor:
+        mentor.cover_url = url
+        mentor.save(update_fields=["cover_url"])
+    if mentee:
+        mentee.cover_url = url
+        mentee.save(update_fields=["cover_url"])
+
+    return JsonResponse({"cover_url": url})
+
+
+@login_required
+@require_http_methods(["POST"])
 def update_mentee_profile(request):
     from ..views import _require_mentee  # avoid circular import at top
 
@@ -677,11 +760,6 @@ def update_mentee_matching_profile(request):
   difficulty = _get_int(payload, "difficulty_level")
   if difficulty is not None and 1 <= difficulty <= 5:
       mentee_profile.difficulty_level = difficulty
-  if "preferred_gender" in payload:
-      mentee_profile.preferred_gender = _normalise_preferred_gender(
-          payload.get("preferred_gender"),
-          default=getattr(mentee_profile, "preferred_gender", "no_preference"),
-      )
   if "availability" in payload:
       mentee_profile.availability = _normalise_availability_slots(
           payload.get("availability")
@@ -703,9 +781,6 @@ def update_mentee_matching_profile(request):
           "subjects": list(mentee_subs),
           "topics": list(mentee_tops),
           "difficulty_level": mentee_profile.difficulty_level,
-          "preferred_gender": _normalise_preferred_gender(
-              getattr(mentee_profile, "preferred_gender", "no_preference")
-          ),
           "availability": _normalise_availability_slots(
               getattr(mentee_profile, "availability", [])
           ),
@@ -735,6 +810,9 @@ def update_mentor_profile(request):
     expertise = _get_int(payload, "expertise_level")
     if expertise is not None and 1 <= expertise <= 5:
         mentor_profile.expertise_level = expertise
+    capacity = _get_int(payload, "capacity", default=None, min_value=1)
+    if capacity is not None:
+        mentor_profile.capacity = capacity
     if "gender" in payload:
         mentor_profile.gender = _normalise_mentor_gender(
             payload.get("gender"),
@@ -760,13 +838,104 @@ def update_mentor_profile(request):
         {
             "program": mentor_profile.program,
             "year_level": mentor_profile.year_level,
+            "role": mentor_profile.role,
             "subjects": list(mentor_subs),
             "topics": list(mentor_tops),
             "expertise_level": mentor_profile.expertise_level,
+            "capacity": mentor_profile.capacity,
             "gender": getattr(mentor_profile, "gender", "") or "",
             "availability": _normalise_availability_slots(
                 getattr(mentor_profile, "availability", [])
             ),
         }
     )
+
+
+POPULAR_TAGS = [
+    "Python", "JavaScript", "Web Dev", "UI/UX", "Data Science",
+    "Machine Learning", "Java", "C++", "Mobile Dev", "React",
+    "HTML/CSS", "Git", "Database", "Algorithms", "Networking",
+    "Cloud Computing", "Cybersecurity", "Game Dev", "DevOps", "AI",
+]
+MAX_TAGS = 8
+
+
+@login_required
+@require_http_methods(["POST"])
+def update_bio(request):
+    payload = _get_payload(request)
+    bio = (_get_str(payload, "bio") or "").strip()
+    if len(bio) > 200:
+        return JsonResponse({"error": "Bio must be 200 characters or less."}, status=400)
+
+    mentor = getattr(request.user, "mentor_profile", None)
+    mentee = getattr(request.user, "mentee_profile", None)
+    if mentor:
+        mentor.bio = bio
+        mentor.save(update_fields=["bio"])
+    elif mentee:
+        mentee.bio = bio
+        mentee.save(update_fields=["bio"])
+    else:
+        return JsonResponse({"error": "No profile found."}, status=404)
+
+    return JsonResponse({"bio": bio})
+
+
+@login_required
+@require_http_methods(["POST"])
+def update_tags(request):
+    payload = _get_payload(request)
+    raw_tags = payload.get("tags")
+    if not isinstance(raw_tags, list):
+        return JsonResponse({"error": "tags must be a list of strings."}, status=400)
+
+    tag_names = []
+    seen = set()
+    for t in raw_tags:
+        name = str(t).strip()[:50]
+        if not name:
+            continue
+        lower = name.lower()
+        if lower in seen:
+            continue
+        seen.add(lower)
+        tag_names.append(name)
+        if len(tag_names) >= MAX_TAGS:
+            break
+
+    tag_objects = []
+    for name in tag_names:
+        tag, _ = InterestTag.objects.get_or_create(
+            name__iexact=name,
+            defaults={"name": name},
+        )
+        tag_objects.append(tag)
+
+    mentor = getattr(request.user, "mentor_profile", None)
+    mentee = getattr(request.user, "mentee_profile", None)
+    if mentor:
+        mentor.interest_tags.set(tag_objects)
+    elif mentee:
+        mentee.interest_tags.set(tag_objects)
+    else:
+        return JsonResponse({"error": "No profile found."}, status=404)
+
+    return JsonResponse({"tags": [t.name for t in tag_objects]})
+
+
+@login_required
+@require_GET
+def tag_suggestions(request):
+    q = request.GET.get("q", "").strip().lower()
+    if q:
+        db_tags = list(
+            InterestTag.objects.filter(name__icontains=q)
+            .values_list("name", flat=True)[:20]
+        )
+        popular_matches = [t for t in POPULAR_TAGS if q in t.lower() and t not in db_tags]
+        suggestions = db_tags + popular_matches
+    else:
+        suggestions = list(POPULAR_TAGS)
+    return JsonResponse({"suggestions": suggestions[:20]})
 

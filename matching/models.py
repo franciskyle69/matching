@@ -163,6 +163,45 @@ class Comment(models.Model):
         return f"Comment<{self.author_id} on session={self.session_id} ann={self.announcement_id}>"
 
 
+class UserPost(models.Model):
+    CATEGORY_CHOICES = (
+        ("achievement", "Achievement"),
+        ("project", "Project"),
+        ("update", "Update"),
+    )
+    author = models.ForeignKey(User, on_delete=models.CASCADE, related_name="posts")
+    text = models.TextField(blank=True)
+    image = models.ImageField(upload_to="posts/%Y/%m/", blank=True, null=True)
+    category = models.CharField(max_length=20, choices=CATEGORY_CHOICES, default="update")
+    likes = models.ManyToManyField(User, related_name="liked_posts", blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["author", "-created_at"], name="userpost_author_created"),
+        ]
+
+    def __str__(self) -> str:
+        return f"Post<{self.author_id} {self.category} @ {self.created_at}>"
+
+
+class PostComment(models.Model):
+    post = models.ForeignKey(UserPost, on_delete=models.CASCADE, related_name="comments")
+    author = models.ForeignKey(User, on_delete=models.CASCADE, related_name="post_comments")
+    content = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["created_at"]
+        indexes = [
+            models.Index(fields=["post", "created_at"], name="postcmt_post_created"),
+        ]
+
+    def __str__(self) -> str:
+        return f"PostComment<{self.author_id} on post={self.post_id}>"
+
+
 class AuditLog(models.Model):
     """Simple audit trail: who did what to which model."""
     user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name="audit_logs")

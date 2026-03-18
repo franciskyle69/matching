@@ -3,6 +3,7 @@ import random
 from django.core.management.base import BaseCommand
 from django.contrib.auth.models import User
 from django.db.models import Q
+from django.db import IntegrityError
 
 from profiles.models import MentorProfile, MenteeProfile
 from profiles.forms import SUBJECT_CHOICES, TOPIC_CHOICES, RATING_CHOICES, ROLE_CHOICES
@@ -54,6 +55,13 @@ class Command(BaseCommand):
         topic_labels = [value for (value, _label) in TOPIC_CHOICES]
         rating_values = [val for (val, _label) in RATING_CHOICES]
         role_labels = [label for (label, _name) in ROLE_CHOICES]
+        time_slots = [
+            "08:00-10:00",
+            "10:00-12:00",
+            "13:00-15:00",
+            "15:00-17:00",
+            "18:00-20:00",
+        ]
 
         # Seed mentors: mentor1..mentorN
         for i in range(1, mentor_count + 1):
@@ -62,16 +70,27 @@ class Command(BaseCommand):
                 self.stdout.write(self.style.WARNING(f"Skipping existing user {username}"))
                 continue
 
-            user = User.objects.create_user(
-                username=username,
-                email=f"{username}@example.com",
-                password=username,
-            )
+            try:
+                user = User.objects.create_user(
+                    username=username,
+                    email=f"{username}@example.com",
+                    password=username,
+                )
+            except IntegrityError:
+                self.stdout.write(self.style.WARNING(f"Skipping existing user {username}"))
+                continue
             # Randomized but reasonable defaults so mentors look "real"
             subjects_sample = random.sample(subject_labels, k=1) if subject_labels else []
             topics_sample = random.sample(topic_labels, k=1) if topic_labels else []
             expertise = random.choice(rating_values) if rating_values else 3
             role = random.choice(role_labels) if role_labels else "Senior IT Student"
+            gender = random.choice(["male", "female"])
+            # Give each mentor 1–3 random time slots.
+            mentor_slots = (
+                random.sample(time_slots, k=random.randint(1, min(3, len(time_slots))))
+                if time_slots
+                else []
+            )
 
             mentor_profile, _ = MentorProfile.objects.get_or_create(
                 user=user,
@@ -81,13 +100,14 @@ class Command(BaseCommand):
                     "gpa": None,
                     "avatar_url": "",
                     "skills": [],
-                    "availability": [],
+                    "availability": mentor_slots,
                     "interests": "",
                     "capacity": 3,
                     "role": role,
                     "subjects": subjects_sample,
                     "topics": topics_sample,
                     "expertise_level": expertise,
+                    "gender": gender,
                     "approved": True,
                 },
             )
@@ -101,15 +121,27 @@ class Command(BaseCommand):
                 self.stdout.write(self.style.WARNING(f"Skipping existing user {username}"))
                 continue
 
-            user = User.objects.create_user(
-                username=username,
-                email=f"{username}@example.com",
-                password=username,
-            )
+            try:
+                user = User.objects.create_user(
+                    username=username,
+                    email=f"{username}@example.com",
+                    password=username,
+                )
+            except IntegrityError:
+                self.stdout.write(self.style.WARNING(f"Skipping existing user {username}"))
+                continue
             # Randomized mentee questionnaire answers so matching can run immediately
             mentee_subjects = random.sample(subject_labels, k=min(2, len(subject_labels))) if subject_labels else []
             mentee_topics = random.sample(topic_labels, k=min(3, len(topic_labels))) if topic_labels else []
             difficulty = random.choice(rating_values) if rating_values else 3
+            sex = random.choice(["male", "female"])
+            # Give each mentee 1–2 random time slots so some, but not all,
+            # will overlap with mentors.
+            mentee_slots = (
+                random.sample(time_slots, k=random.randint(1, min(2, len(time_slots))))
+                if time_slots
+                else []
+            )
 
             mentee_profile, _ = MenteeProfile.objects.get_or_create(
                 user=user,
@@ -119,13 +151,13 @@ class Command(BaseCommand):
                     "gpa": None,
                     "avatar_url": "",
                     "skills": [],
-                    "availability": [],
+                    "availability": mentee_slots,
                     "interests": "",
                     "campus": "Main",
                     "student_id_no": f"S{i:05d}",
                     "contact_no": "",
                     "admission_type": "Regular",
-                    "sex": "",
+                    "sex": sex,
                     "subjects": mentee_subjects,
                     "topics": mentee_topics,
                     "difficulty_level": difficulty,

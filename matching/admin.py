@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Subject, Topic, MentoringSession, Notification, MenteeMentorRequest
+from .models import Subject, Topic, MentoringSession, Notification, MenteeMentorRequest, UserPost, PostComment
 
 
 @admin.register(Subject)
@@ -34,3 +34,17 @@ class MenteeMentorRequestAdmin(admin.ModelAdmin):
 class NotificationAdmin(admin.ModelAdmin):
     list_display = ("user", "message", "is_read", "created_at")
     list_filter = ("is_read",)
+
+
+@admin.register(UserPost)
+class UserPostAdmin(admin.ModelAdmin):
+    list_display = ("author", "category", "created_at")
+    list_filter = ("category",)
+    search_fields = ("author__username", "text")
+
+
+@admin.register(PostComment)
+class PostCommentAdmin(admin.ModelAdmin):
+    list_display = ("author", "post", "created_at")
+    list_filter = ("created_at",)
+    search_fields = ("author__username", "content")

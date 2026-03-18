@@ -724,8 +724,8 @@
     --tw-gradient-to: color-mix(in oklab, #180027 10%, transparent);
     --tw-gradient-stops: var(--tw-gradient-via-stops, var(--tw-gradient-position), var(--tw-gradient-from) var(--tw-gradient-from-position), var(--tw-gradient-to) var(--tw-gradient-to-position));
   }
-  .to-\[\#b6abff\] {
-    --tw-gradient-to: #b6abff;
+  .to-\[\#b8b6d3\] {
+    --tw-gradient-to: #b8b6d3;
     --tw-gradient-stops: var(--tw-gradient-via-stops, var(--tw-gradient-position), var(--tw-gradient-from) var(--tw-gradient-from-position), var(--tw-gradient-to) var(--tw-gradient-to-position));
   }
   .to-black {

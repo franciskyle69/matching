@@ -27,7 +27,13 @@
           <div className="auth-card-right">
             <h2 className="auth-title">Login</h2>
             <p className="auth-subtitle">Welcome back! Please sign in to your account</p>
-            <div className="auth-form">
+            <form
+              className="auth-form"
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleSignIn();
+              }}
+            >
               <div className="auth-field">
                 <label>Email or username</label>
                 <input placeholder="your@email.com or username" value={signInForm.username} onChange={(e) => setSignInForm({ ...signInForm, username: e.target.value })} />
@@ -49,7 +55,7 @@
                 <label className="checkbox-row"><input type="checkbox" /> Remember me</label>
                 <button className="link-button" type="button" onClick={() => { window.location.href = "/accounts/password_reset/"; }}>Forgot password?</button>
               </div>
-              <button className="auth-primary" onClick={handleSignIn} disabled={signInLoading}>
+              <button type="submit" className="auth-primary" disabled={signInLoading}>
                 {signInLoading ? <span className="loading-inline"><LoadingSpinner inline /> Signing in…</span> : "Sign In"}
               </button>
               <div className="auth-divider"><span>Or continue with</span></div>
@@ -59,8 +65,8 @@
                   Google
                 </button>
               </div>
-              <div className="auth-footer">Don't have an account? <button className="link-button" onClick={() => setActiveTab("signup")}>Sign up</button></div>
-            </div>
+              <div className="auth-footer">Don't have an account? <button type="button" className="link-button" onClick={() => setActiveTab("signup")}>Sign up</button></div>
+            </form>
           </div>
         </div>
       </div>
@@ -88,7 +94,13 @@
           <div className="auth-card-right">
             <h2 className="auth-title">Sign Up</h2>
             <p className="auth-subtitle">Create your account to get started</p>
-            <div className="auth-form">
+            <form
+              className="auth-form"
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleSignUp();
+              }}
+            >
               <div className="auth-field">
                 <label>Role</label>
                 <select value={signUpForm.role} onChange={(e) => setSignUpForm({ ...signUpForm, role: e.target.value })}>
@@ -123,9 +135,9 @@
                   </button>
                 </div>
               </div>
-              <button className="auth-primary" onClick={handleSignUp}>Sign Up</button>
-              <div className="auth-footer">Already have an account? <button className="link-button" onClick={() => setActiveTab("signin")}>Sign in</button></div>
-            </div>
+              <button type="submit" className="auth-primary">Sign Up</button>
+              <div className="auth-footer">Already have an account? <button type="button" className="link-button" onClick={() => setActiveTab("signin")}>Sign in</button></div>
+            </form>
           </div>
         </div>
       </div>

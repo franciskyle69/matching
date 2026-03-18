@@ -15,9 +15,12 @@ It follows the current feature schema used in `features.build_features`:
   mentor_expertise_level
   label
 
-Run from the Django project root:
+Run from the Django project root, e.g.:
 
-    python -m matching.ml.generate_synthetic_data
+    # Single CSV (used by train_xgb)
+    python -m matching.ml.generate_synthetic_data --rows 2000
+
+    # Train/val/test splits
     python -m matching.ml.generate_synthetic_data --rows 2500 --split
 """
 
@@ -200,7 +203,8 @@ def main():
         print(f"Val: {val_n} rows -> {here / 'synthetic_val.csv'}")
         print(f"Test: {test_n} rows -> {here / 'synthetic_test.csv'}")
     else:
-        output_path = here / "synthetic_pairs.csv"
+        # Match the existing training default file name.
+        output_path = here / "synthetic_test.csv"
         rows = generate_rows(int(args.rows))
         write_csv(output_path, rows)
         print(f"Synthetic dataset written to: {output_path}")

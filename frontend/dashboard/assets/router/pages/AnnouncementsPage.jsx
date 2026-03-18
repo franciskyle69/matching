@@ -146,7 +146,7 @@
                   type="radio"
                   name="announcement-target"
                   checked={announcementTargetType === "specific"}
-                  onChange={() => setAnnouncementTargetType("specific");}
+                  onChange={() => setAnnouncementTargetType("specific")}
                 />
                 <span>Specific mentees</span>
               </label>
@@ -201,6 +201,25 @@
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="24" height="24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
               </span>
               <p className="muted">No announcements yet.</p>
+              <div className="btn-row" style={{ marginTop: "10px" }}>
+                {isMentor ? (
+                  <button
+                    type="button"
+                    className="btn secondary small"
+                    onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+                  >
+                    Post first announcement
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    className="btn secondary small"
+                    onClick={loadAnnouncements}
+                  >
+                    Refresh announcements
+                  </button>
+                )}
+              </div>
             </div>
           )}
           {!announcementsLoading && announcements.length > 0 && announcements.map((ann) => (

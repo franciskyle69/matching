@@ -2,6 +2,16 @@ from django.db import models
 from django.contrib.auth.models import User
 
 
+class InterestTag(models.Model):
+    name = models.CharField(max_length=50, unique=True)
+
+    class Meta:
+        ordering = ["name"]
+
+    def __str__(self):
+        return self.name
+
+
 class MentorProfile(models.Model):
     GENDER_CHOICES = (
         ("male", "Male"),
@@ -13,9 +23,12 @@ class MentorProfile(models.Model):
     year_level = models.PositiveSmallIntegerField()
     gpa = models.DecimalField(max_digits=3, decimal_places=2, null=True, blank=True)
     avatar_url = models.URLField(blank=True, default="")
+    cover_url = models.URLField(blank=True, default="")
+    bio = models.TextField(max_length=200, blank=True, default="")
     skills = models.JSONField(default=list, blank=True)
     availability = models.JSONField(default=list, blank=True)
     interests = models.TextField(blank=True)
+    interest_tags = models.ManyToManyField(InterestTag, blank=True, related_name="mentor_profiles")
     capacity = models.PositiveSmallIntegerField(default=1)
     role = models.CharField(max_length=50, blank=True)
     subjects = models.JSONField(default=list, blank=True)
@@ -40,9 +53,12 @@ class MenteeProfile(models.Model):
     year_level = models.PositiveSmallIntegerField()
     gpa = models.DecimalField(max_digits=3, decimal_places=2, null=True, blank=True)
     avatar_url = models.URLField(blank=True, default="")
+    cover_url = models.URLField(blank=True, default="")
+    bio = models.TextField(max_length=200, blank=True, default="")
     skills = models.JSONField(default=list, blank=True)
     availability = models.JSONField(default=list, blank=True)
     interests = models.TextField(blank=True)
+    interest_tags = models.ManyToManyField(InterestTag, blank=True, related_name="mentee_profiles")
     campus = models.CharField(max_length=100, blank=True)
     student_id_no = models.CharField(max_length=10, blank=True)
     contact_no = models.CharField(max_length=11, blank=True)

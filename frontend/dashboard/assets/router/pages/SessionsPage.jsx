@@ -99,13 +99,23 @@
   function SessionsPage() {
     const ctx = useContext(AppContext);
     if (!ctx || !ctx.user) return null;
-    const { sessionsLoading, sessionsData, options, topicsBySubject, createForm, setCreateForm, createSessionLoading, rescheduleId, setRescheduleId, rescheduleForm, setRescheduleForm, handleCreateSession, handleReschedule, handleStatusUpdate, handleUpdateMeetingNotes, commentsByKey, commentKey, loadComments, addComment, sessionsPairMenteeId, setSessionsPairMenteeId } = ctx;
+    const { sessionsLoading, sessionsData, options, topicsBySubject, createForm, setCreateForm, createSessionLoading, rescheduleId, setRescheduleId, rescheduleForm, setRescheduleForm, handleCreateSession, handleReschedule, handleStatusUpdate, handleUpdateMeetingNotes, commentsByKey, commentKey, loadComments, addComment, sessionsPairMenteeId, setSessionsPairMenteeId, myMentor, setActiveTab } = ctx;
     const Spinner = LoadingSpinner;
     if (!sessionsData) return null;
     const isMentor = sessionsData.is_mentor;
     const isStaffView = sessionsData.is_staff_view;
     const progressByMentee = sessionsData.progress_by_mentee || [];
-    const acceptedMentees = progressByMentee.length > 0 ? progressByMentee : (options.mentees || []).map((m) => ({ mentee_id: m.id, mentee_username: m.username, total_completed_minutes: 0, progress_percent: 0 }));
+    const acceptedMentees = progressByMentee.length > 0
+      ? progressByMentee
+      : (options.mentees || []).map((m) => ({
+          mentee_id: m.id,
+          mentee_username: m.username,
+          total_completed_minutes: 0,
+          progress_percent: 0,
+          difficulty_subjects: Array.isArray(m.difficulty_subjects) ? m.difficulty_subjects : [],
+          difficulty_topics: Array.isArray(m.difficulty_topics) ? m.difficulty_topics : [],
+          difficulty_level: m.difficulty_level ?? null,
+        }));
 
     const now = new Date();
     const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -148,7 +158,12 @@
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="24" height="24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>
               </span>
               <p className="muted">You have no official mentees yet.</p>
-              <p className="muted" style={{ marginTop: "8px", fontSize: "14px" }}>Accept a mentee in Matching to get a dedicated page and schedule sessions.</p>
+              <p className="muted" style={{ marginTop: "8px", fontSize: "14px" }}>Go to Matching to review mentee requests and accept your first mentee.</p>
+              <div className="btn-row" style={{ marginTop: "10px" }}>
+                <button type="button" className="btn secondary small" onClick={() => setActiveTab("matching")}>
+                  Go to Matching
+                </button>
+              </div>
             </div>
           )}
           {!sessionsLoading && acceptedMentees.length > 0 && (
@@ -174,6 +189,21 @@
 
     const pairEntry = isMentor && sessionsPairMenteeId != null ? acceptedMentees.find((e) => Number(e.mentee_id) === Number(sessionsPairMenteeId)) : null;
     const pairMenteeName = pairEntry ? pairEntry.mentee_username : "Mentee";
+    const normalizeLabel = (value) => String(value || "").trim().toLowerCase();
+    const difficultySubjects = new Set(
+      (pairEntry?.difficulty_subjects || pairEntry?.subjects || []).map(normalizeLabel)
+    );
+    const difficultyTopics = new Set(
+      (pairEntry?.difficulty_topics || pairEntry?.topics || []).map(normalizeLabel)
+    );
+    const selectedSubject = (options.subjects || []).find(
+      (s) => String(s.id) === String(createForm.subject_id)
+    );
+    const selectedTopic = (topicsBySubject[createForm.subject_id] || []).find(
+      (t) => String(t.id) === String(createForm.topic_id)
+    );
+    const selectedSubjectNeedsHelp = !!(selectedSubject && difficultySubjects.has(normalizeLabel(selectedSubject.name)));
+    const selectedTopicNeedsHelp = !!(selectedTopic && difficultyTopics.has(normalizeLabel(selectedTopic.name)));
     const upcomingForPair = isMentor && sessionsPairMenteeId != null ? (sessionsData.upcoming || []).filter((s) => Number(s.mentee_id) === Number(sessionsPairMenteeId)) : (sessionsData.upcoming || []);
     const historyForPair = isMentor && sessionsPairMenteeId != null ? (sessionsData.history || []).filter((s) => Number(s.mentee_id) === Number(sessionsPairMenteeId)) : (sessionsData.history || []);
     const upcomingBuckets = groupUpcomingByBucket(upcomingForPair);
@@ -185,6 +215,32 @@
         )}
         <h1 className="page-title">{isMentor && !isStaffView && sessionsPairMenteeId != null ? `Sessions with ${pairMenteeName}` : "Sessions"}</h1>
         <p className="page-subtitle">{isStaffView ? "View all mentoring sessions." : isMentor && sessionsPairMenteeId != null ? "Schedule and manage sessions for this mentee. Only official mentor–mentee pairs (accepted in Matching) can create sessions." : "Schedule and manage mentoring sessions."}</p>
+        {!sessionsLoading && !isStaffView && !isMentor && myMentor && (
+          <div className="mentee-official-mentor-card" style={{ marginTop: "8px" }}>
+            <div className="mentee-official-mentor-main">
+              <div className="mentee-official-mentor-avatar">
+                <div className="sidebar-avatar-wrapper">
+                  {myMentor.avatar_url ? (
+                    <img src={myMentor.avatar_url} alt={myMentor.username} className="sidebar-avatar" />
+                  ) : (
+                    <div className="sidebar-avatar fallback">
+                      {(myMentor.username || "?").slice(0, 1).toUpperCase()}
+                    </div>
+                  )}
+                </div>
+              </div>
+              <div className="mentee-official-mentor-text">
+                <p className="stat-label" style={{ marginBottom: 2 }}>Your official mentor</p>
+                <p className="stat-value" style={{ marginBottom: 2 }}>{myMentor.username}</p>
+                {myMentor.accepted_at && (
+                  <p className="muted" style={{ fontSize: "12px" }}>
+                    Accepted {formatDate(myMentor.accepted_at)}
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
         {!sessionsLoading && isMentor && !isStaffView && sessionsPairMenteeId != null && !pairEntry && (
           <div className="sessions-pair-not-found" style={{ padding: "12px 16px", background: "var(--surface-2)", borderRadius: "8px", marginBottom: "16px" }}>
             <p className="muted" style={{ margin: 0 }}>This mentee is not in your official list. Only accepted mentor–mentee pairs can schedule sessions. Go to Matching to accept mentees.</p>
@@ -241,9 +297,63 @@
             {isMentor && !isStaffView && sessionsPairMenteeId != null && pairEntry && (
               <div className="session-create-card">
                 <h2>New session with {pairMenteeName}</h2>
+                <div
+                  className="session-focus-note"
+                  title="These are areas where the mentee marked 'Have Difficulty' in their questionnaire."
+                >
+                  <strong>Mentee needs help in:</strong>
+                  {difficultySubjects.size === 0 && difficultyTopics.size === 0 ? (
+                    <span className="muted"> No specific difficulty areas reported yet.</span>
+                  ) : (
+                    <div className="session-focus-chips">
+                      {(pairEntry?.difficulty_subjects || []).map((name) => (
+                        <span key={`subj-${name}`} className="session-focus-chip needs-help">
+                          {name} <span className="session-focus-badge">Needs Help</span>
+                        </span>
+                      ))}
+                      {(pairEntry?.difficulty_topics || []).map((name) => (
+                        <span key={`topic-${name}`} className="session-focus-chip needs-help">
+                          {name} <span className="session-focus-badge">Needs Help</span>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
                 <div className="form-grid">
-                  <div><label>Subject</label><select value={createForm.subject_id} onChange={(e) => setCreateForm({ ...createForm, subject_id: e.target.value, topic_id: "" })}><option value="">Select subject</option>{(options.subjects || []).map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</select></div>
-                  <div><label>Topic</label><select value={createForm.topic_id} onChange={(e) => setCreateForm({ ...createForm, topic_id: e.target.value })}><option value="">Select topic</option>{(topicsBySubject[createForm.subject_id] || []).map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}</select></div>
+                  <div className={"session-create-field " + (selectedSubjectNeedsHelp ? "needs-help" : "")}>
+                    <label>Subject</label>
+                    <select value={createForm.subject_id} onChange={(e) => setCreateForm({ ...createForm, subject_id: e.target.value, topic_id: "" })}>
+                      <option value="">Select subject</option>
+                      {(options.subjects || []).map((s) => {
+                        const needsHelp = difficultySubjects.has(normalizeLabel(s.name));
+                        return (
+                          <option key={s.id} value={s.id}>
+                            {s.name}{needsHelp ? " - Needs Help" : ""}
+                          </option>
+                        );
+                      })}
+                    </select>
+                    {selectedSubjectNeedsHelp && (
+                      <p className="session-needs-help-helper">This subject is marked as a difficulty area.</p>
+                    )}
+                  </div>
+                  <div className={"session-create-field " + (selectedTopicNeedsHelp ? "needs-help" : "")}>
+                    <label>Topic</label>
+                    <select value={createForm.topic_id} onChange={(e) => setCreateForm({ ...createForm, topic_id: e.target.value })}>
+                      <option value="">Select topic</option>
+                      {(topicsBySubject[createForm.subject_id] || []).map((t) => {
+                        const needsHelp = difficultyTopics.has(normalizeLabel(t.name));
+                        return (
+                          <option key={t.id} value={t.id}>
+                            {t.name}{needsHelp ? " - Needs Help" : ""}
+                          </option>
+                        );
+                      })}
+                    </select>
+                    {selectedTopicNeedsHelp && (
+                      <p className="session-needs-help-helper">This topic is marked as a difficulty area.</p>
+                    )}
+                  </div>
                   <div><label>Date & time</label><input type="datetime-local" value={createForm.scheduled_at} onChange={(e) => setCreateForm({ ...createForm, scheduled_at: e.target.value })} /></div>
                   <div><label>Duration</label><div className="duration-presets" style={{ marginBottom: "8px" }}>{[30, 60, 90].map((m) => <button key={m} type="button" className={Number(createForm.duration_minutes) === m ? "active" : ""} onClick={() => setCreateForm({ ...createForm, duration_minutes: m })}>{m} min</button>)}</div><input type="number" min="15" step="15" value={createForm.duration_minutes} onChange={(e) => setCreateForm({ ...createForm, duration_minutes: e.target.value })} /></div>
                   <div style={{ gridColumn: "1 / -1" }}><label>Notes (optional)</label><textarea value={createForm.notes} onChange={(e) => setCreateForm({ ...createForm, notes: e.target.value })} placeholder="Agenda, materials…" /></div>
@@ -258,7 +368,9 @@
                   <span className="fancy-empty-icon" aria-hidden="true">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="24" height="24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></svg>
                   </span>
-                  <p className="muted">No upcoming sessions.</p>
+                  <p className="muted">
+                    No upcoming sessions{isMentor && sessionsPairMenteeId != null ? " with this mentee yet. Use the form above to schedule your first meeting." : "."}
+                  </p>
                 </div>
               )}
               {upcomingForPair.length > 0 && (

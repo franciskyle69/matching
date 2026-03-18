@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import MentorProfile, MenteeProfile
+from .models import MentorProfile, MenteeProfile, InterestTag
 from matching.models import Notification
 
 
@@ -27,3 +27,9 @@ class MenteeProfileAdmin(admin.ModelAdmin):
     list_display = ("user", "program", "year_level")
     search_fields = ("user__username", "program")
     list_filter = ("program", "year_level")
+
+
+@admin.register(InterestTag)
+class InterestTagAdmin(admin.ModelAdmin):
+    list_display = ("name",)
+    search_fields = ("name",)

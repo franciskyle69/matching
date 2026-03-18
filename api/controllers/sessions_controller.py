@@ -249,10 +249,23 @@ def sessions_list(request):
         accepted_mentee_ids = MenteeMentorRequest.objects.filter(
             mentor=mentor, accepted=True
         ).values_list("mentee_id", flat=True).distinct()
-        mentee_options = [
-            _serialize_mentee(m)
-            for m in MenteeProfile.objects.filter(id__in=accepted_mentee_ids).select_related("user")
-        ]
+        mentee_options = []
+        for m in MenteeProfile.objects.filter(
+            id__in=accepted_mentee_ids
+        ).select_related("user"):
+            item = _serialize_mentee(m)
+            item["difficulty_subjects"] = (
+                m.subjects
+                if isinstance(m.subjects, list)
+                else ([m.subjects] if m.subjects else [])
+            )
+            item["difficulty_topics"] = (
+                m.topics
+                if isinstance(m.topics, list)
+                else ([m.topics] if m.topics else [])
+            )
+            item["difficulty_level"] = m.difficulty_level
+            mentee_options.append(item)
     else:
         mentee_options = []
 
@@ -261,7 +274,9 @@ def sessions_list(request):
     progress = None
     progress_by_mentee = []
     if mentor:
-        for m in MenteeProfile.objects.filter(id__in=accepted_mentee_ids or []).select_related("user"):
+        for m in MenteeProfile.objects.filter(
+            id__in=accepted_mentee_ids or []
+        ).select_related("user"):
             total = (
                 MentoringSession.objects.filter(
                     mentor=mentor, mentee=m, status="completed"
@@ -274,6 +289,17 @@ def sessions_list(request):
                 "mentee_username": m.user.username,
                 "total_completed_minutes": total,
                 "progress_percent": pct,
+                "difficulty_subjects": (
+                    m.subjects
+                    if isinstance(m.subjects, list)
+                    else ([m.subjects] if m.subjects else [])
+                ),
+                "difficulty_topics": (
+                    m.topics
+                    if isinstance(m.topics, list)
+                    else ([m.topics] if m.topics else [])
+                ),
+                "difficulty_level": m.difficulty_level,
             })
     elif mentee:
         acc = MenteeMentorRequest.objects.filter(mentee=mentee, accepted=True).select_related("mentor").first()

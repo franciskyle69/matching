@@ -1,8 +1,173 @@
 (function () {
   "use strict";
   const React = window.React;
-  const { useContext } = React;
+  const { useContext, useState, useEffect, useRef } = React;
   const AppContext = window.DashboardApp.AppContext;
+  const { getCookie, fetchJSON } = window.DashboardApp.Utils || {};
+
+  const BIO_MAX = 200;
+  const MAX_TAGS = 8;
+
+  function BioAndInterestsCard({ bio, tags, onBioSave, onTagsSave }) {
+    const [bioText, setBioText] = useState(bio);
+    const [bioSaving, setBioSaving] = useState(false);
+    const [localTags, setLocalTags] = useState(tags);
+    const [tagInput, setTagInput] = useState("");
+    const [tagsSaving, setTagsSaving] = useState(false);
+    const [suggestions, setSuggestions] = useState([]);
+    const [showSuggestions, setShowSuggestions] = useState(false);
+    const [tagError, setTagError] = useState("");
+    const suggestionsRef = useRef(null);
+    const inputRef = useRef(null);
+    const debounceRef = useRef(null);
+
+    useEffect(() => { setBioText(bio); }, [bio]);
+    useEffect(() => { setLocalTags(tags); }, [tags]);
+
+    useEffect(() => {
+      function handleClickOutside(e) {
+        if (suggestionsRef.current && !suggestionsRef.current.contains(e.target) && inputRef.current && !inputRef.current.contains(e.target)) {
+          setShowSuggestions(false);
+        }
+      }
+      document.addEventListener("mousedown", handleClickOutside);
+      return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, []);
+
+    function handleTagInputChange(value) {
+      setTagInput(value);
+      setTagError("");
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+      if (value.trim().length > 0) {
+        debounceRef.current = setTimeout(async () => {
+          const res = await fetchJSON(`/api/tags/suggestions/?q=${encodeURIComponent(value.trim())}`);
+          if (res.ok) {
+            const existing = new Set(localTags.map((t) => t.toLowerCase()));
+            setSuggestions((res.data.suggestions || []).filter((s) => !existing.has(s.toLowerCase())));
+            setShowSuggestions(true);
+          }
+        }, 250);
+      } else {
+        setSuggestions([]);
+        setShowSuggestions(false);
+      }
+    }
+
+    function addTag(name) {
+      const trimmed = name.trim();
+      if (!trimmed) return;
+      if (localTags.length >= MAX_TAGS) { setTagError("Maximum " + MAX_TAGS + " tags allowed."); return; }
+      if (localTags.some((t) => t.toLowerCase() === trimmed.toLowerCase())) { setTagError("Tag already added."); return; }
+      setLocalTags([...localTags, trimmed]);
+      setTagInput("");
+      setSuggestions([]);
+      setShowSuggestions(false);
+      setTagError("");
+    }
+
+    function removeTag(idx) {
+      setLocalTags(localTags.filter((_, i) => i !== idx));
+      setTagError("");
+    }
+
+    function handleTagKeyDown(e) {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        addTag(tagInput);
+      }
+    }
+
+    async function saveBio() {
+      setBioSaving(true);
+      await onBioSave(bioText);
+      setBioSaving(false);
+    }
+
+    async function saveTags() {
+      setTagsSaving(true);
+      await onTagsSave(localTags);
+      setTagsSaving(false);
+    }
+
+    const bioChanged = bioText !== bio;
+    const tagsChanged = JSON.stringify(localTags) !== JSON.stringify(tags);
+
+    return (
+      <div className="card settings-card settings-card--bio">
+        <div className="settings-card-header">
+          <div className="settings-card-header-main">
+            <div className="settings-card-icon">
+              <span aria-hidden="true">✏️</span>
+            </div>
+            <div>
+              <h2 className="section-title" style={{ borderBottom: "none", paddingBottom: 0 }}>Bio & Interests</h2>
+              <p className="page-subtitle">Tell others about yourself and what you're interested in.</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="settings-section-label">Bio</div>
+        <div className="form-group">
+          <textarea
+            className="bio-textarea"
+            value={bioText}
+            onChange={(e) => setBioText(e.target.value.slice(0, BIO_MAX))}
+            placeholder="Write a short bio about yourself..."
+            rows={3}
+            maxLength={BIO_MAX}
+          />
+          <div className="bio-char-count">
+            <span className={bioText.length > BIO_MAX - 20 ? "bio-char-warn" : ""}>{bioText.length}</span>/{BIO_MAX}
+          </div>
+        </div>
+        <div className="btn-row" style={{ marginTop: "8px" }}>
+          <button className="btn small" onClick={saveBio} disabled={bioSaving || !bioChanged}>
+            {bioSaving ? "Saving\u2026" : bioChanged ? "Save bio" : "No changes"}
+          </button>
+        </div>
+
+        <div className="settings-section-label" style={{ marginTop: "20px" }}>Interests / Tags</div>
+        <p className="field-helper">Add up to {MAX_TAGS} tags. Type and press Enter or select from suggestions.</p>
+
+        <div className="tag-input-container">
+          <div className="tag-input-pills">
+            {localTags.map((t, i) => (
+              <span key={t + i} className="sp-tag-pill sp-tag-pill--editable">
+                {t}
+                <button type="button" className="sp-tag-remove" onClick={() => removeTag(i)} aria-label={"Remove " + t}>&times;</button>
+              </span>
+            ))}
+            {localTags.length < MAX_TAGS && (
+              <input
+                ref={inputRef}
+                type="text"
+                className="tag-input-field"
+                value={tagInput}
+                onChange={(e) => handleTagInputChange(e.target.value)}
+                onKeyDown={handleTagKeyDown}
+                onFocus={() => { if (tagInput.trim()) setShowSuggestions(true); }}
+                placeholder={localTags.length === 0 ? "e.g. Python, Web Dev, UI/UX" : "Add tag\u2026"}
+              />
+            )}
+          </div>
+          {showSuggestions && suggestions.length > 0 && (
+            <div className="tag-suggestions" ref={suggestionsRef}>
+              {suggestions.map((s) => (
+                <button key={s} type="button" className="tag-suggestion-item" onClick={() => addTag(s)}>{s}</button>
+              ))}
+            </div>
+          )}
+        </div>
+        {tagError && <p className="sp-file-error">{tagError}</p>}
+
+        <div className="btn-row" style={{ marginTop: "12px" }}>
+          <button className="btn small" onClick={saveTags} disabled={tagsSaving || !tagsChanged}>
+            {tagsSaving ? "Saving\u2026" : tagsChanged ? "Save interests" : "No changes"}
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   function SettingsPage() {
     const ctx = useContext(AppContext);
@@ -13,6 +178,8 @@
       setSettingsForm,
       settingsSaving,
       handleSettingsSave,
+      handleBioSave,
+      handleTagsSave,
       handleAvatarChange,
       avatarUploading,
       menteeProfile,
@@ -28,6 +195,48 @@
       menteeMatchingSaving,
       handleMenteeMatchingSave,
     } = ctx;
+
+    const [mentorProfileSavedAt, setMentorProfileSavedAt] = useState(0);
+    const [menteeMatchingSavedAt, setMenteeMatchingSavedAt] = useState(0);
+
+    const mentorProfilePristine = !user.mentor_questionnaire_completed && mentorProfileSavedAt === 0
+      ? true
+      : mentorProfileSavedAt !== 0 &&
+        JSON.stringify({
+          subjects: mentorProfile.subjects || [],
+          topics: mentorProfile.topics || [],
+          expertise_level: mentorProfile.expertise_level ?? null,
+          role: mentorProfile.role || "",
+          capacity: mentorProfile.capacity ?? 3,
+          gender: mentorProfile.gender || "",
+          availability: mentorProfile.availability || [],
+        }) === JSON.stringify({
+          subjects: mentorProfile.subjects || [],
+          topics: mentorProfile.topics || [],
+          expertise_level: mentorProfile.expertise_level ?? null,
+          role: mentorProfile.role || "",
+          capacity: mentorProfile.capacity ?? 3,
+          gender: mentorProfile.gender || "",
+          availability: mentorProfile.availability || [],
+        });
+
+    const menteeMatchingPristine = !user.mentee_questionnaire_completed && menteeMatchingSavedAt === 0
+      ? true
+      : menteeMatchingSavedAt !== 0 &&
+        JSON.stringify({
+          subjects: menteeMatching.subjects || [],
+          topics: menteeMatching.topics || [],
+          difficulty_level: menteeMatching.difficulty_level ?? null,
+          availability: menteeMatching.availability || [],
+        }) === JSON.stringify({
+          subjects: menteeMatching.subjects || [],
+          topics: menteeMatching.topics || [],
+          difficulty_level: menteeMatching.difficulty_level ?? null,
+          availability: menteeMatching.availability || [],
+        });
+
+    const mentorProfileJustSaved = mentorProfileSavedAt > 0 && Date.now() - mentorProfileSavedAt < 2000;
+    const menteeMatchingJustSaved = menteeMatchingSavedAt > 0 && Date.now() - menteeMatchingSavedAt < 2000;
 
     const SUBJECT_CHOICES = [
       "Computer Programming",
@@ -74,37 +283,137 @@
       return [`${start}-${end}`];
     }
 
-    const mentorRange = firstAvailabilityRange(mentorProfile.availability, "08:00", "17:00");
-    const menteeRange = firstAvailabilityRange(menteeMatching.availability, "08:00", "17:00");
+    const [mentorAvailabilityDraft, setMentorAvailabilityDraft] = useState(() =>
+      firstAvailabilityRange(mentorProfile.availability, "08:00", "17:00")
+    );
+    const [menteeAvailabilityDraft, setMenteeAvailabilityDraft] = useState(() =>
+      firstAvailabilityRange(menteeMatching.availability, "08:00", "17:00")
+    );
+
+    useEffect(() => {
+      setMentorAvailabilityDraft(firstAvailabilityRange(mentorProfile.availability, "08:00", "17:00"));
+    }, [mentorProfile.availability]);
+
+    useEffect(() => {
+      setMenteeAvailabilityDraft(firstAvailabilityRange(menteeMatching.availability, "08:00", "17:00"));
+    }, [menteeMatching.availability]);
 
     return (
-      <>
-        <div className="card settings-card">
-          <h1 className="page-title">Account settings</h1>
-          <p className="page-subtitle">Update your profile details.</p>
-          <div className="form-grid">
-            <div><label>Username</label><input value={settingsForm.username} onChange={(e) => setSettingsForm({ ...settingsForm, username: e.target.value })} placeholder="Your username" /></div>
-            <div><label>Email</label><input type="email" value={settingsForm.email} onChange={(e) => setSettingsForm({ ...settingsForm, email: e.target.value })} placeholder="your@email.com" /></div>
-            <div>
-              <label>Profile picture</label>
-              <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                <div className="sidebar-avatar-wrapper">{settingsForm.avatar_url ? <img src={settingsForm.avatar_url} alt="Profile preview" className="sidebar-avatar" /> : <div className="sidebar-avatar fallback">{(settingsForm.username || user.username || "?").slice(0, 1).toUpperCase()}</div>}</div>
-                <div><input type="file" accept="image/*" onChange={handleAvatarChange} disabled={avatarUploading} />{avatarUploading && <div className="muted" style={{ fontSize: "12px", marginTop: "4px" }}>Uploading...</div>}</div>
+      <div className="settings-page-grid">
+        <div className="card settings-card settings-card--account">
+          <div className="settings-card-header">
+            <div className="settings-card-header-main">
+              <div className="settings-card-icon">
+                <span aria-hidden="true">👤</span>
+              </div>
+              <div>
+                <h1 className="page-title">Account settings</h1>
+                <p className="page-subtitle">Update your profile details used across the dashboard.</p>
               </div>
             </div>
           </div>
-          <div className="btn-row" style={{ marginTop: "16px" }}><button className="btn" onClick={handleSettingsSave} disabled={settingsSaving}>{settingsSaving ? "Saving..." : "Save changes"}</button></div>
+          <div className="form-grid">
+            <div className="form-group">
+              <label>Username</label>
+              <input
+                value={settingsForm.username}
+                onChange={(e) => setSettingsForm({ ...settingsForm, username: e.target.value })}
+                placeholder="Your username"
+              />
+            </div>
+            <div className="form-group">
+              <label>Email</label>
+              <input
+                type="email"
+                value={settingsForm.email}
+                onChange={(e) => setSettingsForm({ ...settingsForm, email: e.target.value })}
+                placeholder="your@email.com"
+              />
+            </div>
+            <div className="form-group" style={{ gridColumn: "1 / -1" }}>
+              <label>Profile picture</label>
+              <div className="settings-avatar-row">
+                <button
+                  type="button"
+                  className="settings-avatar-uploader"
+                  onClick={() => {
+                    const input = document.getElementById("settings-avatar-input");
+                    if (input) input.click();
+                  }}
+                >
+                  <div className="settings-avatar-preview">
+                    {settingsForm.avatar_url ? (
+                      <img
+                        src={settingsForm.avatar_url}
+                        alt="Profile preview"
+                        className="settings-avatar-img"
+                      />
+                    ) : (
+                      <div className="settings-avatar-fallback">
+                        {(settingsForm.username || user.username || "?")
+                          .slice(0, 1)
+                          .toUpperCase()}
+                      </div>
+                    )}
+                  </div>
+                  <div className="settings-avatar-overlay">
+                    <span className="settings-avatar-overlay-icon" aria-hidden="true">📷</span>
+                    <span className="settings-avatar-overlay-text">
+                      {avatarUploading ? "Uploading…" : "Change photo"}
+                    </span>
+                  </div>
+                </button>
+                <div className="settings-avatar-meta">
+                  <input
+                    id="settings-avatar-input"
+                    type="file"
+                    accept="image/*"
+                    onChange={handleAvatarChange}
+                    disabled={avatarUploading}
+                    style={{ display: "none" }}
+                  />
+                  <p className="field-helper">
+                    Use a clear, front-facing photo so mentees and mentors can recognize you.
+                  </p>
+                  <p className="field-helper">
+                    Recommended: square image, at least 256×256px.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className="btn-row settings-card-footer">
+            <button className="btn" onClick={handleSettingsSave} disabled={settingsSaving}>
+              {settingsSaving ? "Saving..." : "Save changes"}
+            </button>
+          </div>
         </div>
+        <BioAndInterestsCard
+          bio={settingsForm.bio || ""}
+          tags={Array.isArray(settingsForm.tags) ? settingsForm.tags : []}
+          onBioSave={handleBioSave}
+          onTagsSave={handleTagsSave}
+        />
+
         {user.role === "mentee" && (
-          <div className="card" style={{ marginTop: 16 }}>
-            <h2 className="section-title">General information</h2>
-            <p className="page-subtitle">
-              Some fields are managed by the school and shown for reference only.
-            </p>
+          <div className="card settings-card settings-card--general">
+            <div className="settings-card-header">
+              <div className="settings-card-header-main">
+                <div className="settings-card-icon">
+                  <span aria-hidden="true">📋</span>
+                </div>
+                <div>
+                  <h2 className="section-title">General information</h2>
+                  <p className="page-subtitle">
+                    Some fields are managed by the school and shown for reference only.
+                  </p>
+                </div>
+              </div>
+            </div>
 
             <div className="settings-section-label">Identity</div>
             <div className="form-grid">
-              <div>
+              <div className="form-group">
                 <label>Campus *</label>
                 <input
                   value={menteeProfile.campus}
@@ -114,7 +423,7 @@
                   placeholder="Campus"
                 />
               </div>
-              <div>
+              <div className="form-group">
                 <label>Student ID No. *</label>
                 <input
                   value={menteeProfile.student_id_no}
@@ -134,7 +443,7 @@
 
             <div className="settings-section-label">Program details</div>
             <div className="form-grid">
-              <div>
+              <div className="form-group">
                 <label>Course / Program (read only)</label>
                 <input
                   value={menteeProfile.program}
@@ -146,7 +455,7 @@
                   Set by your school. Contact an administrator if this is incorrect.
                 </p>
               </div>
-              <div>
+              <div className="form-group">
                 <label>Year level (read only)</label>
                 <input
                   type="number"
@@ -165,7 +474,7 @@
 
             <div className="settings-section-label">Contact</div>
             <div className="form-grid">
-              <div>
+              <div className="form-group">
                 <label>Contact No. *</label>
                 <input
                   value={menteeProfile.contact_no}
@@ -181,7 +490,7 @@
                   maxLength={11}
                 />
               </div>
-              <div>
+              <div className="form-group">
                 <label>Admission Type *</label>
                 <input
                   value={menteeProfile.admission_type}
@@ -198,15 +507,18 @@
 
             <div className="settings-section-label">Personal</div>
             <div className="form-grid">
-              <div>
-                <label>Sex *</label>
-                <input
-                  value={menteeProfile.sex}
+              <div className="form-group">
+                <label>Biological sex *</label>
+                <select
+                  value={menteeProfile.sex || ""}
                   onChange={(e) =>
                     setMenteeProfile({ ...menteeProfile, sex: e.target.value })
                   }
-                  placeholder="Sex"
-                />
+                >
+                  <option value="">Select biological sex</option>
+                  <option value="male">Male</option>
+                  <option value="female">Female</option>
+                </select>
               </div>
             </div>
 
@@ -222,9 +534,22 @@
           </div>
         )}
         {(user.role === "mentor" || user.role === "mentee") && (
-          <div className="card matching-questionnaire-card">
-            <h2 className="section-title" style={{ borderBottom: "none", paddingBottom: 0 }}>Matching questionnaire</h2>
-            <p className="page-subtitle matching-questionnaire-subtitle">Keep your mentoring preferences up to date so we can recommend the best mentors and mentees for you.</p>
+          <div className="card matching-questionnaire-card settings-card settings-card--matching settings-card--full-width">
+            <div className="settings-card-header">
+              <div className="settings-card-header-main">
+                <div className="settings-card-icon">
+                  <span aria-hidden="true">✨</span>
+                </div>
+                <div>
+                  <h2 className="section-title" style={{ borderBottom: "none", paddingBottom: 0 }}>
+                    Matching questionnaire
+                  </h2>
+                  <p className="page-subtitle matching-questionnaire-subtitle">
+                    Keep your mentoring preferences up to date so we can recommend the best mentors and mentees for you.
+                  </p>
+                </div>
+              </div>
+            </div>
 
             {user.role === "mentor" && (
               <>
@@ -244,6 +569,9 @@
                 </div>
 
                 <div className="settings-section-label">Subjects you can help with</div>
+                <p className="field-helper">
+                  Pick the subjects where you feel comfortable guiding mentees.
+                </p>
                 <div className="checkbox-group matching-questionnaire-pill-group">
                   {SUBJECT_CHOICES.map((label) => {
                     const checked =
@@ -265,6 +593,7 @@
                               if (idx >= 0) current.splice(idx, 1);
                             }
                             setMentorProfile({ ...mentorProfile, subjects: current });
+                            if (ctx.mentorProfilePristine) ctx.mentorProfilePristine = false;
                           }}
                         />
                         {label}
@@ -274,6 +603,9 @@
                 </div>
 
                 <div className="settings-section-label">Topics you can mentor on</div>
+                <p className="field-helper">
+                  Choose specific concepts you enjoy explaining the most.
+                </p>
                 <div className="checkbox-group matching-questionnaire-pill-group">
                   {TOPIC_CHOICES.map((label) => {
                     const checked =
@@ -295,6 +627,7 @@
                               if (idx >= 0) current.splice(idx, 1);
                             }
                             setMentorProfile({ ...mentorProfile, topics: current });
+                            if (ctx.mentorProfilePristine) ctx.mentorProfilePristine = false;
                           }}
                         />
                         {label}
@@ -304,6 +637,9 @@
                 </div>
 
                 <div className="settings-section-label">Expertise level (1–5)</div>
+                <p className="field-helper">
+                  1 = just starting to tutor in these subjects, 5 = very experienced and confident mentoring others.
+                </p>
                 <div className="checkbox-group matching-questionnaire-levels">
                   {[1, 2, 3, 4, 5].map((n) => (
                     <label key={n} className="checkbox-row">
@@ -320,52 +656,147 @@
                   ))}
                 </div>
 
-                <div className="settings-section-label">Gender</div>
+                <div className="settings-section-label">Maximum mentees you can handle</div>
+                <p className="field-helper">
+                  We will not assign you more mentees than this number.
+                </p>
                 <div className="form-group">
-                  <label>Gender</label>
+                  <label>Max mentees</label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={5}
+                    value={mentorProfile.capacity ?? 3}
+                    onChange={(e) => {
+                      const raw = Number(e.target.value || 1);
+                      const clamped = Math.max(1, Math.min(5, raw));
+                      setMentorProfile({
+                        ...mentorProfile,
+                        capacity: clamped,
+                      });
+                    }}
+                  />
+                </div>
+
+                <div className="settings-section-label">Biological sex</div>
+                <div className="form-group">
+                  <label>Biological sex</label>
                   <select
                     value={mentorProfile.gender || ""}
                     onChange={(e) => setMentorProfile({ ...mentorProfile, gender: e.target.value })}
                   >
-                    <option value="">Select gender</option>
+                    <option value="">Select biological sex</option>
                     <option value="male">Male</option>
                     <option value="female">Female</option>
                   </select>
                 </div>
 
-                <div className="settings-section-label">Available Time</div>
-                <div className="form-grid">
-                  <div>
+                <div className="settings-section-label">
+                  Available Time
+                  {mentorProfileJustSaved && (
+                    <span className="muted" style={{ marginLeft: "8px", fontSize: "12px" }}>
+                      ✓ Saved
+                    </span>
+                  )}
+                </div>
+                <div className="time-range-row">
+                  <div className="time-field">
                     <label>Start time</label>
-                    <input
-                      type="time"
-                      min={MIN_AVAILABLE_TIME}
-                      max={MAX_AVAILABLE_TIME}
-                      value={mentorRange.start}
-                      onChange={(e) => setMentorProfile({ ...mentorProfile, availability: toSingleAvailabilityRange(e.target.value, mentorRange.end) })}
-                    />
+                    <div className="time-input-wrapper">
+                      <input
+                        type="time"
+                        className="time-input"
+                        min={MIN_AVAILABLE_TIME}
+                        max={MAX_AVAILABLE_TIME}
+                        value={mentorAvailabilityDraft.start}
+                        onChange={(e) =>
+                          setMentorAvailabilityDraft({
+                            ...mentorAvailabilityDraft,
+                            start: e.target.value,
+                          })
+                        }
+                      />
+                    </div>
                   </div>
-                  <div>
+                  <div className="time-field">
                     <label>End time</label>
-                    <input
-                      type="time"
-                      min={MIN_AVAILABLE_TIME}
-                      max={MAX_AVAILABLE_TIME}
-                      value={mentorRange.end}
-                      onChange={(e) => setMentorProfile({ ...mentorProfile, availability: toSingleAvailabilityRange(mentorRange.start, e.target.value) })}
-                    />
+                    <div className="time-input-wrapper">
+                      <input
+                        type="time"
+                        className="time-input"
+                        min={MIN_AVAILABLE_TIME}
+                        max={MAX_AVAILABLE_TIME}
+                        value={mentorAvailabilityDraft.end}
+                        onChange={(e) =>
+                          setMentorAvailabilityDraft({
+                            ...mentorAvailabilityDraft,
+                            end: e.target.value,
+                          })
+                        }
+                      />
+                    </div>
                   </div>
                 </div>
-                <p className="field-helper">Choose one availability range between 08:00 and 20:00.</p>
+                <div className="btn-row" style={{ marginTop: "8px", marginBottom: "4px" }}>
+                  <button
+                    type="button"
+                    className="btn secondary small"
+                    onClick={() => {
+                      const newSlots = toSingleAvailabilityRange(
+                        mentorAvailabilityDraft.start,
+                        mentorAvailabilityDraft.end
+                      );
+                      if (!Array.isArray(newSlots) || newSlots.length === 0) return;
+                      const current = Array.isArray(mentorProfile.availability)
+                        ? [...mentorProfile.availability]
+                        : [];
+                      newSlots.forEach((slot) => {
+                        if (!current.includes(slot)) current.push(slot);
+                      });
+                      const updated = { ...mentorProfile, availability: current };
+                      setMentorProfile(updated);
+                    }}
+                  >
+                    Add timeframe
+                  </button>
+                </div>
+                <p className="field-helper">
+                  You can add multiple availability ranges between 08:00 and 20:00. We&apos;ll match you with people whose times overlap these ranges.
+                </p>
+                {Array.isArray(mentorProfile.availability) && mentorProfile.availability.length > 0 && (
+                  <div className="availability-tags">
+                    {mentorProfile.availability.map((slot) => (
+                      <button
+                        key={slot}
+                        type="button"
+                        className="availability-tag"
+                        onClick={() => {
+                          const next = mentorProfile.availability.filter((s) => s !== slot);
+                          setMentorProfile({ ...mentorProfile, availability: next });
+                        }}
+                      >
+                        <span>{slot}</span>
+                        <span className="availability-tag-remove" aria-hidden="true">×</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
 
-                <div className="btn-row" style={{ marginTop: "16px" }}>
+                <div className="btn-row" style={{ marginTop: "16px", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
                   <button
                     className="btn"
-                    onClick={handleMentorProfileSave}
+                    onClick={async () => {
+                      await handleMentorProfileSave();
+                      setMentorProfileSavedAt(Date.now());
+                    }}
                     type="button"
-                    disabled={mentorProfileSaving}
+                    disabled={mentorProfileSaving || mentorProfilePristine}
                   >
-                    {mentorProfileSaving ? "Saving..." : "Save mentor questionnaire"}
+                    {mentorProfileSaving
+                      ? "Saving..."
+                      : mentorProfilePristine
+                        ? "No changes yet"
+                        : "Save mentor questionnaire"}
                   </button>
                 </div>
               </>
@@ -436,6 +867,9 @@
                     </div>
 
                     <div className="settings-section-label">Difficulty level (1–5)</div>
+                    <p className="field-helper">
+                      1 = course feels very easy right now, 5 = you&apos;re finding it very difficult and need a lot of help.
+                    </p>
                     <div className="checkbox-group matching-questionnaire-levels">
                       {[1, 2, 3, 4, 5].map((n) => (
                         <label key={n} className="checkbox-row">
@@ -452,58 +886,112 @@
                       ))}
                     </div>
 
-                    <div className="settings-section-label">Preferred Mentor Gender</div>
-                    <div className="checkbox-group matching-questionnaire-levels">
-                      {[
-                        { id: "male", label: "Male" },
-                        { id: "female", label: "Female" },
-                        { id: "no_preference", label: "No Preference" },
-                      ].map((choice) => (
-                        <label key={choice.id} className="checkbox-row">
-                          <input
-                            type="radio"
-                            name="preferred-mentor-gender"
-                            checked={(menteeMatching.preferred_gender || "no_preference") === choice.id}
-                            onChange={() => setMenteeMatching({ ...menteeMatching, preferred_gender: choice.id })}
-                          />
-                          {choice.label}
-                        </label>
-                      ))}
+                    <div className="settings-section-label">
+                      Available Time
+                      {menteeMatchingJustSaved && (
+                        <span className="muted" style={{ marginLeft: "8px", fontSize: "12px" }}>
+                          ✓ Saved
+                        </span>
+                      )}
                     </div>
-
-                    <div className="settings-section-label">Available Time</div>
-                    <div className="form-grid">
-                      <div>
+                    <div className="time-range-row">
+                      <div className="time-field">
                         <label>Start time</label>
-                        <input
-                          type="time"
-                          min={MIN_AVAILABLE_TIME}
-                          max={MAX_AVAILABLE_TIME}
-                          value={menteeRange.start}
-                          onChange={(e) => setMenteeMatching({ ...menteeMatching, availability: toSingleAvailabilityRange(e.target.value, menteeRange.end) })}
-                        />
+                        <div className="time-input-wrapper">
+                          <input
+                            type="time"
+                            className="time-input"
+                            min={MIN_AVAILABLE_TIME}
+                            max={MAX_AVAILABLE_TIME}
+                            value={menteeAvailabilityDraft.start}
+                            onChange={(e) =>
+                              setMenteeAvailabilityDraft({
+                                ...menteeAvailabilityDraft,
+                                start: e.target.value,
+                              })
+                            }
+                          />
+                        </div>
                       </div>
-                      <div>
+                      <div className="time-field">
                         <label>End time</label>
-                        <input
-                          type="time"
-                          min={MIN_AVAILABLE_TIME}
-                          max={MAX_AVAILABLE_TIME}
-                          value={menteeRange.end}
-                          onChange={(e) => setMenteeMatching({ ...menteeMatching, availability: toSingleAvailabilityRange(menteeRange.start, e.target.value) })}
-                        />
+                        <div className="time-input-wrapper">
+                          <input
+                            type="time"
+                            className="time-input"
+                            min={MIN_AVAILABLE_TIME}
+                            max={MAX_AVAILABLE_TIME}
+                            value={menteeAvailabilityDraft.end}
+                            onChange={(e) =>
+                              setMenteeAvailabilityDraft({
+                                ...menteeAvailabilityDraft,
+                                end: e.target.value,
+                              })
+                            }
+                          />
+                        </div>
                       </div>
                     </div>
-                    <p className="field-helper">Choose one availability range between 08:00 and 20:00.</p>
+                    <div className="btn-row" style={{ marginTop: "8px", marginBottom: "4px" }}>
+                      <button
+                        type="button"
+                        className="btn secondary small"
+                        onClick={() => {
+                          const newSlots = toSingleAvailabilityRange(
+                            menteeAvailabilityDraft.start,
+                            menteeAvailabilityDraft.end
+                          );
+                          if (!Array.isArray(newSlots) || newSlots.length === 0) return;
+                          const current = Array.isArray(menteeMatching.availability)
+                            ? [...menteeMatching.availability]
+                            : [];
+                          newSlots.forEach((slot) => {
+                            if (!current.includes(slot)) current.push(slot);
+                          });
+                          const updated = { ...menteeMatching, availability: current };
+                          setMenteeMatching(updated);
+                        }}
+                      >
+                        Add timeframe
+                      </button>
+                    </div>
+                    <p className="field-helper">
+                      You can add multiple availability ranges between 08:00 and 20:00. We&apos;ll match you with people whose times overlap these ranges.
+                    </p>
+                    {Array.isArray(menteeMatching.availability) && menteeMatching.availability.length > 0 && (
+                      <div className="availability-tags">
+                        {menteeMatching.availability.map((slot) => (
+                          <button
+                            key={slot}
+                            type="button"
+                            className="availability-tag"
+                            onClick={() => {
+                              const next = menteeMatching.availability.filter((s) => s !== slot);
+                              setMenteeMatching({ ...menteeMatching, availability: next });
+                            }}
+                          >
+                            <span>{slot}</span>
+                            <span className="availability-tag-remove" aria-hidden="true">×</span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
 
-                    <div className="btn-row" style={{ marginTop: "16px" }}>
+                    <div className="btn-row" style={{ marginTop: "16px", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
                       <button
                         className="btn"
                         type="button"
-                        onClick={handleMenteeMatchingSave}
-                        disabled={menteeMatchingSaving}
+                        onClick={async () => {
+                          await handleMenteeMatchingSave();
+                          setMenteeMatchingSavedAt(Date.now());
+                        }}
+                        disabled={menteeMatchingSaving || menteeMatchingPristine}
                       >
-                        {menteeMatchingSaving ? "Saving..." : "Save mentee questionnaire"}
+                        {menteeMatchingSaving
+                          ? "Saving..."
+                          : menteeMatchingPristine
+                            ? "No changes yet"
+                            : "Save mentee questionnaire"}
                       </button>
                     </div>
                   </>
@@ -516,7 +1004,7 @@
             )}
           </div>
         )}
-      </>
+      </div>
     );
   }
 

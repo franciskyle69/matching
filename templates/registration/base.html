@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+  {% load static %}
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}Capstone{% endblock %}</title>
@@ -15,9 +16,9 @@
       --border: #e2e8f0;
       --text: #1e293b;
       --text-muted: #64748b;
-      --accent: #4f46e5;
-      --accent-hover: #4338ca;
-      --accent-light: #eef2ff;
+      --accent: #352c90;
+      --accent-hover: #22177A;
+      --accent-light: #eeedf7;
       --error: #dc2626;
       --error-bg: #fef2f2;
       --radius: 12px;
@@ -29,9 +30,9 @@
       --slate-600: #475569;
       --slate-800: #1e293b;
       --slate-900: #0f172a;
-      --indigo-200: #c7d2fe;
-      --indigo-400: #818cf8;
-      --indigo-600: #4f46e5;
+      --indigo-200: #b8b6d3;
+      --indigo-400: #605EA1;
+      --indigo-600: #352c90;
       --white: #ffffff;
       --green-600: #16a34a;
     }
@@ -41,9 +42,9 @@
       --border: #334155;
       --text: #f1f5f9;
       --text-muted: #94a3b8;
-      --accent: #818cf8;
-      --accent-hover: #6366f1;
-      --accent-light: rgba(99, 102, 241, 0.2);
+      --accent: #605EA1;
+      --accent-hover: #352c90;
+      --accent-light: rgba(53, 44, 144, 0.2);
       --error: #f87171;
       --error-bg: rgba(248, 113, 113, 0.15);
       --shadow: 0 1px 3px rgba(0,0,0,.35);
@@ -54,9 +55,9 @@
       --slate-600: #cbd5e1;
       --slate-800: #e2e8f0;
       --slate-900: #f1f5f9;
-      --indigo-200: rgba(129, 140, 248, 0.3);
-      --indigo-400: #818cf8;
-      --indigo-600: #6366f1;
+      --indigo-200: rgba(96, 94, 161, 0.3);
+      --indigo-400: #605EA1;
+      --indigo-600: #352c90;
       --white: #ffffff;
       --green-600: #22c55e;
     }
@@ -81,10 +82,16 @@
       transition: background .2s ease, border-color .2s ease;
     }
     .app-brand {
-      font-weight: 700;
-      font-size: 1.25rem;
-      color: var(--text);
+      display: inline-flex;
+      align-items: center;
+      gap: .5rem;
       text-decoration: none;
+      color: var(--text);
+    }
+    .app-brand img {
+      height: 32px;
+      width: auto;
+      display: block;
     }
     .app-brand:hover { color: var(--accent); }
     .nav-links {
@@ -198,7 +205,11 @@
       cursor: pointer;
     }
     .theme-toggle:hover { color: var(--accent); border-color: var(--accent); }
-    .main { padding: 2rem 1.5rem; max-width: 480px; margin: 0 auto; }
+    .main {
+      padding: 2rem 1.5rem;
+      max-width: 1100px;
+      margin: 0 auto;
+    }
     .card {
       background: var(--surface);
       border-radius: var(--radius);
@@ -298,6 +309,79 @@
     .footer-links a:hover { text-decoration: underline; }
     .divider { margin: 1rem 0; color: var(--text-muted); }
 
+    /* Split auth layout (welcome panel + form panel) */
+    .auth-shell {
+      max-width: 980px;
+      margin: 3rem auto;
+      border-radius: 18px;
+      overflow: hidden;
+      display: grid;
+      grid-template-columns: minmax(0, 1.1fr) minmax(0, 1.2fr);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow-lg);
+    }
+    .auth-panel-left {
+      padding: 2.25rem 2.5rem;
+      background: radial-gradient(circle at top left, var(--accent-light), var(--surface));
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 1rem;
+    }
+    .auth-panel-left h1 {
+      font-size: 1.75rem;
+      margin: 0 0 .5rem 0;
+    }
+    .auth-panel-left p {
+      margin: 0;
+      color: var(--text-muted);
+      max-width: 26rem;
+    }
+    .auth-panel-left ul {
+      margin: 1rem 0 0 0;
+      padding-left: 1.1rem;
+      color: var(--text-muted);
+      font-size: .9rem;
+    }
+    .auth-panel-left li + li {
+      margin-top: .25rem;
+    }
+    .auth-panel-right {
+      padding: 2.25rem 2.5rem;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 1.25rem;
+    }
+    .auth-panel-right h2 {
+      font-size: 1.3rem;
+      margin: 0 0 .5rem 0;
+    }
+    .auth-panel-subtitle {
+      margin: 0;
+      color: var(--text-muted);
+      font-size: .9rem;
+    }
+    .auth-panel-form {
+      margin-top: 1rem;
+    }
+    @media (max-width: 768px) {
+      .auth-shell {
+        grid-template-columns: minmax(0, 1fr);
+        margin: 1.5rem 1rem;
+      }
+      .auth-panel-left {
+        border-right: none;
+        border-bottom: 1px solid var(--border);
+        padding: 1.75rem 1.5rem;
+      }
+      .auth-panel-right {
+        padding: 1.75rem 1.5rem 1.75rem;
+      }
+    }
+
     /* Sidebar layout (matches React app dashboard) */
     .app-shell { display: flex; min-height: 100vh; }
     .sidebar {
@@ -390,7 +474,9 @@
     </aside>
   {% else %}
   <header class="app-header-simple">
-    <a href="{% url 'home' %}" class="app-brand">Capstone</a>
+    <a href="{% url 'home' %}" class="app-brand">
+      <img src="{% static 'assets/logodark.svg' %}" alt="Mentoring Dashboard" />
+    </a>
     <nav class="nav-links">
       <a href="{% url 'login' %}">Log in</a>
       <a href="{% url 'register' %}">Sign up</a>

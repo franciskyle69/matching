@@ -1,15 +1,22 @@
 (function () {
   "use strict";
   const React = window.React;
-  const { useContext, useState, useEffect } = React;
+  const { useContext, useState, useEffect, useRef } = React;
   const AppContext = window.DashboardApp.AppContext;
   const MainContent = window.DashboardApp.MainContent;
   const MAIN_TABS = (window.DashboardApp && window.DashboardApp.MAIN_TABS) || [];
+  const PLACEHOLDER_AVATAR = window.DashboardApp.PLACEHOLDER_AVATAR || "";
 
   const TAB_ICONS = {
     home: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /><polyline points="9 22 9 12 15 12 15 22" />
+      </svg>
+    ),
+    profile: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <circle cx="12" cy="7" r="4" />
+        <path d="M5 21v-1a5 5 0 0 1 5-5h4a5 5 0 0 1 5 5v1" />
       </svg>
     ),
     "complete-profile": (
@@ -59,6 +66,19 @@
     ),
   };
 
+  function HighlightText({ text, query }) {
+    if (!query || !text) return text || "";
+    const lower = text.toLowerCase();
+    const qLower = query.toLowerCase();
+    const idx = lower.indexOf(qLower);
+    if (idx === -1) return text;
+    return React.createElement(React.Fragment, null,
+      text.slice(0, idx),
+      React.createElement("mark", { className: "search-highlight" }, text.slice(idx, idx + query.length)),
+      text.slice(idx + query.length)
+    );
+  }
+
   function Layout() {
     const ctx = useContext(AppContext);
     if (!ctx) return null;
@@ -71,7 +91,10 @@
       theme,
       toggleTheme,
       handleLogout,
+      globalSearchResults,
+      loadGlobalSearch,
       isAuthenticated,
+      loadUserProfile,
     } = ctx;
 
     const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
@@ -133,8 +156,13 @@
       closeMobileMenu();
     };
 
+    const [searchQuery, setSearchQuery] = useState("");
+    const [searchFocused, setSearchFocused] = useState(false);
+    const [searchHighlight, setSearchHighlight] = useState(0);
+
+    const isStaff = !!(user?.is_staff || user?.role === "staff");
+
     const filteredTabs = MAIN_TABS.filter((tab) => {
-      const isStaff = !!(user?.is_staff || user?.role === "staff");
       if (tab.id === "subjects") return isStaff;
       if (tab.id === "activity-logs") return isStaff;
       if (tab.id === "backup") return isStaff;
@@ -147,6 +175,159 @@
       }
       return true;
     });
+
+    const role = user?.role;
+    const baseShortcuts = [
+      {
+        id: "matching",
+        label: "Go to Matching",
+        hint: "See mentor/mentee matches",
+        roles: ["mentor", "mentee", "staff"],
+        type: "shortcut",
+        actionTab: "matching",
+      },
+      {
+        id: "sessions",
+        label: "Go to Sessions",
+        hint: "View and schedule sessions",
+        roles: ["mentor", "mentee", "staff"],
+        type: "shortcut",
+        actionTab: "sessions",
+      },
+      {
+        id: "announcements",
+        label: "Go to Announcements",
+        hint: "Post or read announcements",
+        roles: ["mentor", "mentee", "staff"],
+        type: "shortcut",
+        actionTab: "announcements",
+      },
+      {
+        id: "settings",
+        label: "Go to Settings",
+        hint: "Update your profile and matching info",
+        roles: ["mentor", "mentee"],
+        type: "shortcut",
+        actionTab: "settings",
+      },
+      {
+        id: "general-info",
+        label: "Open general information",
+        hint: "Settings → your general info",
+        roles: ["mentee"],
+        type: "shortcut",
+        actionTab: "settings",
+      },
+      {
+        id: "mentee-questionnaire",
+        label: "Open mentee questionnaire",
+        hint: "Settings → mentee matching form",
+        roles: ["mentee"],
+        type: "shortcut",
+        actionTab: "settings",
+      },
+      {
+        id: "mentor-questionnaire",
+        label: "Open mentor questionnaire",
+        hint: "Settings → mentor profile form",
+        roles: ["mentor"],
+        type: "shortcut",
+        actionTab: "settings",
+      },
+      {
+        id: "approvals",
+        label: "Review approvals",
+        hint: "Approve mentors and mentees",
+        roles: ["staff"],
+        action: () => goTo("approvals"),
+      },
+      {
+        id: "subjects",
+        label: "Manage subjects",
+        hint: "Edit available subjects and topics",
+        roles: ["staff"],
+        action: () => goTo("subjects"),
+      },
+    ].filter((item) => {
+      if (!role && !isStaff) return true;
+      if (isStaff) return item.roles.includes("staff");
+      return !item.roles.length || item.roles.includes(role);
+    });
+
+    const trimmedQuery = searchQuery.trim().toLowerCase();
+
+    let shortcutMatches = [];
+    if (trimmedQuery) {
+      shortcutMatches = baseShortcuts.filter((item) => {
+        const haystack = (item.label + " " + (item.hint || "")).toLowerCase();
+        return haystack.includes(trimmedQuery);
+      });
+    }
+
+    const entitySuggestions = (globalSearchResults || []).slice(0, 8);
+    // Put entity (user/session) matches first so pressing Enter on a username
+    // prefers profiles over generic shortcuts like \"Go to Matching\".
+    const suggestions = [...entitySuggestions, ...shortcutMatches].slice(0, 8);
+    const showSuggestions =
+      isAuthenticated && searchFocused && trimmedQuery.length > 0;
+
+    useEffect(() => {
+      const q = searchQuery.trim();
+      if (!q) {
+        loadGlobalSearch("");
+        return;
+      }
+      const handle = setTimeout(() => {
+        loadGlobalSearch(q);
+      }, 300);
+      return () => clearTimeout(handle);
+      // We intentionally depend only on searchQuery here. loadGlobalSearch
+      // comes from context and is stable for the lifetime of the app, so
+      // including it can cause unnecessary re-runs.
+    }, [searchQuery]);
+
+    function handleSuggestionSelect(item) {
+      if (!item) return;
+      if (item.type === "shortcut" || item.actionTab) {
+        const tab = item.actionTab || "home";
+        setActiveTab(tab);
+      } else if (item.type === "user") {
+        if (item.id === user?.id) {
+          setActiveTab("profile");
+        } else if (typeof loadUserProfile === "function") {
+          loadUserProfile(item.id);
+        }
+      } else if (item.type === "session") {
+        setActiveTab("sessions");
+      }
+      setSearchQuery("");
+      setSearchHighlight(0);
+      setSearchFocused(false);
+    }
+
+    const handleSearchKeyDown = (e) => {
+      if (!suggestions.length) return;
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        setSearchHighlight((prev) => (prev + 1) % suggestions.length);
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        setSearchHighlight((prev) =>
+          prev - 1 < 0 ? suggestions.length - 1 : prev - 1
+        );
+      } else if (e.key === "Enter") {
+        e.preventDefault();
+        const chosen = suggestions[searchHighlight] || suggestions[0];
+        if (chosen) {
+          handleSuggestionSelect(chosen);
+        }
+      } else if (e.key === "Escape") {
+        setSearchQuery("");
+        setSearchHighlight(0);
+        setSearchFocused(false);
+        e.preventDefault();
+      }
+    };
 
     return (
       <div className="app-shell">
@@ -195,55 +376,13 @@
                     </svg>
                   )}
                 </button>
-                <span className="sidebar-header-title">Dashboard</span>
-              </div>
-              <div className="sidebar-profile">
-                <button
-                  type="button"
-                  className="sidebar-avatar-btn"
-                  onClick={() => goTo("notifications")}
-                  aria-label={unreadCount > 0 ? `${unreadCount} unread notifications` : "Notifications"}
-                  title="Notifications"
-                >
-                  <div className="sidebar-avatar-wrapper">
-                    {user.avatar_url ? (
-                      <img src={user.avatar_url} alt={user.username || "Profile"} className="sidebar-avatar" />
-                    ) : (
-                      <div className="sidebar-avatar fallback">
-                        {(user.username || "?").slice(0, 1).toUpperCase()}
-                      </div>
-                    )}
-                  </div>
-                  {unreadCount > 0 && (
-                    <span className="sidebar-avatar-notification-badge" aria-hidden="true">
-                      {unreadCount > 99 ? "99+" : unreadCount}
-                    </span>
-                  )}
-                </button>
-                <div className="sidebar-profile-text">
-                  <div className="sidebar-name">{user.username}</div>
-                  <div className="sidebar-role-line">
-                    {user.role && (
-                      <span className={"sidebar-role-badge role-" + user.role}>
-                        {user.role === "mentor" ? "Mentor" : user.role === "mentee" ? "Mentee" : "Staff"}
-                      </span>
-                    )}
-                    {!user.role && user.is_staff && <span className="sidebar-role-badge staff">Staff</span>}
-                  </div>
-                </div>
-                <div className="sidebar-profile-actions">
-                  <button
-                    type="button"
-                    className="sidebar-icon-btn"
-                    onClick={() => goTo("notifications")}
-                    aria-label="Notifications"
-                  >
-                    <svg className="sidebar-icon-bell" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                      <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.73 21a2 2 0 0 1-3.46 0" />
-                    </svg>
-                    {unreadCount > 0 && <span className="nav-badge">{unreadCount > 99 ? "99+" : unreadCount}</span>}
-                  </button>
-                </div>
+                <span className="sidebar-header-title">
+                  <img
+                    src={theme === "dark" ? "/static/assets/logoreal.svg" : "/static/assets/logodark.svg"}
+                    alt="Mentoring Dashboard"
+                    className="sidebar-logo"
+                  />
+                </span>
               </div>
               <div className="sidebar-section">
                 <div className="sidebar-title">Navigation</div>
@@ -297,9 +436,173 @@
           </>
         )}
 
-        <main className={"app-content " + (isAuthenticated ? "with-sidebar" : "") + (sidebarCollapsed && isAuthenticated ? " sidebar-collapsed" : "")}>
-          <MainContent />
-        </main>
+        <div className="app-main-shell">
+          {isAuthenticated && (
+            <header className="app-topbar">
+              <div className="app-topbar-user">
+                <div className="sidebar-avatar-wrapper">
+                  {user.avatar_url ? (
+                    <img src={user.avatar_url} alt={user.username || "Profile"} className="sidebar-avatar" />
+                  ) : (
+                    <div className="sidebar-avatar fallback">
+                      {(user.username || "?").slice(0, 1).toUpperCase()}
+                    </div>
+                  )}
+                </div>
+                <div className="app-topbar-user-text">
+                  <div className="sidebar-name">{user.username}</div>
+                  <div className="sidebar-role-line">
+                    {user.role && (
+                      <span className={"sidebar-role-badge role-" + user.role}>
+                        {user.role === "mentor" ? "Mentor" : user.role === "mentee" ? "Mentee" : "Staff"}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="app-topbar-search-wrapper">
+                <div className="app-topbar-search">
+                  <input
+                    type="search"
+                    className="app-topbar-search-input"
+                    placeholder="Search users, sessions, actions…"
+                    aria-label="Global search"
+                    value={searchQuery}
+                    onChange={(e) => {
+                      setSearchQuery(e.target.value);
+                      setSearchHighlight(0);
+                    }}
+                    onFocus={() => setSearchFocused(true)}
+                    onBlur={() => {
+                      // Delay so click on suggestion still registers
+                      setTimeout(() => setSearchFocused(false), 120);
+                    }}
+                    onKeyDown={handleSearchKeyDown}
+                  />
+                  <button
+                    type="button"
+                    className="app-topbar-search-btn"
+                    aria-label="Search"
+                    onClick={() => {
+                      if (suggestions.length) {
+                        handleSuggestionSelect(suggestions[0]);
+                      }
+                    }}
+                  >
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                      <circle cx="11" cy="11" r="7" />
+                      <line x1="16.65" y1="16.65" x2="21" y2="21" />
+                    </svg>
+                  </button>
+                </div>
+                {showSuggestions && (
+                  <div className="search-dropdown" role="listbox">
+                    {suggestions.some((s) => s.type === "user") && (
+                      <div className="search-dropdown-section">
+                        <div className="search-dropdown-heading">Users</div>
+                        {suggestions.filter((s) => s.type === "user").map((item, idx) => {
+                          const globalIdx = suggestions.indexOf(item);
+                          return (
+                            <button
+                              key={item.id}
+                              type="button"
+                              className={"search-dropdown-item" + (globalIdx === searchHighlight ? " active" : "")}
+                              onMouseDown={(e) => { e.preventDefault(); handleSuggestionSelect(item); }}
+                              role="option"
+                              aria-selected={globalIdx === searchHighlight}
+                            >
+                              <div className="search-dropdown-avatar">
+                                {item.avatar_url ? (
+                                  <img src={item.avatar_url} alt="" />
+                                ) : (
+                                  <span className="search-dropdown-avatar-fallback">{(item.label || "?")[0].toUpperCase()}</span>
+                                )}
+                              </div>
+                              <div className="search-dropdown-info">
+                                <span className="search-dropdown-name">
+                                  <HighlightText text={item.label} query={trimmedQuery} />
+                                </span>
+                                <span className={"search-dropdown-role search-role-" + (item.role || "user")}>
+                                  {item.role === "mentor" ? "Mentor" : item.role === "mentee" ? "Mentee" : "User"}
+                                </span>
+                              </div>
+                              <svg className="search-dropdown-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                    {suggestions.some((s) => s.type === "shortcut") && (
+                      <div className="search-dropdown-section">
+                        <div className="search-dropdown-heading">Quick actions</div>
+                        {suggestions.filter((s) => s.type === "shortcut").map((item) => {
+                          const globalIdx = suggestions.indexOf(item);
+                          return (
+                            <button
+                              key={item.id}
+                              type="button"
+                              className={"search-dropdown-item search-dropdown-item--shortcut" + (globalIdx === searchHighlight ? " active" : "")}
+                              onMouseDown={(e) => { e.preventDefault(); handleSuggestionSelect(item); }}
+                            >
+                              <div className="search-dropdown-info">
+                                <span className="search-dropdown-name">
+                                  <HighlightText text={item.label} query={trimmedQuery} />
+                                </span>
+                                {item.hint && <span className="search-dropdown-hint">{item.hint}</span>}
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                    {suggestions.some((s) => s.type === "session") && (
+                      <div className="search-dropdown-section">
+                        <div className="search-dropdown-heading">Sessions</div>
+                        {suggestions.filter((s) => s.type === "session").map((item) => {
+                          const globalIdx = suggestions.indexOf(item);
+                          return (
+                            <button
+                              key={item.id}
+                              type="button"
+                              className={"search-dropdown-item search-dropdown-item--session" + (globalIdx === searchHighlight ? " active" : "")}
+                              onMouseDown={(e) => { e.preventDefault(); handleSuggestionSelect(item); }}
+                            >
+                              <div className="search-dropdown-info">
+                                <span className="search-dropdown-name">
+                                  <HighlightText text={item.label} query={trimmedQuery} />
+                                </span>
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                    {trimmedQuery && suggestions.length === 0 && (
+                      <div className="search-dropdown-empty">No results found</div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              <button
+                type="button"
+                className="sidebar-icon-btn app-topbar-bell"
+                onClick={() => goTo("notifications")}
+                aria-label="Notifications"
+              >
+                <svg className="sidebar-icon-bell" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.73 21a2 2 0 0 1-3.46 0" />
+                </svg>
+                {unreadCount > 0 && <span className="nav-badge">{unreadCount > 99 ? "99+" : unreadCount}</span>}
+              </button>
+            </header>
+          )}
+
+          <main className={"app-content " + (isAuthenticated ? "with-sidebar" : "") + (sidebarCollapsed && isAuthenticated ? " sidebar-collapsed" : "")}>
+            <MainContent />
+          </main>
+        </div>
       </div>
     );
   }

@@ -4,12 +4,18 @@ Supports targeting: all mentees (default) or specific user(s) via recipient_ids.
 Soft delete: announcements with deleted_at set are excluded from lists.
 """
 from django.contrib.auth.decorators import login_required
-from django.db.models import Exists, OuterRef
+from django.db.models import Exists, OuterRef, Q
 from django.http import JsonResponse
 from django.utils import timezone
 from django.views.decorators.http import require_GET, require_http_methods
 
-from matching.models import Announcement, AnnouncementRecipient, Comment, MentoringSession
+from matching.models import (
+    Announcement,
+    AnnouncementRecipient,
+    Comment,
+    MentoringSession,
+    MenteeMentorRequest,
+)
 from profiles.models import MenteeProfile
 
 from ..views import (
@@ -35,8 +41,16 @@ def _announcements_queryset_for_user(request):
             .order_by("-created_at")
         )
     if mentee and get_mentee_approved(mentee):
-        mentor_ids = MentoringSession.objects.filter(mentee=mentee).values_list("mentor_id", flat=True).distinct()
-        base = Announcement.objects.filter(mentor_id__in=mentor_ids, deleted_at__isnull=True).select_related("mentor__user")
+        session_mentor_ids = MentoringSession.objects.filter(mentee=mentee).values_list(
+            "mentor_id", flat=True
+        )
+        request_mentor_ids = MenteeMentorRequest.objects.filter(
+            mentee=mentee
+        ).values_list("mentor_id", flat=True)
+        mentor_ids = list(set(list(session_mentor_ids) + list(request_mentor_ids)))
+        base = Announcement.objects.filter(
+            mentor_id__in=mentor_ids, deleted_at__isnull=True
+        ).select_related("mentor__user")
         # Show if announcement has no recipients (goes to all) OR current user is in recipients
         no_recip = ~Exists(AnnouncementRecipient.objects.filter(announcement_id=OuterRef("pk")))
         user_recip = Exists(
@@ -84,7 +98,8 @@ def announcements_list(request):
     mentor = getattr(request.user, "mentor_profile", None)
     if mentor and get_mentor_approved(mentor):
         mentee_profiles = MenteeProfile.objects.filter(
-            mentoringsession_set__mentor=mentor
+            Q(mentoringsession__mentor=mentor)
+            | Q(menteementorrequest__mentor=mentor)
         ).select_related("user").distinct()
         data["mentee_options"] = [{"id": mp.user_id, "username": mp.user.username} for mp in mentee_profiles]
     else:
@@ -93,12 +108,14 @@ def announcements_list(request):
 
 
 def _mentee_user_ids_for_mentor(mentor_profile):
-    """User IDs of mentees who have at least one session with this mentor."""
-    return set(
-        MentoringSession.objects.filter(mentor=mentor_profile)
-        .values_list("mentee__user_id", flat=True)
-        .distinct()
+    """User IDs of mentees associated with this mentor (sessions or any requests)."""
+    session_ids = MentoringSession.objects.filter(mentor=mentor_profile).values_list(
+        "mentee__user_id", flat=True
     )
+    request_ids = MenteeMentorRequest.objects.filter(
+        mentor=mentor_profile
+    ).values_list("mentee__user_id", flat=True)
+    return set(list(session_ids) + list(request_ids))
 
 
 @login_required

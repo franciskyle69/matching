@@ -2,8 +2,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import List, Tuple, Dict, Set, Any, Optional
+import time
 
 import pandas as pd
+from django.core.cache import cache
 from django.db.models import Count
 
 from profiles.models import MentorProfile, MenteeProfile
@@ -132,6 +134,10 @@ def _accepted_mentee_counts(mentor_ids: List[int]) -> Dict[int, int]:
     return {int(row["mentor_id"]): int(row["total"] or 0) for row in rows}
 
 
+MATCHING_PROFILES_VERSION_KEY = "matching:profiles_version"
+MENTEE_RECS_CACHE_TIMEOUT = 300  # seconds
+
+
 @dataclass
 class MentorFilterResult:
     mentors: List[MentorProfile]
@@ -147,24 +153,23 @@ def _filter_mentors_for_mentee(
     if not mentors:
         return MentorFilterResult(mentors=[], empty_reason="no_mentors", suggested_time_slots=[])
 
-    preferred = _normalise_gender(
-        getattr(mentee, "preferred_gender", "no_preference"),
-        default="no_preference",
-    )
-    if preferred == "no_preference":
-        gender_filtered = mentors
-    else:
+    # Enforce same-gender matching by default:
+    # mentee.sex -> mentor.gender. If mentee.sex is not set, skip gender filter.
+    mentee_sex = _normalise_gender(getattr(mentee, "sex", ""), default="")
+    if mentee_sex in ("male", "female"):
         gender_filtered = [
             mentor
             for mentor in mentors
-            if _normalise_gender(getattr(mentor, "gender", "")) == preferred
+            if _normalise_gender(getattr(mentor, "gender", ""), default="") == mentee_sex
         ]
-    if not gender_filtered:
-        return MentorFilterResult(
-            mentors=[],
-            empty_reason="gender_preference",
-            suggested_time_slots=[],
-        )
+        if not gender_filtered:
+            return MentorFilterResult(
+                mentors=[],
+                empty_reason="gender_preference",
+                suggested_time_slots=[],
+            )
+    else:
+        gender_filtered = mentors
 
     counts = accepted_counts or _accepted_mentee_counts([m.id for m in gender_filtered])
     capacity_filtered: List[MentorProfile] = []
@@ -339,9 +344,36 @@ def recommend_mentors_for_mentee_with_meta(
     limit: int = 10,
     min_score: float = 0.0,
 ) -> Tuple[List[Tuple[MentorProfile, float]], Dict[str, Any]]:
+    start = time.monotonic()
     mentors: List[MentorProfile] = list(MentorProfile.objects.all())
     if not mentors:
-        return [], {"empty_reason": "no_mentors", "suggested_time_slots": []}
+        elapsed_ms = int((time.monotonic() - start) * 1000)
+        return [], {
+            "empty_reason": "no_mentors",
+            "suggested_time_slots": [],
+            "from_cache": False,
+            "elapsed_ms": elapsed_ms,
+        }
+
+    # Use a global profiles version so that when any mentor/mentee profile changes,
+    # cached recommendations are automatically invalidated.
+    version = int(cache.get(MATCHING_PROFILES_VERSION_KEY, 1))
+    cache_key = f"matching:recs:v2:mentee:{mentee.id}:limit:{int(limit or 0)}:min:{float(min_score or 0.0):.2f}"
+
+    cached = cache.get(cache_key, version=version)
+    if cached:
+        mentor_ids = [item["mentor_id"] for item in cached.get("items", [])]
+        mentor_map = MentorProfile.objects.in_bulk(mentor_ids)
+        scored: List[Tuple[MentorProfile, float]] = []
+        for item in cached.get("items", []):
+            m = mentor_map.get(item["mentor_id"])
+            if m is not None:
+                scored.append((m, float(item.get("score", 0.0))))
+        meta = dict(cached.get("meta", {}) or {})
+        meta.setdefault("from_cache", True)
+        elapsed_ms = int((time.monotonic() - start) * 1000)
+        meta.setdefault("elapsed_ms", elapsed_ms)
+        return scored, meta
 
     accepted_counts = _accepted_mentee_counts([m.id for m in mentors])
     filtered = _filter_mentors_for_mentee(
@@ -350,10 +382,20 @@ def recommend_mentors_for_mentee_with_meta(
         accepted_counts=accepted_counts,
     )
     if not filtered.mentors:
-        return [], {
+        elapsed_ms = int((time.monotonic() - start) * 1000)
+        meta = {
             "empty_reason": filtered.empty_reason,
             "suggested_time_slots": filtered.suggested_time_slots or [],
+            "from_cache": False,
+            "elapsed_ms": elapsed_ms,
         }
+        cache.set(
+            cache_key,
+            {"items": [], "meta": meta},
+            timeout=MENTEE_RECS_CACHE_TIMEOUT,
+            version=version,
+        )
+        return [], meta
 
     scored: List[Tuple[MentorProfile, float]] = []
     threshold = float(min_score or 0.0)
@@ -367,7 +409,24 @@ def recommend_mentors_for_mentee_with_meta(
     if limit is not None and limit > 0:
         scored = scored[: int(limit)]
 
-    meta: Dict[str, Any] = {"empty_reason": None, "suggested_time_slots": []}
+    elapsed_ms = int((time.monotonic() - start) * 1000)
+    meta: Dict[str, Any] = {
+        "empty_reason": None,
+        "suggested_time_slots": [],
+        "from_cache": False,
+        "elapsed_ms": elapsed_ms,
+    }
     if not scored:
         meta["empty_reason"] = "no_candidates_after_filter"
+
+    cache_payload = {
+        "items": [{"mentor_id": m.id, "score": s} for m, s in scored],
+        "meta": meta,
+    }
+    cache.set(
+        cache_key,
+        cache_payload,
+        timeout=MENTEE_RECS_CACHE_TIMEOUT,
+        version=version,
+    )
     return scored, meta

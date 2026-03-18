@@ -72,14 +72,15 @@
 
   async function fetchJSON(url, options = {}) {
     try {
-      const response = await fetch(url, {
-        credentials: "include",
-        headers: {
-          "Content-Type": "application/json",
-          ...(options.headers || {}),
-        },
-        ...options,
-      });
+      const isRaw = options.raw;
+      const fetchOpts = { credentials: "include", ...options };
+      delete fetchOpts.raw;
+      if (isRaw) {
+        fetchOpts.headers = { ...(options.headers || {}) };
+      } else {
+        fetchOpts.headers = { "Content-Type": "application/json", ...(options.headers || {}) };
+      }
+      const response = await fetch(url, fetchOpts);
       const contentType = response.headers.get("content-type") || "";
       if (!contentType.includes("application/json")) {
         return { ok: false, status: response.status, data: null };

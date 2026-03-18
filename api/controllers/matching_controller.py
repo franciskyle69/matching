@@ -198,7 +198,12 @@ def mentee_recommendations(request):
         "mentee_recommendations",
         extra={"count": len(data), "user_id": request.user.id},
     )
-    payload = {"count": len(data), "results": data}
+    payload = {
+        "count": len(data),
+        "results": data,
+        "from_cache": bool(filter_meta.get("from_cache")),
+        "elapsed_ms": int(filter_meta.get("elapsed_ms") or 0),
+    }
     if len(data) == 0:
         empty_reason = filter_meta.get("empty_reason")
         payload["empty_reason"] = empty_reason
@@ -306,20 +311,46 @@ def mentor_accept_mentee(request):
 
 @login_required
 @require_GET
+def mentor_profile_by_user_id(request, user_id):
+    """
+    Return a single mentor's profile by user id for display (e.g. bookmarkable mentor profile page).
+    Only approved mentors are returned. Payload shape matches one recommendation item for viewedMentorProfile.
+    """
+    mentor = (
+        MentorProfile.objects.select_related("user")
+        .filter(user_id=user_id)
+        .first()
+    )
+    if not mentor:
+        return JsonResponse({"error": "Mentor not found."}, status=404)
+    if not get_mentor_approved(mentor) and not request.user.is_staff:
+        return JsonResponse({"error": "Mentor not found."}, status=404)
+    payload = {
+        "mentor_id": mentor.id,
+        "mentor_username": mentor.user.username,
+        "mentor": _serialize_mentor_for_matching(mentor, request),
+        "match_details": {},
+    }
+    return JsonResponse(payload)
+
+
+@login_required
+@require_GET
 def my_mentor(request):
     """For mentees: return the mentor who has accepted them (official mentor), if any."""
     mentee_profile, error = _require_mentee(request)
     if error:
         return error
-    req = MenteeMentorRequest.objects.filter(mentee=mentee_profile, accepted=True).select_related("mentor", "mentor__user").order_by("-accepted_at").first()
+    req = (
+        MenteeMentorRequest.objects.filter(mentee=mentee_profile, accepted=True)
+        .select_related("mentor", "mentor__user")
+        .order_by("-accepted_at")
+        .first()
+    )
     if not req:
         return JsonResponse({"mentor": None})
     m = req.mentor
-    return JsonResponse({
-        "mentor": {
-            "id": m.id,
-            "username": m.user.username,
-            "accepted_at": req.accepted_at.isoformat(),
-        },
-    })
+    mentor_payload = _serialize_mentor_for_matching(m, request)
+    mentor_payload["accepted_at"] = req.accepted_at.isoformat()
+    return JsonResponse({"mentor": mentor_payload})
 

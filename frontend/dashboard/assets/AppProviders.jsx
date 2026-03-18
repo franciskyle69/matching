@@ -30,7 +30,7 @@
     const [notificationsLoading, setNotificationsLoading] = useState(false);
     const [notifications, setNotifications] = useState([]);
     const [settingsSaving, setSettingsSaving] = useState(false);
-    const [settingsForm, setSettingsForm] = useState({ username: "", email: "", avatar_url: "" });
+    const [settingsForm, setSettingsForm] = useState({ username: "", email: "", avatar_url: "", bio: "", tags: [] });
     const [menteeProfile, setMenteeProfile] = useState({ program: "", year_level: 0, campus: "", student_id_no: "", contact_no: "", admission_type: "", sex: "" });
     const [menteeProfileSaving, setMenteeProfileSaving] = useState(false);
     const [signInLoading, setSignInLoading] = useState(false);
@@ -55,9 +55,9 @@
     const [notificationsVisited, setNotificationsVisited] = useState(false);
     const [showMenteeInfoModal, setShowMenteeInfoModal] = useState(false);
     const [showMentorInfoModal, setShowMentorInfoModal] = useState(false);
-    const [mentorProfile, setMentorProfile] = useState({ subjects: [], topics: [], expertise_level: null, gender: "", availability: [] });
+    const [mentorProfile, setMentorProfile] = useState({ subjects: [], topics: [], expertise_level: null, role: "", capacity: 3, gender: "", availability: [] });
     const [mentorProfileSaving, setMentorProfileSaving] = useState(false);
-    const [menteeMatching, setMenteeMatching] = useState({ subjects: [], topics: [], difficulty_level: null, preferred_gender: "no_preference", availability: [] });
+    const [menteeMatching, setMenteeMatching] = useState({ subjects: [], topics: [], difficulty_level: null, availability: [] });
     const [menteeMatchingSaving, setMenteeMatchingSaving] = useState(false);
     const [chosenMentorId, setChosenMentorId] = useState(null);
     const [mentorRequestsLoading, setMentorRequestsLoading] = useState(false);
@@ -66,6 +66,7 @@
     const [acceptMenteeLoading, setAcceptMenteeLoading] = useState(null);
     const [announcements, setAnnouncements] = useState([]);
     const [announcementsLoading, setAnnouncementsLoading] = useState(false);
+    const [announcementsLoaded, setAnnouncementsLoaded] = useState(false);
     const [announcementMessage, setAnnouncementMessage] = useState("");
     const [announcementMenteeOptions, setAnnouncementMenteeOptions] = useState([]);
     const [announcementTargetType, setAnnouncementTargetType] = useState("all");
@@ -81,6 +82,13 @@
     const [backupRestoreLoading, setBackupRestoreLoading] = useState(false);
     const [activityLogs, setActivityLogs] = useState([]);
     const [activityLogsLoading, setActivityLogsLoading] = useState(false);
+    const [globalSearchResults, setGlobalSearchResults] = useState([]);
+    const [postsFeed, setPostsFeed] = useState([]);
+    const [postsFeedLoaded, setPostsFeedLoaded] = useState(false);
+    const [viewedMentorProfile, setViewedMentorProfile] = useState(null);
+    const [mentorProfileHashId, setMentorProfileHashId] = useState(null);
+    const [viewedUserProfile, setViewedUserProfile] = useState(null);
+    const [menteeRecUpdating, setMenteeRecUpdating] = useState(false);
     const prevActiveTabRef = useRef(activeTab);
     const lastMatchingRunRef = useRef(0);
     const [theme, setThemeState] = useState(() => {
@@ -117,6 +125,10 @@
         setActiveTab("sessions");
         const m = raw.match(/sessions\/mentee\/(\d+)/);
         setSessionsPairMenteeId(m ? parseInt(m[1], 10) : null);
+      } else if (raw.startsWith("profile/mentor")) {
+        setActiveTab("profile");
+        const m = raw.match(/profile\/mentor\/(\d+)/);
+        setMentorProfileHashId(m ? parseInt(m[1], 10) : null);
       } else if (MAIN_TABS.some((tab) => tab.id === raw)) {
         setActiveTab(raw);
       }
@@ -133,19 +145,53 @@
         setActiveTab("sessions");
         const m = hash.match(/sessions\/mentee\/(\d+)/);
         setSessionsPairMenteeId(m ? parseInt(m[1], 10) : null);
+      } else if (hash.startsWith("profile/mentor")) {
+        setActiveTab("profile");
+        const m = hash.match(/profile\/mentor\/(\d+)/);
+        setMentorProfileHashId(m ? parseInt(m[1], 10) : null);
       } else if (validTabs.includes(hash)) {
         setActiveTab(hash);
       }
     }, [authCheckDone, user]);
 
     useEffect(() => {
+      const onHashChange = () => {
+        const hash = window.location.hash.replace("#", "");
+        if (hash.startsWith("profile/mentor")) {
+          setActiveTab("profile");
+          const m = hash.match(/profile\/mentor\/(\d+)/);
+          setMentorProfileHashId(m ? parseInt(m[1], 10) : null);
+        } else if (hash.startsWith("sessions")) {
+          setActiveTab("sessions");
+          const m = hash.match(/sessions\/mentee\/(\d+)/);
+          setSessionsPairMenteeId(m ? parseInt(m[1], 10) : null);
+        }
+      };
+      window.addEventListener("hashchange", onHashChange);
+      return () => window.removeEventListener("hashchange", onHashChange);
+    }, []);
+
+    useEffect(() => {
       if (!authCheckDone) return;
       if (activeTab === "sessions") {
         window.location.hash = sessionsPairMenteeId ? `sessions/mentee/${sessionsPairMenteeId}` : "sessions";
+      } else if (activeTab === "profile" && mentorProfileHashId) {
+        window.location.hash = `profile/mentor/${mentorProfileHashId}`;
       } else {
         window.location.hash = activeTab;
       }
-    }, [activeTab, authCheckDone, sessionsPairMenteeId]);
+    }, [activeTab, authCheckDone, sessionsPairMenteeId, mentorProfileHashId]);
+
+    useEffect(() => {
+      const baseTitle = "Mentoring Dashboard";
+      const tabMeta = MAIN_TABS.find((t) => t.id === activeTab);
+      const label = tabMeta ? tabMeta.label : "";
+      if (!label) {
+        document.title = baseTitle;
+      } else {
+        document.title = `${label} · ${baseTitle}`;
+      }
+    }, [activeTab]);
 
     useEffect(() => {
       const body = document.body;
@@ -162,7 +208,10 @@
     useEffect(() => {
       if (activeTab === "sessions" && sessionsData === null) loadSessions();
       if (activeTab === "home" && user?.role === "mentee" && sessionsData === null) loadSessions();
-      if (activeTab === "announcements") loadAnnouncements();
+      if ((activeTab === "home" || activeTab === "sessions") && user?.role === "mentee" && !myMentor) {
+        loadMyMentor();
+      }
+      if (activeTab === "announcements" && !announcementsLoaded) loadAnnouncements();
       if (activeTab === "matching") {
         if (prevActiveTabRef.current !== "matching") {
           if (user?.role === "mentor") loadMentorRequests();
@@ -176,9 +225,13 @@
         loadNotifications();
         setNotificationsVisited(true);
       }
+      if (activeTab === "profile" && mentorProfileHashId && (!viewedMentorProfile || (viewedMentorProfile.mentor && viewedMentorProfile.mentor.user_id !== mentorProfileHashId))) {
+        loadMentorProfileByUserId(mentorProfileHashId);
+      }
+      if (activeTab !== "profile" && viewedUserProfile) setViewedUserProfile(null);
       if (activeTab === "subjects" && user?.is_staff && !subjectsLoaded) loadSubjects();
       if (activeTab === "approvals" && user?.is_staff) loadApprovals();
-    }, [activeTab, user?.role, user?.is_staff, subjectsLoaded, sessionsData]);
+    }, [activeTab, user?.role, user?.is_staff, subjectsLoaded, sessionsData, myMentor, mentorProfileHashId, viewedMentorProfile]);
 
     useEffect(() => {
       if (!notificationsVisited) return;
@@ -222,7 +275,7 @@
       setUser(result.data);
       setStats(result.data.stats);
       setUnreadCount(result.data.unread_notifications || 0);
-      setSettingsForm({ username: result.data.username || "", email: result.data.email || "", avatar_url: result.data.avatar_url || "" });
+      setSettingsForm({ username: result.data.username || "", email: result.data.email || "", avatar_url: result.data.avatar_url || "", bio: result.data.bio || "", tags: Array.isArray(result.data.tags) ? [...result.data.tags] : [] });
       if (result.data.mentee_info) {
         const info = result.data.mentee_info || {};
         setMenteeProfile({ program: info.program || "", year_level: Number(info.year_level || 0), campus: info.campus || "", student_id_no: info.student_id_no || "", contact_no: info.contact_no || "", admission_type: info.admission_type || "", sex: info.sex || "" });
@@ -233,6 +286,8 @@
           subjects: Array.isArray(info.subjects) ? [...info.subjects] : [],
           topics: Array.isArray(info.topics) ? [...info.topics] : [],
           expertise_level: info.expertise_level != null ? info.expertise_level : null,
+          role: info.role || "",
+          capacity: info.capacity != null ? Math.max(1, Math.min(5, Number(info.capacity))) : 3,
           gender: info.gender || "",
           availability: Array.isArray(info.availability) ? [...info.availability] : [],
         });
@@ -243,7 +298,6 @@
           subjects: Array.isArray(mm.subjects) ? [...mm.subjects] : [],
           topics: Array.isArray(mm.topics) ? [...mm.topics] : [],
           difficulty_level: mm.difficulty_level != null ? mm.difficulty_level : null,
-          preferred_gender: mm.preferred_gender || "no_preference",
           availability: Array.isArray(mm.availability) ? [...mm.availability] : [],
         });
       }
@@ -288,6 +342,30 @@
       else setMyMentor(null);
     }
 
+    async function loadMentorProfileByUserId(userId) {
+      if (!userId) return;
+      const result = await fetchJSON(`/api/matching/mentor-profile/${userId}/`);
+      if (result.ok && result.data && !result.data.error) {
+        setViewedMentorProfile(result.data);
+        setMentorProfileHashId(userId);
+      } else {
+        setViewedMentorProfile(null);
+        setMentorProfileHashId(null);
+      }
+    }
+
+    async function loadUserProfile(userId) {
+      if (!userId) return;
+      const result = await fetchJSON(`/api/users/${userId}/profile/`);
+      if (result.ok && result.data && !result.data.error) {
+        setViewedUserProfile(result.data);
+        setActiveTab("profile");
+      } else {
+        setViewedUserProfile(null);
+        setError(result.data?.error || "User not found.");
+      }
+    }
+
     async function acceptMentee(menteeId) {
       setError("");
       setAcceptMenteeLoading(menteeId);
@@ -303,18 +381,64 @@
 
     async function loadMenteeRecommendations(limit) {
       if (!user || user.role !== "mentee") return;
-      setMenteeRecLoading(true);
+      const hasCached = Array.isArray(menteeRecommendations) && menteeRecommendations.length > 0;
+      if (hasCached) {
+        setMenteeRecUpdating(true);
+      } else {
+        setMenteeRecLoading(true);
+      }
       setError("");
       const params = new URLSearchParams();
       if (limit) params.set("limit", String(limit));
       const url = params.toString()
         ? `/api/matching/mentee-recommendations/?${params.toString()}`
         : "/api/matching/mentee-recommendations/";
+      // #region agent log
+      fetch("http://127.0.0.1:7242/ingest/0f5aa513-ed5f-49b8-a462-9721f726591f", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Debug-Session-Id": "467508",
+        },
+        body: JSON.stringify({
+          sessionId: "467508",
+          runId: "pre-fix",
+          hypothesisId: "H1",
+          location: "AppProviders.jsx:loadMenteeRecommendations",
+          message: "before fetch",
+          data: { url, limit },
+          timestamp: Date.now(),
+        }),
+      }).catch(() => {});
+      // #endregion
       const result = await fetchJSON(url);
+      // #region agent log
+      fetch("http://127.0.0.1:7242/ingest/0f5aa513-ed5f-49b8-a462-9721f726591f", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Debug-Session-Id": "467508",
+        },
+        body: JSON.stringify({
+          sessionId: "467508",
+          runId: "pre-fix",
+          hypothesisId: "H1",
+          location: "AppProviders.jsx:loadMenteeRecommendations",
+          message: "after fetch",
+          data: {
+            ok: result.ok,
+            count: result.data?.count,
+            hasError: !!result.data?.error,
+          },
+          timestamp: Date.now(),
+        }),
+      }).catch(() => {});
+      // #endregion
       if (!result.ok) {
         setError(result.data?.error || "Unable to load mentor recommendations.");
-        setMenteeRecMeta({ empty_reason: null, message: "", suggested_time_slots: [] });
+        setMenteeRecMeta({ empty_reason: null, message: "", suggested_time_slots: [], from_cache: false, elapsed_ms: 0 });
         setMenteeRecLoading(false);
+        setMenteeRecUpdating(false);
         return;
       }
       setMenteeRecommendations(result.data.results || []);
@@ -322,8 +446,11 @@
         empty_reason: result.data.empty_reason || null,
         message: result.data.message || "",
         suggested_time_slots: Array.isArray(result.data.suggested_time_slots) ? result.data.suggested_time_slots : [],
+        from_cache: !!result.data.from_cache,
+        elapsed_ms: typeof result.data.elapsed_ms === "number" ? result.data.elapsed_ms : 0,
       });
       setMenteeRecLoading(false);
+      setMenteeRecUpdating(false);
     }
 
     async function chooseMentor(mentorId) {
@@ -382,6 +509,16 @@
       setSessionsLoading(false);
     }
 
+    async function loadPostsFeed() {
+      const result = await fetchJSON("/api/posts/feed/");
+      if (result.ok) {
+        setPostsFeed(result.data.posts || []);
+      } else {
+        setPostsFeed([]);
+      }
+      setPostsFeedLoaded(true);
+    }
+
     async function loadNotifications() {
       setNotificationsLoading(true);
       const result = await fetchJSON("/api/notifications/");
@@ -416,6 +553,7 @@
         setError(result.data?.error || "Unable to load announcements.");
         setAnnouncements([]);
       }
+      setAnnouncementsLoaded(true);
       setAnnouncementsLoading(false);
     }
 
@@ -433,6 +571,8 @@
         if (!result.ok) { setError(result.data?.error || "Failed to post announcement."); return; }
         setAnnouncementMessage("");
         addToast("Announcement posted.");
+        // Force refresh and keep cache in sync
+        setAnnouncementsLoaded(false);
         loadAnnouncements();
       } finally { setPostAnnouncementLoading(false); }
     }
@@ -442,6 +582,7 @@
       const result = await fetchJSON(`/api/announcements/${announcementId}/delete/`, { method: "POST", headers: { "X-CSRFToken": getCookie("csrftoken") } });
       if (!result.ok) { setError(result.data?.error || "Failed to delete announcement."); return; }
       addToast("Announcement removed.");
+      setAnnouncementsLoaded(false);
       loadAnnouncements();
     }
 
@@ -606,6 +747,24 @@
       setSettingsSaving(false);
     }
 
+    async function handleBioSave(bio) {
+      const result = await fetchJSON("/api/me/bio/", { method: "POST", headers: { "X-CSRFToken": getCookie("csrftoken") }, body: JSON.stringify({ bio }) });
+      if (!result.ok) { setError(result.data?.error || "Unable to update bio."); return false; }
+      setUser((prev) => prev ? { ...prev, bio: result.data.bio } : prev);
+      setSettingsForm((prev) => ({ ...prev, bio: result.data.bio }));
+      addToast("Bio updated.");
+      return true;
+    }
+
+    async function handleTagsSave(tags) {
+      const result = await fetchJSON("/api/me/tags/", { method: "POST", headers: { "X-CSRFToken": getCookie("csrftoken") }, body: JSON.stringify({ tags }) });
+      if (!result.ok) { setError(result.data?.error || "Unable to update tags."); return false; }
+      setUser((prev) => prev ? { ...prev, tags: result.data.tags } : prev);
+      setSettingsForm((prev) => ({ ...prev, tags: result.data.tags }));
+      addToast("Interests updated.");
+      return true;
+    }
+
     async function handleMenteeProfileSave() {
       if (!user || user.role !== "mentee") return;
       setError("");
@@ -632,13 +791,14 @@
 
     async function handleMentorProfileSave() {
       if (!user || user.role !== "mentor") return;
+      const profile = mentorProfile;
       setError("");
       const hasPrefs =
-        (Array.isArray(mentorProfile.subjects) && mentorProfile.subjects.length > 0) ||
-        (Array.isArray(mentorProfile.topics) && mentorProfile.topics.length > 0) ||
-        (mentorProfile.expertise_level != null && mentorProfile.expertise_level >= 1 && mentorProfile.expertise_level <= 5) ||
-        !!mentorProfile.gender ||
-        (Array.isArray(mentorProfile.availability) && mentorProfile.availability.length > 0);
+        (Array.isArray(profile.subjects) && profile.subjects.length > 0) ||
+        (Array.isArray(profile.topics) && profile.topics.length > 0) ||
+        (profile.expertise_level != null && profile.expertise_level >= 1 && profile.expertise_level <= 5) ||
+        !!profile.gender ||
+        (Array.isArray(profile.availability) && profile.availability.length > 0);
       if (!hasPrefs) {
         const message = "Please set at least one matching preference (subjects, topics, expertise, gender, or availability).";
         setError(message);
@@ -647,11 +807,13 @@
       }
       setMentorProfileSaving(true);
       const payload = {
-        subjects: mentorProfile.subjects || [],
-        topics: mentorProfile.topics || [],
-        expertise_level: mentorProfile.expertise_level,
-        gender: mentorProfile.gender || "",
-        availability: mentorProfile.availability || [],
+        subjects: profile.subjects || [],
+        topics: profile.topics || [],
+        expertise_level: profile.expertise_level,
+        role: profile.role || "",
+        capacity: Math.max(1, Math.min(5, Number(profile.capacity || 1))),
+        gender: profile.gender || "",
+        availability: profile.availability || [],
       };
       const result = await fetchJSON("/api/me/mentor-profile/", { method: "POST", headers: { "X-CSRFToken": getCookie("csrftoken") }, body: JSON.stringify(payload) });
       if (!result.ok) { setError(result.data?.error || "Unable to update mentor profile."); setMentorProfileSaving(false); return; }
@@ -670,13 +832,13 @@
 
     async function handleMenteeMatchingSave() {
       if (!user || user.role !== "mentee") return;
+      const matching = menteeMatching;
       setError("");
       const hasPrefs =
-        (Array.isArray(menteeMatching.subjects) && menteeMatching.subjects.length > 0) ||
-        (Array.isArray(menteeMatching.topics) && menteeMatching.topics.length > 0) ||
-        (menteeMatching.difficulty_level != null && menteeMatching.difficulty_level >= 1 && menteeMatching.difficulty_level <= 5) ||
-        (menteeMatching.preferred_gender && menteeMatching.preferred_gender !== "no_preference") ||
-        (Array.isArray(menteeMatching.availability) && menteeMatching.availability.length > 0);
+        (Array.isArray(matching.subjects) && matching.subjects.length > 0) ||
+        (Array.isArray(matching.topics) && matching.topics.length > 0) ||
+        (matching.difficulty_level != null && matching.difficulty_level >= 1 && matching.difficulty_level <= 5) ||
+        (Array.isArray(matching.availability) && matching.availability.length > 0);
       if (!hasPrefs) {
         const message = "Please set at least one matching preference (subjects, topics, difficulty, preferred gender, or availability).";
         setError(message);
@@ -684,12 +846,14 @@
         return;
       }
       setMenteeMatchingSaving(true);
+      if (nextMatching) {
+        setMenteeMatching(nextMatching);
+      }
       const payload = {
-        subjects: menteeMatching.subjects || [],
-        topics: menteeMatching.topics || [],
-        difficulty_level: menteeMatching.difficulty_level,
-        preferred_gender: menteeMatching.preferred_gender || "no_preference",
-        availability: menteeMatching.availability || [],
+        subjects: matching.subjects || [],
+        topics: matching.topics || [],
+        difficulty_level: matching.difficulty_level,
+        availability: matching.availability || [],
       };
       const result = await fetchJSON("/api/me/mentee-matching/", { method: "POST", headers: { "X-CSRFToken": getCookie("csrftoken") }, body: JSON.stringify(payload) });
       if (!result.ok) { setError(result.data?.error || "Unable to update mentee questionnaire."); setMenteeMatchingSaving(false); return; }
@@ -718,6 +882,20 @@
       if (result.ok) setActivityLogs(result.data.logs || []);
       else setActivityLogs([]);
       setActivityLogsLoading(false);
+    }
+
+    async function loadGlobalSearch(q) {
+      const query = (q || "").trim();
+      if (!query) {
+        setGlobalSearchResults([]);
+        return;
+      }
+      const result = await fetchJSON(`/api/search/?q=${encodeURIComponent(query)}`);
+      if (!result.ok) {
+        setGlobalSearchResults([]);
+        return;
+      }
+      setGlobalSearchResults(result.data.results || []);
     }
 
     async function loadBackups() {
@@ -876,7 +1054,7 @@
       mentorRequestsLoading, mentorRequests, loadMentorRequests, acceptMentee, acceptMenteeLoading, myMentor, loadMyMentor,
       sessionsLoading, sessionsData, loadSessions, createForm, setCreateForm, createSessionLoading, rescheduleId, setRescheduleId, rescheduleForm, setRescheduleForm, handleCreateSession, handleReschedule, handleStatusUpdate, handleUpdateMeetingNotes, options, topicsBySubject, sessionsPairMenteeId, setSessionsPairMenteeId,
       notificationsLoading, notifications, loadNotifications, handleMarkAllRead, handleMarkRead,
-      settingsForm, setSettingsForm, settingsSaving, handleSettingsSave, handleAvatarChange, avatarUploading,
+      settingsForm, setSettingsForm, settingsSaving, handleSettingsSave, handleBioSave, handleTagsSave, handleAvatarChange, avatarUploading,
       menteeProfile, setMenteeProfile, menteeProfileSaving, handleMenteeProfileSave,
       mentorProfile, setMentorProfile, mentorProfileSaving, handleMentorProfileSave,
       menteeMatching, setMenteeMatching, menteeMatchingSaving, handleMenteeMatchingSave,
@@ -885,13 +1063,24 @@
       approvalsLoading, approvalActionKey, pendingMentors, pendingMentees, loadApprovals, handleApproveMentor, handleRejectMentor, handleApproveMentee, handleRejectMentee,
       backups, backupDir, backupsLoading, backupCreateLoading, backupRestoreLoading, loadBackups, createBackup, restoreBackup, restoreBackupById, deleteBackup, downloadBackup,
       activityLogs, activityLogsLoading, loadActivityLogs,
+      postsFeed, postsFeedLoaded, loadPostsFeed, setPostsFeed,
       chosenMentorId,
       announcements, announcementsLoading, announcementMessage, setAnnouncementMessage, announcementMenteeOptions, announcementTargetType, setAnnouncementTargetType, announcementRecipientIds, setAnnouncementRecipientIds, postAnnouncementLoading, loadAnnouncements, postAnnouncement, handleDeleteAnnouncement,
       commentsByKey, commentKey, loadComments, addComment,
       loadMe, handleSignIn, handleSignUp, handleLogout,
       theme, toggleTheme,
-      isAuthenticated, showSignInPrompt,
+      isAuthenticated, showSignInPrompt, menteeRecUpdating,
       addToast,
+      globalSearchResults,
+      loadGlobalSearch,
+      viewedMentorProfile,
+      setViewedMentorProfile,
+      mentorProfileHashId,
+      setMentorProfileHashId,
+      loadMentorProfileByUserId,
+      viewedUserProfile,
+      setViewedUserProfile,
+      loadUserProfile,
     };
 
     const LayoutComponent = Layout;

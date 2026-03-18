@@ -189,6 +189,7 @@ def _serialize_mentor_for_matching(m, request=None):
     tops = m.topics if isinstance(m.topics, list) else ([m.topics] if m.topics else [])
     out = {
         "id": m.id,
+        "user_id": m.user_id,
         "username": m.user.username,
         "subjects": subs or [],
         "topics": tops or [],
@@ -216,7 +217,6 @@ def _serialize_mentee_for_matching(e, request=None):
         "subjects": subs or [],
         "topics": tops or [],
         "difficulty_level": e.difficulty_level,
-        "preferred_gender": getattr(e, "preferred_gender", "no_preference") or "no_preference",
         "availability": e.availability if isinstance(getattr(e, "availability", []), list) else [],
     }
     if request and getattr(e, "avatar_url", None):
