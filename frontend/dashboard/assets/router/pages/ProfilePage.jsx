@@ -3,7 +3,7 @@
   const React = window.React;
   const { useContext, useState, useEffect, useRef } = React;
   const AppContext = window.DashboardApp.AppContext;
-  const { getCookie, fetchJSON, formatDate, LoadingSpinner } = window.DashboardApp.Utils || {};
+  const { getCookie, fetchJSON, formatDate, LoadingSpinner, DashboardIcon, categoryIconName } = window.DashboardApp.Utils || {};
   const PLACEHOLDER_AVATAR = window.DashboardApp.PLACEHOLDER_AVATAR || "";
   const Spinner = LoadingSpinner;
 
@@ -23,7 +23,6 @@
   }
 
   const CATEGORY_LABELS = { achievement: "Achievement", project: "Project", update: "Update" };
-  const CATEGORY_ICONS = { achievement: "\u{1F3C6}", project: "\u{1F4BB}", update: "\u{1F4DD}" };
   const MAX_FILE_SIZE = 10 * 1024 * 1024;
   const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp", "image/svg+xml"];
   const CAPTION_TRUNCATE_LENGTH = 150;
@@ -127,7 +126,10 @@
             <div className="sp-category-pills">
               {["update", "achievement", "project"].map((c) => (
                 <button key={c} type="button" className={"sp-category-pill" + (category === c ? " active" : "")} onClick={() => setCategory(c)}>
-                  {CATEGORY_ICONS[c]} {CATEGORY_LABELS[c]}
+                  <span className="sp-category-pill-icon" aria-hidden="true">
+                    <DashboardIcon name={categoryIconName(c)} size={15} />
+                  </span>
+                  {CATEGORY_LABELS[c]}
                 </button>
               ))}
             </div>
@@ -149,7 +151,12 @@
             <span className="sp-post-author-name">{post.author_username}</span>
             <span className="sp-post-time">{relativeTime(post.created_at)}</span>
           </div>
-          <span className={"sp-post-category-badge sp-cat-" + post.category}>{CATEGORY_ICONS[post.category]} {CATEGORY_LABELS[post.category]}</span>
+          <span className={"sp-post-category-badge sp-cat-" + post.category}>
+            <span className="sp-post-cat-icon" aria-hidden="true">
+              <DashboardIcon name={categoryIconName(post.category)} size={14} />
+            </span>
+            {CATEGORY_LABELS[post.category]}
+          </span>
         </div>
         <div className="sp-post-clickable" onClick={() => onOpen && onOpen(post)}>
           {post.text && <ExpandableCaption text={post.text} maxLength={CAPTION_TRUNCATE_LENGTH} />}
@@ -280,7 +287,12 @@
             <span className="sp-post-author-name">{post.author_username}</span>
             <span className="sp-post-time">{relativeTime(post.created_at)}</span>
           </div>
-          <span className={"sp-post-category-badge sp-cat-" + post.category}>{CATEGORY_ICONS[post.category]} {CATEGORY_LABELS[post.category]}</span>
+          <span className={"sp-post-category-badge sp-cat-" + post.category}>
+            <span className="sp-post-cat-icon" aria-hidden="true">
+              <DashboardIcon name={categoryIconName(post.category)} size={14} />
+            </span>
+            {CATEGORY_LABELS[post.category]}
+          </span>
         </div>
 
         {post.text && <ExpandableCaption text={post.text} maxLength={9999} />}
@@ -348,7 +360,12 @@
             <img src={img.image_url} alt={img.text || "Gallery"} loading="lazy" />
             <div className="sp-gallery-overlay">
               <div className="sp-gallery-overlay-content">
-                <span className={"sp-gallery-badge sp-cat-" + img.category}>{CATEGORY_ICONS[img.category]} {CATEGORY_LABELS[img.category]}</span>
+                <span className={"sp-gallery-badge sp-cat-" + img.category}>
+                  <span className="sp-post-cat-icon" aria-hidden="true">
+                    <DashboardIcon name={categoryIconName(img.category)} size={14} />
+                  </span>
+                  {CATEGORY_LABELS[img.category]}
+                </span>
                 {img.text && <p className="sp-gallery-title">{img.text.length > 60 ? img.text.slice(0, 60) + "\u2026" : img.text}</p>}
               </div>
             </div>
@@ -378,7 +395,12 @@
           <img src={image.image_url} alt={image.text || "Full view"} className="sp-modal-image" />
           <div className="sp-modal-body">
             <div className="sp-modal-badge-row">
-              <span className={"sp-gallery-badge sp-cat-" + image.category}>{CATEGORY_ICONS[image.category]} {CATEGORY_LABELS[image.category]}</span>
+              <span className={"sp-gallery-badge sp-cat-" + image.category}>
+                <span className="sp-post-cat-icon" aria-hidden="true">
+                  <DashboardIcon name={categoryIconName(image.category)} size={14} />
+                </span>
+                {CATEGORY_LABELS[image.category]}
+              </span>
               <span className="sp-modal-time">{relativeTime(image.created_at)}</span>
             </div>
             {image.text && <p className="sp-modal-caption">{image.text}</p>}
@@ -464,16 +486,16 @@
           <h4 className="sp-sidebar-card-title">{isMentor ? "Mentor details" : isMentee ? "Student details" : "Details"}</h4>
           {isMentee && (
             <>
-              <div className="sp-sidebar-row"><span className="sp-sidebar-icon">🎓</span><span>{menteeProfile.program || "—"}</span></div>
-              <div className="sp-sidebar-row"><span className="sp-sidebar-icon">📅</span><span>Year {menteeProfile.year_level || "—"}</span></div>
-              <div className="sp-sidebar-row"><span className="sp-sidebar-icon">🏫</span><span>{menteeProfile.campus || "—"}</span></div>
+              <div className="sp-sidebar-row"><span className="sp-sidebar-icon"><DashboardIcon name="graduationCap" size={16} /></span><span>{menteeProfile.program || "—"}</span></div>
+              <div className="sp-sidebar-row"><span className="sp-sidebar-icon"><DashboardIcon name="calendar" size={16} /></span><span>Year {menteeProfile.year_level || "—"}</span></div>
+              <div className="sp-sidebar-row"><span className="sp-sidebar-icon"><DashboardIcon name="building" size={16} /></span><span>{menteeProfile.campus || "—"}</span></div>
             </>
           )}
           {isMentor && (
             <>
-              <div className="sp-sidebar-row"><span className="sp-sidebar-icon">⚥</span><span>{mentorProfile.gender || "—"}</span></div>
-              {mentorProfile.expertise_level != null && <div className="sp-sidebar-row"><span className="sp-sidebar-icon">📊</span><span>Expertise: {mentorProfile.expertise_level}/5</span></div>}
-              {mentorProfile.capacity != null && <div className="sp-sidebar-row"><span className="sp-sidebar-icon">👥</span><span>{mentorProfile.capacity} mentee slots</span></div>}
+              <div className="sp-sidebar-row"><span className="sp-sidebar-icon"><DashboardIcon name="userCircle" size={16} /></span><span>{mentorProfile.gender || "—"}</span></div>
+              {mentorProfile.expertise_level != null && <div className="sp-sidebar-row"><span className="sp-sidebar-icon"><DashboardIcon name="barChart" size={16} /></span><span>Expertise: {mentorProfile.expertise_level}/5</span></div>}
+              {mentorProfile.capacity != null && <div className="sp-sidebar-row"><span className="sp-sidebar-icon"><DashboardIcon name="users" size={16} /></span><span>{mentorProfile.capacity} mentee slots</span></div>}
             </>
           )}
         </div>
@@ -489,7 +511,7 @@
         {availability.length > 0 && (
           <div className="sp-sidebar-card">
             <h4 className="sp-sidebar-card-title">Availability</h4>
-            <div className="sp-sidebar-avail">{availability.map((s) => <span key={s} className="prof-avail-slot"><span className="prof-avail-clock">🕒</span>{s}</span>)}</div>
+            <div className="sp-sidebar-avail">{availability.map((s) => <span key={s} className="prof-avail-slot"><span className="prof-avail-clock" aria-hidden="true"><DashboardIcon name="clock" size={14} /></span>{s}</span>)}</div>
           </div>
         )}
       </aside>
@@ -513,6 +535,7 @@
           </div>
           <div className="sp-cover-overlay" />
         </div>
+        <div className="home-dashboard-space profile-content-shell">
         <div className="sp-layout">
           <aside className="sp-sidebar">
             <div className="sp-sidebar-identity">
@@ -533,9 +556,9 @@
             </div>
             <div className="sp-sidebar-card">
               <h4 className="sp-sidebar-card-title">About</h4>
-              <div className="sp-sidebar-row"><span className="sp-sidebar-icon">⚥</span><span>{mentor.gender || "—"}</span></div>
-              {mentor.expertise_level != null && <div className="sp-sidebar-row"><span className="sp-sidebar-icon">📊</span><span>Expertise: {mentor.expertise_level}/5</span></div>}
-              {mentor.capacity != null && <div className="sp-sidebar-row"><span className="sp-sidebar-icon">👥</span><span>{mentor.capacity} mentee slots</span></div>}
+              <div className="sp-sidebar-row"><span className="sp-sidebar-icon"><DashboardIcon name="userCircle" size={16} /></span><span>{mentor.gender || "—"}</span></div>
+              {mentor.expertise_level != null && <div className="sp-sidebar-row"><span className="sp-sidebar-icon"><DashboardIcon name="barChart" size={16} /></span><span>Expertise: {mentor.expertise_level}/5</span></div>}
+              {mentor.capacity != null && <div className="sp-sidebar-row"><span className="sp-sidebar-icon"><DashboardIcon name="users" size={16} /></span><span>{mentor.capacity} mentee slots</span></div>}
             </div>
             {(mentorSubjects.length > 0 || mentorTopics.length > 0) && (
               <div className="sp-sidebar-card">
@@ -547,13 +570,14 @@
             {availability.length > 0 && (
               <div className="sp-sidebar-card">
                 <h4 className="sp-sidebar-card-title">Availability</h4>
-                <div className="sp-sidebar-avail">{availability.map((s) => <span key={s} className="prof-avail-slot"><span className="prof-avail-clock">🕒</span>{s}</span>)}</div>
+                <div className="sp-sidebar-avail">{availability.map((s) => <span key={s} className="prof-avail-slot"><span className="prof-avail-clock" aria-hidden="true"><DashboardIcon name="clock" size={14} /></span>{s}</span>)}</div>
               </div>
             )}
           </aside>
           <main className="sp-main">
             <p className="muted" style={{ textAlign: "center", padding: "40px 0" }}>Visit this mentor's full profile to see their posts and gallery.</p>
           </main>
+        </div>
         </div>
       </div>
     );
@@ -641,6 +665,7 @@
           </div>
           <div className="sp-cover-overlay" />
         </div>
+        <div className="home-dashboard-space profile-content-shell">
         <div className="sp-layout">
           <aside className="sp-sidebar">
             <div className="sp-sidebar-identity">
@@ -678,17 +703,17 @@
                 <h4 className="sp-sidebar-card-title">{isMentor ? "Mentor details" : isMentee ? "Student details" : "Details"}</h4>
                 {isMentee && (
                   <>
-                    {details.program && <div className="sp-sidebar-row"><span className="sp-sidebar-icon">🎓</span><span>{details.program}</span></div>}
-                    {details.year_level && <div className="sp-sidebar-row"><span className="sp-sidebar-icon">📅</span><span>Year {details.year_level}</span></div>}
-                    {details.campus && <div className="sp-sidebar-row"><span className="sp-sidebar-icon">🏫</span><span>{details.campus}</span></div>}
+                    {details.program && <div className="sp-sidebar-row"><span className="sp-sidebar-icon"><DashboardIcon name="graduationCap" size={16} /></span><span>{details.program}</span></div>}
+                    {details.year_level && <div className="sp-sidebar-row"><span className="sp-sidebar-icon"><DashboardIcon name="calendar" size={16} /></span><span>Year {details.year_level}</span></div>}
+                    {details.campus && <div className="sp-sidebar-row"><span className="sp-sidebar-icon"><DashboardIcon name="building" size={16} /></span><span>{details.campus}</span></div>}
                   </>
                 )}
                 {isMentor && (
                   <>
-                    {details.gender && <div className="sp-sidebar-row"><span className="sp-sidebar-icon">⚥</span><span>{details.gender}</span></div>}
-                    {details.expertise_level != null && <div className="sp-sidebar-row"><span className="sp-sidebar-icon">📊</span><span>Expertise: {details.expertise_level}/5</span></div>}
-                    {details.capacity != null && <div className="sp-sidebar-row"><span className="sp-sidebar-icon">👥</span><span>{details.capacity} mentee slots</span></div>}
-                    {details.role && <div className="sp-sidebar-row"><span className="sp-sidebar-icon">💼</span><span>{details.role}</span></div>}
+                    {details.gender && <div className="sp-sidebar-row"><span className="sp-sidebar-icon"><DashboardIcon name="userCircle" size={16} /></span><span>{details.gender}</span></div>}
+                    {details.expertise_level != null && <div className="sp-sidebar-row"><span className="sp-sidebar-icon"><DashboardIcon name="barChart" size={16} /></span><span>Expertise: {details.expertise_level}/5</span></div>}
+                    {details.capacity != null && <div className="sp-sidebar-row"><span className="sp-sidebar-icon"><DashboardIcon name="users" size={16} /></span><span>{details.capacity} mentee slots</span></div>}
+                    {details.role && <div className="sp-sidebar-row"><span className="sp-sidebar-icon"><DashboardIcon name="briefcase" size={16} /></span><span>{details.role}</span></div>}
                   </>
                 )}
               </div>
@@ -705,7 +730,7 @@
             {availability.length > 0 && (
               <div className="sp-sidebar-card">
                 <h4 className="sp-sidebar-card-title">Availability</h4>
-                <div className="sp-sidebar-avail">{availability.map((s) => <span key={s} className="prof-avail-slot"><span className="prof-avail-clock">🕒</span>{s}</span>)}</div>
+                <div className="sp-sidebar-avail">{availability.map((s) => <span key={s} className="prof-avail-slot"><span className="prof-avail-clock" aria-hidden="true"><DashboardIcon name="clock" size={14} /></span>{s}</span>)}</div>
               </div>
             )}
           </aside>
@@ -751,6 +776,7 @@
               )}
             </div>
           </main>
+        </div>
         </div>
 
         {lightboxImage && <ImageModal image={lightboxImage} onClose={() => setLightboxImage(null)} />}
@@ -906,6 +932,7 @@
       <div className="sp-wide">
         <CoverPhoto coverUrl={coverUrl} onUpload={handleCoverUpload} uploading={coverUploading} isOwner={true} />
 
+        <div className="home-dashboard-space profile-content-shell">
         <div className="sp-layout">
           <Sidebar user={user} isMentor={isMentor} isMentee={isMentee} menteeProfile={menteeProfile || {}} mentorProfile={mentorProfile || {}} menteeMatching={menteeMatching || {}} profileStats={profileStats} avatarUrl={avatarUrl} setActiveTab={setActiveTab} />
 
@@ -952,6 +979,7 @@
               )}
             </div>
           </main>
+        </div>
         </div>
 
         {showComposerModal && (

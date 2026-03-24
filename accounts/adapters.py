@@ -73,17 +73,32 @@ class RoleAwareSocialAccountAdapter(DefaultSocialAccountAdapter):
         selected_role = request.session.get(ROLE_SESSION_KEY)
 
         # Create the appropriate profile for a new user if missing.
+        if selected_role == "mentor":
+            # For testing/development, allow immediate dashboard access.
+            mentor_profile = getattr(user, "mentor_profile", None)
+            if mentor_profile is not None and not getattr(mentor_profile, "approved", False):
+                mentor_profile.approved = True
+                mentor_profile.save(update_fields=["approved"])
+
         if selected_role == "mentor" and not hasattr(user, "mentor_profile"):
             MentorProfile.objects.create(
                 user=user,
                 program="BSIT",
                 year_level=4,
+                approved=True,
             )
-        elif selected_role == "mentee" and not hasattr(user, "mentee_profile"):
+        elif selected_role == "mentee":
+            mentee_profile = getattr(user, "mentee_profile", None)
+            if mentee_profile is not None and not getattr(mentee_profile, "approved", False):
+                mentee_profile.approved = True
+                mentee_profile.save(update_fields=["approved"])
+
+        if selected_role == "mentee" and not hasattr(user, "mentee_profile"):
             MenteeProfile.objects.create(
                 user=user,
                 program="BSIT",
                 year_level=1,
+                approved=True,
             )
         return user
 

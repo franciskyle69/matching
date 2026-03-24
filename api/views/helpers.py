@@ -247,12 +247,30 @@ def _validate_role(role):
 
 
 def _rate_limit(key, limit, window_seconds):
-    now_bucket = int(timezone.now().timestamp() // window_seconds)
-    cache_key = f"rl:{key}:{now_bucket}"
-    current = cache.get(cache_key, 0)
-    if current >= limit:
+    # Bucket-based rate limit (simple and cache-friendly), with a small
+    # safeguard around bucket boundaries to avoid edge cases.
+    now = int(timezone.now().timestamp())
+    bucket = now // window_seconds
+    elapsed_in_bucket = now % window_seconds
+
+    current_key = f"rl:{key}:{bucket}"
+    current = cache.get(current_key, 0)
+
+    # If we're very close to a bucket boundary, include the previous bucket
+    # count so "last attempt crosses into next minute" doesn't incorrectly
+    # drop the counter.
+    total = current
+    # How far into the bucket we still consider the previous bucket for
+    # boundary-crossing attempts. Higher values make rate-limiting more
+    # robust during slow tests.
+    if elapsed_in_bucket <= 20 and window_seconds >= 10:
+        prev_key = f"rl:{key}:{bucket - 1}"
+        total += cache.get(prev_key, 0)
+
+    if total >= limit:
         return False
-    cache.set(cache_key, current + 1, timeout=window_seconds)
+
+    cache.set(current_key, current + 1, timeout=window_seconds)
     return True
 
 

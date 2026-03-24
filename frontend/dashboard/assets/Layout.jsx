@@ -175,6 +175,11 @@
       }
       return true;
     });
+    const dashboardTab = filteredTabs.find((tab) => tab.id === "home");
+    const activityTabIds = new Set(["matching", "sessions", "announcements", "approvals", "subjects", "activity-logs", "backup"]);
+    const accountTabIds = new Set(["profile", "settings", "complete-profile"]);
+    const activityTabs = filteredTabs.filter((tab) => activityTabIds.has(tab.id));
+    const accountTabs = filteredTabs.filter((tab) => accountTabIds.has(tab.id));
 
     const role = user?.role;
     const baseShortcuts = [
@@ -255,6 +260,8 @@
     });
 
     const trimmedQuery = searchQuery.trim().toLowerCase();
+    const activeTabMeta = MAIN_TABS.find((tab) => tab.id === activeTab);
+    const topbarTitle = activeTabMeta?.label || "Dashboard";
 
     let shortcutMatches = [];
     if (trimmedQuery) {
@@ -378,28 +385,67 @@
                 </button>
                 <span className="sidebar-header-title">
                   <img
-                    src={theme === "dark" ? "/static/assets/logoreal.svg" : "/static/assets/logodark.svg"}
+                    src="/static/assets/logoreal.svg"
                     alt="Mentoring Dashboard"
                     className="sidebar-logo"
                   />
                 </span>
               </div>
               <div className="sidebar-section">
-                <div className="sidebar-title">Navigation</div>
-                <div className="sidebar-links">
-                  {filteredTabs.map((tab) => (
+                {dashboardTab && (
+                  <div className="sidebar-links">
                     <button
-                      key={tab.id}
+                      key={dashboardTab.id}
                       type="button"
-                      className={"sidebar-link " + (activeTab === tab.id ? "active" : "")}
-                      onClick={() => goTo(tab.id)}
-                      title={tab.label}
+                      className={"sidebar-link " + (activeTab === dashboardTab.id ? "active" : "")}
+                      onClick={() => goTo(dashboardTab.id)}
+                      title={dashboardTab.label}
                     >
-                      <span className="sidebar-link-icon">{TAB_ICONS[tab.id] || TAB_ICONS.home}</span>
-                      <span className="sidebar-link-text">{tab.label}</span>
+                      <span className="sidebar-link-icon">{TAB_ICONS[dashboardTab.id] || TAB_ICONS.home}</span>
+                      <span className="sidebar-link-text">{dashboardTab.label}</span>
                     </button>
-                  ))}
-                </div>
+                  </div>
+                )}
+
+                {activityTabs.length > 0 && (
+                  <>
+                    <div className="sidebar-title">My Activities</div>
+                    <div className="sidebar-links">
+                      {activityTabs.map((tab) => (
+                        <button
+                          key={tab.id}
+                          type="button"
+                          className={"sidebar-link " + (activeTab === tab.id ? "active" : "")}
+                          onClick={() => goTo(tab.id)}
+                          title={tab.label}
+                        >
+                          <span className="sidebar-link-icon">{TAB_ICONS[tab.id] || TAB_ICONS.home}</span>
+                          <span className="sidebar-link-text">{tab.label}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                )}
+
+                {accountTabs.length > 0 && (
+                  <>
+                    <div className="sidebar-title">Account Pages</div>
+                    <div className="sidebar-links">
+                      {accountTabs.map((tab) => (
+                        <button
+                          key={tab.id}
+                          type="button"
+                          className={"sidebar-link " + (activeTab === tab.id ? "active" : "")}
+                          onClick={() => goTo(tab.id)}
+                          title={tab.label}
+                        >
+                          <span className="sidebar-link-icon">{TAB_ICONS[tab.id] || TAB_ICONS.home}</span>
+                          <span className="sidebar-link-text">{tab.label}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                )}
               </div>
               <div className="sidebar-section sidebar-footer">
                 <button
@@ -431,6 +477,14 @@
                   </svg>
                   <span className="sidebar-logout-text">Log out</span>
                 </button>
+                <a href="#" className="sidebar-help-card" onClick={(e) => e.preventDefault()}>
+                  <div className="sidebar-help-icon">?</div>
+                  <div className="sidebar-help-content">
+                    <div className="sidebar-help-title">Need help?</div>
+                    <div className="sidebar-help-sub">Please check our docs</div>
+                    <span className="sidebar-help-cta">Documentation</span>
+                  </div>
+                </a>
               </div>
             </aside>
           </>
@@ -439,26 +493,9 @@
         <div className="app-main-shell">
           {isAuthenticated && (
             <header className="app-topbar">
-              <div className="app-topbar-user">
-                <div className="sidebar-avatar-wrapper">
-                  {user.avatar_url ? (
-                    <img src={user.avatar_url} alt={user.username || "Profile"} className="sidebar-avatar" />
-                  ) : (
-                    <div className="sidebar-avatar fallback">
-                      {(user.username || "?").slice(0, 1).toUpperCase()}
-                    </div>
-                  )}
-                </div>
-                <div className="app-topbar-user-text">
-                  <div className="sidebar-name">{user.username}</div>
-                  <div className="sidebar-role-line">
-                    {user.role && (
-                      <span className={"sidebar-role-badge role-" + user.role}>
-                        {user.role === "mentor" ? "Mentor" : user.role === "mentee" ? "Mentee" : "Staff"}
-                      </span>
-                    )}
-                  </div>
-                </div>
+              <div className="app-topbar-meta">
+                <div className="app-topbar-meta-label">Pages / {topbarTitle}</div>
+                <div className="app-topbar-meta-title">{topbarTitle}</div>
               </div>
 
               <div className="app-topbar-search-wrapper">
@@ -595,6 +632,23 @@
                   <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.73 21a2 2 0 0 1-3.46 0" />
                 </svg>
                 {unreadCount > 0 && <span className="nav-badge">{unreadCount > 99 ? "99+" : unreadCount}</span>}
+              </button>
+              <button
+                type="button"
+                className="app-topbar-avatar-btn"
+                onClick={() => goTo("profile")}
+                aria-label="Open profile"
+                title="Profile"
+              >
+                <div className="sidebar-avatar-wrapper">
+                  {user.avatar_url ? (
+                    <img src={user.avatar_url} alt={user.username || "Profile"} className="sidebar-avatar" />
+                  ) : (
+                    <div className="sidebar-avatar fallback">
+                      {(user.username || "?").slice(0, 1).toUpperCase()}
+                    </div>
+                  )}
+                </div>
               </button>
             </header>
           )}

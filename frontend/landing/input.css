@@ -1,14 +1,521 @@
-@import url('https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Josefin+Sans:wght@500;600;700&family=Karantina:wght@400;700&family=Space+Grotesk:wght@400;500;600;700&display=swap');
 @import "tailwindcss";
 
 @theme {
-    --font-poppins: "Poppins", sans-serif;
+    --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+    --font-display: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+    --font-banner: "Karantina", ui-serif, Georgia, serif;
+    --font-card: "Josefin Sans", ui-sans-serif, system-ui, sans-serif;
+}
+
+html {
+    scroll-behavior: smooth;
+    overflow-x: clip;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    html {
+        scroll-behavior: auto;
+    }
 }
 
 body {
-    @apply bg-black text-white text-sm font-poppins antialiased;
+    @apply bg-[#121212] text-white text-sm font-sans antialiased m-0 p-0;
+}
+
+/* Landing entry intro (SVG slide-in) */
+.page-intro {
+    position: fixed;
+    inset: 0;
+    z-index: 200;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background:
+        radial-gradient(circle at 50% 44%, rgba(124, 90, 255, 0.35), transparent 42%),
+        linear-gradient(180deg, #07060e 0%, #0c0a18 100%);
+    transition: opacity 0.45s ease, visibility 0.45s ease;
+}
+
+.page-intro-inner {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.85rem;
+    color: #f7f5ff;
+    animation: intro-slide-in 0.9s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.intro-mark {
+    width: 76px;
+    height: 76px;
+    color: #ffffff;
+    filter: drop-shadow(0 6px 18px rgba(194, 184, 255, 0.25));
+}
+
+.page-intro-text {
+    margin: 0;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: rgba(247, 245, 255, 0.9);
+}
+
+.page-intro.is-exit {
+    opacity: 0;
+    visibility: hidden;
+}
+
+@keyframes intro-slide-in {
+    from {
+        opacity: 0;
+        transform: translateY(22px) scale(0.96);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .page-intro,
+    .page-intro-inner {
+        animation: none !important;
+        transition: none !important;
+    }
+}
+
+/*
+ * Sticky header: fully clear while hero is visible (hero is pulled under the bar with -mt).
+ * Solid black only after user scrolls past #hero (see script.js).
+ */
+.site-nav {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    width: 100%;
+    border-bottom: 1px solid transparent;
+    background-color: transparent;
+    transition:
+        background-color 0.35s ease,
+        border-color 0.35s ease;
+}
+
+.site-nav.site-nav--solid {
+    background-color: #000000;
+    border-bottom-color: rgba(255, 255, 255, 0.06);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .site-nav {
+        transition: none;
+    }
+}
+
+/* Hero: full-bleed space background (asset in /static/assets/hero-space-bg.png) */
+.hero-space-bg {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    background-color: #0c0618;
+    background-image: url("/static/assets/hero-space-bg.png");
+    background-size: cover;
+    background-position: center top;
+    background-repeat: no-repeat;
+    will-change: transform;
+}
+
+/* Subtle animated glow layer behind the hero content */
+.hero-space-bg::after {
+    content: "";
+    position: absolute;
+    inset: -30%;
+    background:
+        radial-gradient(circle at 30% 20%, rgba(194, 184, 255, 0.32), transparent 58%),
+        radial-gradient(circle at 70% 45%, rgba(124, 90, 255, 0.25), transparent 52%),
+        radial-gradient(circle at 55% 80%, rgba(99, 79, 200, 0.16), transparent 56%);
+    filter: blur(22px);
+    opacity: 0.7;
+    mix-blend-mode: screen;
+    transform: translate3d(0, 0, 0);
+    animation: hero-glow-drift 8.5s ease-in-out infinite;
+    pointer-events: none;
+}
+
+/* Additional moving color layer for clearly visible hero motion */
+.hero-space-bg::before {
+    content: "";
+    position: absolute;
+    inset: -18%;
+    background:
+        radial-gradient(circle at 18% 22%, rgba(255, 255, 255, 0.2), transparent 30%),
+        radial-gradient(circle at 78% 20%, rgba(194, 184, 255, 0.26), transparent 38%),
+        radial-gradient(circle at 52% 72%, rgba(124, 90, 255, 0.22), transparent 42%);
+    mix-blend-mode: screen;
+    opacity: 0.78;
+    animation: hero-orbital 13s linear infinite;
+    pointer-events: none;
+}
+
+@keyframes hero-glow-drift {
+    0% {
+        transform: translate3d(-1.5%, -1%, 0) scale(1.02);
+    }
+    50% {
+        transform: translate3d(2%, 1.4%, 0) scale(1.06);
+    }
+    100% {
+        transform: translate3d(-1.5%, -1%, 0) scale(1.02);
+    }
+}
+
+@keyframes hero-orbital {
+    0% {
+        transform: rotate(0deg) scale(1.04);
+    }
+    50% {
+        transform: rotate(180deg) scale(1.08);
+    }
+    100% {
+        transform: rotate(360deg) scale(1.04);
+    }
+}
+
+/* More obvious hero headline movement */
+.hero-title-glow {
+    animation: hero-title-breathe 3.6s ease-in-out infinite;
+}
+
+@keyframes hero-title-breathe {
+    0%,
+    100% {
+        text-shadow:
+            0 2px 32px rgba(0, 0, 0, 0.55),
+            0 0 0 rgba(194, 184, 255, 0);
+    }
+    50% {
+        text-shadow:
+            0 2px 32px rgba(0, 0, 0, 0.55),
+            0 0 28px rgba(194, 184, 255, 0.35);
+    }
+}
+
+/* Hero CTA ring pulse so improvements are visible immediately */
+.hero-cta-pulse {
+    position: relative;
+}
+
+.hero-cta-pulse::after {
+    content: "";
+    position: absolute;
+    inset: -7px;
+    border-radius: inherit;
+    border: 1px solid rgba(194, 184, 255, 0.55);
+    opacity: 0;
+    animation: hero-cta-ring 2.2s ease-out infinite;
+    pointer-events: none;
+}
+
+@keyframes hero-cta-ring {
+    0% {
+        transform: scale(0.97);
+        opacity: 0;
+    }
+    35% {
+        opacity: 0.65;
+    }
+    100% {
+        transform: scale(1.07);
+        opacity: 0;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .hero-space-bg::before,
+    .hero-space-bg::after {
+        animation: none;
+        opacity: 0.35;
+    }
+
+    .hero-title-glow,
+    .hero-cta-pulse::after {
+        animation: none;
+    }
+}
+
+/**
+ * Edge-to-edge horizontal rules. Parent max-width does not constrain these.
+ * Uses viewport width; html overflow-x: clip avoids scrollbar-induced horizontal scroll.
+ */
+.section-rule-full {
+    width: 100vw;
+    max-width: none;
+    margin-left: calc(50% - 50vw);
+    margin-right: calc(50% - 50vw);
+    box-sizing: border-box;
 }
 
 button {
     @apply cursor-pointer;
+}
+
+/* Hero typewriter cursor */
+.hero-cursor {
+    display: inline-block;
+    width: 0.06em;
+    height: 0.85em;
+    margin-left: 2px;
+    vertical-align: -0.05em;
+    background: #c2b8ff;
+    animation: hero-caret-blink 0.95s ease-in-out infinite;
+}
+
+.hero-cursor.is-done {
+    animation: none;
+    opacity: 0;
+}
+
+@keyframes hero-caret-blink {
+    0%,
+    45% {
+        opacity: 1;
+    }
+    50%,
+    100% {
+        opacity: 0;
+    }
+}
+
+/* Scroll reveal */
+.reveal {
+    opacity: 0;
+    transform: translateY(1.5rem);
+    transition:
+        opacity 0.65s cubic-bezier(0.22, 1, 0.36, 1),
+        transform 0.65s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.reveal.is-visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .reveal {
+        opacity: 1;
+        transform: none;
+        transition: none;
+    }
+
+    .hero-cursor {
+        animation: none;
+        opacity: 0;
+    }
+}
+
+/* Primary / ghost buttons — shared motion (Tailwind adds hover:*) */
+.btn-motion {
+    transition:
+        transform 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+        box-shadow 0.25s ease,
+        background-color 0.25s ease,
+        border-color 0.25s ease;
+}
+
+/* Nav link underline */
+.nav-link-animate {
+    position: relative;
+}
+
+.nav-link-animate::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    bottom: -2px;
+    width: 0;
+    height: 2px;
+    background: #c2b8ff;
+    transition: width 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.nav-link-animate:hover::after {
+    width: 100%;
+}
+
+/* Active-section underline state (managed by script.js) */
+.nav-link-animate.is-active {
+    color: #c2b8ff;
+}
+
+.nav-link-animate.is-active::after {
+    width: 100%;
+}
+
+/* Feature cards hover lift */
+.card-hover-lift {
+    position: relative;
+    overflow: hidden;
+    transition:
+        transform 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+        box-shadow 0.35s ease,
+        border-color 0.35s ease;
+}
+
+.card-hover-lift > * {
+    position: relative;
+    z-index: 1;
+}
+
+/* Gradient edge shimmer */
+.card-hover-lift::before {
+    content: "";
+    position: absolute;
+    inset: -1px;
+    background: linear-gradient(
+        135deg,
+        rgba(194, 184, 255, 0) 0%,
+        rgba(194, 184, 255, 0.55) 35%,
+        rgba(124, 90, 255, 0.25) 60%,
+        rgba(194, 184, 255, 0) 100%
+    );
+    opacity: 0;
+    transition: opacity 0.35s ease;
+    z-index: 0;
+    pointer-events: none;
+}
+
+/* Soft highlight sweep */
+.card-hover-lift::after {
+    content: "";
+    position: absolute;
+    top: -35%;
+    left: -55%;
+    width: 210%;
+    height: 170%;
+    background: radial-gradient(circle at 40% 35%, rgba(194, 184, 255, 0.22), transparent 60%);
+    opacity: 0;
+    transform: translateX(-20%) rotate(10deg);
+    pointer-events: none;
+    z-index: 0;
+}
+
+.card-hover-lift:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 40px rgba(99, 79, 200, 0.12);
+    border-color: rgba(194, 184, 255, 0.35);
+}
+
+.card-hover-lift:hover::before {
+    opacity: 1;
+}
+
+.card-hover-lift:hover::after {
+    opacity: 1;
+    animation: card-highlight-sweep 0.95s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes card-highlight-sweep {
+    0% {
+        transform: translateX(-22%) rotate(10deg);
+        opacity: 0;
+    }
+    25% {
+        opacity: 0.9;
+    }
+    100% {
+        transform: translateX(26%) rotate(10deg);
+        opacity: 0;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .card-hover-lift:hover {
+        transform: none;
+    }
+
+    .card-hover-lift:hover::after {
+        animation: none;
+        opacity: 0.35;
+    }
+}
+
+/* Stagger feature cards on scroll */
+#features article.reveal:nth-child(1) {
+    transition-delay: 0.04s;
+}
+#features article.reveal:nth-child(2) {
+    transition-delay: 0.1s;
+}
+#features article.reveal:nth-child(3) {
+    transition-delay: 0.16s;
+}
+#features article.reveal:nth-child(4) {
+    transition-delay: 0.22s;
+}
+#features article.reveal:nth-child(5) {
+    transition-delay: 0.28s;
+}
+#features article.reveal:nth-child(6) {
+    transition-delay: 0.34s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    #features article.reveal {
+        transition-delay: 0ms !important;
+    }
+}
+
+/* Team cover-flow carousel */
+.team-coverflow-stage {
+    perspective: 1200px;
+    perspective-origin: 50% 45%;
+}
+
+.team-coverflow-track {
+    transform-style: preserve-3d;
+}
+
+.team-coverflow-slide {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: min(88vw, 320px);
+    transform-origin: center center;
+    will-change: transform, opacity, filter;
+    backface-visibility: hidden;
+}
+
+.team-coverflow-slide article {
+    border-radius: 1.5rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .team-coverflow-slide {
+        filter: none !important;
+    }
+}
+
+/* Testimonial content swap animation */
+.testimonial-swap {
+    animation: testimonial-swap-in 380ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes testimonial-swap-in {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+        filter: blur(6px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+        filter: blur(0);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .testimonial-swap {
+        animation: none;
+    }
 }

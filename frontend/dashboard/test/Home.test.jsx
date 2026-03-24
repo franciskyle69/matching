@@ -34,7 +34,9 @@ describe("HomePage", () => {
       stats: { total_mentors: 5, total_mentees: 10, total_sessions: 3, completion_rate: 80 },
       setActiveTab: () => {},
       sessionsData: null,
+      sessionsLoading: false,
       menteeRecommendations: [],
+      mentorRequests: [],
     };
     render(withContext(React.createElement(HomePage), ctx));
     expect(screen.getByText(/welcome.*staff1/i)).toBeInTheDocument();

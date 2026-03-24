@@ -3,10 +3,31 @@
   const React = window.React;
   const { useContext, useState, useEffect, useRef } = React;
   const AppContext = window.DashboardApp.AppContext;
-  const { getCookie, fetchJSON } = window.DashboardApp.Utils || {};
+  const { getCookie, fetchJSON, DashboardIcon } = window.DashboardApp.Utils || {};
 
   const BIO_MAX = 200;
   const MAX_TAGS = 8;
+
+  /** Inline pencil (always visible; avoids cache/missing DashboardIcon on Bio card) */
+  function BioInterestsHeaderIcon() {
+    return (
+      <svg
+        className="settings-bio-header-icon"
+        width="20"
+        height="20"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        aria-hidden="true"
+      >
+        <path d="M12 20h9" />
+        <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+      </svg>
+    );
+  }
 
   function BioAndInterestsCard({ bio, tags, onBioSave, onTagsSave }) {
     const [bioText, setBioText] = useState(bio);
@@ -93,41 +114,46 @@
     const tagsChanged = JSON.stringify(localTags) !== JSON.stringify(tags);
 
     return (
-      <div className="card settings-card settings-card--bio">
+      <div className="settings-card settings-card--bio">
         <div className="settings-card-header">
           <div className="settings-card-header-main">
             <div className="settings-card-icon">
-              <span aria-hidden="true">✏️</span>
+              <BioInterestsHeaderIcon />
             </div>
             <div>
               <h2 className="section-title" style={{ borderBottom: "none", paddingBottom: 0 }}>Bio & Interests</h2>
-              <p className="page-subtitle">Tell others about yourself and what you're interested in.</p>
+              <p className="page-subtitle settings-card-subtitle-tight">Tell others about yourself and what you&apos;re interested in.</p>
             </div>
           </div>
         </div>
 
-        <div className="settings-section-label">Bio</div>
-        <div className="form-group">
-          <textarea
-            className="bio-textarea"
-            value={bioText}
-            onChange={(e) => setBioText(e.target.value.slice(0, BIO_MAX))}
-            placeholder="Write a short bio about yourself..."
-            rows={3}
-            maxLength={BIO_MAX}
-          />
-          <div className="bio-char-count">
-            <span className={bioText.length > BIO_MAX - 20 ? "bio-char-warn" : ""}>{bioText.length}</span>/{BIO_MAX}
+        <div className="settings-bio-section">
+          <div className="settings-section-label">Bio</div>
+          <div className="form-group settings-bio-form-group">
+            <textarea
+              className="bio-textarea"
+              value={bioText}
+              onChange={(e) => setBioText(e.target.value.slice(0, BIO_MAX))}
+              placeholder="Write a short bio about yourself..."
+              rows={4}
+              maxLength={BIO_MAX}
+            />
+            <div className="settings-bio-toolbar">
+              <div className="bio-char-count">
+                <span className={bioText.length > BIO_MAX - 20 ? "bio-char-warn" : ""}>{bioText.length}</span>/{BIO_MAX}
+              </div>
+              <button type="button" className="btn small" onClick={saveBio} disabled={bioSaving || !bioChanged}>
+                {bioSaving ? "Saving\u2026" : bioChanged ? "Save bio" : "No changes"}
+              </button>
+            </div>
           </div>
         </div>
-        <div className="btn-row" style={{ marginTop: "8px" }}>
-          <button className="btn small" onClick={saveBio} disabled={bioSaving || !bioChanged}>
-            {bioSaving ? "Saving\u2026" : bioChanged ? "Save bio" : "No changes"}
-          </button>
-        </div>
 
-        <div className="settings-section-label" style={{ marginTop: "20px" }}>Interests / Tags</div>
-        <p className="field-helper">Add up to {MAX_TAGS} tags. Type and press Enter or select from suggestions.</p>
+        <div className="settings-bio-divider" role="presentation" />
+
+        <div className="settings-tags-section">
+          <div className="settings-section-label">Interests / Tags</div>
+          <p className="field-helper settings-tags-helper">Add up to {MAX_TAGS} tags. Type and press Enter or select from suggestions.</p>
 
         <div className="tag-input-container">
           <div className="tag-input-pills">
@@ -160,10 +186,11 @@
         </div>
         {tagError && <p className="sp-file-error">{tagError}</p>}
 
-        <div className="btn-row" style={{ marginTop: "12px" }}>
-          <button className="btn small" onClick={saveTags} disabled={tagsSaving || !tagsChanged}>
+        <div className="settings-tags-toolbar">
+          <button type="button" className="btn small" onClick={saveTags} disabled={tagsSaving || !tagsChanged}>
             {tagsSaving ? "Saving\u2026" : tagsChanged ? "Save interests" : "No changes"}
           </button>
+        </div>
         </div>
       </div>
     );
@@ -299,12 +326,22 @@
     }, [menteeMatching.availability]);
 
     return (
+      <div
+        className={
+          "home-dashboard-space settings-page-shell" +
+          (user.role === "mentee"
+            ? " settings-page-shell--mentee"
+            : user.role === "mentor"
+              ? " settings-page-shell--mentor"
+              : "")
+        }
+      >
       <div className="settings-page-grid">
-        <div className="card settings-card settings-card--account">
+        <div className="settings-card settings-card--account">
           <div className="settings-card-header">
             <div className="settings-card-header-main">
               <div className="settings-card-icon">
-                <span aria-hidden="true">👤</span>
+                <DashboardIcon name="user" size={20} />
               </div>
               <div>
                 <h1 className="page-title">Account settings</h1>
@@ -357,7 +394,7 @@
                     )}
                   </div>
                   <div className="settings-avatar-overlay">
-                    <span className="settings-avatar-overlay-icon" aria-hidden="true">📷</span>
+                    <span className="settings-avatar-overlay-icon" aria-hidden="true"><DashboardIcon name="camera" size={18} /></span>
                     <span className="settings-avatar-overlay-text">
                       {avatarUploading ? "Uploading…" : "Change photo"}
                     </span>
@@ -396,11 +433,11 @@
         />
 
         {user.role === "mentee" && (
-          <div className="card settings-card settings-card--general">
+          <div className="settings-card settings-card--general">
             <div className="settings-card-header">
               <div className="settings-card-header-main">
                 <div className="settings-card-icon">
-                  <span aria-hidden="true">📋</span>
+                  <DashboardIcon name="clipboardList" size={20} />
                 </div>
                 <div>
                   <h2 className="section-title">General information</h2>
@@ -534,11 +571,11 @@
           </div>
         )}
         {(user.role === "mentor" || user.role === "mentee") && (
-          <div className="card matching-questionnaire-card settings-card settings-card--matching settings-card--full-width">
+          <div className="matching-questionnaire-card settings-card settings-card--matching settings-card--full-width">
             <div className="settings-card-header">
               <div className="settings-card-header-main">
                 <div className="settings-card-icon">
-                  <span aria-hidden="true">✨</span>
+                  <DashboardIcon name="sparkles" size={20} />
                 </div>
                 <div>
                   <h2 className="section-title" style={{ borderBottom: "none", paddingBottom: 0 }}>
@@ -1004,6 +1041,7 @@
             )}
           </div>
         )}
+      </div>
       </div>
     );
   }

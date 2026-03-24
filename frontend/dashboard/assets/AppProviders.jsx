@@ -186,14 +186,7 @@
     }, [activeTab, authCheckDone, sessionsPairMenteeId, mentorProfileHashId]);
 
     useEffect(() => {
-      const baseTitle = "Mentoring Dashboard";
-      const tabMeta = MAIN_TABS.find((t) => t.id === activeTab);
-      const label = tabMeta ? tabMeta.label : "";
-      if (!label) {
-        document.title = baseTitle;
-      } else {
-        document.title = `${label} · ${baseTitle}`;
-      }
+      document.title = "PeerLink";
     }, [activeTab]);
 
     useEffect(() => {
@@ -211,6 +204,8 @@
     useEffect(() => {
       if (activeTab === "sessions" && sessionsData === null) loadSessions();
       if (activeTab === "home" && user?.role === "mentee" && sessionsData === null) loadSessions();
+      if (activeTab === "home" && user?.role === "mentor" && sessionsData === null) loadSessions();
+      if (activeTab === "home" && user?.role === "mentor") loadMentorRequests();
       if ((activeTab === "home" || activeTab === "sessions") && user?.role === "mentee" && !myMentor) {
         loadMyMentor();
       }
@@ -490,7 +485,21 @@
       setError("");
       setAuthMessage("");
       const result = await fetchJSON("/api/auth/register/", { method: "POST", headers: { "X-CSRFToken": getCookie("csrftoken") }, body: JSON.stringify(signUpForm) });
-      if (!result.ok) { const message = result.data?.error || "Unable to create account."; setError(message); return; }
+      if (!result.ok) {
+        const errs = result.data?.errors;
+        const message =
+          errs && typeof errs === "object"
+            ? Object.values(errs)
+              .flat()
+              .filter(Boolean)
+              .map(String)
+              .join(" ")
+            : result.data?.error || "Unable to create account.";
+        setError(message);
+        if (window.Swal && typeof window.Swal.fire === "function") window.Swal.fire("Action failed", message, "error");
+        setActiveTab("signin");
+        return;
+      }
       const message = result.data?.message || "Account created.";
       setAuthMessage(message);
       setActiveTab("signin");

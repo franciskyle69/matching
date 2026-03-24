@@ -141,7 +141,7 @@
 
     if (isMentor && !isStaffView && sessionsPairMenteeId == null) {
       return (
-        <div className="card sessions-page">
+        <div className="home-dashboard-space sessions-page">
           <h1 className="page-title">Sessions</h1>
           <p className="page-subtitle">Choose a mentee to view sessions and schedule new ones. Only official mentor–mentee pairs from Matching are shown.</p>
           {sessionsLoading && (
@@ -209,7 +209,7 @@
     const upcomingBuckets = groupUpcomingByBucket(upcomingForPair);
 
     return (
-      <div className="card sessions-page">
+      <div className="home-dashboard-space sessions-page">
         {isMentor && !isStaffView && sessionsPairMenteeId != null && (
           <button type="button" className="sessions-back-link" onClick={() => setSessionsPairMenteeId(null)}>← Back to my mentees</button>
         )}

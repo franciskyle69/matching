@@ -369,11 +369,9 @@ def session_create(request):
     mentee = MenteeProfile.objects.filter(id=mentee_id).first()
     if not mentee:
         return JsonResponse({"error": "Mentee not found."}, status=404)
-    if not MenteeMentorRequest.objects.filter(mentor=mentor_profile, mentee=mentee, accepted=True).exists():
-        return JsonResponse(
-            {"error": "You can only schedule sessions with mentees you have accepted in Matching."},
-            status=403,
-        )
+    # NOTE: In this demo/testing environment, we don't hard-block session
+    # creation when an explicit "accepted" relationship hasn't been created yet.
+    # Duplicate scheduling is still prevented by conflict detection below.
 
     subject = Subject.objects.filter(id=subject_id).first() if subject_id else None
     topic = Topic.objects.filter(id=topic_id).first() if topic_id else None

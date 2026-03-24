@@ -114,7 +114,7 @@
     }
 
     return (
-      <div className="card announcements-page">
+      <div className="home-dashboard-space announcements-page">
         <h1 className="page-title">Announcements</h1>
         <p className="page-subtitle">
           {isMentor ? "Post announcements to your mentees. They can comment below." : "Announcements from your mentors. You can add comments."}

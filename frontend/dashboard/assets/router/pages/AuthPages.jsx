@@ -12,19 +12,53 @@
     if (!ctx) return null;
     const [showPassword, setShowPassword] = useState(false);
     const { signInForm, setSignInForm, handleSignIn, setActiveTab, signInLoading } = ctx;
+
+    function goBackToLandingOrPrevious() {
+      // Prefer "previous page" when possible, but always fall back to landing.
+      try {
+        if (window.history.length > 1) window.history.back();
+        else window.location.href = "/";
+      } catch {
+        window.location.href = "/";
+      }
+    }
+
     return (
       <div className="auth-page">
         <div className="auth-card">
           <div className="auth-card-left">
-            <div>
-              <div className="auth-brand">BukSU</div>
-              <h1 className="auth-info-title">Academic mentoring system</h1>
-              <p className="auth-info-text">Connect mentors and mentees seamlessly.</p>
+            <div className="auth-left-top">
+              <img
+                src="/static/assets/logoreal.svg"
+                alt="PeerLink logo"
+                className="auth-left-logo"
+              />
+              <h1 className="auth-info-title">Welcome to PeerLink</h1>
+              <p className="auth-info-text">
+                Access your personalized learning dashboard and continue your
+                journey with expert mentors.
+              </p>
+              <ul className="auth-left-points">
+                <li>Secure authentication</li>
+                <li>Track your progress</li>
+                <li>Connect with mentors</li>
+              </ul>
             </div>
-            <div className="auth-info-footer">www.capstoneproject.com</div>
+            <div className="auth-info-footer">www.peerlink.com</div>
           </div>
           <div className="auth-card-divider"></div>
           <div className="auth-card-right">
+            <button
+              type="button"
+              className="auth-back-btn"
+              onClick={goBackToLandingOrPrevious}
+              aria-label="Go back"
+              title="Go back"
+            >
+              <svg className="auth-back-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M15 18l-6-6 6-6" />
+              </svg>
+            </button>
             <h2 className="auth-title">Login</h2>
             <p className="auth-subtitle">Welcome back! Please sign in to your account</p>
             <form
@@ -79,19 +113,53 @@
     const [showPassword1, setShowPassword1] = useState(false);
     const [showPassword2, setShowPassword2] = useState(false);
     const { signUpForm, setSignUpForm, handleSignUp, setActiveTab } = ctx;
+
+    function goBackToLandingOrPrevious() {
+      // Prefer "previous page" when possible, but always fall back to landing.
+      try {
+        if (window.history.length > 1) window.history.back();
+        else window.location.href = "/";
+      } catch {
+        window.location.href = "/";
+      }
+    }
+
     return (
       <div className="auth-page">
         <div className="auth-card">
           <div className="auth-card-left">
-            <div>
-              <div className="auth-brand">Academic mentoring system</div>
-              <h1 className="auth-info-title">Join Us Today</h1>
-              <p className="auth-info-text">Start your mentoring journey with our platform.</p>
+            <div className="auth-left-top">
+              <img
+                src="/static/assets/logoreal.svg"
+                alt="PeerLink logo"
+                className="auth-left-logo"
+              />
+              <h1 className="auth-info-title">Welcome to PeerLink</h1>
+              <p className="auth-info-text">
+                Access your personalized learning dashboard and continue your
+                journey with expert mentors.
+              </p>
+              <ul className="auth-left-points">
+                <li>Secure authentication</li>
+                <li>Track your progress</li>
+                <li>Connect with mentors</li>
+              </ul>
             </div>
-            <div className="auth-info-footer">www.academicmentoring.com</div>
+            <div className="auth-info-footer">www.peerlink.com</div>
           </div>
           <div className="auth-card-divider"></div>
           <div className="auth-card-right">
+            <button
+              type="button"
+              className="auth-back-btn"
+              onClick={goBackToLandingOrPrevious}
+              aria-label="Go back"
+              title="Go back"
+            >
+              <svg className="auth-back-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M15 18l-6-6 6-6" />
+              </svg>
+            </button>
             <h2 className="auth-title">Sign Up</h2>
             <p className="auth-subtitle">Create your account to get started</p>
             <form

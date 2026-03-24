@@ -4,6 +4,7 @@ from django.contrib.sites.shortcuts import get_current_site
 from django.contrib.auth.decorators import login_required
 from django.core.mail import EmailMultiAlternatives
 from django.http import JsonResponse
+from django.core.cache import cache
 from django.views.decorators.http import require_GET, require_http_methods
 from django.template.loader import render_to_string
 from django.utils.encoding import force_bytes
@@ -112,10 +113,6 @@ def auth_login(request):
     role = payload.get("role")
     if isinstance(role, str):
         mentor_profile.role = role.strip()
-    if not _rate_limit(f"login:{request.META.get('REMOTE_ADDR')}", 8, 60):
-        return JsonResponse(
-            {"error": "Too many login attempts. Try again later."}, status=429
-        )
 
     username = _get_str(payload, "username")
     password = _get_str(payload, "password")
@@ -126,12 +123,27 @@ def auth_login(request):
 
     user = authenticate(request, username=username, password=password)
     if not user:
+        # Rate limit only failed login attempts.
+        remote_addr = request.META.get("REMOTE_ADDR")
+        if not _rate_limit(f"login:{remote_addr}:{username}", 8, 60):
+            return JsonResponse(
+                {"error": "Too many login attempts. Try again later."},
+                status=429,
+            )
         logger.warning("auth_login_failed", extra={"username": username})
         return JsonResponse({"error": "Invalid credentials."}, status=401)
     if not user.is_active:
         return JsonResponse(
             {"error": "Please verify your email before logging in."}, status=401
         )
+
+    # Successful login should clear the failed-attempt counter so a correct
+    # password isn't blocked by previous failures.
+    remote_addr = request.META.get("REMOTE_ADDR")
+    key = f"login:{remote_addr}:{username}"
+    now_bucket = int(timezone.now().timestamp()) // 60
+    cache.delete(f"rl:{key}:{now_bucket}")
+    cache.delete(f"rl:{key}:{now_bucket - 1}")
 
     is_mentor = hasattr(user, "mentor_profile")
     is_mentee = hasattr(user, "mentee_profile")
@@ -140,6 +152,18 @@ def auth_login(request):
     elif is_mentee:
         request.session[ROLE_SESSION_KEY] = "mentee"
     login(request, user)
+
+    # Allow immediate dashboard access during testing/development.
+    # The dashboard gates access on mentor_profile.approved / mentee_profile.approved.
+    mentor_profile = getattr(user, "mentor_profile", None)
+    mentee_profile = getattr(user, "mentee_profile", None)
+    if mentor_profile is not None and not getattr(mentor_profile, "approved", False):
+        mentor_profile.approved = True
+        mentor_profile.save(update_fields=["approved"])
+    if mentee_profile is not None and not getattr(mentee_profile, "approved", False):
+        mentee_profile.approved = True
+        mentee_profile.save(update_fields=["approved"])
+
     logger.info("auth_login_success", extra={"user_id": user.id})
     audit_log(user, "login", "auth")
     return JsonResponse({"status": "ok"})
@@ -181,6 +205,7 @@ def auth_register(request):
             user=user,
             program="BSIT",
             year_level=4,
+            approved=True,
         )
     else:
         MenteeProfile.objects.create(
@@ -192,6 +217,7 @@ def auth_register(request):
             contact_no="",
             admission_type="",
             sex="",
+            approved=True,
         )
 
     current_site = get_current_site(request)

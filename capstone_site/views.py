@@ -27,8 +27,6 @@ def react_app(request):
 
 
 def landing_page(request):
-    if request.user.is_authenticated:
-        return HttpResponseRedirect("/app/")
     index_path = Path(__file__).resolve().parent.parent / "frontend" / "landing" / "index.html"
     if not index_path.exists():
         return HttpResponseNotFound("Landing page not found. Move Agentix into frontend/landing.")

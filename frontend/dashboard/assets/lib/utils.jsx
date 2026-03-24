@@ -128,6 +128,174 @@
     }
   }
 
+  /** Stroke icons (sidebar-style) for profile, settings, post categories */
+  function DashboardIcon({ name, size = 18, className = "" }) {
+    const s = size;
+    const common = {
+      width: s,
+      height: s,
+      viewBox: "0 0 24 24",
+      fill: "none",
+      stroke: "currentColor",
+      strokeWidth: 1.75,
+      strokeLinecap: "round",
+      strokeLinejoin: "round",
+      className: "dashboard-stroke-icon " + (className || ""),
+      "aria-hidden": true,
+    };
+    switch (name) {
+      case "graduationCap":
+        return (
+          <svg {...common}>
+            <path d="M22 10v6M2 10l10-5 10 5-10 5z" />
+            <path d="M6 12v5c3 3 9 3 12 0v-5" />
+          </svg>
+        );
+      case "calendar":
+        return (
+          <svg {...common}>
+            <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+            <line x1="16" y1="2" x2="16" y2="6" />
+            <line x1="8" y1="2" x2="8" y2="6" />
+            <line x1="3" y1="10" x2="21" y2="10" />
+          </svg>
+        );
+      case "building":
+        return (
+          <svg {...common}>
+            <path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18" />
+            <path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2" />
+            <path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2" />
+            <path d="M10 6h4" />
+            <path d="M10 10h4" />
+            <path d="M10 14h4" />
+            <path d="M10 18h4" />
+          </svg>
+        );
+      case "users":
+        return (
+          <svg {...common}>
+            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+            <circle cx="9" cy="7" r="4" />
+            <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+            <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+          </svg>
+        );
+      case "barChart":
+        return (
+          <svg {...common}>
+            <line x1="12" y1="20" x2="12" y2="10" />
+            <line x1="18" y1="20" x2="18" y2="4" />
+            <line x1="6" y1="20" x2="6" y2="16" />
+          </svg>
+        );
+      case "userCircle":
+        return (
+          <svg {...common}>
+            <circle cx="12" cy="12" r="10" />
+            <circle cx="12" cy="10" r="3" />
+            <path d="M7 20.7c.7-2 2.6-3.3 5-3.3s4.3 1.3 5 3.3" />
+          </svg>
+        );
+      case "briefcase":
+        return (
+          <svg {...common}>
+            <rect x="2" y="7" width="20" height="14" rx="2" ry="2" />
+            <path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2" />
+            <line x1="12" y1="12" x2="12" y2="12.01" />
+          </svg>
+        );
+      case "clock":
+        return (
+          <svg {...common}>
+            <circle cx="12" cy="12" r="10" />
+            <polyline points="12 6 12 12 16 14" />
+          </svg>
+        );
+      case "trophy":
+        return (
+          <svg {...common}>
+            <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6" />
+            <path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18" />
+            <path d="M4 22h16" />
+            <path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22" />
+            <path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22" />
+            <path d="M18 2H6v7a6 6 0 0 0 12 0V2Z" />
+          </svg>
+        );
+      case "laptop":
+        return (
+          <svg {...common}>
+            <path d="M4 8a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z" />
+            <line x1="2" y1="20" x2="22" y2="20" />
+          </svg>
+        );
+      case "fileText":
+        return (
+          <svg {...common}>
+            <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" />
+            <polyline points="14 2 14 8 20 8" />
+            <line x1="16" y1="13" x2="8" y2="13" />
+            <line x1="16" y1="17" x2="8" y2="17" />
+            <line x1="10" y1="9" x2="8" y2="9" />
+          </svg>
+        );
+      case "pencil":
+        return (
+          <svg {...common}>
+            <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+            <path d="m15 5 4 4" />
+          </svg>
+        );
+      case "user":
+        return (
+          <svg {...common}>
+            <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
+            <circle cx="12" cy="7" r="4" />
+          </svg>
+        );
+      case "clipboardList":
+        return (
+          <svg {...common}>
+            <rect width="8" height="4" x="8" y="2" rx="1" ry="1" />
+            <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
+            <path d="M12 11h4" />
+            <path d="M12 16h4" />
+            <path d="M8 11h.01" />
+            <path d="M8 16h.01" />
+          </svg>
+        );
+      case "sparkles":
+        return (
+          <svg {...common}>
+            <path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3L12 3Z" />
+          </svg>
+        );
+      case "camera":
+        return (
+          <svg {...common}>
+            <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z" />
+            <circle cx="12" cy="13" r="3" />
+          </svg>
+        );
+      default:
+        return (
+          <svg {...common}>
+            <circle cx="12" cy="12" r="10" />
+          </svg>
+        );
+    }
+  }
+
+  function categoryIconName(cat) {
+    if (cat === "achievement") return "trophy";
+    if (cat === "project") return "laptop";
+    return "fileText";
+  }
+
+  window.DashboardApp.DashboardIcon = DashboardIcon;
+  window.DashboardApp.categoryIconName = categoryIconName;
+
   window.DashboardApp.Utils = {
     formatMatchScore,
     getCookie,
@@ -136,5 +304,7 @@
     LoadingSpinner,
     OrbitingDotsLoader,
     MatchingLoadingAnimation,
+    DashboardIcon,
+    categoryIconName,
   };
 })();

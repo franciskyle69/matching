@@ -78,7 +78,13 @@
     }, [isMentee, menteeQuestionnaireCompleted, menteeRecLoading, menteeRecUpdating, loadMenteeRecommendations]);
 
     return (
-      <div className="card">
+      <div
+        className={
+          isMentee
+            ? "home-dashboard-space matching-page matching-page--mentee"
+            : "home-dashboard-space matching-page matching-page--mentor"
+        }
+      >
         <h1 className="page-title">
           Matching
           {isMentee && menteeRecUpdating && (
@@ -307,7 +313,25 @@
 
           return (
             <div className="match-mentee-list">
-              <div className="section-title">Your mentor matches</div>
+              <div className="match-mentee-list-head">
+                <div className="section-title">Your mentor matches</div>
+                {recs.length >= 1 && (
+                  <div className="btn-row match-mentee-list-head-actions">
+                    <button
+                      type="button"
+                      className="btn"
+                      disabled={menteeRecLoading}
+                      onClick={() => {
+                        setShowMoreMentors(true);
+                        loadMenteeRecommendations(30);
+                      }}
+                      style={{ fontSize: "13px", padding: "8px 16px", borderRadius: "999px" }}
+                    >
+                      {menteeRecLoading ? "Loading more mentors…" : "View more mentors"}
+                    </button>
+                  </div>
+                )}
+              </div>
               {recs.map((match, idx) => {
                 const mentor = match.mentor || {};
                 const d = match.match_details || {};
@@ -449,22 +473,6 @@
                   </div>
                 );
               })}
-              {recs.length >= 1 && (
-                <div className="btn-row" style={{ marginTop: "8px", justifyContent: "flex-end" }}>
-                  <button
-                    type="button"
-                    className="btn"
-                    disabled={menteeRecLoading}
-                    onClick={() => {
-                      setShowMoreMentors(true);
-                      loadMenteeRecommendations(30);
-                    }}
-                    style={{ fontSize: "13px", padding: "8px 16px", borderRadius: "999px" }}
-                  >
-                    {menteeRecLoading ? "Loading more mentors…" : "View more mentors"}
-                  </button>
-                </div>
-              )}
             </div>
           );
         })()}

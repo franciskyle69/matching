@@ -1,4 +1,8 @@
 {
+  "type": "module",
+  "scripts": {
+    "preview": "node preview-server.mjs"
+  },
   "dependencies": {
     "@tailwindcss/cli": "^4.1.12",
     "tailwindcss": "^4.1.12"
