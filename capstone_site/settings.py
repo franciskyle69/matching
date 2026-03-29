@@ -56,6 +56,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'django.contrib.sites',
+    'axes',  # Login attempt rate limiting
     'rest_framework',
     'accounts',
     'profiles',
@@ -74,6 +75,7 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'axes.middleware.AxesMiddleware',  # Must be after AuthenticationMiddleware
     'allauth.account.middleware.AccountMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
@@ -205,6 +207,7 @@ LOGIN_URL = '/accounts/login/'
 PASSWORD_RESET_TIMEOUT = 600
 
 AUTHENTICATION_BACKENDS = [
+    'axes.backends.AxesBackend',  # Must be first
     'accounts.auth_backends.EmailOrUsernameModelBackend',
     'django.contrib.auth.backends.ModelBackend',
     'allauth.account.auth_backends.AuthenticationBackend',
@@ -213,8 +216,6 @@ AUTHENTICATION_BACKENDS = [
 SITE_ID = 1
 
 # django-allauth settings
-ACCOUNT_EMAIL_REQUIRED = True
-ACCOUNT_USERNAME_REQUIRED = True
 ACCOUNT_EMAIL_VERIFICATION = 'mandatory'
 ACCOUNT_UNIQUE_EMAIL = True
 ACCOUNT_SIGNUP_FIELDS = ['email*', 'username*', 'password1*', 'password2*']
@@ -305,3 +306,13 @@ LOGGING = {
         },
     },
 }
+
+# django-axes: Login attempt rate limiting
+# Track failed login attempts and temporarily lock accounts after threshold exceeded
+from datetime import timedelta
+
+AXES_FAILURE_LIMIT = 5  # Lock account after 5 failed attempts
+AXES_COOLOFF_TIME = timedelta(minutes=15)  # Lockout duration: 15 minutes
+AXES_LOCKOUT_TEMPLATE = None  # Use DRF response for API lockouts
+AXES_VERBOSE = True  # Log detailed information about attempts
+AXES_RESET_ON_SUCCESS = True  # Reset counter on successful login

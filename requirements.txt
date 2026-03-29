@@ -12,6 +12,7 @@ cloudinary>=1.36
 google-auth>=2.0
 google-api-python-client>=2.0
 cryptography
+django-axes>=5.40.0
 xgboost>=2.0
 scikit-learn>=1.3
 pandas>=2.1

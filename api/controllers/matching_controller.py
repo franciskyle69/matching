@@ -107,6 +107,7 @@ def run_matching(request):
     logger.info(
         "matching_run", extra={"count": len(data), "mode": mode, "user_id": request.user.id}
     )
+    audit_log(request.user, "run", "matching", mode)
     return JsonResponse(
         {
             "count": len(data),
@@ -230,12 +231,16 @@ def mentee_choose_mentor(request):
     if not mentor:
         return JsonResponse({"error": "Mentor not found."}, status=404)
 
-    MenteeMentorRequest.objects.get_or_create(mentee=mentee_profile, mentor=mentor)
+    req, _created = MenteeMentorRequest.objects.get_or_create(
+        mentee=mentee_profile,
+        mentor=mentor,
+    )
     Notification.objects.create(
         user=mentor.user,
         message=f"{mentee_profile.user.username} has requested you as a mentor.",
         action_tab="matching",
     )
+    audit_log(request.user, "create", "mentee_mentor_request", req.id)
     logger.info(
         "mentee_chose_mentor",
         extra={"mentee_id": mentee_profile.id, "mentor_id": mentor.id},

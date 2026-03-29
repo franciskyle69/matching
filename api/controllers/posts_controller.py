@@ -177,9 +177,11 @@ def post_like(request, post_id):
     if request.user in post.likes.all():
         post.likes.remove(request.user)
         liked = False
+        audit_log(request.user, "unlike", "post", post.id)
     else:
         post.likes.add(request.user)
         liked = True
+        audit_log(request.user, "like", "post", post.id)
 
     return JsonResponse({
         "liked": liked,
@@ -193,7 +195,9 @@ def post_delete(request, post_id):
     post = UserPost.objects.filter(id=post_id, author=request.user).first()
     if not post:
         return JsonResponse({"error": "Post not found or not yours."}, status=404)
+    deleted_post_id = post.id
     post.delete()
+    audit_log(request.user, "delete", "post", deleted_post_id)
     return JsonResponse({"status": "ok"})
 
 
@@ -279,4 +283,5 @@ def post_comment_create(request, post_id):
     if not content:
         return JsonResponse({"error": "Comment cannot be empty."}, status=400)
     comment = PostComment.objects.create(post=post, author=request.user, content=content)
+    audit_log(request.user, "create", "post_comment", comment.id)
     return JsonResponse({"comment": _serialize_comment(comment)})

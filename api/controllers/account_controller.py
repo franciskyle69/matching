@@ -17,6 +17,12 @@ from profiles.models import MentorProfile, MenteeProfile, InterestTag
 
 from accounts.forms import AccountSettingsForm, RegisterForm
 from accounts.views import ROLE_SESSION_KEY
+from accounts.auth_backends import EmailOrUsernameModelBackend
+from accounts.lockout_utils import (
+    get_lockout_info,
+    create_lockout_response,
+    reset_lockout_progress,
+)
 
 from ..views import (
     _get_payload,
@@ -110,40 +116,43 @@ def csrf(request):
 @require_http_methods(["POST"])
 def auth_login(request):
     payload = _get_payload(request)
-    role = payload.get("role")
-    if isinstance(role, str):
-        mentor_profile.role = role.strip()
-
     username = _get_str(payload, "username")
     password = _get_str(payload, "password")
+    client_ip = request.META.get("REMOTE_ADDR")
     if not username or not password:
         return JsonResponse(
             {"error": "Username and password are required."}, status=400
         )
 
-    user = authenticate(request, username=username, password=password)
+    # Allow valid credentials to sign in and reset limits immediately.
+    backend = EmailOrUsernameModelBackend()
+    user = backend.authenticate(request, username=username, password=password)
+
     if not user:
-        # Rate limit only failed login attempts.
-        remote_addr = request.META.get("REMOTE_ADDR")
-        if not _rate_limit(f"login:{remote_addr}:{username}", 8, 60):
-            return JsonResponse(
-                {"error": "Too many login attempts. Try again later."},
-                status=429,
-            )
+        # Trigger axes tracking/backoff path for failed credentials.
+        authenticate(request, username=username, password=password)
+        lockout_info = get_lockout_info(username, ip_address=client_ip)
+        if lockout_info["is_locked"]:
+            return create_lockout_response(username, ip_address=client_ip)
+
         logger.warning("auth_login_failed", extra={"username": username})
-        return JsonResponse({"error": "Invalid credentials."}, status=401)
+        return JsonResponse(
+            {
+                "error": "Invalid credentials.",
+                "attempts": lockout_info.get("attempts", 0),
+                "failure_limit": lockout_info.get("failure_limit", 5),
+            },
+            status=401,
+        )
+
     if not user.is_active:
         return JsonResponse(
             {"error": "Please verify your email before logging in."}, status=401
         )
 
-    # Successful login should clear the failed-attempt counter so a correct
-    # password isn't blocked by previous failures.
-    remote_addr = request.META.get("REMOTE_ADDR")
-    key = f"login:{remote_addr}:{username}"
-    now_bucket = int(timezone.now().timestamp()) // 60
-    cache.delete(f"rl:{key}:{now_bucket}")
-    cache.delete(f"rl:{key}:{now_bucket - 1}")
+    # No longer call django.authenticate for successful login; use explicit backend.
+    # This guarantees valid credentials can reset lockout state.
+    login(request, user, backend="accounts.auth_backends.EmailOrUsernameModelBackend")
 
     is_mentor = hasattr(user, "mentor_profile")
     is_mentee = hasattr(user, "mentee_profile")
@@ -151,7 +160,6 @@ def auth_login(request):
         request.session[ROLE_SESSION_KEY] = "mentor"
     elif is_mentee:
         request.session[ROLE_SESSION_KEY] = "mentee"
-    login(request, user)
 
     # Allow immediate dashboard access during testing/development.
     # The dashboard gates access on mentor_profile.approved / mentee_profile.approved.
@@ -163,6 +171,14 @@ def auth_login(request):
     if mentee_profile is not None and not getattr(mentee_profile, "approved", False):
         mentee_profile.approved = True
         mentee_profile.save(update_fields=["approved"])
+
+    # Successful authentication clears escalation progress.
+    reset_lockout_progress(
+        username,
+        user.username,
+        user.email,
+        ip_address=client_ip,
+    )
 
     logger.info("auth_login_success", extra={"user_id": user.id})
     audit_log(user, "login", "auth")
@@ -176,6 +192,30 @@ def auth_logout(request):
     logout(request)
     audit_log(user, "logout", "auth")
     return JsonResponse({"status": "ok"})
+
+
+@require_http_methods(["POST"])
+def check_lockout(request):
+    """Check if a user's account is currently locked (for auto-polling lockout status)."""
+    payload = _get_payload(request)
+    username = _get_str(payload, "username")
+    if not username:
+        return JsonResponse(
+            {"error": "Username is required."}, status=400
+        )
+    
+    lockout_info = get_lockout_info(
+        username,
+        ip_address=request.META.get("REMOTE_ADDR"),
+    )
+    return JsonResponse({
+        "is_locked": lockout_info["is_locked"],
+        "remaining_minutes": lockout_info.get("remaining_minutes"),
+        "locked_until": lockout_info.get("locked_until"),
+        "penalty_minutes": lockout_info.get("penalty_minutes"),
+        "attempts": lockout_info.get("attempts", 0),
+        "failure_limit": lockout_info.get("failure_limit", 5),
+    })
 
 
 @require_http_methods(["POST"])
@@ -246,6 +286,7 @@ def auth_register(request):
     email.attach_alternative(html_message, "text/html")
     email.send()
 
+    audit_log(user, "register", "auth", user.id)
     logger.info("auth_register", extra={"user_id": user.id, "role": role})
     return JsonResponse(
         {
@@ -575,6 +616,7 @@ def update_account(request):
         errors = {k: list(v) for k, v in form.errors.items()}
         return JsonResponse({"errors": errors}, status=400)
     form.save()
+    audit_log(request.user, "update", "account", request.user.id)
     logger.info("account_updated", extra={"user_id": request.user.id})
     return JsonResponse(
         {
@@ -648,6 +690,7 @@ def upload_avatar(request):
             mentee.avatar_url = url
             mentee.save(update_fields=["avatar_url"])
 
+        audit_log(request.user, "update", "avatar", request.user.id)
         return JsonResponse({"avatar_url": url})
     except Exception as e:
         return JsonResponse(
@@ -711,6 +754,7 @@ def upload_cover(request):
         mentee.cover_url = url
         mentee.save(update_fields=["cover_url"])
 
+    audit_log(request.user, "update", "cover", request.user.id)
     return JsonResponse({"cover_url": url})
 
 
@@ -756,6 +800,7 @@ def update_mentee_profile(request):
         payload, "sex", getattr(mentee_profile, "sex", "")
     )
     mentee_profile.save()
+    audit_log(request.user, "update", "mentee_profile", mentee_profile.id)
 
     return JsonResponse(
         {
@@ -797,6 +842,7 @@ def update_mentee_matching_profile(request):
           payload.get("availability")
       )
   mentee_profile.save()
+  audit_log(request.user, "update", "mentee_matching", mentee_profile.id)
 
   mentee_subs = (
       mentee_profile.subjects
@@ -855,6 +901,7 @@ def update_mentor_profile(request):
             payload.get("availability")
         )
     mentor_profile.save()
+    audit_log(request.user, "update", "mentor_profile", mentor_profile.id)
 
     mentor_subs = (
         mentor_profile.subjects
@@ -911,6 +958,7 @@ def update_bio(request):
     else:
         return JsonResponse({"error": "No profile found."}, status=404)
 
+    audit_log(request.user, "update", "bio", request.user.id)
     return JsonResponse({"bio": bio})
 
 
@@ -953,6 +1001,7 @@ def update_tags(request):
     else:
         return JsonResponse({"error": "No profile found."}, status=404)
 
+    audit_log(request.user, "update", "interest_tags", request.user.id)
     return JsonResponse({"tags": [t.name for t in tag_objects]})
 
 

@@ -570,6 +570,7 @@ def session_update_meeting_notes(request, session_id: int):
     meeting_notes = _get_str(payload, "meeting_notes", default="")
     session.meeting_notes = meeting_notes
     session.save(update_fields=["meeting_notes"])
+    audit_log(request.user, "update_notes", "session", session.id)
     _invalidate_sessions_cache_for_user(session.mentor.user_id)
     _invalidate_sessions_cache_for_user(session.mentee.user_id)
     return JsonResponse({"session": _serialize_session(session)})

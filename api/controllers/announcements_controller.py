@@ -249,4 +249,5 @@ def comment_create(request):
     else:
         return JsonResponse({"error": "target_type must be 'announcement' or 'session'."}, status=400)
 
+    audit_log(request.user, "create", "comment", comment.id)
     return JsonResponse({"comment": _serialize_comment(comment)})

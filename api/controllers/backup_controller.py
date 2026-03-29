@@ -5,6 +5,7 @@ Backups stored in BACKUP_DIR (default: project root / backups).
 import json
 import os
 from datetime import datetime
+from decimal import Decimal
 from pathlib import Path
 
 from django.conf import settings
@@ -20,7 +21,7 @@ from matching.models import (
     Notification, Announcement, AnnouncementRecipient, Comment, AuditLog,
 )
 
-from ..views import _require_staff
+from ..views import _require_staff, audit_log
 
 BACKUP_VERSION = 1
 
@@ -37,13 +38,33 @@ def _ensure_backup_dir():
 
 def _model_to_row(instance):
     from django.forms.models import model_to_dict
+
+    def _json_safe(value):
+        if value is None:
+            return None
+        if isinstance(value, (str, int, float, bool)):
+            return value
+        if isinstance(value, Decimal):
+            # Keep precision for values like GPA.
+            return str(value)
+        if hasattr(value, "isoformat"):
+            return value.isoformat()
+        if isinstance(value, dict):
+            return {k: _json_safe(v) for k, v in value.items()}
+        if isinstance(value, (list, tuple, set)):
+            return [_json_safe(v) for v in value]
+        if hasattr(value, "all"):
+            return [_json_safe(v) for v in value.all()]
+        if hasattr(value, "pk"):
+            return value.pk
+        if hasattr(value, "id"):
+            return value.id
+        return str(value)
+
     row = model_to_dict(instance)
     row["pk"] = instance.pk
     for key, value in list(row.items()):
-        if hasattr(value, "isoformat"):
-            row[key] = value.isoformat()
-        elif hasattr(value, "id"):
-            row[key] = value.id
+        row[key] = _json_safe(value)
     return row
 
 
@@ -276,6 +297,7 @@ def backup_create(request):
         data = _export_data()
         with open(path, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=2)
+        audit_log(request.user, "create", "backup", str(ts))
         return JsonResponse({
             "ok": True,
             "id": str(ts),
@@ -301,6 +323,7 @@ def backup_download(request, backup_id):
     if not path.is_file():
         return JsonResponse({"error": "Backup not found."}, status=404)
     try:
+        audit_log(request.user, "download", "backup", str(backup_id))
         return FileResponse(open(path, "rb"), as_attachment=True, filename=path.name)
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)
@@ -324,7 +347,12 @@ def backup_restore(request):
     if data.get("version") != BACKUP_VERSION:
         return JsonResponse({"error": "Unsupported backup version."}, status=400)
     try:
+        actor_id = request.user.id
+        uploaded_name = f.name
         _restore_data(data)
+        actor = User.objects.filter(id=actor_id).first()
+        if actor:
+            audit_log(actor, "restore", "backup", uploaded_name)
         return JsonResponse({"ok": True, "message": "Restore completed. You may need to log in again."})
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)
@@ -349,7 +377,11 @@ def backup_restore_by_id(request, backup_id):
     if data.get("version") != BACKUP_VERSION:
         return JsonResponse({"error": "Unsupported backup version."}, status=400)
     try:
+        actor_id = request.user.id
         _restore_data(data)
+        actor = User.objects.filter(id=actor_id).first()
+        if actor:
+            audit_log(actor, "restore", "backup", str(backup_id))
         return JsonResponse({"ok": True, "message": "Restore completed. You may need to log in again."})
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)
@@ -367,6 +399,7 @@ def backup_delete(request, backup_id):
         return JsonResponse({"error": "Backup not found."}, status=404)
     try:
         path.unlink()
+        audit_log(request.user, "delete", "backup", str(backup_id))
         return JsonResponse({"ok": True})
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)

@@ -9,7 +9,18 @@
   function formatBackupDate(iso) {
     if (!iso) return "";
     const d = new Date(iso);
-    return d.toLocaleDateString([], { dateStyle: "medium", timeStyle: "short" });
+    if (Number.isNaN(d.getTime())) return String(iso);
+    try {
+      return d.toLocaleString([], {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+      });
+    } catch {
+      return d.toISOString();
+    }
   }
 
   function BackupPage() {
@@ -53,33 +64,82 @@
     return (
       <div className="card backup-page">
         <h1 className="page-title">Backup & Restore</h1>
-        <p className="page-subtitle">Save or restore a full snapshot of the site data (users, sessions, announcements, and more).</p>
+        <p className="page-subtitle">
+          Save or restore a full snapshot of the site data (users, sessions,
+          announcements, and more).
+        </p>
 
         <div className="backup-alert" role="alert">
-          <span className="backup-alert-icon" aria-hidden="true">!</span>
+          <span className="backup-alert-icon" aria-hidden="true">
+            !
+          </span>
           <div>
             <strong>Important Information</strong>
-            <p>Restoring a backup will replace <strong>ALL</strong> current data. Always create a new backup before restoring to prevent data loss.</p>
+            <p>
+              Restoring a backup will replace <strong>ALL</strong> current data.
+              Always create a new backup before restoring to prevent data loss.
+            </p>
           </div>
         </div>
 
         <section className="backup-card">
           <h2 className="backup-card-title">
             <span className="backup-card-icon" aria-hidden="true">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" y1="3" x2="12" y2="15" /></svg>
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="17 8 12 3 7 8" />
+                <line x1="12" y1="3" x2="12" y2="15" />
+              </svg>
             </span>
             Create New Backup
           </h2>
           <p className="backup-card-desc">
-            Creates a complete backup of all collections as a JSON file: users, mentors, mentees, subjects, sessions, announcements, and more. Stored in <code>{backupDir || "backups/"}</code>.
+            Creates a complete backup of all collections as a JSON file: users,
+            mentors, mentees, subjects, sessions, announcements, and more.
+            Stored in <code>{backupDir || "backups/"}</code>.
           </p>
           <div className="backup-card-actions">
-            <button type="button" className="btn btn-primary" onClick={createBackup} disabled={backupCreateLoading}>
-              {backupCreateLoading ? <span className="loading-inline"><Spinner inline /> Creating…</span> : "Create Backup Now"}
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={createBackup}
+              disabled={backupCreateLoading}
+            >
+              {backupCreateLoading ? (
+                <span className="loading-inline">
+                  <Spinner inline /> Creating…
+                </span>
+              ) : (
+                "Create Backup Now"
+              )}
             </button>
-            <input type="file" ref={fileInputRef} accept=".json" onChange={onFileChange} style={{ display: "none" }} />
-            <button type="button" className="btn btn-success" onClick={handleUploadClick} disabled={backupRestoreLoading}>
-              {backupRestoreLoading ? <span className="loading-inline"><Spinner inline /> Restoring…</span> : "Upload & Restore"}
+            <input
+              type="file"
+              ref={fileInputRef}
+              accept=".json"
+              onChange={onFileChange}
+              style={{ display: "none" }}
+            />
+            <button
+              type="button"
+              className="btn btn-success"
+              onClick={handleUploadClick}
+              disabled={backupRestoreLoading}
+            >
+              {backupRestoreLoading ? (
+                <span className="loading-inline">
+                  <Spinner inline /> Restoring…
+                </span>
+              ) : (
+                "Upload & Restore"
+              )}
             </button>
           </div>
         </section>
@@ -88,18 +148,39 @@
           <div className="backup-history-header">
             <h2 className="backup-card-title">
               <span className="backup-card-icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" y1="3" x2="12" y2="15" /></svg>
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                  <polyline points="17 8 12 3 7 8" />
+                  <line x1="12" y1="3" x2="12" y2="15" />
+                </svg>
               </span>
               Backup History
             </h2>
-            <button type="button" className="btn secondary small" onClick={loadBackups} disabled={backupsLoading}>
+            <button
+              type="button"
+              className="btn secondary small"
+              onClick={loadBackups}
+              disabled={backupsLoading}
+            >
               {backupsLoading ? <Spinner inline /> : null} Refresh
             </button>
           </div>
           {backupsLoading && backups.length === 0 ? (
-            <div className="loading-block"><Spinner /><p className="muted">Loading backups…</p></div>
+            <div className="loading-block">
+              <Spinner />
+              <p className="muted">Loading backups…</p>
+            </div>
           ) : backups.length === 0 ? (
-            <p className="muted backup-empty">No backups yet. Create one above.</p>
+            <p className="muted backup-empty">
+              No backups yet. Create one above.
+            </p>
           ) : (
             <div className="table-wrapper">
               <table className="table backup-table">
@@ -122,13 +203,29 @@
                       <td>{b.records}</td>
                       <td>
                         <div className="backup-actions">
-                          <button type="button" className="btn btn-warning small" onClick={() => restoreBackupById(b.id)} disabled={backupRestoreLoading} title="Restore to this backup">
+                          <button
+                            type="button"
+                            className="btn btn-warning small"
+                            onClick={() => restoreBackupById(b.id)}
+                            disabled={backupRestoreLoading}
+                            title="Restore to this backup"
+                          >
                             Restore
                           </button>
-                          <button type="button" className="btn btn-info small" onClick={() => downloadBackup(b.id)} title="Download backup file">
+                          <button
+                            type="button"
+                            className="btn btn-info small"
+                            onClick={() => downloadBackup(b.id)}
+                            title="Download backup file"
+                          >
                             Download
                           </button>
-                          <button type="button" className="btn danger small" onClick={() => deleteBackup(b.id)} title="Delete backup file">
+                          <button
+                            type="button"
+                            className="btn danger small"
+                            onClick={() => deleteBackup(b.id)}
+                            title="Delete backup file"
+                          >
                             Delete
                           </button>
                         </div>
