@@ -20,8 +20,15 @@
     } = ctx;
     const isMentee = user.role === "mentee";
     const isMentor = user.role === "mentor";
-    const SUBJECT_OPTIONS = (window.DashboardApp && window.DashboardApp.MENTOR_SUBJECT_OPTIONS) || [];
-    const TOPIC_OPTIONS = (window.DashboardApp && window.DashboardApp.MENTOR_TOPIC_OPTIONS) || [];
+    const SUBJECT_OPTIONS =
+      (window.DashboardApp && window.DashboardApp.MENTOR_SUBJECT_OPTIONS) || [];
+    const TOPIC_OPTIONS =
+      (window.DashboardApp && window.DashboardApp.MENTOR_TOPIC_OPTIONS) || [];
+    const getAllowedTopicsForSubjects =
+      window.DashboardApp.getAllowedTopicsForSubjects || (() => []);
+    const filterTopicsForSubjects =
+      window.DashboardApp.filterTopicsForSubjects ||
+      ((subjects, topics) => (Array.isArray(topics) ? [...topics] : []));
 
     return (
       <div className="card">
@@ -39,7 +46,12 @@
                 <label>Campus *</label>
                 <input
                   value={menteeProfile.campus}
-                  onChange={(e) => setMenteeProfile({ ...menteeProfile, campus: e.target.value })}
+                  onChange={(e) =>
+                    setMenteeProfile({
+                      ...menteeProfile,
+                      campus: e.target.value,
+                    })
+                  }
                   placeholder="Campus"
                 />
               </div>
@@ -50,7 +62,9 @@
                   onChange={(e) =>
                     setMenteeProfile({
                       ...menteeProfile,
-                      student_id_no: e.target.value.replace(/\D/g, "").slice(0, 10),
+                      student_id_no: e.target.value
+                        .replace(/\D/g, "")
+                        .slice(0, 10),
                     })
                   }
                   placeholder="10 digits only"
@@ -61,11 +75,24 @@
               </div>
               <div>
                 <label>Course / Program (read only)</label>
-                <input value={menteeProfile.program} readOnly disabled placeholder="e.g. BSIT" />
+                <input
+                  value={menteeProfile.program}
+                  readOnly
+                  disabled
+                  placeholder="e.g. BSIT"
+                />
               </div>
               <div>
                 <label>Year level (read only)</label>
-                <input type="number" min="1" max="10" value={menteeProfile.year_level} readOnly disabled placeholder="1" />
+                <input
+                  type="number"
+                  min="1"
+                  max="10"
+                  value={menteeProfile.year_level}
+                  readOnly
+                  disabled
+                  placeholder="1"
+                />
               </div>
               <div>
                 <label>Contact No. *</label>
@@ -74,7 +101,9 @@
                   onChange={(e) =>
                     setMenteeProfile({
                       ...menteeProfile,
-                      contact_no: e.target.value.replace(/\D/g, "").slice(0, 11),
+                      contact_no: e.target.value
+                        .replace(/\D/g, "")
+                        .slice(0, 11),
                     })
                   }
                   placeholder="11 digits only"
@@ -87,7 +116,12 @@
                 <label>Admission Type *</label>
                 <input
                   value={menteeProfile.admission_type}
-                  onChange={(e) => setMenteeProfile({ ...menteeProfile, admission_type: e.target.value })}
+                  onChange={(e) =>
+                    setMenteeProfile({
+                      ...menteeProfile,
+                      admission_type: e.target.value,
+                    })
+                  }
                   placeholder="e.g. Regular, Transferee"
                 />
               </div>
@@ -95,13 +129,19 @@
                 <label>Sex *</label>
                 <input
                   value={menteeProfile.sex}
-                  onChange={(e) => setMenteeProfile({ ...menteeProfile, sex: e.target.value })}
+                  onChange={(e) =>
+                    setMenteeProfile({ ...menteeProfile, sex: e.target.value })
+                  }
                   placeholder="Sex"
                 />
               </div>
             </div>
             <div className="btn-row" style={{ marginTop: "16px" }}>
-              <button className="btn" onClick={handleMenteeProfileSave} disabled={menteeProfileSaving}>
+              <button
+                className="btn"
+                onClick={handleMenteeProfileSave}
+                disabled={menteeProfileSaving}
+              >
                 {menteeProfileSaving ? "Saving..." : "Save information"}
               </button>
             </div>
@@ -120,9 +160,18 @@
                       checked={(mentorProfile.subjects || []).includes(s)}
                       onChange={() => {
                         const next = (mentorProfile.subjects || []).includes(s)
-                          ? (mentorProfile.subjects || []).filter((x) => x !== s)
+                          ? (mentorProfile.subjects || []).filter(
+                              (x) => x !== s,
+                            )
                           : [...(mentorProfile.subjects || []), s];
-                        setMentorProfile({ ...mentorProfile, subjects: next });
+                        setMentorProfile({
+                          ...mentorProfile,
+                          subjects: next,
+                          topics: filterTopicsForSubjects(
+                            next,
+                            mentorProfile.topics || [],
+                          ),
+                        });
                       }}
                     />
                     <span>{s}</span>
@@ -133,22 +182,53 @@
             <div className="form-group">
               <label>Topics (select at least one)</label>
               <div className="checkbox-group">
-                {TOPIC_OPTIONS.map((t) => (
-                  <label key={t} className="checkbox-row">
-                    <input
-                      type="checkbox"
-                      checked={(mentorProfile.topics || []).includes(t)}
-                      onChange={() => {
-                        const next = (mentorProfile.topics || []).includes(t)
-                          ? (mentorProfile.topics || []).filter((x) => x !== t)
-                          : [...(mentorProfile.topics || []), t];
-                        setMentorProfile({ ...mentorProfile, topics: next });
-                      }}
-                    />
-                    <span>{t}</span>
-                  </label>
-                ))}
+                {(() => {
+                  const allowedTopics = getAllowedTopicsForSubjects(
+                    mentorProfile.subjects || [],
+                  );
+                  const isTopicAllowed = allowedTopics.length > 0;
+                  return TOPIC_OPTIONS.map((t) => {
+                    const disabled =
+                      !isTopicAllowed || !allowedTopics.includes(t);
+                    return (
+                      <label
+                        key={t}
+                        className={
+                          "checkbox-row" +
+                          (disabled ? " checkbox-row--disabled" : "")
+                        }
+                      >
+                        <input
+                          type="checkbox"
+                          disabled={disabled}
+                          checked={(mentorProfile.topics || []).includes(t)}
+                          onChange={() => {
+                            if (disabled) return;
+                            const next = (mentorProfile.topics || []).includes(
+                              t,
+                            )
+                              ? (mentorProfile.topics || []).filter(
+                                  (x) => x !== t,
+                                )
+                              : [...(mentorProfile.topics || []), t];
+                            setMentorProfile({
+                              ...mentorProfile,
+                              topics: filterTopicsForSubjects(
+                                mentorProfile.subjects || [],
+                                next,
+                              ),
+                            });
+                          }}
+                        />
+                        <span>{t}</span>
+                      </label>
+                    );
+                  });
+                })()}
               </div>
+              <p className="field-helper">
+                Select one or more subjects first to unlock matching topics.
+              </p>
             </div>
             <div className="form-group">
               <label>Expertise level (1-5)</label>
@@ -159,7 +239,12 @@
                       type="radio"
                       name="complete_profile_expertise"
                       checked={mentorProfile.expertise_level === n}
-                      onChange={() => setMentorProfile({ ...mentorProfile, expertise_level: n })}
+                      onChange={() =>
+                        setMentorProfile({
+                          ...mentorProfile,
+                          expertise_level: n,
+                        })
+                      }
                     />
                     <span>{n}</span>
                   </label>
@@ -167,7 +252,11 @@
               </div>
             </div>
             <div className="btn-row" style={{ marginTop: "16px" }}>
-              <button className="btn" onClick={handleMentorProfileSave} disabled={mentorProfileSaving}>
+              <button
+                className="btn"
+                onClick={handleMentorProfileSave}
+                disabled={mentorProfileSaving}
+              >
                 {mentorProfileSaving ? "Saving..." : "Save information"}
               </button>
             </div>

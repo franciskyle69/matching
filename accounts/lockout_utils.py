@@ -18,17 +18,42 @@ PENALTY_MINUTES = (1, 5, 15)
 PROGRESS_TTL_SECONDS = 24 * 60 * 60
 
 
-def _progress_key(username):
+def _progress_key(username: str | None) -> str:
+    """Generate cache key for lockout progress tracking.
+    
+    Args:
+        username: Username to track (case-insensitive).
+    
+    Returns:
+        Cache key string for storing lockout stage and marker.
+    """
     normalized = str(username or "").strip().lower()
     return f"auth:lockout:progress:{normalized}"
 
 
-def _penalty_for_stage(stage):
+def _penalty_for_stage(stage: int | None) -> int:
+    """Get lockout penalty in minutes for a given stage.
+    
+    Args:
+        stage: Lockout stage (0, 1, or higher).
+    
+    Returns:
+        Penalty in minutes (from PENALTY_MINUTES tuple).
+    """
     idx = max(0, min(int(stage or 0), len(PENALTY_MINUTES) - 1))
     return PENALTY_MINUTES[idx]
 
 
-def _get_stage_for_lock(username, marker):
+def _get_stage_for_lock(username: str | None, marker: str) -> int:
+    """Get current lockout stage and update cache on lock change.
+    
+    Args:
+        username: Username to track.
+        marker: Identifier for current lock event (e.g., attempt count + timestamp).
+    
+    Returns:
+        Current lockout stage (integer).
+    """
     key = _progress_key(username)
     progress = cache.get(key) or {"stage": 0, "lock_marker": None}
     current_stage = int(progress.get("stage", 0))

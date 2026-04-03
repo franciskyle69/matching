@@ -14,7 +14,7 @@ from matching.ml.features import build_features
 from matching.ml.model_io import load_model
 
 
-def _to_set(items) -> Set[str]:
+def _to_set(items: Any) -> Set[str]:
     if not items:
         return set()
     if isinstance(items, list):
@@ -32,7 +32,7 @@ def _jaccard(a: Set[str], b: Set[str]) -> float:
     return inter / union
 
 
-def _difficulty_alignment(mentor_level, mentee_level) -> float:
+def _difficulty_alignment(mentor_level: Any, mentee_level: Any) -> float:
     try:
         ml = float(mentor_level)
         el = float(mentee_level)

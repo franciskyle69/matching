@@ -56,17 +56,17 @@ frontend/
 
 ## Tech stack
 
-| Layer | Technology |
-|-------|------------|
-| **UI** | React 18 (UMD from CDN in `index.html`) |
-| **Routing** | Hash-based: `#home`, `#profile`, `#matching`, `#sessions`, etc. |
-| **State** | React Context (`AppContext`) in `AppProviders.jsx` |
-| **API** | `fetch` with `credentials: 'include'`; CSRF via `X-CSRFToken` cookie |
-| **Styling** | Plain CSS in `app.css` (no Tailwind in dashboard) |
-| **Icons** | Inline SVG in Layout and pages |
-| **Modals / alerts** | SweetAlert2 (CDN), custom modals in JSX |
-| **Charts** | Chart.js (CDN), used where needed |
-| **Build / dev** | Vite (dashboard), Tailwind CLI (landing); Django can serve unbundled JSX via Babel (see below) |
+| Layer               | Technology                                                                                     |
+| ------------------- | ---------------------------------------------------------------------------------------------- |
+| **UI**              | React 18 (UMD from CDN in `index.html`)                                                        |
+| **Routing**         | Hash-based: `#home`, `#profile`, `#matching`, `#sessions`, etc.                                |
+| **State**           | React Context (`AppContext`) in `AppProviders.jsx`                                             |
+| **API**             | `fetch` with `credentials: 'include'`; CSRF via `X-CSRFToken` cookie                           |
+| **Styling**         | Plain CSS in `app.css` (no Tailwind in dashboard)                                              |
+| **Icons**           | Inline SVG in Layout and pages                                                                 |
+| **Modals / alerts** | SweetAlert2 (CDN), custom modals in JSX                                                        |
+| **Charts**          | Chart.js (CDN), used where needed                                                              |
+| **Build / dev**     | Vite (dashboard), Tailwind CLI (landing); Django can serve unbundled JSX via Babel (see below) |
 
 ---
 
@@ -79,23 +79,95 @@ frontend/
 
 ---
 
+## Component patterns and best practices
+
+### Functional components
+
+- All components are **functional components** with React Hooks (useState, useEffect, useContext).
+- Use `useContext()` to access global state from `AppContext` (auth, activeTab, etc.).
+- Store component-level state in `useState()`.
+
+### Page structure
+
+- Each page file exports a single component named `[Name]Page`.
+- Pages receive no props; they access context for auth and global state.
+- Use `useEffect()` with empty dependency array to load data on mount; add cleanup if needed.
+- Always wrap API data fetches in try/catch blocks and set error/loading state.
+
+### Data fetching pattern
+
+```javascript
+const [data, setData] = useState(null);
+const [loading, setLoading] = useState(false);
+const [error, setError] = useState("");
+
+useEffect(() => {
+  (async () => {
+    setLoading(true);
+    try {
+      const result = await fetchJSON("/api/endpoint/");
+      if (!result.ok) throw new Error(result.data?.error || "Failed to load");
+      setData(result.data);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  })();
+}, []);
+```
+
+### State management
+
+- **Global state** (auth, user, theme, activeTab) lives in `AppContext` and `AppProviders.jsx`.
+- **Page state** (filtered results, modal open/close, form input) lives in individual pages/components.
+- Use context when data needs to be shared across multiple pages or the entire app.
+
+### API calls
+
+- Always use `credentials: 'include'` to send session cookies.
+- CSRF tokens are handled by Django; the `fetchJSON()` helper reads the token from cookies automatically.
+- Consistent error handling: display errors in JSX via state, not console.log.
+
+### Styling
+
+- Global styles in `app.css`; scope component-specific styles by class name (e.g., `.profile-card`, `.session-item`).
+- Use `margin`, `padding`, and `width` utilities for layout; avoid inline styles unless needed for dynamic values.
+- Components inherit text color and font from `<body>`; override only where needed.
+
+### Naming conventions
+
+- Component files: `PascalCase` + `Page` suffix for page files (e.g., `HomePage.jsx`).
+- CSS classes: kebab-case (e.g., `.mentor-card`, `.session-form__input`).
+- Context values: camelCase (e.g., `currentUser`, `setActiveTab`).
+
+---
+
+## Caching and performance
+
+- **Recommendations cache**: `AppProviders.jsx` caches mentee recommendations for 300 seconds (`RECOMMENDATIONS_CACHE_MS`).
+- **API response caching**: Optional; consider implementing if your app makes repeated calls to the same endpoint.
+- **Component re-renders**: Use `useMemo()` and `useCallback()` if a page has complex lists or frequent updates.
+
+---
+
 ## Main tabs (sidebar)
 
 Tabs are driven by `activeTab` in context and `window.DashboardApp.MAIN_TABS` (and `DashboardApp.Pages`). Layout maps tab ids to icons and renders the active page via `RouteRenderer`.
 
-| Tab id | Purpose |
-|--------|--------|
-| `home` | Home / overview |
-| `profile` | User profile, posts feed, gallery, post composer |
-| `complete-profile` | Required mentee/mentor info form |
-| `matching` | Mentor recommendations (mentee) or requests (mentor) |
-| `sessions` | Schedule and manage mentoring sessions |
-| `announcements` | Announcements and comments |
-| `approvals` | Staff: approve/reject mentors and mentees |
-| `subjects` | Staff: manage subjects |
-| `activity-logs` | Staff: activity logs |
-| `backup` | Staff: backup/restore |
-| `settings` | Account settings, avatar, bio, tags |
+| Tab id             | Purpose                                              |
+| ------------------ | ---------------------------------------------------- |
+| `home`             | Home / overview                                      |
+| `profile`          | User profile, posts feed, gallery, post composer     |
+| `complete-profile` | Required mentee/mentor info form                     |
+| `matching`         | Mentor recommendations (mentee) or requests (mentor) |
+| `sessions`         | Schedule and manage mentoring sessions               |
+| `announcements`    | Announcements and comments                           |
+| `approvals`        | Staff: approve/reject mentors and mentees            |
+| `subjects`         | Staff: manage subjects                               |
+| `activity-logs`    | Staff: activity logs                                 |
+| `backup`           | Staff: backup/restore                                |
+| `settings`         | Account settings, avatar, bio, tags                  |
 
 Auth-only screens (e.g. `signin`, `signup`) are handled inside the same SPA and shown when `activeTab` is set to them.
 
@@ -125,10 +197,10 @@ Auth-only screens (e.g. `signin`, `signup`) are handled inside the same SPA and 
 
 ## Quick reference
 
-| Task | Where |
-|------|--------|
-| Add a new dashboard tab | Register in `MAIN_TABS` and `DashboardApp.Pages`, add icon in `Layout.jsx` `TAB_ICONS`. |
-| Add a new API call | Use `fetchJSON()` from context or utils; often in `AppProviders.jsx` or the page that needs the data. |
-| Change global styles / spinner | `frontend/dashboard/assets/app.css`. |
-| Change auth or global state | `AppProviders.jsx` and `context.jsx`. |
-| Change how the app is served | `capstone_site/views.py` (`react_app`, `landing_page`) and `capstone_site/settings.py` (`STATICFILES_DIRS`, `STATIC_URL`). |
+| Task                           | Where                                                                                                                      |
+| ------------------------------ | -------------------------------------------------------------------------------------------------------------------------- |
+| Add a new dashboard tab        | Register in `MAIN_TABS` and `DashboardApp.Pages`, add icon in `Layout.jsx` `TAB_ICONS`.                                    |
+| Add a new API call             | Use `fetchJSON()` from context or utils; often in `AppProviders.jsx` or the page that needs the data.                      |
+| Change global styles / spinner | `frontend/dashboard/assets/app.css`.                                                                                       |
+| Change auth or global state    | `AppProviders.jsx` and `context.jsx`.                                                                                      |
+| Change how the app is served   | `capstone_site/views.py` (`react_app`, `landing_page`) and `capstone_site/settings.py` (`STATICFILES_DIRS`, `STATIC_URL`). |

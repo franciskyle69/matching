@@ -44,7 +44,7 @@ from ..views import (
 )
 from matching.models import Notification, Subject, Topic
 from django.middleware.csrf import get_token
-from django.views.decorators.csrf import csrf_exempt
+from profiles.questionnaire_utils import filter_topics_for_subjects
 
 
 def _parse_hhmm_to_minutes(value):
@@ -831,8 +831,9 @@ def update_mentee_matching_profile(request):
       )
   raw_topics = payload.get("topics")
   if raw_topics is not None:
-      mentee_profile.topics = (
-          list(raw_topics) if isinstance(raw_topics, list) else []
+      mentee_profile.topics = filter_topics_for_subjects(
+          raw_subjects if isinstance(raw_subjects, list) else mentee_profile.subjects,
+          raw_topics if isinstance(raw_topics, list) else [],
       )
   difficulty = _get_int(payload, "difficulty_level")
   if difficulty is not None and 1 <= difficulty <= 5:
@@ -882,8 +883,9 @@ def update_mentor_profile(request):
         )
     raw_topics = payload.get("topics")
     if raw_topics is not None:
-        mentor_profile.topics = (
-            list(raw_topics) if isinstance(raw_topics, list) else []
+        mentor_profile.topics = filter_topics_for_subjects(
+            raw_subjects if isinstance(raw_subjects, list) else mentor_profile.subjects,
+            raw_topics if isinstance(raw_topics, list) else [],
         )
     expertise = _get_int(payload, "expertise_level")
     if expertise is not None and 1 <= expertise <= 5:

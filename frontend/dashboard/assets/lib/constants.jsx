@@ -18,7 +18,10 @@
   ];
 
   window.DashboardApp.ROUTES = ROUTES;
-  window.DashboardApp.MAIN_TABS = ROUTES.map(({ id, label }) => ({ id, label }));
+  window.DashboardApp.MAIN_TABS = ROUTES.map(({ id, label }) => ({
+    id,
+    label,
+  }));
   window.DashboardApp.MENTOR_SUBJECT_OPTIONS = [
     "Computer Programming",
     "Introduction to Computing",
@@ -35,6 +38,48 @@
     "Javascript",
     "UI/UX",
   ];
+  window.DashboardApp.QUESTIONNAIRE_TOPIC_MAP = {
+    "Computer Programming": [
+      "Arrays",
+      "Loops",
+      "Input and Output Handling",
+      "Error Handling",
+      "Javascript",
+    ],
+    "Introduction to Computing": [
+      "Arrays",
+      "Loops",
+      "Input and Output Handling",
+      "Error Handling",
+    ],
+    "Intro to Human Computer Interaction": ["UI/UX"],
+    "IT Fundamentals": ["HTML", "CSS", "Javascript"],
+  };
+  window.DashboardApp.getAllowedTopicsForSubjects =
+    function getAllowedTopicsForSubjects(subjects) {
+      const selected = Array.isArray(subjects) ? subjects : [];
+      const allowed = [];
+      const seen = new Set();
+      selected.forEach((subject) => {
+        (window.DashboardApp.QUESTIONNAIRE_TOPIC_MAP[subject] || []).forEach(
+          (topic) => {
+            if (!seen.has(topic)) {
+              seen.add(topic);
+              allowed.push(topic);
+            }
+          },
+        );
+      });
+      return allowed;
+    };
+  window.DashboardApp.filterTopicsForSubjects =
+    function filterTopicsForSubjects(subjects, topics) {
+      const allowed = new Set(
+        window.DashboardApp.getAllowedTopicsForSubjects(subjects),
+      );
+      const selectedTopics = Array.isArray(topics) ? topics : [];
+      return selectedTopics.filter((topic) => allowed.has(topic));
+    };
   window.DashboardApp.ROLE_OPTIONS = [
     { value: "mentor", label: "Mentor" },
     { value: "mentee", label: "Mentee" },

@@ -6158,6 +6158,31 @@ button:focus-visible {
   margin-bottom: 18px;
 }
 
+.matching-questionnaire-flow {
+  display: grid;
+  gap: 14px;
+}
+
+.matching-section-card {
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(100, 116, 139, 0.2);
+  border-radius: 14px;
+  padding: 14px;
+}
+
+.matching-section-card .settings-section-label {
+  margin-bottom: 6px;
+}
+
+.matching-section-card .form-group,
+.matching-section-card .field-helper {
+  margin-bottom: 0;
+}
+
+.matching-section-card .field-helper {
+  margin-top: 4px;
+}
+
 .matching-questionnaire-pill-group {
   margin-top: 8px;
   margin-bottom: 12px;
@@ -6169,7 +6194,8 @@ button:focus-visible {
 
 .matching-questionnaire-pill-group .checkbox-row {
   border-radius: 999px;
-  padding: 6px 14px;
+  min-height: 38px;
+  padding: 8px 14px;
   background: #ffffff;
   border: 1px solid #d1d5db;
   font-size: 13px;
@@ -6223,6 +6249,11 @@ button:focus-visible {
   transform: translateY(-1px);
 }
 
+.matching-questionnaire-pill-group .checkbox-row:focus-within {
+  border-color: #352c90;
+  box-shadow: 0 0 0 3px rgba(53, 44, 144, 0.2);
+}
+
 .matching-questionnaire-pill-group .checkbox-row:has(input:checked) {
   background: #352c90;
   border-color: #352c90;
@@ -6230,13 +6261,51 @@ button:focus-visible {
   box-shadow: 0 4px 12px rgba(34, 23, 122, 0.4);
 }
 
+.matching-questionnaire-pill-group .checkbox-row--disabled {
+  opacity: 0.54;
+  cursor: not-allowed;
+  background: #f8fafc;
+  border-color: #e2e8f0;
+  color: #64748b;
+  box-shadow: none;
+  transform: none;
+}
+
+.matching-questionnaire-pill-group .checkbox-row--disabled:hover {
+  border-color: #e2e8f0;
+  box-shadow: none;
+  transform: none;
+}
+
 .matching-questionnaire-levels {
   margin-top: 6px;
 }
 
 .matching-questionnaire-levels .checkbox-row {
-  min-width: 40px;
+  min-width: 48px;
+  min-height: 40px;
   justify-content: center;
+}
+
+.matching-questionnaire-actions {
+  border-top: 1px solid rgba(148, 163, 184, 0.3);
+  padding-top: 12px;
+}
+
+.matching-inline-feedback {
+  min-height: 20px;
+  margin: 6px 2px 0;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.matching-inline-feedback--success {
+  color: #166534;
+}
+
+.matching-inline-feedback--error {
+  color: #b91c1c;
+  margin-top: 4px;
 }
 
 /* Dark-mode overrides for questionnaire to keep good contrast */
@@ -6271,6 +6340,26 @@ button:focus-visible {
   background: #0f172a;
   border-color: #334155;
   color: var(--text-primary);
+}
+
+[data-theme="dark"] .matching-section-card {
+  background: rgba(15, 23, 42, 0.76);
+  border-color: rgba(100, 116, 139, 0.35);
+}
+
+[data-theme="dark"] .matching-questionnaire-pill-group .checkbox-row--disabled {
+  opacity: 0.5;
+  background: #0b1220;
+  border-color: #1e293b;
+  color: #64748b;
+}
+
+[data-theme="dark"] .matching-inline-feedback--success {
+  color: #86efac;
+}
+
+[data-theme="dark"] .matching-inline-feedback--error {
+  color: #fca5a5;
 }
 
 [data-theme="dark"] .matching-questionnaire-levels .checkbox-row {

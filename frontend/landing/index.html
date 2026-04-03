@@ -1,450 +1,941 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en" class="scroll-smooth">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PeerLink</title>
+    <link rel="stylesheet" href="/static/output.css?v=landing-fx-3" />
+    <link rel="icon" href="/static/assets/logoreal.svg" type="image/svg+xml" />
+  </head>
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PeerLink </title>
-    <link rel="stylesheet" href="/static/output.css?v=landing-fx-3">
-    <link rel="icon" href="/static/assets/logoreal.svg" type="image/svg+xml">
-</head>
-
-<body class="text-white">
+  <body class="text-white">
     <div id="page-intro" class="page-intro" aria-hidden="true">
-        <div class="page-intro-inner">
-            <svg class="intro-mark" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M18 34L60 16L102 34L60 52L18 34Z" stroke="currentColor" stroke-width="6" stroke-linejoin="round" />
-                <path d="M26 58L60 44L94 58L60 72L26 58Z" stroke="currentColor" stroke-width="5" stroke-linejoin="round" opacity="0.9" />
-                <path d="M34 82L60 72L86 82L60 94L34 82Z" stroke="currentColor" stroke-width="4" stroke-linejoin="round" opacity="0.8" />
-            </svg>
-            <p class="page-intro-text">Welcome to PeerLink</p>
-        </div>
+      <div class="page-intro-inner">
+        <svg
+          class="intro-mark"
+          viewBox="0 0 120 120"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M18 34L60 16L102 34L60 52L18 34Z"
+            stroke="currentColor"
+            stroke-width="6"
+            stroke-linejoin="round"
+          />
+          <path
+            d="M26 58L60 44L94 58L60 72L26 58Z"
+            stroke="currentColor"
+            stroke-width="5"
+            stroke-linejoin="round"
+            opacity="0.9"
+          />
+          <path
+            d="M34 82L60 72L86 82L60 94L34 82Z"
+            stroke="currentColor"
+            stroke-width="4"
+            stroke-linejoin="round"
+            opacity="0.8"
+          />
+        </svg>
+        <p class="page-intro-text">Welcome to PeerLink</p>
+      </div>
     </div>
     <!-- Asset URLs from Figma MCP (re-export from file if expired): proto Mo47QplY3UXke35hkDChWd -->
     <nav id="site-nav" class="site-nav" role="navigation" aria-label="Primary">
+      <div
+        class="mx-auto flex w-full max-w-[min(100%,92rem)] min-h-[96px] items-center justify-between gap-4 px-6 sm:px-10 md:px-14 lg:px-16 xl:px-20 2xl:px-28"
+      >
+        <a
+          href="#hero"
+          class="inline-flex shrink-0 items-center justify-center transition-transform duration-300 hover:scale-105 active:scale-95"
+          aria-label="PeerLink home"
+        >
+          <img
+            class="block h-[78px] w-auto sm:h-[84px] md:h-[90px] lg:h-[94px] xl:h-[96px] max-h-[96px] object-contain object-left align-middle"
+            width="532"
+            height="469"
+            alt="PeerLink"
+            src="https://www.figma.com/api/mcp/asset/ebbb17cb-7b04-492a-91b1-0c61d20a7df9"
+          />
+        </a>
         <div
-            class="mx-auto flex w-full max-w-[min(100%,92rem)] min-h-[96px] items-center justify-between gap-4 px-6 sm:px-10 md:px-14 lg:px-16 xl:px-20 2xl:px-28">
-            <a href="#hero"
-                class="inline-flex shrink-0 items-center justify-center transition-transform duration-300 hover:scale-105 active:scale-95"
-                aria-label="PeerLink home">
-                <img class="block h-[78px] w-auto sm:h-[84px] md:h-[90px] lg:h-[94px] xl:h-[96px] max-h-[96px] object-contain object-left align-middle"
-                    width="532" height="469" alt="PeerLink"
-                    src="https://www.figma.com/api/mcp/asset/ebbb17cb-7b04-492a-91b1-0c61d20a7df9" />
-            </a>
-            <div class="hidden lg:flex flex-1 items-center justify-center gap-8 xl:gap-12 text-[23px] font-medium tracking-tight">
-                <a href="#hero" class="nav-link-animate text-white hover:text-[#c2b8ff] transition-colors duration-300">Home</a>
-                <a href="#features" class="nav-link-animate text-white hover:text-[#c2b8ff] transition-colors duration-300">Features</a>
-                <a href="#how" class="nav-link-animate text-white hover:text-[#c2b8ff] transition-colors duration-300">How it Works</a>
-                <a href="#footer-contact" class="nav-link-animate text-white hover:text-[#c2b8ff] transition-colors duration-300">Contact Us</a>
-            </div>
-            <div class="hidden lg:flex shrink-0 items-center gap-3">
-                <a href="/app/#signin"
-                    class="btn-motion min-w-[140px] h-[47px] inline-flex items-center justify-center rounded-[5px] border border-white/35 bg-black/55 text-white text-base shadow-[0px_2px_30px_rgba(0,0,0,0.25)] hover:bg-black/70 hover:border-white/50 hover:shadow-[0px_8px_32px_rgba(99,79,200,0.2)] hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98]">
-                    Log In
-                </a>
-                <a href="/app/#signup"
-                    class="btn-motion min-w-[140px] h-[47px] inline-flex items-center justify-center rounded-[5px] bg-white text-black text-base border border-[#1c1c1c] shadow-[0px_2px_30px_rgba(0,0,0,0.25)] hover:bg-[#f5f3ff] hover:shadow-[0px_10px_36px_rgba(255,255,255,0.15)] hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98]">
-                    Sign Up
-                </a>
-            </div>
-            <button type="button" class="lg:hidden shrink-0 rounded-md p-2 transition active:scale-90" id="menu-button"
-                aria-label="Open menu">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
-                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="size-6"
-                    aria-hidden="true">
-                    <path d="M4 5h16"></path>
-                    <path d="M4 12h16"></path>
-                    <path d="M4 19h16"></path>
-                </svg>
-            </button>
+          class="hidden lg:flex flex-1 items-center justify-center gap-8 xl:gap-12 text-[23px] font-medium tracking-tight"
+        >
+          <a
+            href="#hero"
+            class="nav-link-animate text-white hover:text-[#c2b8ff] transition-colors duration-300"
+            >Home</a
+          >
+          <a
+            href="#features"
+            class="nav-link-animate text-white hover:text-[#c2b8ff] transition-colors duration-300"
+            >Features</a
+          >
+          <a
+            href="#how"
+            class="nav-link-animate text-white hover:text-[#c2b8ff] transition-colors duration-300"
+            >How it Works</a
+          >
+          <a
+            href="#footer-contact"
+            class="nav-link-animate text-white hover:text-[#c2b8ff] transition-colors duration-300"
+            >Contact Us</a
+          >
         </div>
+        <div class="hidden lg:flex shrink-0 items-center gap-3">
+          <a
+            href="/app/#signin"
+            class="btn-motion min-w-[140px] h-[47px] inline-flex items-center justify-center rounded-[5px] border border-white/35 bg-black/55 text-white text-base shadow-[0px_2px_30px_rgba(0,0,0,0.25)] hover:bg-black/70 hover:border-white/50 hover:shadow-[0px_8px_32px_rgba(99,79,200,0.2)] hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98]"
+          >
+            Log In
+          </a>
+          <a
+            href="/app/#signup"
+            class="btn-motion min-w-[140px] h-[47px] inline-flex items-center justify-center rounded-[5px] bg-white text-black text-base border border-[#1c1c1c] shadow-[0px_2px_30px_rgba(0,0,0,0.25)] hover:bg-[#f5f3ff] hover:shadow-[0px_10px_36px_rgba(255,255,255,0.15)] hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98]"
+          >
+            Sign Up
+          </a>
+        </div>
+        <button
+          type="button"
+          class="lg:hidden shrink-0 rounded-md p-2 transition active:scale-90"
+          id="menu-button"
+          aria-label="Open menu"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            class="size-6"
+            aria-hidden="true"
+          >
+            <path d="M4 5h16"></path>
+            <path d="M4 12h16"></path>
+            <path d="M4 19h16"></path>
+          </svg>
+        </button>
+      </div>
     </nav>
 
-    <div id="nav-links"
-        class="fixed inset-0 z-[100] bg-black/80 backdrop-blur-lg flex flex-col items-center justify-center text-lg gap-8 lg:hidden transition-transform duration-300 -translate-x-full">
-        <a href="#hero" class="text-xl">Home</a>
-        <a href="#features" class="text-xl">Features</a>
-        <a href="#how" class="text-xl">How it Works</a>
-        <a href="#footer-contact" class="text-xl">Contact Us</a>
-        <a href="/app/#signin" class="text-[#c2b8ff]">Log In</a>
-        <a href="/app/#signup" class="text-white font-medium">Sign Up</a>
-        <button type="button" id="close-menu"
-            class="mt-4 flex items-center justify-center size-12 bg-white text-black rounded-lg">
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
-                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M18 6 6 18"></path>
-                <path d="m6 6 12 12"></path>
-            </svg>
-        </button>
+    <div
+      id="nav-links"
+      class="fixed inset-0 z-[100] bg-black/80 backdrop-blur-lg flex flex-col items-center justify-center text-lg gap-8 lg:hidden transition-transform duration-300 -translate-x-full"
+    >
+      <a href="#hero" class="text-xl">Home</a>
+      <a href="#features" class="text-xl">Features</a>
+      <a href="#how" class="text-xl">How it Works</a>
+      <a href="#footer-contact" class="text-xl">Contact Us</a>
+      <a href="/app/#signin" class="text-[#c2b8ff]">Log In</a>
+      <a href="/app/#signup" class="text-white font-medium">Sign Up</a>
+      <button
+        type="button"
+        id="close-menu"
+        class="mt-4 flex items-center justify-center size-12 bg-white text-black rounded-lg"
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="24"
+          height="24"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path d="M18 6 6 18"></path>
+          <path d="m6 6 12 12"></path>
+        </svg>
+      </button>
     </div>
 
-    <section style="margin-bottom: 30px;" id="hero"
-        class="hero-shell relative flex flex-col justify-center overflow-hidden -mt-[96px] min-h-[min(88vh,52rem)] md:min-h-[min(90svh,56rem)] pt-[calc(96px+2.5rem)] pb-14 sm:pt-[calc(96px+3.5rem)] md:pt-[calc(96px+4rem)] md:pb-16 lg:pt-[calc(96px+5rem)] lg:pb-20">
-        <div class="hero-space-bg pointer-events-none" aria-hidden="true"></div>
-        <div class="pointer-events-none absolute inset-0 z-[1] bg-[radial-gradient(ellipse_120%_80%_at_50%_-20%,rgba(124,90,255,0.22),transparent_55%)]" aria-hidden="true"></div>
-        <div class="pointer-events-none absolute inset-0 z-[1] bg-gradient-to-b from-[#0a0512]/50 via-transparent via-50% to-[#121212] to-100%" aria-hidden="true"></div>
+    <section
+      style="margin-bottom: 30px"
+      id="hero"
+      class="hero-shell relative flex flex-col justify-center overflow-hidden -mt-[96px] min-h-[min(88vh,52rem)] md:min-h-[min(90svh,56rem)] pt-[calc(96px+2.5rem)] pb-14 sm:pt-[calc(96px+3.5rem)] md:pt-[calc(96px+4rem)] md:pb-16 lg:pt-[calc(96px+5rem)] lg:pb-20"
+    >
+      <div class="hero-space-bg pointer-events-none" aria-hidden="true"></div>
+      <div
+        class="pointer-events-none absolute inset-0 z-[1] bg-[radial-gradient(ellipse_120%_80%_at_50%_-20%,rgba(124,90,255,0.22),transparent_55%)]"
+        aria-hidden="true"
+      ></div>
+      <div
+        class="pointer-events-none absolute inset-0 z-[1] bg-gradient-to-b from-[#0a0512]/50 via-transparent via-50% to-[#121212] to-100%"
+        aria-hidden="true"
+      ></div>
 
-        <div class="relative z-10 mx-auto max-w-5xl px-4 md:px-8 text-center w-full">
-            <h1 id="hero-headline"
-                class="hero-title-glow font-display font-medium text-4xl sm:text-5xl md:text-6xl lg:text-[76px] lg:leading-[1.12] tracking-[-0.02em] text-white px-2 min-h-[5.5rem] sm:min-h-[6.5rem] md:min-h-[7.5rem] lg:min-h-[8.75rem] [text-shadow:0_2px_32px_rgba(0,0,0,0.55)]"
-                aria-label="Learn Smarter. Grow Faster. Succeed Together.">
-                <span class="block hero-line min-h-[1.05em]" data-hero-line="0"></span>
-                <span class="block hero-line min-h-[1.05em]" data-hero-line="1"></span>
-                <span class="block hero-line min-h-[1.05em]" data-hero-line="2"></span>
-            </h1>
-            <p class="reveal mx-auto mt-4 md:mt-5 max-w-2xl text-base md:text-[16px] leading-relaxed text-white/80 [text-shadow:0_1px_18px_rgba(0,0,0,0.45)]" data-reveal>
-                Join the PeerLink future platform to optimize your learning path. Get matched to the greatest mentors
-                in a simple &amp; easy.
-            </p>
-            <a href="/app/#signup"
-                class="reveal btn-motion hero-cta-pulse mt-6 md:mt-8 inline-flex h-14 md:h-16 min-w-[260px] md:min-w-[280px] items-center justify-center rounded-full bg-white px-8 md:px-10 text-base font-bold text-black border border-[#1c1c1c] shadow-[0px_2px_30px_rgba(0,0,0,0.25)] hover:bg-[#f5f3ff] hover:shadow-[0px_12px_40px_rgba(194,184,255,0.25)] hover:-translate-y-1 hover:scale-[1.02] active:translate-y-0 active:scale-[0.98]"
-                data-reveal>
-                Start Your Journey
-            </a>
-        </div>
+      <div
+        class="relative z-10 mx-auto max-w-5xl px-4 md:px-8 text-center w-full"
+      >
+        <h1
+          id="hero-headline"
+          class="hero-title-glow font-display font-medium text-4xl sm:text-5xl md:text-6xl lg:text-[76px] lg:leading-[1.12] tracking-[-0.02em] text-white px-2 min-h-[5.5rem] sm:min-h-[6.5rem] md:min-h-[7.5rem] lg:min-h-[8.75rem] [text-shadow:0_2px_32px_rgba(0,0,0,0.55)]"
+          aria-label="Learn Smarter. Grow Faster. Succeed Together."
+        >
+          <span
+            class="block hero-line min-h-[1.05em]"
+            data-hero-line="0"
+          ></span>
+          <span
+            class="block hero-line min-h-[1.05em]"
+            data-hero-line="1"
+          ></span>
+          <span
+            class="block hero-line min-h-[1.05em]"
+            data-hero-line="2"
+          ></span>
+        </h1>
+        <p
+          class="reveal mx-auto mt-4 md:mt-5 max-w-2xl text-base md:text-[16px] leading-relaxed text-white/80 [text-shadow:0_1px_18px_rgba(0,0,0,0.45)]"
+          data-reveal
+        >
+          Join the PeerLink future platform to optimize your learning path. Get
+          matched to the greatest mentors in a simple &amp; easy.
+        </p>
+        <a
+          href="/app/#signup"
+          class="reveal btn-motion hero-cta-pulse mt-6 md:mt-8 inline-flex h-14 md:h-16 min-w-[260px] md:min-w-[280px] items-center justify-center rounded-full bg-white px-8 md:px-10 text-base font-bold text-black border border-[#1c1c1c] shadow-[0px_2px_30px_rgba(0,0,0,0.25)] hover:bg-[#f5f3ff] hover:shadow-[0px_12px_40px_rgba(194,184,255,0.25)] hover:-translate-y-1 hover:scale-[1.02] active:translate-y-0 active:scale-[0.98]"
+          data-reveal
+        >
+          Start Your Journey
+        </a>
+      </div>
     </section>
 
-    <section id="features" class="relative py-10 md:py-14 lg:py-16 overflow-hidden">
-        <div
-            class="pointer-events-none absolute right-[-4%] top-8 h-72 w-72 opacity-25 md:h-96 md:w-96 md:opacity-35 lg:right-0 lg:top-12 hidden md:block rotate-[-16deg]">
-            <img src="https://www.figma.com/api/mcp/asset/fadbaf2e-0a2e-4ebc-a5b3-7f9a8da6ff45" alt="" class="size-full object-contain" />
-        </div>
-        <div
-            class="pointer-events-none absolute left-[-8%] bottom-10 h-56 w-56 opacity-15 lg:opacity-20 hidden lg:block rotate-[12deg]">
-            <img src="https://www.figma.com/api/mcp/asset/fadbaf2e-0a2e-4ebc-a5b3-7f9a8da6ff45" alt="" class="size-full object-contain" />
-        </div>
+    <section
+      id="features"
+      class="relative py-10 md:py-14 lg:py-16 overflow-hidden"
+    >
+      <div
+        class="pointer-events-none absolute right-[-4%] top-8 h-72 w-72 opacity-25 md:h-96 md:w-96 md:opacity-35 lg:right-0 lg:top-12 hidden md:block rotate-[-16deg]"
+      >
+        <img
+          src="https://www.figma.com/api/mcp/asset/fadbaf2e-0a2e-4ebc-a5b3-7f9a8da6ff45"
+          alt=""
+          class="size-full object-contain"
+        />
+      </div>
+      <div
+        class="pointer-events-none absolute left-[-8%] bottom-10 h-56 w-56 opacity-15 lg:opacity-20 hidden lg:block rotate-[12deg]"
+      >
+        <img
+          src="https://www.figma.com/api/mcp/asset/fadbaf2e-0a2e-4ebc-a5b3-7f9a8da6ff45"
+          alt=""
+          class="size-full object-contain"
+        />
+      </div>
 
-        <div class="mx-auto max-w-[min(100%,92rem)] px-4 sm:px-6 md:px-8 lg:px-10 xl:px-12">
-            <div
-                class="grid items-start gap-y-10 gap-x-8 lg:grid-cols-[minmax(280px,1.15fr)_minmax(0,1.85fr)] lg:gap-y-12 lg:gap-x-12 xl:gap-x-16 2xl:gap-x-24">
-                <div class="reveal relative z-[1] min-w-0 max-w-full pr-2 sm:pr-6 lg:pr-8 xl:pr-10" data-reveal>
-                    <div class="flex items-stretch gap-6">
-                        <span aria-hidden="true" class="flex-none w-[56px] sm:w-[64px] bg-white self-stretch"></span>
-                        <p
-                            class="font-banner max-w-full whitespace-nowrap text-[clamp(4.5rem,14vw,9.5rem)] sm:text-[clamp(5rem,12vw,10rem)] md:text-[clamp(5.5rem,11vw,11rem)] lg:text-[clamp(3.75rem,7.8vw,7.25rem)] xl:text-[clamp(4.25rem,8.2vw,8.5rem)] 2xl:text-[clamp(5rem,9vw,12.5rem)] leading-[0.92] tracking-[0.04em] text-white [text-shadow:0px_35px_22px_rgba(0,0,0,0.35)]">
-                            FEATURES
-                        </p>
-                    </div>
-                    <p class="mt-3 text-[#f5f5f5] text-3xl sm:text-4xl md:text-[56px] lg:text-[clamp(1.75rem,2.8vw,3.5rem)] xl:text-[clamp(2rem,3vw,3.9rem)] font-normal leading-tight font-display">
-                        Powerful Features
-                    </p>
-                    <p class="mt-4 max-w-sm text-[17px] sm:text-[19px] text-[#9a9a9a] leading-relaxed">
-                        Everything you need for successful mentorship
-                    </p>
-                </div>
-                <div class="relative z-0 grid min-w-0 w-full grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 lg:gap-5 xl:gap-6">
-                    <article
-                        class="reveal card-hover-lift rounded-[21px] border border-[#252525] bg-[#1a1a1a] p-6 pt-12 min-h-[200px] flex flex-col"
-                        data-reveal>
-                        <span class="mb-4 inline-flex size-11 items-center justify-center rounded-full bg-white/10 ring-1 ring-white/15">
-                            <img src="https://www.figma.com/api/mcp/asset/6c15124a-f9e6-4c5d-8709-8c01bf390dec" alt=""
-                                class="size-6 object-contain" width="28" height="27" />
-                        </span>
-                        <h3 class="text-[22px] sm:text-[24px] font-semibold text-white leading-snug">AI-Powered Matching</h3>
-                        <p class="mt-3 text-[15px] md:text-base leading-relaxed text-[#626262]">
-                            XGBoost algorithm intelligently pairs mentees with compatible mentors based on expertise,
-                            learning style, and goals.
-                        </p>
-                    </article>
-                    <article
-                        class="reveal card-hover-lift rounded-[21px] border border-[#252525] bg-[#1a1a1a] p-6 pt-12 min-h-[200px] flex flex-col"
-                        data-reveal>
-                        <span class="mb-4 inline-flex size-11 items-center justify-center rounded-full bg-white/10 ring-1 ring-white/15">
-                            <img src="https://www.figma.com/api/mcp/asset/44cce387-3d42-46db-8794-265bb74abbe1" alt=""
-                                class="size-5 object-contain" width="21" height="21" />
-                        </span>
-                        <h3 class="text-[22px] sm:text-[24px] font-semibold text-white leading-snug">Smart Scheduling</h3>
-                        <p class="mt-3 text-[15px] md:text-base leading-relaxed text-[#626262]">
-                            Easily schedule and manage mentoring sessions with conflict detection and automated
-                            reminders.
-                        </p>
-                    </article>
-                    <article
-                        class="reveal card-hover-lift rounded-[18px] border border-[#252525] bg-[#1a1a1a] p-6 pt-12 min-h-[200px] flex flex-col"
-                        data-reveal>
-                        <span class="mb-4 inline-flex size-11 items-center justify-center rounded-full bg-white/10 ring-1 ring-white/15">
-                            <img src="https://www.figma.com/api/mcp/asset/d3a90d4d-52c7-47b6-9243-0f492e256bf0" alt=""
-                                class="size-6 object-contain" width="2830" height="28" />
-                        </span>
-                        <h3 class="text-[22px] sm:text-[24px] font-semibold text-white leading-snug">Smart Notifications</h3>
-                        <p class="mt-3 text-[15px] md:text-base leading-relaxed text-[#626262]">
-                            Stay updated with automated alerts for upcoming sessions, messages, and important updates.
-                        </p>
-                    </article>
-                    <article
-                        class="reveal card-hover-lift rounded-[18px] border border-[#252525] bg-[#1a1a1a] p-6 pt-12 min-h-[200px] flex flex-col"
-                        data-reveal>
-                        <span class="mb-4 inline-flex size-11 items-center justify-center rounded-full bg-white/10 ring-1 ring-white/15">
-                            <img src="https://www.figma.com/api/mcp/asset/e4c7843f-90f1-4d31-b493-ad724e3e4a9e" alt=""
-                                class="size-5 object-contain" width="24" height="24" />
-                        </span>
-                        <h3 class="text-[22px] sm:text-[24px] font-semibold text-white leading-snug">Role-Based Access</h3>
-                        <p class="mt-3 text-[15px] md:text-base leading-relaxed text-[#626262]">
-                            Customized dashboards for admins, mentors, and mentees with appropriate permissions.
-                        </p>
-                    </article>
-                    <article
-                        class="reveal card-hover-lift rounded-[21px] border border-[#252525] bg-[#1a1a1a] p-6 pt-12 min-h-[200px] flex flex-col"
-                        data-reveal>
-                        <span class="mb-4 inline-flex size-11 items-center justify-center rounded-full bg-white/10 ring-1 ring-white/15">
-                            <img src="https://www.figma.com/api/mcp/asset/9df641d6-df78-48f4-b2d5-9539b743db8c" alt=""
-                                class="size-5 object-contain" width="24" height="24" />
-                        </span>
-                        <h3 class="text-[22px] sm:text-[24px] font-semibold text-white leading-snug">Secure &amp; Reliable</h3>
-                        <p class="mt-3 text-[15px] md:text-base leading-relaxed text-[#626262]">
-                            Enterprise-grade security with role-based access control and data protection.
-                        </p>
-                    </article>
-                    <article
-                        class="reveal card-hover-lift rounded-[19px] border border-[#252525] bg-[#1a1a1a] p-6 pt-12 min-h-[200px] flex flex-col"
-                        data-reveal>
-                        <span class="mb-4 inline-flex size-11 items-center justify-center rounded-full bg-white/10 ring-1 ring-white/15">
-                            <img src="https://www.figma.com/api/mcp/asset/b9e526e4-f0c0-4e54-98b0-1256085e1250" alt=""
-                                class="size-5 object-contain" width="24" height="24" />
-                        </span>
-                        <h3 class="text-[22px] sm:text-[24px] font-semibold text-white leading-snug">Subject Management</h3>
-                        <p class="mt-3 text-[15px] md:text-base leading-relaxed text-[#626262]">
-                            Organize mentoring by academic subjects and track progress across different areas.
-                        </p>
-                    </article>
-                </div>
+      <div
+        class="mx-auto max-w-[min(100%,92rem)] px-4 sm:px-6 md:px-8 lg:px-10 xl:px-12"
+      >
+        <div
+          class="grid items-start gap-y-10 gap-x-8 lg:grid-cols-[minmax(280px,1.15fr)_minmax(0,1.85fr)] lg:gap-y-12 lg:gap-x-12 xl:gap-x-16 2xl:gap-x-24"
+        >
+          <div
+            class="reveal relative z-[1] min-w-0 max-w-full pr-2 sm:pr-6 lg:pr-8 xl:pr-10"
+            data-reveal
+          >
+            <div class="flex items-stretch gap-6">
+              <span
+                aria-hidden="true"
+                class="flex-none w-[56px] sm:w-[64px] bg-white self-stretch"
+              ></span>
+              <p
+                class="font-banner max-w-full whitespace-nowrap text-[clamp(4.5rem,14vw,9.5rem)] sm:text-[clamp(5rem,12vw,10rem)] md:text-[clamp(5.5rem,11vw,11rem)] lg:text-[clamp(3.75rem,7.8vw,7.25rem)] xl:text-[clamp(4.25rem,8.2vw,8.5rem)] 2xl:text-[clamp(5rem,9vw,12.5rem)] leading-[0.92] tracking-[0.04em] text-white [text-shadow:0px_35px_22px_rgba(0,0,0,0.35)]"
+              >
+                FEATURES
+              </p>
             </div>
-        </div>
-    </section>
-
-    <section id="how" class="relative pt-16 pb-40 md:pt-20 md:pb-44 lg:pt-24 lg:pb-56 bg-[#0c0d0d] overflow-hidden">
-        <div class="pointer-events-none absolute inset-0 opacity-12">
-            <img src="/static/assets/how-section-bg.png" alt=""
-                class="absolute inset-0 size-full object-cover" />
-        </div>
-        <div class="relative mx-auto max-w-7xl px-4 md:px-8">
             <p
-                class="reveal font-banner text-[90px] sm:text-[120px] md:text-[180px] leading-none text-center tracking-[0.04em] text-transparent [-webkit-text-stroke:2px_#ffffff] [text-shadow:0px_0px_24px_rgba(255,255,255,0.08)] mb-10 md:mb-14 lg:mb-16"
-                data-reveal>
-                HOW IT WORKS
+              class="mt-3 text-[#f5f5f5] text-3xl sm:text-4xl md:text-[56px] lg:text-[clamp(1.75rem,2.8vw,3.5rem)] xl:text-[clamp(2rem,3vw,3.9rem)] font-normal leading-tight font-display"
+            >
+              Powerful Features
             </p>
-            <div class="grid md:grid-cols-3 gap-12 md:gap-6 lg:gap-12">
-                <div class="reveal flex items-start gap-6 md:gap-8" data-reveal>
-                    <span class="font-sans text-[78px] md:text-[100px] lg:text-[108px] leading-none text-white shrink-0 w-[92px] md:w-[116px]">01</span>
-                    <div>
-                        <p class="inline-flex items-center justify-center bg-white text-black text-[16px] md:text-[18px] px-3 py-1 rounded-[4px] mb-3 font-medium transition-transform duration-300 hover:scale-[1.02]">Create Your Profile</p>
-                        <p class="text-white/90 text-[16px] md:text-[18px] leading-relaxed max-w-[280px]">
-                            Sign up and complete your profile with your academic interests, strengths, and areas where you
-                            need support.
-                        </p>
-                    </div>
-                </div>
-                <div class="reveal flex items-start gap-6 md:gap-8" data-reveal>
-                    <span class="font-sans text-[78px] md:text-[104px] lg:text-[110px] leading-none text-white shrink-0 w-[92px] md:w-[116px]">02</span>
-                    <div>
-                        <p class="inline-flex items-center justify-center bg-white text-black text-[16px] md:text-[18px] px-3 py-1 rounded-[4px] mb-3 font-medium transition-transform duration-300 hover:scale-[1.02]">AI Matching</p>
-                        <p class="text-white/90 text-[16px] md:text-[18px] leading-relaxed max-w-[280px]">
-                            Our XGBoost algorithm analyzes compatibility factors to find the perfect mentor-mentee
-                            pairing for you.
-                        </p>
-                    </div>
-                </div>
-                <div class="reveal flex items-start gap-6 md:gap-8" data-reveal>
-                    <span class="font-sans text-[78px] md:text-[100px] lg:text-[108px] leading-none text-white shrink-0 w-[92px] md:w-[116px]">03</span>
-                    <div>
-                        <p class="inline-flex items-center justify-center bg-white text-black text-[16px] md:text-[18px] px-3 py-1 rounded-[4px] mb-3 font-medium transition-transform duration-300 hover:scale-[1.02]">Start Learning</p>
-                        <p class="text-white/90 text-[16px] md:text-[18px] leading-relaxed max-w-[280px]">
-                            Schedule sessions, track progress, and build meaningful mentoring relationships that last.
-                        </p>
-                    </div>
-                </div>
-            </div>
+            <p
+              class="mt-4 max-w-sm text-[17px] sm:text-[19px] text-[#9a9a9a] leading-relaxed"
+            >
+              Everything you need for successful mentorship
+            </p>
+          </div>
+          <div
+            class="relative z-0 grid min-w-0 w-full grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 lg:gap-5 xl:gap-6"
+          >
+            <article
+              class="reveal card-hover-lift rounded-[21px] border border-[#252525] bg-[#1a1a1a] p-6 pt-12 min-h-[200px] flex flex-col"
+              data-reveal
+            >
+              <span
+                class="mb-4 inline-flex size-11 items-center justify-center rounded-full bg-white/10 ring-1 ring-white/15"
+              >
+                <img
+                  src="https://www.figma.com/api/mcp/asset/6c15124a-f9e6-4c5d-8709-8c01bf390dec"
+                  alt="AI Matching icon"
+                  class="size-6 object-contain"
+                  width="28"
+                  height="27"
+                />
+              </span>
+              <h3
+                class="text-[22px] sm:text-[24px] font-semibold text-white leading-snug"
+              >
+                AI-Powered Matching
+              </h3>
+              <p
+                class="mt-3 text-[15px] md:text-base leading-relaxed text-[#626262]"
+              >
+                XGBoost algorithm intelligently pairs mentees with compatible
+                mentors based on expertise, learning style, and goals.
+              </p>
+            </article>
+            <article
+              class="reveal card-hover-lift rounded-[21px] border border-[#252525] bg-[#1a1a1a] p-6 pt-12 min-h-[200px] flex flex-col"
+              data-reveal
+            >
+              <span
+                class="mb-4 inline-flex size-11 items-center justify-center rounded-full bg-white/10 ring-1 ring-white/15"
+              >
+                <img
+                  src="https://www.figma.com/api/mcp/asset/44cce387-3d42-46db-8794-265bb74abbe1"
+                  alt="Smart Scheduling icon"
+                  class="size-5 object-contain"
+                  width="21"
+                  height="21"
+                />
+              </span>
+              <h3
+                class="text-[22px] sm:text-[24px] font-semibold text-white leading-snug"
+              >
+                Smart Scheduling
+              </h3>
+              <p
+                class="mt-3 text-[15px] md:text-base leading-relaxed text-[#626262]"
+              >
+                Easily schedule and manage mentoring sessions with conflict
+                detection and automated reminders.
+              </p>
+            </article>
+            <article
+              class="reveal card-hover-lift rounded-[18px] border border-[#252525] bg-[#1a1a1a] p-6 pt-12 min-h-[200px] flex flex-col"
+              data-reveal
+            >
+              <span
+                class="mb-4 inline-flex size-11 items-center justify-center rounded-full bg-white/10 ring-1 ring-white/15"
+              >
+                <img
+                  src="https://www.figma.com/api/mcp/asset/d3a90d4d-52c7-47b6-9243-0f492e256bf0"
+                  alt="Smart Notifications icon"
+                  class="size-6 object-contain"
+                  width="2830"
+                  height="28"
+                />
+              </span>
+              <h3
+                class="text-[22px] sm:text-[24px] font-semibold text-white leading-snug"
+              >
+                Smart Notifications
+              </h3>
+              <p
+                class="mt-3 text-[15px] md:text-base leading-relaxed text-[#626262]"
+              >
+                Stay updated with automated alerts for upcoming sessions,
+                messages, and important updates.
+              </p>
+            </article>
+            <article
+              class="reveal card-hover-lift rounded-[18px] border border-[#252525] bg-[#1a1a1a] p-6 pt-12 min-h-[200px] flex flex-col"
+              data-reveal
+            >
+              <span
+                class="mb-4 inline-flex size-11 items-center justify-center rounded-full bg-white/10 ring-1 ring-white/15"
+              >
+                <img
+                  src="https://www.figma.com/api/mcp/asset/e4c7843f-90f1-4d31-b493-ad724e3e4a9e"
+                  alt="Role-Based Access icon"
+                  class="size-5 object-contain"
+                  width="24"
+                  height="24"
+                />
+              </span>
+              <h3
+                class="text-[22px] sm:text-[24px] font-semibold text-white leading-snug"
+              >
+                Role-Based Access
+              </h3>
+              <p
+                class="mt-3 text-[15px] md:text-base leading-relaxed text-[#626262]"
+              >
+                Customized dashboards for admins, mentors, and mentees with
+                appropriate permissions.
+              </p>
+            </article>
+            <article
+              class="reveal card-hover-lift rounded-[21px] border border-[#252525] bg-[#1a1a1a] p-6 pt-12 min-h-[200px] flex flex-col"
+              data-reveal
+            >
+              <span
+                class="mb-4 inline-flex size-11 items-center justify-center rounded-full bg-white/10 ring-1 ring-white/15"
+              >
+                <img
+                  src="https://www.figma.com/api/mcp/asset/9df641d6-df78-48f4-b2d5-9539b743db8c"
+                  alt="Secure & Reliable icon"
+                  class="size-5 object-contain"
+                  width="24"
+                  height="24"
+                />
+              </span>
+              <h3
+                class="text-[22px] sm:text-[24px] font-semibold text-white leading-snug"
+              >
+                Secure &amp; Reliable
+              </h3>
+              <p
+                class="mt-3 text-[15px] md:text-base leading-relaxed text-[#626262]"
+              >
+                Enterprise-grade security with role-based access control and
+                data protection.
+              </p>
+            </article>
+            <article
+              class="reveal card-hover-lift rounded-[19px] border border-[#252525] bg-[#1a1a1a] p-6 pt-12 min-h-[200px] flex flex-col"
+              data-reveal
+            >
+              <span
+                class="mb-4 inline-flex size-11 items-center justify-center rounded-full bg-white/10 ring-1 ring-white/15"
+              >
+                <img
+                  src="https://www.figma.com/api/mcp/asset/b9e526e4-f0c0-4e54-98b0-1256085e1250"
+                  alt="Subject Management icon"
+                  class="size-5 object-contain"
+                  width="24"
+                  height="24"
+                />
+              </span>
+              <h3
+                class="text-[22px] sm:text-[24px] font-semibold text-white leading-snug"
+              >
+                Subject Management
+              </h3>
+              <p
+                class="mt-3 text-[15px] md:text-base leading-relaxed text-[#626262]"
+              >
+                Organize mentoring by academic subjects and track progress
+                across different areas.
+              </p>
+            </article>
+          </div>
         </div>
+      </div>
     </section>
 
-    
-
-    <section id="teams" class="pt-10 pb-32 md:pt-14 md:pb-48 lg:pt-16 lg:pb-56 relative overflow-x-clip overflow-y-visible">
-        <div class="pointer-events-none absolute inset-0 -z-10">
-            <img src="/static/assets/teams-section-bg.png" alt="" class="absolute inset-0 size-full object-cover opacity-30" />
-            <div class="absolute inset-0 bg-[#0c0d0d]/75"></div>
+    <section
+      id="how"
+      class="relative pt-16 pb-40 md:pt-20 md:pb-44 lg:pt-24 lg:pb-56 bg-[#0c0d0d] overflow-hidden"
+    >
+      <div class="pointer-events-none absolute inset-0 opacity-12">
+        <img
+          src="/static/assets/how-section-bg.png"
+          alt=""
+          class="absolute inset-0 size-full object-cover"
+        />
+      </div>
+      <div class="relative mx-auto max-w-7xl px-4 md:px-8">
+        <p
+          class="reveal font-banner text-[90px] sm:text-[120px] md:text-[180px] leading-none text-center tracking-[0.04em] text-transparent [-webkit-text-stroke:2px_#ffffff] [text-shadow:0px_0px_24px_rgba(255,255,255,0.08)] mb-10 md:mb-14 lg:mb-16"
+          data-reveal
+        >
+          HOW IT WORKS
+        </p>
+        <div class="grid md:grid-cols-3 gap-12 md:gap-6 lg:gap-12">
+          <div class="reveal flex items-start gap-6 md:gap-8" data-reveal>
+            <span
+              class="font-sans text-[78px] md:text-[100px] lg:text-[108px] leading-none text-white shrink-0 w-[92px] md:w-[116px]"
+              >01</span
+            >
+            <div>
+              <p
+                class="inline-flex items-center justify-center bg-white text-black text-[16px] md:text-[18px] px-3 py-1 rounded-[4px] mb-3 font-medium transition-transform duration-300 hover:scale-[1.02]"
+              >
+                Create Your Profile
+              </p>
+              <p
+                class="text-white/90 text-[16px] md:text-[18px] leading-relaxed max-w-[280px]"
+              >
+                Sign up and complete your profile with your academic interests,
+                strengths, and areas where you need support.
+              </p>
+            </div>
+          </div>
+          <div class="reveal flex items-start gap-6 md:gap-8" data-reveal>
+            <span
+              class="font-sans text-[78px] md:text-[104px] lg:text-[110px] leading-none text-white shrink-0 w-[92px] md:w-[116px]"
+              >02</span
+            >
+            <div>
+              <p
+                class="inline-flex items-center justify-center bg-white text-black text-[16px] md:text-[18px] px-3 py-1 rounded-[4px] mb-3 font-medium transition-transform duration-300 hover:scale-[1.02]"
+              >
+                AI Matching
+              </p>
+              <p
+                class="text-white/90 text-[16px] md:text-[18px] leading-relaxed max-w-[280px]"
+              >
+                Our XGBoost algorithm analyzes compatibility factors to find the
+                perfect mentor-mentee pairing for you.
+              </p>
+            </div>
+          </div>
+          <div class="reveal flex items-start gap-6 md:gap-8" data-reveal>
+            <span
+              class="font-sans text-[78px] md:text-[100px] lg:text-[108px] leading-none text-white shrink-0 w-[92px] md:w-[116px]"
+              >03</span
+            >
+            <div>
+              <p
+                class="inline-flex items-center justify-center bg-white text-black text-[16px] md:text-[18px] px-3 py-1 rounded-[4px] mb-3 font-medium transition-transform duration-300 hover:scale-[1.02]"
+              >
+                Start Learning
+              </p>
+              <p
+                class="text-white/90 text-[16px] md:text-[18px] leading-relaxed max-w-[280px]"
+              >
+                Schedule sessions, track progress, and build meaningful
+                mentoring relationships that last.
+              </p>
+            </div>
+          </div>
         </div>
-        <div class="mx-auto max-w-[min(100%,92rem)] px-4 sm:px-6 md:px-8 lg:px-10 xl:px-12">
-            <div
-                class="reveal flex items-stretch gap-6 font-banner mb-6 md:mb-8"
-                data-reveal>
-                <span aria-hidden="true" class="flex-none w-[56px] sm:w-[64px] bg-white self-stretch"></span>
+      </div>
+    </section>
+
+    <section
+      id="teams"
+      class="pt-10 pb-32 md:pt-14 md:pb-48 lg:pt-16 lg:pb-56 relative overflow-x-clip overflow-y-visible"
+    >
+      <div class="pointer-events-none absolute inset-0 -z-10">
+        <img
+          src="/static/assets/teams-section-bg.png"
+          alt=""
+          class="absolute inset-0 size-full object-cover opacity-30"
+        />
+        <div class="absolute inset-0 bg-[#0c0d0d]/75"></div>
+      </div>
+      <div
+        class="mx-auto max-w-[min(100%,92rem)] px-4 sm:px-6 md:px-8 lg:px-10 xl:px-12"
+      >
+        <div
+          class="reveal flex items-stretch gap-6 font-banner mb-6 md:mb-8"
+          data-reveal
+        >
+          <span
+            aria-hidden="true"
+            class="flex-none w-[56px] sm:w-[64px] bg-white self-stretch"
+          ></span>
+          <p
+            class="text-[100px] sm:text-[140px] md:text-[200px] leading-none tracking-[0.04em] text-white [text-shadow:0px_35px_22px_rgba(0,0,0,0.35)] whitespace-nowrap"
+          >
+            TEAMS
+          </p>
+        </div>
+
+        <div class="reveal max-w-[min(100%,92rem)] mx-auto px-0" data-reveal>
+          <div
+            class="relative z-10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8 items-stretch justify-items-center"
+          >
+            <article
+              class="group card-hover-lift w-full max-w-[260px] rounded-[22px] border border-black/10 bg-white overflow-hidden shadow-[0px_18px_45px_rgba(0,0,0,0.22)] transition-transform duration-300 hover:-translate-y-1"
+            >
+              <div class="aspect-square overflow-hidden bg-neutral-100">
+                <img
+                  src="/static/assets/team-jeisha.png"
+                  alt="Jeisha Lou P. Petancio"
+                  class="size-full object-cover"
+                  width="600"
+                  height="600"
+                  loading="lazy"
+                />
+              </div>
+              <div class="px-5 py-4 bg-white">
                 <p
-                    class="text-[100px] sm:text-[140px] md:text-[200px] leading-none tracking-[0.04em] text-white [text-shadow:0px_35px_22px_rgba(0,0,0,0.35)] whitespace-nowrap">
-                    TEAMS
+                  class="font-card font-bold text-lg sm:text-xl text-center text-black"
+                >
+                  Jeisha Lou P. Petancio
                 </p>
-            </div>
+                <p
+                  class="font-card font-medium text-base text-center text-black/60 mt-1"
+                >
+                  Frontend Developer
+                </p>
+              </div>
+            </article>
 
-            <div class="reveal max-w-[min(100%,92rem)] mx-auto px-0" data-reveal>
-                <div class="relative z-10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8 items-stretch justify-items-center">
-                        <article
-                            class="group card-hover-lift w-full max-w-[260px] rounded-[22px] border border-black/10 bg-white overflow-hidden shadow-[0px_18px_45px_rgba(0,0,0,0.22)] transition-transform duration-300 hover:-translate-y-1">
-                            <div class="aspect-square overflow-hidden bg-neutral-100">
-                                <img src="/static/assets/team-jeisha.png" alt="Jeisha Lou P. Petancio"
-                                    class="size-full object-cover" width="600" height="600" loading="lazy" />
-                            </div>
-                            <div class="px-5 py-4 bg-white">
-                                <p class="font-card font-bold text-lg sm:text-xl text-center text-black">Jeisha Lou P. Petancio</p>
-                                <p class="font-card font-medium text-base text-center text-black/60 mt-1">Frontend Developer</p>
-                            </div>
-                        </article>
+            <article
+              class="group card-hover-lift w-full max-w-[260px] rounded-[22px] border border-black/10 bg-white overflow-hidden shadow-[0px_18px_45px_rgba(0,0,0,0.22)] transition-transform duration-300 hover:-translate-y-1"
+            >
+              <div class="aspect-square overflow-hidden bg-neutral-100">
+                <img
+                  src="/static/assets/team-alexander.png"
+                  alt="Alexander Miguel Pallasigue"
+                  class="size-full object-cover"
+                  width="600"
+                  height="600"
+                  loading="lazy"
+                />
+              </div>
+              <div class="px-5 py-4 bg-white">
+                <p
+                  class="font-card font-bold text-lg sm:text-xl text-center text-black"
+                >
+                  Alexander Miguel Pallasigue
+                </p>
+                <p
+                  class="font-card font-medium text-base text-center text-black/60 mt-1"
+                >
+                  QA Engineer
+                </p>
+              </div>
+            </article>
 
-                        <article
-                            class="group card-hover-lift w-full max-w-[260px] rounded-[22px] border border-black/10 bg-white overflow-hidden shadow-[0px_18px_45px_rgba(0,0,0,0.22)] transition-transform duration-300 hover:-translate-y-1">
-                            <div class="aspect-square overflow-hidden bg-neutral-100">
-                                <img src="/static/assets/team-alexander.png" alt="Alexander Miguel Pallasigue"
-                                    class="size-full object-cover" width="600" height="600" loading="lazy" />
-                            </div>
-                            <div class="px-5 py-4 bg-white">
-                                <p class="font-card font-bold text-lg sm:text-xl text-center text-black">Alexander Miguel Pallasigue</p>
-                                <p class="font-card font-medium text-base text-center text-black/60 mt-1">QA Engineer</p>
-                            </div>
-                        </article>
+            <article
+              class="group card-hover-lift w-full max-w-[260px] rounded-[22px] border border-black/10 bg-white overflow-hidden shadow-[0px_18px_45px_rgba(0,0,0,0.22)] transition-transform duration-300 hover:-translate-y-1"
+            >
+              <div class="aspect-square overflow-hidden bg-neutral-100">
+                <img
+                  src="/static/assets/team-von.png"
+                  alt="Von Ziljan Dela Cruz"
+                  class="size-full object-cover"
+                  width="600"
+                  height="600"
+                  loading="lazy"
+                />
+              </div>
+              <div class="px-5 py-4 bg-white">
+                <p
+                  class="font-card font-bold text-lg sm:text-xl text-center text-black"
+                >
+                  Von Ziljan Dela Cruz
+                </p>
+                <p
+                  class="font-card font-medium text-base text-center text-black/60 mt-1"
+                >
+                  Project Manager
+                </p>
+              </div>
+            </article>
 
-                        <article
-                            class="group card-hover-lift w-full max-w-[260px] rounded-[22px] border border-black/10 bg-white overflow-hidden shadow-[0px_18px_45px_rgba(0,0,0,0.22)] transition-transform duration-300 hover:-translate-y-1">
-                            <div class="aspect-square overflow-hidden bg-neutral-100">
-                                <img src="/static/assets/team-von.png" alt="Von Ziljan Dela Cruz"
-                                    class="size-full object-cover" width="600" height="600" loading="lazy" />
-                            </div>
-                            <div class="px-5 py-4 bg-white">
-                                <p class="font-card font-bold text-lg sm:text-xl text-center text-black">Von Ziljan Dela Cruz</p>
-                                <p class="font-card font-medium text-base text-center text-black/60 mt-1">Project Manager</p>
-                            </div>
-                        </article>
-
-                        <article
-                            class="group card-hover-lift w-full max-w-[260px] rounded-[22px] border border-black/10 bg-white overflow-hidden shadow-[0px_18px_45px_rgba(0,0,0,0.22)] transition-transform duration-300 hover:-translate-y-1">
-                            <div class="aspect-square overflow-hidden bg-neutral-100">
-                                <img src="/static/assets/team-sofia.png" alt="Sofia Reyes"
-                                    class="size-full object-cover" width="600" height="600" loading="lazy" />
-                            </div>
-                            <div class="px-5 py-4 bg-white">
-                                <p class="font-card font-bold text-lg sm:text-xl text-center text-black">Francis Kyle Arranchado</p>
-                                <p class="font-card font-medium text-base text-center text-black/60 mt-1">Developer</p>
-                            </div>
-                        </article>
-                    </div>
-            </div>
+            <article
+              class="group card-hover-lift w-full max-w-[260px] rounded-[22px] border border-black/10 bg-white overflow-hidden shadow-[0px_18px_45px_rgba(0,0,0,0.22)] transition-transform duration-300 hover:-translate-y-1"
+            >
+              <div class="aspect-square overflow-hidden bg-neutral-100">
+                <img
+                  src="/static/assets/team-sofia.png"
+                  alt="Sofia Reyes"
+                  class="size-full object-cover"
+                  width="600"
+                  height="600"
+                  loading="lazy"
+                />
+              </div>
+              <div class="px-5 py-4 bg-white">
+                <p
+                  class="font-card font-bold text-lg sm:text-xl text-center text-black"
+                >
+                  Sofia Reyes
+                </p>
+                <p
+                  class="font-card font-medium text-base text-center text-black/60 mt-1"
+                >
+                  Developer
+                </p>
+              </div>
+            </article>
+          </div>
         </div>
+      </div>
     </section>
 
-    <section id="testimonials" class="py-10 md:py-14 lg:py-16 relative overflow-hidden">
-        <img src="/static/assets/testimonials-section-bg.png" alt=""
-            class="absolute inset-0 size-full object-cover opacity-18 z-0" />
-        <div class="absolute inset-0 bg-[#0c0d0d]/75 z-0"></div>
-        <div class="relative z-10 mx-auto max-w-7xl px-4 md:px-8">
-            <p
-                class="reveal font-banner text-[80px] sm:text-[120px] md:text-[200px] leading-none text-center tracking-[0.04em] text-transparent [-webkit-text-stroke:2px_#ffffff] [text-shadow:0px_0px_24px_rgba(255,255,255,0.08)]"
-                data-reveal>
-                TESTIMONIALS
-            </p>
-            <p class="reveal text-center text-[#676d79] text-lg md:text-xl mt-6" data-reveal>Some of the most memorable reviews we heard from our design colleagues.</p>
-            <h2 class="reveal font-display font-bold text-3xl sm:text-4xl md:text-[64px] text-center mt-10 leading-tight [text-shadow:0px_4px_4px_rgba(0,0,0,0.25)] px-2" data-reveal>
-                What's our user says about us
-            </h2>
+    <section
+      id="testimonials"
+      class="py-10 md:py-14 lg:py-16 relative overflow-hidden"
+    >
+      <img
+        src="/static/assets/testimonials-section-bg.png"
+        alt=""
+        class="absolute inset-0 size-full object-cover opacity-18 z-0"
+      />
+      <div class="absolute inset-0 bg-[#0c0d0d]/75 z-0"></div>
+      <div class="relative z-10 mx-auto max-w-7xl px-4 md:px-8">
+        <p
+          class="reveal font-banner text-[80px] sm:text-[120px] md:text-[200px] leading-none text-center tracking-[0.04em] text-transparent [-webkit-text-stroke:2px_#ffffff] [text-shadow:0px_0px_24px_rgba(255,255,255,0.08)]"
+          data-reveal
+        >
+          TESTIMONIALS
+        </p>
+        <p
+          class="reveal text-center text-[#676d79] text-lg md:text-xl mt-6"
+          data-reveal
+        >
+          Some of the most memorable reviews we heard from our design
+          colleagues.
+        </p>
+        <h2
+          class="reveal font-display font-bold text-3xl sm:text-4xl md:text-[64px] text-center mt-10 leading-tight [text-shadow:0px_4px_4px_rgba(0,0,0,0.25)] px-2"
+          data-reveal
+        >
+          What our users say about us
+        </h2>
 
-            <div class="reveal relative mt-12 max-w-5xl mx-auto" data-reveal>
-                <button type="button" id="testimonial-prev"
-                    class="btn-motion absolute left-0 top-1/2 z-10 -translate-y-1/2 -translate-x-2 md:-translate-x-12 p-2 rounded-full border border-white/20 bg-black/40 hover:bg-black/60 hover:border-[#c2b8ff]/50 hover:scale-110 active:scale-95"
-                    aria-label="Previous testimonial">
-                    <img src="https://www.figma.com/api/mcp/asset/dbd0db75-7789-4d0e-8ced-3de53fda57be" alt="" class="size-9 object-contain" width="44" height="44" />
-                </button>
-                <button type="button" id="testimonial-next"
-                    class="btn-motion absolute right-0 top-1/2 z-10 -translate-y-1/2 translate-x-2 md:translate-x-12 p-2 rounded-full border border-white/20 bg-black/40 hover:bg-black/60 hover:border-[#c2b8ff]/50 hover:scale-110 active:scale-95"
-                    aria-label="Next testimonial">
-                    <img src="https://www.figma.com/api/mcp/asset/02393a9e-2b4d-4fc4-a465-2541638ed054" alt="" class="size-9 object-contain" width="44" height="44" />
-                </button>
+        <div class="reveal relative mt-12 max-w-5xl mx-auto" data-reveal>
+          <button
+            type="button"
+            id="testimonial-prev"
+            class="btn-motion absolute left-0 top-1/2 z-10 -translate-y-1/2 -translate-x-2 md:-translate-x-12 p-2 rounded-full border border-white/20 bg-black/40 hover:bg-black/60 hover:border-[#c2b8ff]/50 hover:scale-110 active:scale-95"
+            aria-label="Previous testimonial"
+          >
+            <img
+              src="https://www.figma.com/api/mcp/asset/dbd0db75-7789-4d0e-8ced-3de53fda57be"
+              alt=""
+              class="size-9 object-contain"
+              width="44"
+              height="44"
+            />
+          </button>
+          <button
+            type="button"
+            id="testimonial-next"
+            class="btn-motion absolute right-0 top-1/2 z-10 -translate-y-1/2 translate-x-2 md:translate-x-12 p-2 rounded-full border border-white/20 bg-black/40 hover:bg-black/60 hover:border-[#c2b8ff]/50 hover:scale-110 active:scale-95"
+            aria-label="Next testimonial"
+          >
+            <img
+              src="https://www.figma.com/api/mcp/asset/02393a9e-2b4d-4fc4-a465-2541638ed054"
+              alt=""
+              class="size-9 object-contain"
+              width="44"
+              height="44"
+            />
+          </button>
 
-                <div
-                    class="rounded-[20px] border border-black backdrop-blur-md p-6 md:p-10 mx-10 md:mx-16 transition-shadow duration-500 hover:shadow-[0_20px_60px_rgba(0,0,0,0.35)]"
-                    style="background: linear-gradient(60deg, rgba(41,41,41,0.35) 41%, rgba(231,231,231,0.12) 63%, rgba(255,255,255,0.12) 98%)">
-                    <div class="rounded-[20px] border border-transparent bg-black/20 p-6 md:p-8 shadow-[0px_4px_4px_rgba(0,0,0,0.25)]">
-                        <div class="flex flex-col md:flex-row gap-6 md:gap-8">
-                            <div class="shrink-0 flex justify-center md:block">
-                                <img src="https://www.figma.com/api/mcp/asset/79354493-8dba-42cd-b4c4-21a01ac52d4b" alt=""
-                                    class="size-12 md:size-11 rounded-full object-cover" width="53" height="53" />
-                            </div>
-                            <div class="flex-1 min-w-0 text-center md:text-left">
-                                <p id="testimonial-name" class="text-xl md:text-2xl font-semibold text-white">Juan Dela Cruz</p>
-                                <p id="testimonial-role" class="text-[#9d9ba6] text-lg mt-1">Business Man</p>
-                                <p id="testimonial-text" class="mt-6 text-[#cac6dd] text-base md:text-lg leading-relaxed text-left">
-                                    Forget about spam, advertising mailings, hacking and attacking robots. Keep your real mailbox clean and secure.
-                                </p>
-                                <div class="flex justify-center md:justify-start gap-4 mt-8">
-                                    <button type="button" data-testimonial-dot class="btn-motion size-3 rounded-full bg-white transition hover:scale-125" aria-label="Testimonial 1"></button>
-                                    <button type="button" data-testimonial-dot class="btn-motion size-3 rounded-full bg-white/30 transition hover:scale-125" aria-label="Testimonial 2"></button>
-                                    <button type="button" data-testimonial-dot class="btn-motion size-3 rounded-full bg-white/30 transition hover:scale-125" aria-label="Testimonial 3"></button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+          <div
+            class="rounded-[20px] border border-black backdrop-blur-md p-6 md:p-10 mx-10 md:mx-16 transition-shadow duration-500 hover:shadow-[0_20px_60px_rgba(0,0,0,0.35)]"
+            style="
+              background: linear-gradient(
+                60deg,
+                rgba(41, 41, 41, 0.35) 41%,
+                rgba(231, 231, 231, 0.12) 63%,
+                rgba(255, 255, 255, 0.12) 98%
+              );
+            "
+          >
+            <div
+              class="rounded-[20px] border border-transparent bg-black/20 p-6 md:p-8 shadow-[0px_4px_4px_rgba(0,0,0,0.25)]"
+            >
+              <div class="flex flex-col md:flex-row gap-6 md:gap-8">
+                <div class="shrink-0 flex justify-center md:block">
+                  <img
+                    src="https://www.figma.com/api/mcp/asset/79354493-8dba-42cd-b4c4-21a01ac52d4b"
+                    alt=""
+                    class="size-12 md:size-11 rounded-full object-cover"
+                    width="53"
+                    height="53"
+                  />
                 </div>
+                <div class="flex-1 min-w-0 text-center md:text-left">
+                  <p
+                    id="testimonial-name"
+                    class="text-xl md:text-2xl font-semibold text-white"
+                  >
+                    Juan Dela Cruz
+                  </p>
+                  <p id="testimonial-role" class="text-[#9d9ba6] text-lg mt-1">
+                    Business Man
+                  </p>
+                  <p
+                    id="testimonial-text"
+                    class="mt-6 text-[#cac6dd] text-base md:text-lg leading-relaxed text-left"
+                  >
+                    Forget about spam, advertising mailings, hacking and
+                    attacking robots. Keep your real mailbox clean and secure.
+                  </p>
+                  <div class="flex justify-center md:justify-start gap-4 mt-8">
+                    <button
+                      type="button"
+                      data-testimonial-dot
+                      class="btn-motion size-3 rounded-full bg-white transition hover:scale-125"
+                      aria-label="Testimonial 1"
+                    ></button>
+                    <button
+                      type="button"
+                      data-testimonial-dot
+                      class="btn-motion size-3 rounded-full bg-white/30 transition hover:scale-125"
+                      aria-label="Testimonial 2"
+                    ></button>
+                    <button
+                      type="button"
+                      data-testimonial-dot
+                      class="btn-motion size-3 rounded-full bg-white/30 transition hover:scale-125"
+                      aria-label="Testimonial 3"
+                    ></button>
+                  </div>
+                </div>
+              </div>
             </div>
+          </div>
         </div>
+      </div>
     </section>
 
     <div class="relative overflow-hidden">
-        <img src="/static/assets/mentorship-journey-bg.png" alt=""
-            class="absolute inset-0 size-full object-cover object-top z-0" />
-        <div class="absolute inset-0 z-0" style="background: rgba(0,0,0,0.35);"></div>
-        <div class="relative z-10">
-            <section class="py-16 md:py-24 px-4 reveal" id="footer-contact" data-reveal>
-                <div class="relative mx-auto max-w-4xl overflow-hidden rounded-[60px] md:rounded-[94px] text-center px-6 py-12 md:py-16 transition-transform duration-500 hover:scale-[1.01] bg-black/35 border border-[1.5px] border-[#c2b8ff]/70 shadow-[0_0_45px_rgba(194,184,255,0.35)]">
-                    <img src="/static/assets/mentorship-journey-bg.png" alt=""
-                        class="absolute inset-0 size-full object-cover object-top -z-10" />
-            <div class="absolute inset-0 -z-10" style="background: rgba(0,0,0,0.55);"></div>
-            <img src="https://www.figma.com/api/mcp/asset/ebbb17cb-7b04-492a-91b1-0c61d20a7df9" alt=""
-                class="mx-auto h-16 w-auto object-contain mb-6" width="112" height="99" />
-            <h2 class="font-display font-medium text-3xl sm:text-4xl md:text-[56px] md:leading-[1.1] tracking-[-0.02em]">
-                Ready to Start Your Mentorship Journey?
+      <img
+        src="/static/assets/mentorship-journey-bg.png"
+        alt=""
+        class="absolute inset-0 size-full object-cover object-top z-0"
+      />
+      <div
+        class="absolute inset-0 z-0"
+        style="background: rgba(0, 0, 0, 0.35)"
+      ></div>
+      <div class="relative z-10">
+        <section
+          class="py-16 md:py-24 px-4 reveal"
+          id="footer-contact"
+          data-reveal
+        >
+          <div
+            class="relative mx-auto max-w-4xl overflow-hidden rounded-[60px] md:rounded-[94px] text-center px-6 py-12 md:py-16 transition-transform duration-500 hover:scale-[1.01] bg-black/35 border border-[1.5px] border-[#c2b8ff]/70 shadow-[0_0_45px_rgba(194,184,255,0.35)]"
+          >
+            <img
+              src="/static/assets/mentorship-journey-bg.png"
+              alt=""
+              class="absolute inset-0 size-full object-cover object-top -z-10"
+            />
+            <div
+              class="absolute inset-0 -z-10"
+              style="background: rgba(0, 0, 0, 0.55)"
+            ></div>
+            <img
+              src="https://www.figma.com/api/mcp/asset/ebbb17cb-7b04-492a-91b1-0c61d20a7df9"
+              alt=""
+              class="mx-auto h-16 w-auto object-contain mb-6"
+              width="112"
+              height="99"
+            />
+            <h2
+              class="font-display font-medium text-3xl sm:text-4xl md:text-[56px] md:leading-[1.1] tracking-[-0.02em]"
+            >
+              Ready to Start Your Mentorship Journey?
             </h2>
             <p class="mt-4 text-[#9e9da4] text-base max-w-xl mx-auto">
-                Join hundreds of first-year IT students already benefiting from personalized mentorship
+              Join hundreds of first-year IT students already benefiting from
+              personalized mentorship
             </p>
-            <a href="/app/#signup"
-                class="btn-motion mt-8 inline-flex h-[72px] md:h-[88px] min-w-[260px] items-center justify-center rounded-full bg-white px-10 text-lg md:text-2xl font-bold text-black border border-[#1c1c1c] shadow-[0px_2px_30px_rgba(0,0,0,0.25)] hover:bg-[#f5f3ff] hover:shadow-[0px_14px_44px_rgba(194,184,255,0.3)] hover:-translate-y-1 hover:scale-[1.03] active:translate-y-0 active:scale-[0.98]">
-                Get Started Now
+            <a
+              href="/app/#signup"
+              class="btn-motion mt-8 inline-flex h-[72px] md:h-[88px] min-w-[260px] items-center justify-center rounded-full bg-white px-10 text-lg md:text-2xl font-bold text-black border border-[#1c1c1c] shadow-[0px_2px_30px_rgba(0,0,0,0.25)] hover:bg-[#f5f3ff] hover:shadow-[0px_14px_44px_rgba(194,184,255,0.3)] hover:-translate-y-1 hover:scale-[1.03] active:translate-y-0 active:scale-[0.98]"
+            >
+              Get Started Now
             </a>
-                </div>
-            </section>
+          </div>
+        </section>
 
-            <footer class="reveal bg-transparent px-6 md:px-16 lg:px-24 py-10 md:py-12 lg:py-14" data-reveal>
-                <div class="max-w-7xl mx-auto flex flex-col lg:flex-row gap-12 lg:gap-8 lg:justify-between lg:items-start relative z-10">
+        <footer
+          class="reveal bg-transparent px-6 md:px-16 lg:px-24 py-10 md:py-12 lg:py-14"
+          data-reveal
+        >
+          <div
+            class="max-w-7xl mx-auto flex flex-col lg:flex-row gap-12 lg:gap-8 lg:justify-between lg:items-start relative z-10"
+          >
             <div class="shrink-0 self-start">
-                <img src="https://www.figma.com/api/mcp/asset/ebbb17cb-7b04-492a-91b1-0c61d20a7df9" alt="MentorMatch"
-                    class="h-28 md:h-32 w-auto object-contain object-top max-w-[240px]" width="262" height="231" />
+              <img
+                src="https://www.figma.com/api/mcp/asset/ebbb17cb-7b04-492a-91b1-0c61d20a7df9"
+                alt="PeerLink"
+                class="h-28 md:h-32 w-auto object-contain object-top max-w-[240px]"
+                width="262"
+                height="231"
+              />
             </div>
             <div>
-                <h2 class="font-extrabold text-white text-2xl md:text-[37px] mb-6">ABOUT US</h2>
-                <ul class="space-y-3 text-[#716f6f] text-xl md:text-[34px] font-medium">
-                    <li><a href="#teams" class="nav-link-animate inline-block hover:text-white transition-colors duration-300">Teams</a></li>
-                    <li><a href="#footer-contact" class="nav-link-animate inline-block hover:text-white transition-colors duration-300">Commitee</a></li>
-                    <li><a href="#features" class="nav-link-animate inline-block hover:text-white transition-colors duration-300">Teachers</a></li>
-                </ul>
+              <h2
+                class="font-extrabold text-white text-2xl md:text-[37px] mb-6"
+              >
+                ABOUT US
+              </h2>
+              <ul
+                class="space-y-3 text-[#716f6f] text-xl md:text-[34px] font-medium"
+              >
+                <li>
+                  <a
+                    href="#teams"
+                    class="nav-link-animate inline-block hover:text-white transition-colors duration-300"
+                    >Teams</a
+                  >
+                </li>
+                <li>
+                  <a
+                    href="#footer-contact"
+                    class="nav-link-animate inline-block hover:text-white transition-colors duration-300"
+                    >Committee</a
+                  >
+                </li>
+                <li>
+                  <a
+                    href="#features"
+                    class="nav-link-animate inline-block hover:text-white transition-colors duration-300"
+                    >Teachers</a
+                  >
+                </li>
+              </ul>
             </div>
             <div id="contact">
-                <h2 class="font-extrabold text-white text-2xl md:text-[37px] mb-6">SOCIAL</h2>
-                <div class="flex items-center gap-6">
-                    <a href="#" class="hover:opacity-70 transition" aria-label="Facebook">
-                        <img src="https://www.figma.com/api/mcp/asset/4b7df36e-2242-460a-acb1-0ca967d1159e" alt=""
-                            class="h-14 w-14 object-contain mix-blend-difference" width="55" height="62" />
-                    </a>
-                    <a href="#" class="hover:opacity-70 transition" aria-label="Instagram">
-                        <img src="https://www.figma.com/api/mcp/asset/0a4a9ff1-76e2-4b23-a28d-2d1b609175b7" alt=""
-                            class="h-14 w-14 object-contain mix-blend-difference" width="58" height="61" />
-                    </a>
-                </div>
+              <h2
+                class="font-extrabold text-white text-2xl md:text-[37px] mb-6"
+              >
+                SOCIAL
+              </h2>
+              <div class="flex items-center gap-6">
+                <a
+                  href="#"
+                  class="hover:opacity-70 transition"
+                  aria-label="Facebook"
+                >
+                  <img
+                    src="https://www.figma.com/api/mcp/asset/4b7df36e-2242-460a-acb1-0ca967d1159e"
+                    alt=""
+                    class="h-14 w-14 object-contain mix-blend-difference"
+                    width="55"
+                    height="62"
+                  />
+                </a>
+                <a
+                  href="#"
+                  class="hover:opacity-70 transition"
+                  aria-label="Instagram"
+                >
+                  <img
+                    src="https://www.figma.com/api/mcp/asset/0a4a9ff1-76e2-4b23-a28d-2d1b609175b7"
+                    alt=""
+                    class="h-14 w-14 object-contain mix-blend-difference"
+                    width="58"
+                    height="61"
+                  />
+                </a>
+              </div>
             </div>
-                </div>
-                <p class="text-center text-slate-500 text-sm mt-14 pt-8 border-t border-white/10">
-                    © 2025 PeerLink. Capstone project.
-                </p>
-            </footer>
-        </div>
+          </div>
+          <p
+            class="text-center text-slate-500 text-sm mt-14 pt-8 border-t border-white/10"
+          >
+            © 2025 PeerLink. Capstone project.
+          </p>
+        </footer>
+      </div>
     </div>
 
     <script src="/static/script.js?v=landing-fx-3"></script>
-</body>
-
+  </body>
 </html>

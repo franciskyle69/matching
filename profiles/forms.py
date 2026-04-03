@@ -1,6 +1,7 @@
 from django import forms
 
 from .models import MentorProfile, MenteeProfile
+from .questionnaire_utils import filter_topics_for_subjects
 
 
 SUBJECT_CHOICES = [
@@ -43,11 +44,13 @@ class MentorQuestionnaireForm(forms.ModelForm):
         model = MentorProfile
         fields = ("role", "subjects", "topics", "expertise_level")
 
-    def clean_subjects(self):
-        return list(self.cleaned_data.get("subjects") or [])
-
-    def clean_topics(self):
-        return list(self.cleaned_data.get("topics") or [])
+    def clean(self):
+        cleaned_data = super().clean()
+        cleaned_data["subjects"] = list(cleaned_data.get("subjects") or [])
+        cleaned_data["topics"] = filter_topics_for_subjects(
+            cleaned_data.get("subjects"), cleaned_data.get("topics")
+        )
+        return cleaned_data
 
 
 class MenteeQuestionnaireForm(forms.ModelForm):
@@ -63,8 +66,10 @@ class MenteeQuestionnaireForm(forms.ModelForm):
         model = MenteeProfile
         fields = ("subjects", "topics", "difficulty_level")
 
-    def clean_subjects(self):
-        return list(self.cleaned_data.get("subjects") or [])
-
-    def clean_topics(self):
-        return list(self.cleaned_data.get("topics") or [])
+    def clean(self):
+        cleaned_data = super().clean()
+        cleaned_data["subjects"] = list(cleaned_data.get("subjects") or [])
+        cleaned_data["topics"] = filter_topics_for_subjects(
+            cleaned_data.get("subjects"), cleaned_data.get("topics")
+        )
+        return cleaned_data

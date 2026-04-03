@@ -45,7 +45,33 @@ copy .env.example .env
 # Edit .env with your secret key, DB, email, and optional Google OAuth settings.
 ```
 
-See `.env.example` for all variables (Django, DB, email, Google OAuth).
+**Key environment variables:**
+
+- **Django**
+  - `SECRET_KEY` — Django secret key (generate with `python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"`)
+  - `DEBUG` — Set to `False` in production; `True` for local dev
+  - `ALLOWED_HOSTS` — Comma-separated list of allowed domains
+
+- **Database**
+  - `DATABASE_URL` — PostgreSQL connection string (e.g., `postgresql://user:password@localhost/dbname`)
+  - `FORCE_SQLITE` — Set to `True` to use SQLite instead of PostgreSQL (for local dev only)
+
+- **Email (SMTP)**
+  - `EMAIL_HOST` — SMTP server (e.g., `smtp.gmail.com`)
+  - `EMAIL_PORT` — SMTP port (usually 587 for TLS or 465 for SSL)
+  - `EMAIL_HOST_USER` — Sender email address
+  - `EMAIL_HOST_PASSWORD` — SMTP password or app-specific password
+  - `DEFAULT_FROM_EMAIL` — From address for automated emails
+
+- **Google OAuth** (optional)
+  - `SOCIALACCOUNT_PROVIDERS` — JSON configuration for Google OAuth (see `.env.example` for format)
+  - Google Cloud Console: Create OAuth 2.0 credentials and add `http://127.0.0.1:8000/accounts/google/login/callback/` to authorized redirect URIs
+
+- **Media / File Storage** (optional)
+  - `CLOUDINARY_URL` — For profile images (if using Cloudinary instead of local storage)
+  - `GOOGLE_DRIVE_FOLDER_ID` — For backup/media storage via Google Drive API
+
+See `.env.example` for complete variable list and descriptions.
 
 ### 4. Database
 

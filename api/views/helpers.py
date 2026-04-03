@@ -172,6 +172,15 @@ def _maybe_send_due_session_reminders():
 
 
 def _avatar_url(request, path_or_url):
+    """Convert a relative or absolute path to a fully-qualified avatar URL.
+    
+    Args:
+        request: Django request object for building absolute URIs.
+        path_or_url: Path or URL string to process.
+    
+    Returns:
+        Fully-qualified URL string, or empty string if input is empty.
+    """
     if not path_or_url:
         return ""
     s = (path_or_url or "").strip()
@@ -183,6 +192,15 @@ def _avatar_url(request, path_or_url):
 
 
 def _serialize_mentor_for_matching(m, request=None):
+    """Serialize a MentorProfile into a dictionary for matching/API responses.
+    
+    Args:
+        m: MentorProfile instance or None.
+        request: Optional Django request for avatar URL resolution.
+    
+    Returns:
+        Dictionary with mentor data (id, username, subjects, topics, role, etc.).
+    """
     if not m:
         return {}
     subs = m.subjects if isinstance(m.subjects, list) else ([m.subjects] if m.subjects else [])
@@ -207,6 +225,15 @@ def _serialize_mentor_for_matching(m, request=None):
 
 
 def _serialize_mentee_for_matching(e, request=None):
+    """Serialize a MenteeProfile into a dictionary for matching/API responses.
+    
+    Args:
+        e: MenteeProfile instance or None.
+        request: Optional Django request for avatar URL resolution.
+    
+    Returns:
+        Dictionary with mentee data (id, username, subjects, topics, difficulty_level, etc.).
+    """
     if not e:
         return {}
     subs = e.subjects if isinstance(e.subjects, list) else ([e.subjects] if e.subjects else [])
@@ -227,6 +254,14 @@ def _serialize_mentee_for_matching(e, request=None):
 
 
 def _json_body(request):
+    """Parse JSON request body, returning an empty dict if parsing fails.
+    
+    Args:
+        request: Django request object to parse.
+    
+    Returns:
+        Parsed JSON dict, or empty dict on decoding error.
+    """
     if not request.body:
         return {}
     try:
@@ -236,6 +271,14 @@ def _json_body(request):
 
 
 def _get_role_flags(user):
+    """Check if user has mentor and/or mentee profiles.
+    
+    Args:
+        user: Django User object.
+    
+    Returns:
+        Dict with 'is_mentor' and 'is_mentee' boolean flags.
+    """
     return {
         "is_mentor": hasattr(user, "mentor_profile"),
         "is_mentee": hasattr(user, "mentee_profile"),
@@ -243,10 +286,28 @@ def _get_role_flags(user):
 
 
 def _validate_role(role):
+    """Validate that role is either 'mentor' or 'mentee'.
+    
+    Args:
+        role: String role to validate.
+    
+    Returns:
+        True if role is valid, False otherwise.
+    """
     return role in ("mentor", "mentee")
 
 
 def _rate_limit(key, limit, window_seconds):
+    """Implement bucket-based rate limiting using cache.
+    
+    Args:
+        key: Unique rate-limit key (e.g., user_id or IP).
+        limit: Maximum number of requests allowed per window.
+        window_seconds: Time window in seconds.
+    
+    Returns:
+        True if request is allowed, False if rate limit exceeded.
+    """
     # Bucket-based rate limit (simple and cache-friendly), with a small
     # safeguard around bucket boundaries to avoid edge cases.
     now = int(timezone.now().timestamp())
@@ -288,6 +349,14 @@ def audit_log(user, action, model_name, object_id=""):
 
 
 def _require_mentor(request):
+    """Ensure user has a mentor profile, return profile or error response.
+    
+    Args:
+        request: Django request object.
+    
+    Returns:
+        Tuple of (mentor_profile, error_response). If mentor exists, error_response is None.
+    """
     mentor_profile = getattr(request.user, "mentor_profile", None)
     if not mentor_profile:
         return None, JsonResponse({"error": "Mentor access required."}, status=403)
@@ -295,6 +364,14 @@ def _require_mentor(request):
 
 
 def _require_mentee(request):
+    """Ensure user has a mentee profile, return profile or error response.
+    
+    Args:
+        request: Django request object.
+    
+    Returns:
+        Tuple of (mentee_profile, error_response). If mentee exists, error_response is None.
+    """
     mentee_profile = getattr(request.user, "mentee_profile", None)
     if not mentee_profile:
         return None, JsonResponse({"error": "Mentee access required."}, status=403)
@@ -309,10 +386,29 @@ def _require_role(request):
 
 
 def _get_payload(request):
+    """Extract JSON body or POST data from request.
+    
+    Args:
+        request: Django request object.
+    
+    Returns:
+        Dict from parsed JSON or request.POST.
+    """
     return _json_body(request) or request.POST
 
 
 def _get_int(payload, key, default=None, min_value=None):
+    """Extract an integer value from payload with optional min_value validation.
+    
+    Args:
+        payload: Dict to extract from.
+        key: Dictionary key.
+        default: Default value if key not found or parsing fails.
+        min_value: Optional minimum acceptable value.
+    
+    Returns:
+        Parsed integer, or default if invalid.
+    """
     if key not in payload or payload.get(key) in (None, ""):
         return default
     try:
@@ -325,6 +421,16 @@ def _get_int(payload, key, default=None, min_value=None):
 
 
 def _get_str(payload, key, default=""):
+    """Extract and strip a string value from payload.
+    
+    Args:
+        payload: Dict to extract from.
+        key: Dictionary key.
+        default: Default value if key not found.
+    
+    Returns:
+        Stripped string value, or default.
+    """
     value = payload.get(key)
     if value is None:
         return default
@@ -332,6 +438,14 @@ def _get_str(payload, key, default=""):
 
 
 def _serialize_session(session: MentoringSession):
+    """Serialize a MentoringSession into a dictionary for API responses.
+    
+    Args:
+        session: MentoringSession instance.
+    
+    Returns:
+        Dictionary with session data (id, mentor, mentee, subject, status, etc).
+    """
     return {
         "id": session.id,
         "mentor_id": session.mentor_id,

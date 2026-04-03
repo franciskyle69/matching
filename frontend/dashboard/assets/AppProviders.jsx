@@ -10,6 +10,11 @@
     (window.DashboardApp && window.DashboardApp.AppContext) ||
     React.createContext(null);
   const Layout = window.DashboardApp.Layout;
+  const getAllowedTopicsForSubjects =
+    window.DashboardApp.getAllowedTopicsForSubjects || (() => []);
+  const filterTopicsForSubjects =
+    window.DashboardApp.filterTopicsForSubjects ||
+    ((subjects, topics) => (Array.isArray(topics) ? [...topics] : []));
 
   function AppProviders() {
     const [activeTab, setActiveTab] = useState("home");
@@ -429,9 +434,16 @@
       }
       if (result.data.mentor_info) {
         const info = result.data.mentor_info || {};
+        const mentorSubjects = Array.isArray(info.subjects)
+          ? [...info.subjects]
+          : [];
+        const mentorTopics = filterTopicsForSubjects(
+          mentorSubjects,
+          info.topics,
+        );
         setMentorProfile({
-          subjects: Array.isArray(info.subjects) ? [...info.subjects] : [],
-          topics: Array.isArray(info.topics) ? [...info.topics] : [],
+          subjects: mentorSubjects,
+          topics: mentorTopics,
           expertise_level:
             info.expertise_level != null ? info.expertise_level : null,
           role: info.role || "",
@@ -447,9 +459,13 @@
       }
       if (result.data.mentee_matching) {
         const mm = result.data.mentee_matching || {};
+        const menteeSubjects = Array.isArray(mm.subjects)
+          ? [...mm.subjects]
+          : [];
+        const menteeTopics = filterTopicsForSubjects(menteeSubjects, mm.topics);
         setMenteeMatching({
-          subjects: Array.isArray(mm.subjects) ? [...mm.subjects] : [],
-          topics: Array.isArray(mm.topics) ? [...mm.topics] : [],
+          subjects: menteeSubjects,
+          topics: menteeTopics,
           difficulty_level:
             mm.difficulty_level != null ? mm.difficulty_level : null,
           availability: Array.isArray(mm.availability)
@@ -568,53 +584,7 @@
       const url = params.toString()
         ? `/api/matching/mentee-recommendations/?${params.toString()}`
         : "/api/matching/mentee-recommendations/";
-      // #region agent log
-      fetch(
-        "http://127.0.0.1:7242/ingest/0f5aa513-ed5f-49b8-a462-9721f726591f",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "X-Debug-Session-Id": "467508",
-          },
-          body: JSON.stringify({
-            sessionId: "467508",
-            runId: "pre-fix",
-            hypothesisId: "H1",
-            location: "AppProviders.jsx:loadMenteeRecommendations",
-            message: "before fetch",
-            data: { url, limit },
-            timestamp: Date.now(),
-          }),
-        },
-      ).catch(() => {});
-      // #endregion
       const result = await fetchJSON(url);
-      // #region agent log
-      fetch(
-        "http://127.0.0.1:7242/ingest/0f5aa513-ed5f-49b8-a462-9721f726591f",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "X-Debug-Session-Id": "467508",
-          },
-          body: JSON.stringify({
-            sessionId: "467508",
-            runId: "pre-fix",
-            hypothesisId: "H1",
-            location: "AppProviders.jsx:loadMenteeRecommendations",
-            message: "after fetch",
-            data: {
-              ok: result.ok,
-              count: result.data?.count,
-              hasError: !!result.data?.error,
-            },
-            timestamp: Date.now(),
-          }),
-        },
-      ).catch(() => {});
-      // #endregion
       if (!result.ok) {
         setError(
           result.data?.error || "Unable to load mentor recommendations.",
@@ -1428,10 +1398,17 @@
     async function handleMentorProfileSave() {
       if (!user || user.role !== "mentor") return;
       const profile = mentorProfile;
+      const sanitizedSubjects = Array.isArray(profile.subjects)
+        ? [...profile.subjects]
+        : [];
+      const sanitizedTopics = filterTopicsForSubjects(
+        sanitizedSubjects,
+        profile.topics,
+      );
       setError("");
       const hasPrefs =
-        (Array.isArray(profile.subjects) && profile.subjects.length > 0) ||
-        (Array.isArray(profile.topics) && profile.topics.length > 0) ||
+        sanitizedSubjects.length > 0 ||
+        sanitizedTopics.length > 0 ||
         (profile.expertise_level != null &&
           profile.expertise_level >= 1 &&
           profile.expertise_level <= 5) ||
@@ -1448,8 +1425,8 @@
       }
       setMentorProfileSaving(true);
       const payload = {
-        subjects: profile.subjects || [],
-        topics: profile.topics || [],
+        subjects: sanitizedSubjects,
+        topics: sanitizedTopics,
         expertise_level: profile.expertise_level,
         role: profile.role || "",
         capacity: Math.max(1, Math.min(5, Number(profile.capacity || 1))),
@@ -1484,10 +1461,17 @@
     async function handleMenteeMatchingSave() {
       if (!user || user.role !== "mentee") return;
       const matching = menteeMatching;
+      const sanitizedSubjects = Array.isArray(matching.subjects)
+        ? [...matching.subjects]
+        : [];
+      const sanitizedTopics = filterTopicsForSubjects(
+        sanitizedSubjects,
+        matching.topics,
+      );
       setError("");
       const hasPrefs =
-        (Array.isArray(matching.subjects) && matching.subjects.length > 0) ||
-        (Array.isArray(matching.topics) && matching.topics.length > 0) ||
+        sanitizedSubjects.length > 0 ||
+        sanitizedTopics.length > 0 ||
         (matching.difficulty_level != null &&
           matching.difficulty_level >= 1 &&
           matching.difficulty_level <= 5) ||
@@ -1506,8 +1490,8 @@
         setMenteeMatching(nextMatching);
       }
       const payload = {
-        subjects: matching.subjects || [],
-        topics: matching.topics || [],
+        subjects: sanitizedSubjects,
+        topics: sanitizedTopics,
         difficulty_level: matching.difficulty_level,
         availability: matching.availability || [],
       };

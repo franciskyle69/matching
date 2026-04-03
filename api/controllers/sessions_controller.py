@@ -39,10 +39,29 @@ from ..views import (
 SESSION_LIST_CACHE_TTL = 60  # seconds
 MENTORING_COMPLETION_HOURS = 12
 TARGET_MINUTES = MENTORING_COMPLETION_HOURS * 60  # 720
+WEEKLY_SESSION_LIMIT_MINUTES = 120
 
 
 def _invalidate_sessions_cache_for_user(user_id):
     cache.delete(f"sessions_list:{user_id}")
+
+
+def _weekly_completed_minutes_for_pair(mentor_id, mentee_id, reference_dt):
+    week_start = timezone.localtime(reference_dt) - timedelta(
+        days=timezone.localtime(reference_dt).weekday()
+    )
+    week_start = week_start.replace(hour=0, minute=0, second=0, microsecond=0)
+    week_end = week_start + timedelta(days=7)
+    return (
+        MentoringSession.objects.filter(
+            mentor_id=mentor_id,
+            mentee_id=mentee_id,
+            status="completed",
+            scheduled_at__gte=week_start,
+            scheduled_at__lt=week_end,
+        ).aggregate(total=Sum("duration_minutes"))["total"]
+        or 0
+    )
 
 
 def _user_has_verified_email(user):
@@ -333,6 +352,7 @@ def sessions_list(request):
         "is_mentor": bool(mentor),
         "is_staff_view": bool(request.user.is_staff and not mentor and not mentee),
         "progress_target_hours": progress_target_hours,
+        "weekly_session_limit_minutes": WEEKLY_SESSION_LIMIT_MINUTES,
         "progress": progress,
         "progress_by_mentee": progress_by_mentee,
     }
@@ -378,6 +398,19 @@ def session_create(request):
     if topic and subject and topic.subject_id != subject.id:
         return JsonResponse(
             {"error": "Topic does not belong to the selected subject."}, status=400
+        )
+
+    weekly_completed_minutes = _weekly_completed_minutes_for_pair(
+        mentor_profile.id, mentee.id, scheduled_at
+    )
+    if weekly_completed_minutes >= WEEKLY_SESSION_LIMIT_MINUTES:
+        return JsonResponse(
+            {
+                "error": "This mentor and mentee have already completed 2 hours of sessions this week. Choose another week.",
+                "weekly_completed_minutes": weekly_completed_minutes,
+                "weekly_limit_minutes": WEEKLY_SESSION_LIMIT_MINUTES,
+            },
+            status=400,
         )
 
     session = MentoringSession(
@@ -468,6 +501,19 @@ def session_reschedule(request, session_id: int):
     if topic and subject and topic.subject_id != subject.id:
         return JsonResponse(
             {"error": "Topic does not belong to the selected subject."}, status=400
+        )
+
+    weekly_completed_minutes = _weekly_completed_minutes_for_pair(
+        mentor_profile.id, session.mentee_id, scheduled_at
+    )
+    if weekly_completed_minutes >= WEEKLY_SESSION_LIMIT_MINUTES:
+        return JsonResponse(
+            {
+                "error": "This mentor and mentee have already completed 2 hours of sessions this week. Choose another week.",
+                "weekly_completed_minutes": weekly_completed_minutes,
+                "weekly_limit_minutes": WEEKLY_SESSION_LIMIT_MINUTES,
+            },
+            status=400,
         )
 
     old_time = session.scheduled_at

@@ -41,36 +41,36 @@ Where:
 
 **Mentee**
 
-- Subjects: `["Computer Programming", "Introduction to Computing"]`  
-- Topics: `["Arrays", "Loops"]`  
+- Subjects: `["Computer Programming", "Introduction to Computing"]`
+- Topics: `["Arrays", "Loops"]`
 - Difficulty level: **3** (1–5 scale)
 
 **Mentor**
 
-- Subjects: `["Computer Programming", "IT Fundamentals"]`  
-- Topics: `["Arrays", "Loops", "HTML"]`  
-- Expertise level: **4**  
+- Subjects: `["Computer Programming", "IT Fundamentals"]`
+- Topics: `["Arrays", "Loops", "HTML"]`
+- Expertise level: **4**
 - Role: `"Senior IT Student"` (not instructor)
 
 **Step 1 – Subject overlap (Jaccard)**
 
 - Mentee subjects: `{computer programming, introduction to computing}`
 - Mentor subjects: `{computer programming, it fundamentals}`
-- Intersection: `{computer programming}` → size 1  
-- Union: `{computer programming, introduction to computing, it fundamentals}` → size 3  
+- Intersection: `{computer programming}` → size 1
+- Union: `{computer programming, introduction to computing, it fundamentals}` → size 3
 - **Subject Jaccard = 1/3 ≈ 0.333**
 
 **Step 2 – Topic overlap (Jaccard)**
 
 - Mentee topics: `{arrays, loops}`
 - Mentor topics: `{arrays, loops, html}`
-- Intersection: `{arrays, loops}` → size 2  
-- Union: `{arrays, loops, html}` → size 3  
+- Intersection: `{arrays, loops}` → size 2
+- Union: `{arrays, loops, html}` → size 3
 - **Topic Jaccard = 2/3 ≈ 0.667**
 
 **Step 3 – Difficulty alignment**
 
-- Mentee level 3, mentor level 4 → difference = 1  
+- Mentee level 3, mentor level 4 → difference = 1
 - `min(1, 4) / 4 = 0.25` → **alignment = 1 − 0.25 = 0.75**
 
 **Step 4 – Instructor bonus**
@@ -79,8 +79,8 @@ Where:
 
 **Step 5 – Final score**
 
-- **Score = 0.45 × 0.333 + 0.40 × 0.667 + 0.10 × 0.75 + 0.05 × 0**  
-- **Score = 0.45 × 0.333 + 0.40 × 0.667 + 0.10 × 0.75**  
+- **Score = 0.45 × 0.333 + 0.40 × 0.667 + 0.10 × 0.75 + 0.05 × 0**
+- **Score = 0.45 × 0.333 + 0.40 × 0.667 + 0.10 × 0.75**
 - **Score ≈ 0.150 + 0.267 + 0.075 = 0.492**
 
 So this pair would get a **match score of about 0.49**. In the UI and API this is rounded (e.g. to 4 decimal places).
@@ -94,6 +94,15 @@ So this pair would get a **match score of about 0.49**. In the UI and API this i
 - At runtime we build the feature vector for a pair, pass it to the model, and use:
   - **Classification**: probability of class 1 as the score.
   - **Regression**: predicted value as the score (often scaled to [0, 1] in practice).
+
+### Current system status
+
+- **Model file location:** `matching/ml/xgb_model.pkl` (if trained)
+- **Model metadata:** `matching/ml/xgb_metadata.json` (defines features, task type, feature names)
+- **Training command:** `python manage.py train_xgb --input <csv_path> --target <target_col> --task [classification|regression]`
+- **Feature builder:** `matching.ml.features.build_features()` — used for both training and inference
+- **If no model exists:** The system automatically uses the rule-based **fallback formula** (above) with the weights shown in Section 2.
+- **Recommendation cache:** Mentee recommendations are cached for 300 seconds to reduce redundant scoring; cache key is user ID.
 
 ---
 
