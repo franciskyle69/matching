@@ -288,6 +288,10 @@
       setSettingsForm,
       settingsSaving,
       handleSettingsSave,
+      passwordForm,
+      setPasswordForm,
+      passwordChanging,
+      handlePasswordChange,
       handleBioSave,
       handleTagsSave,
       handleAvatarChange,
@@ -554,6 +558,96 @@
               </button>
             </div>
           </div>
+
+          <div className="settings-card settings-card--security">
+            <div className="settings-card-header">
+              <div className="settings-card-header-main">
+                <div className="settings-card-icon">
+                  <DashboardIcon name="lock" size={20} />
+                </div>
+                <div>
+                  <h2 className="section-title">Security</h2>
+                  <p className="page-subtitle">
+                    Change your password to keep your account safe.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="form-grid">
+              <div className="form-group" style={{ gridColumn: "1 / -1" }}>
+                <label>Current password</label>
+                <input
+                  type="password"
+                  value={passwordForm.current_password}
+                  onChange={(e) =>
+                    setPasswordForm({
+                      ...passwordForm,
+                      current_password: e.target.value,
+                    })
+                  }
+                  placeholder="Enter current password"
+                  autoComplete="current-password"
+                />
+              </div>
+              <div className="form-group">
+                <label>New password</label>
+                <input
+                  type="password"
+                  value={passwordForm.new_password1}
+                  onChange={(e) =>
+                    setPasswordForm({
+                      ...passwordForm,
+                      new_password1: e.target.value,
+                    })
+                  }
+                  placeholder="At least 8 characters"
+                  autoComplete="new-password"
+                />
+              </div>
+              <div className="form-group">
+                <label>Confirm new password</label>
+                <input
+                  type="password"
+                  value={passwordForm.new_password2}
+                  onChange={(e) =>
+                    setPasswordForm({
+                      ...passwordForm,
+                      new_password2: e.target.value,
+                    })
+                  }
+                  placeholder="Re-enter new password"
+                  autoComplete="new-password"
+                />
+              </div>
+            </div>
+
+            <div className="btn-row settings-card-footer">
+              <button
+                type="button"
+                className="btn"
+                onClick={handlePasswordChange}
+                disabled={
+                  passwordChanging ||
+                  !passwordForm.current_password ||
+                  !passwordForm.new_password1 ||
+                  !passwordForm.new_password2 ||
+                  passwordForm.new_password1 !== passwordForm.new_password2 ||
+                  String(passwordForm.new_password1 || "").length < 8
+                }
+              >
+                {passwordChanging ? "Changing..." : "Change password"}
+              </button>
+            </div>
+            {passwordForm.new_password1 &&
+              passwordForm.new_password2 &&
+              passwordForm.new_password1 !== passwordForm.new_password2 && (
+                <p className="sp-file-error" role="alert">
+                  New passwords do not match.
+                </p>
+              )}
+          </div>
+
           <BioAndInterestsCard
             bio={settingsForm.bio || ""}
             tags={Array.isArray(settingsForm.tags) ? settingsForm.tags : []}

@@ -51,6 +51,12 @@
       bio: "",
       tags: [],
     });
+    const [passwordChanging, setPasswordChanging] = useState(false);
+    const [passwordForm, setPasswordForm] = useState({
+      current_password: "",
+      new_password1: "",
+      new_password2: "",
+    });
     const [menteeProfile, setMenteeProfile] = useState({
       program: "",
       year_level: 0,
@@ -626,20 +632,17 @@
         body: JSON.stringify({ mentor_id: mentorId }),
       });
       if (!result.ok) {
-        const message = result.data?.error || "Unable to choose this mentor.";
+        const message = result.data?.error || "Unable to send mentor request.";
         setError(message);
         if (window.Swal && typeof window.Swal.fire === "function")
-          window.Swal.fire("Unable to connect mentor", message, "error");
+          window.Swal.fire("Mentor request failed", message, "error");
         return;
       }
-      const successMessage = "Mentor matched successfully. You can now schedule sessions.";
+      const successMessage = "Your mentor request has been sent.";
       setAuthMessage(successMessage);
       if (window.Swal && typeof window.Swal.fire === "function")
-        window.Swal.fire("Mentor matched", successMessage, "success");
+        window.Swal.fire("Mentor requested", successMessage, "success");
       setChosenMentorId(mentorId);
-      loadMyMentor();
-      loadSessions();
-      loadMentorRequests();
     }
 
     async function handleSignIn() {
@@ -1313,6 +1316,35 @@
       setSettingsSaving(false);
     }
 
+    async function handlePasswordChange() {
+      setPasswordChanging(true);
+      setError("");
+      const result = await fetchJSON("/api/me/password/", {
+        method: "POST",
+        headers: {
+          "X-CSRFToken": getCookie("csrftoken"),
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(passwordForm),
+      });
+      if (!result.ok) {
+        const message = result.data?.error || "Unable to change password.";
+        setError(message);
+        if (window.Swal && typeof window.Swal.fire === "function")
+          window.Swal.fire("Password not changed", message, "error");
+        setPasswordChanging(false);
+        return false;
+      }
+      setPasswordForm({
+        current_password: "",
+        new_password1: "",
+        new_password2: "",
+      });
+      addToast("Password changed.");
+      setPasswordChanging(false);
+      return true;
+    }
+
     async function handleBioSave(bio) {
       const result = await fetchJSON("/api/me/bio/", {
         method: "POST",
@@ -1822,6 +1854,10 @@
       setSettingsForm,
       settingsSaving,
       handleSettingsSave,
+      passwordForm,
+      setPasswordForm,
+      passwordChanging,
+      handlePasswordChange,
       handleBioSave,
       handleTagsSave,
       handleAvatarChange,

@@ -8,6 +8,99 @@
   const ROLE_OPTIONS = window.DashboardApp.ROLE_OPTIONS || [];
   const { LoadingSpinner } = Utils;
 
+  function RoleIcon({ role }) {
+    const key = String(role || "").toLowerCase();
+    if (key === "mentee") {
+      return (
+        <svg
+          className="auth-role-svg"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden="true"
+        >
+          <path d="M4 19.5c1.5-1 3.5-1.5 6-1.5s4.5.5 6 1.5" />
+          <path d="M4.2 6.7C5.7 5.6 7.6 5 10 5s4.3.6 5.8 1.7" />
+          <path d="M6 6.2v12.6" />
+          <path d="M18 6.2v12.6" />
+          <path d="M10 5v13" />
+          <path d="M14 5v13" />
+        </svg>
+      );
+    }
+    return (
+      <svg
+        className="auth-role-svg"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        aria-hidden="true"
+      >
+        <path d="M12 3l8 4-8 4-8-4 8-4z" />
+        <path d="M4 10v6c0 1 4 4 8 4s8-3 8-4v-6" />
+        <path d="M10 12l2 1 2-1" />
+      </svg>
+    );
+  }
+
+  function RolePicker({ value, onChange }) {
+    const options = (Array.isArray(ROLE_OPTIONS) && ROLE_OPTIONS.length
+      ? ROLE_OPTIONS
+      : [
+          { value: "mentor", label: "Mentor" },
+          { value: "mentee", label: "Mentee" },
+        ]
+    ).filter((r) => r && r.value);
+
+    return (
+      <div className="auth-role-picker" role="radiogroup" aria-label="Role">
+        {options.map((opt) => {
+          const selected = String(value) === String(opt.value);
+          return (
+            <button
+              key={opt.value}
+              type="button"
+              className={"auth-role-card" + (selected ? " is-selected" : "")}
+              onClick={() => onChange(opt.value)}
+              role="radio"
+              aria-checked={selected}
+              tabIndex={selected ? 0 : -1}
+            >
+              <span className="auth-role-card-top">
+                <span className="auth-role-card-icon" aria-hidden="true">
+                  <RoleIcon role={opt.value} />
+                </span>
+                <span className="auth-role-card-title">{opt.label}</span>
+              </span>
+              <span className="auth-role-card-sub">
+                {String(opt.value).toLowerCase() === "mentor"
+                  ? "Guide and support students"
+                  : "Find help and track progress"}
+              </span>
+              <span className="auth-role-card-check" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none">
+                  <path
+                    d="M20 6L9 17l-5-5"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    );
+  }
+
   function SignInPage() {
     const ctx = useContext(AppContext);
     if (!ctx) return null;
@@ -344,11 +437,18 @@
             >
               <div className="auth-field">
                 <label>Role</label>
+                <RolePicker
+                  value={signUpForm.role}
+                  onChange={(role) => setSignUpForm({ ...signUpForm, role })}
+                />
                 <select
+                  className="auth-role-native"
                   value={signUpForm.role}
                   onChange={(e) =>
                     setSignUpForm({ ...signUpForm, role: e.target.value })
                   }
+                  aria-hidden="true"
+                  tabIndex={-1}
                 >
                   {ROLE_OPTIONS.map((r) => (
                     <option key={r.value} value={r.value}>

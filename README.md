@@ -82,6 +82,16 @@ python manage.py runserver
 
 For local dev without PostgreSQL, you can use SQLite (see `.env.example` for `FORCE_SQLITE`).
 
+### Demo accounts (optional)
+
+Seed demo users `mentor1..mentor50` and `mentee1..mentee50`:
+
+```bash
+python manage.py seed_demo_users --mentors 50 --mentees 50
+```
+
+Passwords are the same as the username (e.g. username `mentee5` password `mentee5`).
+
 ### 5. Frontend dashboard (optional)
 
 To build or run the React dashboard:

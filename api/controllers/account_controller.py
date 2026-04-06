@@ -1,4 +1,5 @@
 from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth import update_session_auth_hash
 from django.contrib.auth.tokens import default_token_generator
 from django.contrib.sites.shortcuts import get_current_site
 from django.contrib.auth.decorators import login_required
@@ -625,6 +626,50 @@ def update_account(request):
             "email": request.user.email,
         }
     )
+
+
+@login_required
+@require_http_methods(["POST"])
+def change_password(request):
+    payload = _get_payload(request)
+    current_password = _get_str(payload, "current_password")
+    new_password1 = _get_str(payload, "new_password1")
+    new_password2 = _get_str(payload, "new_password2")
+
+    if not current_password or not new_password1 or not new_password2:
+        return JsonResponse(
+            {"error": "Current password and new password fields are required."},
+            status=400,
+        )
+
+    if new_password1 != new_password2:
+        return JsonResponse({"error": "New passwords do not match."}, status=400)
+
+    if len(new_password1) < 8:
+        return JsonResponse(
+            {"error": "New password must be at least 8 characters long."},
+            status=400,
+        )
+
+    user = request.user
+    if not user.has_usable_password():
+        return JsonResponse(
+            {
+                "error": "This account does not have a usable password set. Contact an administrator."
+            },
+            status=400,
+        )
+
+    if not user.check_password(current_password):
+        return JsonResponse({"error": "Current password is incorrect."}, status=401)
+
+    user.set_password(new_password1)
+    user.save(update_fields=["password"])
+    update_session_auth_hash(request, user)
+
+    audit_log(user, "update", "password", user.id)
+    logger.info("password_changed", extra={"user_id": user.id})
+    return JsonResponse({"status": "ok"})
 
 
 @login_required
