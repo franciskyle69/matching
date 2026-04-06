@@ -747,7 +747,7 @@
                   <span className="quick-action-pill-icon" aria-hidden="true">
                     <MenteeDashIcon name="users" size={16} />
                   </span>
-                  <span>Review requests</span>
+                  <span>View mentees</span>
                 </button>
                 <button
                   type="button"
@@ -799,7 +799,7 @@
                   <div className="mentor-summary-metric">
                     <div className="mentor-summary-metric-label">Pending requests</div>
                     <div className="mentor-summary-metric-value">{pendingMentorRequests}</div>
-                    <span className="mentor-summary-metric-hint">Awaiting your response</span>
+                    <span className="mentor-summary-metric-hint">Auto-accepted when slots are available</span>
                   </div>
                   <div className="mentor-summary-metric">
                     <div className="mentor-summary-metric-label">Upcoming sessions</div>
@@ -827,7 +827,7 @@
                   <p className="mentor-home-muted">Loading session data…</p>
                 ) : progressByMentee.length === 0 ? (
                   <p className="mentor-home-muted">
-                    No mentee progress yet. Accept a mentee request under Matching to see real progress here.
+                    No mentee progress yet. Once mentees are auto-matched to you, progress will appear here.
                   </p>
                 ) : (
                   <ul className="mentor-mentee-progress-list">

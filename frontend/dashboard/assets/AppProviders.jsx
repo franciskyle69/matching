@@ -626,17 +626,20 @@
         body: JSON.stringify({ mentor_id: mentorId }),
       });
       if (!result.ok) {
-        const message = result.data?.error || "Unable to send mentor request.";
+        const message = result.data?.error || "Unable to choose this mentor.";
         setError(message);
         if (window.Swal && typeof window.Swal.fire === "function")
-          window.Swal.fire("Mentor request failed", message, "error");
+          window.Swal.fire("Unable to connect mentor", message, "error");
         return;
       }
-      const successMessage = "Your mentor request has been sent.";
+      const successMessage = "Mentor matched successfully. You can now schedule sessions.";
       setAuthMessage(successMessage);
       if (window.Swal && typeof window.Swal.fire === "function")
-        window.Swal.fire("Mentor requested", successMessage, "success");
+        window.Swal.fire("Mentor matched", successMessage, "success");
       setChosenMentorId(mentorId);
+      loadMyMentor();
+      loadSessions();
+      loadMentorRequests();
     }
 
     async function handleSignIn() {

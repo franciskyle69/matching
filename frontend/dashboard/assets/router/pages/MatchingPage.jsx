@@ -30,8 +30,6 @@
       mentorRequestsLoading,
       mentorRequests,
       loadMentorRequests,
-      acceptMentee,
-      acceptMenteeLoading,
       myMentor,
       loadMyMentor,
       menteeMatching,
@@ -95,7 +93,7 @@
           {isMentee
             ? "Personalized mentor recommendations based on your questionnaire. Choose a mentor to start your session—we match you by subjects and topics you care about."
             : user.role === "mentor"
-            ? "View your official mentees and mentee requests."
+            ? "View your official mentees. New mentee requests are auto-accepted when you have available slots."
             : "Run the model to get mentor–mentee pairs."}
         </p>
         {user.role === "staff" && (
@@ -177,7 +175,7 @@
                   <div className="match-mentee-list" style={{ marginBottom: "24px" }}>
                     <div className="section-title">My mentees</div>
                     <p className="page-subtitle" style={{ marginTop: "-8px", marginBottom: "12px" }}>
-                      Official mentees you accepted. Each has a dedicated Sessions page where you can schedule sessions.
+                      Official mentees matched to you. Each has a dedicated Sessions page where you can schedule sessions.
                     </p>
                     {accepted.map((r) => (
                       <div key={r.mentee_id} className="match-card match-card-mentee-list match-card-accepted">
@@ -202,29 +200,20 @@
                     ))}
                   </div>
                 )}
-                <div className="match-mentee-list" style={{ marginBottom: "24px" }}>
-                  <div className="section-title">Mentees who requested you</div>
-                  <p className="page-subtitle" style={{ marginTop: "-8px", marginBottom: "12px" }}>
-                    Accept a request to make them your official mentee; then you can schedule sessions in Sessions.
-                  </p>
-                  {pending.length === 0 ? (
-                    <p className="muted">No pending requests.</p>
-                  ) : (
-                    pending.map((r) => (
+                {pending.length > 0 && (
+                  <div className="match-mentee-list" style={{ marginBottom: "24px" }}>
+                    <div className="section-title">Unaccepted requests</div>
+                    <p className="page-subtitle" style={{ marginTop: "-8px", marginBottom: "12px" }}>
+                      These are older requests created before auto-accept was enabled.
+                    </p>
+                    {pending.map((r) => (
                       <div key={r.mentee_id} className="match-card match-card-mentee-list">
                         <div className="match-card-header">
                           <div className="match-card-main">
                             <p className="match-card-title">Mentee: {r.mentee_username}</p>
                             <div className="notification-time">{formatDate(r.created_at)}</div>
                           </div>
-                          <button
-                            type="button"
-                            className="btn small"
-                            onClick={() => acceptMentee(r.mentee_id)}
-                            disabled={acceptMenteeLoading === r.mentee_id}
-                          >
-                            {acceptMenteeLoading === r.mentee_id ? "Accepting…" : "Accept mentee"}
-                          </button>
+                          <span className="match-request-badge">Pending</span>
                         </div>
                         <div className="match-card-body">
                           {r.mentee_subjects?.length > 0 && <p><strong>Subjects:</strong> {r.mentee_subjects.join(", ")}</p>}
@@ -235,9 +224,9 @@
                           )}
                         </div>
                       </div>
-                    ))
-                  )}
-                </div>
+                    ))}
+                  </div>
+                )}
               </>
             );
           }

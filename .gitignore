@@ -21,8 +21,10 @@ data.json
 
 # Environment
 .env
+.env.*
 .env.local
 .env.*.local
+!.env.example
 
 # Google service account keys (never commit; copy to each device manually)
 service-account*.json

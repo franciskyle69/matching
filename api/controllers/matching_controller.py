@@ -1,5 +1,7 @@
 from django.contrib.auth.decorators import login_required
 from django.core.cache import cache
+from django.core.mail import send_mail
+from django.conf import settings
 from django.http import JsonResponse
 from django.views.decorators.http import require_GET, require_http_methods
 
@@ -33,6 +35,31 @@ def _recommendations_empty_message(empty_reason: str) -> str:
     if empty_reason == "no_time_overlap":
         return "No mentors match your current schedule. Try adjusting your availability."
     return "No mentor recommendations yet. Try updating your matching questionnaire."
+
+
+def _email_from_address() -> str:
+    return getattr(settings, "DEFAULT_FROM_EMAIL", "") or getattr(settings, "EMAIL_HOST_USER", "")
+
+
+def _send_pairing_email(recipient_email: str, subject: str, message: str) -> bool:
+    if not recipient_email:
+        return False
+    from_email = _email_from_address()
+    if not from_email:
+        logger.warning("pairing_email_skipped_no_from")
+        return False
+    try:
+        send_mail(
+            subject,
+            message,
+            from_email,
+            [recipient_email],
+            fail_silently=False,
+        )
+        return True
+    except Exception:
+        logger.exception("pairing_email_send_failed", extra={"to": recipient_email, "subject": subject})
+        return False
 
 
 @login_required
@@ -218,7 +245,7 @@ def mentee_recommendations(request):
 def mentee_choose_mentor(request):
     """
     Allow a mentee to choose a mentor from their recommendations.
-    This sends a notification to the chosen mentor so they can follow up.
+    Requests are auto-accepted unless the mentor has reached mentee capacity.
     """
     mentee_profile, error = _require_mentee(request)
     if error:
@@ -231,21 +258,90 @@ def mentee_choose_mentor(request):
     if not mentor:
         return JsonResponse({"error": "Mentor not found."}, status=404)
 
+    capacity = max(int(getattr(mentor, "capacity", 0) or 0), 0)
+    accepted_count = MenteeMentorRequest.objects.filter(
+        mentor=mentor,
+        accepted=True,
+    ).count()
+    if accepted_count >= capacity:
+        _send_pairing_email(
+            getattr(mentee_profile.user, "email", "") or "",
+            "Mentor currently full",
+            (
+                f"Hi {mentee_profile.user.username},\n\n"
+                f"{mentor.user.username} currently has a full mentee slot capacity. "
+                "Please choose another mentor recommendation.\n\n"
+                "You can return to the Matching tab to pick another mentor."
+            ),
+        )
+        return JsonResponse(
+            {
+                "error": "This mentor has reached their mentee slot limit. Please choose another mentor.",
+                "code": "mentor_capacity_full",
+            },
+            status=409,
+        )
+
+    from django.utils import timezone
+
     req, _created = MenteeMentorRequest.objects.get_or_create(
         mentee=mentee_profile,
         mentor=mentor,
     )
+    if not req.accepted:
+        req.accepted = True
+        req.accepted_at = timezone.now()
+        req.save(update_fields=["accepted", "accepted_at"])
+
+    cache.delete(f"sessions_list:{request.user.id}")
+    cache.delete(f"sessions_list:{mentor.user_id}")
+
     Notification.objects.create(
         user=mentor.user,
-        message=f"{mentee_profile.user.username} has requested you as a mentor.",
+        message=f"{mentee_profile.user.username} has chosen you as a mentor. The pairing is now active.",
         action_tab="matching",
     )
+    Notification.objects.create(
+        user=mentee_profile.user,
+        message=f"You are now paired with {mentor.user.username}. You can schedule sessions in Sessions.",
+        action_tab="sessions",
+    )
+
+    _send_pairing_email(
+        getattr(mentor.user, "email", "") or "",
+        "New mentee pairing confirmed",
+        (
+            f"Hi {mentor.user.username},\n\n"
+            f"{mentee_profile.user.username} has been paired with you as a mentee.\n\n"
+            "Open Matching or Sessions in the dashboard to continue."
+        ),
+    )
+    _send_pairing_email(
+        getattr(mentee_profile.user, "email", "") or "",
+        "Mentor pairing confirmed",
+        (
+            f"Hi {mentee_profile.user.username},\n\n"
+            f"You are now paired with {mentor.user.username}.\n\n"
+            "You can schedule sessions from the Sessions tab."
+        ),
+    )
+
     audit_log(request.user, "create", "mentee_mentor_request", req.id)
     logger.info(
-        "mentee_chose_mentor",
-        extra={"mentee_id": mentee_profile.id, "mentor_id": mentor.id},
+        "mentee_chose_mentor_auto_accepted",
+        extra={
+            "mentee_id": mentee_profile.id,
+            "mentor_id": mentor.id,
+            "accepted_at": req.accepted_at.isoformat() if req.accepted_at else None,
+        },
     )
-    return JsonResponse({"status": "ok"})
+    return JsonResponse(
+        {
+            "status": "ok",
+            "accepted": True,
+            "accepted_at": req.accepted_at.isoformat() if req.accepted_at else None,
+        }
+    )
 
 
 @login_required
@@ -283,35 +379,14 @@ def mentor_requests(request):
 @login_required
 @require_http_methods(["POST"])
 def mentor_accept_mentee(request):
-    """Mentor accepts a mentee request; makes the mentee an official mentee of the mentor."""
-    mentor_profile = getattr(request.user, "mentor_profile", None)
-    if not mentor_profile:
-        return JsonResponse({"error": "Mentor profile required."}, status=403)
-    if not get_mentor_approved(mentor_profile):
-        return JsonResponse({"error": "Mentor account pending approval."}, status=403)
-    payload = _get_payload(request)
-    mentee_id = _get_int(payload, "mentee_id")
-    if not mentee_id:
-        return JsonResponse({"error": "mentee_id is required."}, status=400)
-    from django.utils import timezone
-    req = MenteeMentorRequest.objects.filter(mentor=mentor_profile, mentee_id=mentee_id).first()
-    if not req:
-        return JsonResponse({"error": "Request not found."}, status=404)
-    if req.accepted:
-        return JsonResponse({"error": "Already accepted."}, status=400)
-    req.accepted = True
-    req.accepted_at = timezone.now()
-    req.save(update_fields=["accepted", "accepted_at"])
-    cache.delete(f"sessions_list:{request.user.id}")
-    cache.delete(f"sessions_list:{req.mentee.user_id}")
-    Notification.objects.create(
-        user=req.mentee.user,
-        message=f"{mentor_profile.user.username} has accepted you as their mentee. You can now schedule sessions in Sessions.",
-        action_tab="sessions",
+    """Legacy endpoint retained for compatibility. Manual acceptance is disabled."""
+    return JsonResponse(
+        {
+            "error": "Manual acceptance is disabled. Requests are auto-accepted when a mentor has available slots.",
+            "code": "manual_accept_disabled",
+        },
+        status=410,
     )
-    audit_log(request.user, "accept_mentee", "mentee_mentor_request", req.id)
-    logger.info("mentor_accepted_mentee", extra={"mentor_id": mentor_profile.id, "mentee_id": req.mentee_id})
-    return JsonResponse({"status": "ok", "accepted_at": req.accepted_at.isoformat()})
 
 
 @login_required

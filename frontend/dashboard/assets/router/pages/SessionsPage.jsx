@@ -48,6 +48,26 @@
     }, 0);
   }
 
+  function toDateTimeLocalMinString(dateObj) {
+    const d = dateObj instanceof Date ? dateObj : new Date();
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    const hours = String(d.getHours()).padStart(2, "0");
+    const minutes = String(d.getMinutes()).padStart(2, "0");
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
+  }
+
+  function openNativeDateTimePicker(event) {
+    const input = event.currentTarget;
+    if (!input || typeof input.showPicker !== "function") return;
+    try {
+      input.showPicker();
+    } catch (_err) {
+      // Some browsers block picker opening outside trusted user gestures.
+    }
+  }
+
   function MeetingNotesBlock({ session, onSave }) {
     const [editing, setEditing] = useState(false);
     const [editValue, setEditValue] = useState(session.meeting_notes || "");
@@ -250,7 +270,10 @@
                 <input
                   id={`reschedule-date-time-${session.id}`}
                   type="datetime-local"
+                  min={minDateTimeLocal}
                   value={rescheduleForm.scheduled_at}
+                  onFocus={openNativeDateTimePicker}
+                  onClick={openNativeDateTimePicker}
                   onChange={(e) =>
                     setRescheduleForm({
                       ...rescheduleForm,
@@ -357,6 +380,7 @@
       setActiveTab,
     } = ctx;
     const Spinner = LoadingSpinner;
+    const minDateTimeLocal = toDateTimeLocalMinString(new Date());
     if (!sessionsData) return null;
     const isMentor = sessionsData.is_mentor;
     const isStaffView = sessionsData.is_staff_view;
@@ -921,7 +945,10 @@
                       <input
                         id="create-session-date-time"
                         type="datetime-local"
+                        min={minDateTimeLocal}
                         value={createForm.scheduled_at}
+                        onFocus={openNativeDateTimePicker}
+                        onClick={openNativeDateTimePicker}
                         onChange={(e) =>
                           setCreateForm({
                             ...createForm,

@@ -21,29 +21,61 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR / '.env')
 
 
+def _env_bool(name: str, default: bool = False) -> bool:
+    raw = os.environ.get(name)
+    if raw is None:
+        return default
+    return str(raw).strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _env_csv(name: str) -> list[str]:
+    raw = os.environ.get(name, "")
+    return [part.strip() for part in raw.split(",") if part.strip()]
+
+
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
 # In development, you can store this in the .env file as DJANGO_SECRET_KEY
-SECRET_KEY = os.environ.get(
-    'DJANGO_SECRET_KEY',
-    'django-insecure-t(c9avgw9hu&5y0cs^%@sh@34y_vgpev%)ue07zdnti8!ib-*o',
-)
+DEBUG = _env_bool("DJANGO_DEBUG", default=False)
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.environ.get("DJANGO_DEBUG", "True").lower() == "true"
-
-allowed_hosts = os.environ.get("DJANGO_ALLOWED_HOSTS", "")
-ALLOWED_HOSTS = [h.strip() for h in allowed_hosts.split(",") if h.strip()]
+_secret_key_env = (os.environ.get('DJANGO_SECRET_KEY') or '').strip()
+if _secret_key_env:
+    SECRET_KEY = _secret_key_env
+elif DEBUG:
+    # Dev-only fallback to avoid startup failure when setting up locally.
+    SECRET_KEY = 'django-insecure-dev-only-change-me'
+else:
+    SECRET_KEY = ''
 
 if not DEBUG:
+    if not SECRET_KEY:
+        raise RuntimeError('DJANGO_SECRET_KEY must be set when DJANGO_DEBUG is False.')
+    if SECRET_KEY.startswith('django-insecure') or 'change-me' in SECRET_KEY.lower():
+        raise RuntimeError('DJANGO_SECRET_KEY appears weak or placeholder-like in production.')
+
+# SECURITY WARNING: don't run with debug turned on in production!
+ALLOWED_HOSTS = _env_csv("DJANGO_ALLOWED_HOSTS")
+CSRF_TRUSTED_ORIGINS = _env_csv("DJANGO_CSRF_TRUSTED_ORIGINS")
+
+if not DEBUG:
+    if not ALLOWED_HOSTS:
+        raise RuntimeError('DJANGO_ALLOWED_HOSTS must be set when DJANGO_DEBUG is False.')
     SESSION_COOKIE_SECURE = True
+    SESSION_COOKIE_HTTPONLY = True
+    SESSION_COOKIE_SAMESITE = 'Lax'
     CSRF_COOKIE_SECURE = True
+    CSRF_COOKIE_SAMESITE = 'Lax'
     SECURE_SSL_REDIRECT = True
+    if _env_bool('TRUST_X_FORWARDED_PROTO', default=True):
+        SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
     SECURE_HSTS_SECONDS = 31536000
     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
     SECURE_HSTS_PRELOAD = True
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+    SECURE_REFERRER_POLICY = 'strict-origin-when-cross-origin'
+    X_FRAME_OPTIONS = 'DENY'
 
 
 # Application definition

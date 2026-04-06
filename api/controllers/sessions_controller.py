@@ -46,6 +46,13 @@ def _invalidate_sessions_cache_for_user(user_id):
     cache.delete(f"sessions_list:{user_id}")
 
 
+def _is_past_datetime(dt):
+    if not dt:
+        return False
+    now = timezone.now()
+    return dt <= now
+
+
 def _weekly_completed_minutes_for_pair(mentor_id, mentee_id, reference_dt):
     week_start = timezone.localtime(reference_dt) - timedelta(
         days=timezone.localtime(reference_dt).weekday()
@@ -386,6 +393,12 @@ def session_create(request):
             {"error": "mentee_id and scheduled_at are required."}, status=400
         )
 
+    if _is_past_datetime(scheduled_at):
+        return JsonResponse(
+            {"error": "Past date/time is not allowed. Please choose a future schedule."},
+            status=400,
+        )
+
     mentee = MenteeProfile.objects.filter(id=mentee_id).first()
     if not mentee:
         return JsonResponse({"error": "Mentee not found."}, status=404)
@@ -488,6 +501,12 @@ def session_reschedule(request, session_id: int):
     if not duration_minutes:
         return JsonResponse(
             {"error": "duration_minutes must be >= 15."}, status=400
+        )
+
+    if _is_past_datetime(scheduled_at):
+        return JsonResponse(
+            {"error": "Past date/time is not allowed. Please choose a future schedule."},
+            status=400,
         )
 
     subject = (
