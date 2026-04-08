@@ -66,7 +66,7 @@
             title="To date"
           />
           <button type="button" className="btn" onClick={handleSearch} disabled={activityLogsLoading}>
-            {activityLogsLoading ? <span className="loading-inline"><Spinner inline /> Searching…</span> : "Search"}
+            {activityLogsLoading ? <Spinner inline /> : "Search"}
           </button>
         </div>
 
@@ -84,7 +84,7 @@
               {activityLogsLoading && activityLogs.length === 0 ? (
                 <tr>
                   <td colSpan={4} className="activity-logs-loading">
-                    <Spinner /> Loading…
+                    <Spinner />
                   </td>
                 </tr>
               ) : activityLogs.length === 0 ? (

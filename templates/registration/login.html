@@ -1,6 +1,7 @@
 {% extends "registration/base.html" %}
 {% load socialaccount %}
 {% block title %}Log in{% endblock %}
+{% block public_header %}{% endblock %}
 {% block content %}
 <div class="auth-shell">
   <section class="auth-panel-left">
@@ -20,11 +21,28 @@
   <section class="auth-panel-right">
     <div>
       <h2>Sign in</h2>
-      <p class="auth-panel-subtitle">Enter your credentials to continue.</p>
+      <p class="auth-panel-subtitle">
+        {% if selected_role %}
+          Enter your credentials to continue.
+        {% else %}
+          Choose your role first to continue with Google or email login.
+        {% endif %}
+      </p>
     </div>
     {% if form.errors %}
-    <p class="errornote">Username or password incorrect. Please try again.</p>
+    <p class="errornote">Email or password incorrect. Please try again.</p>
     {% endif %}
+    {% if not selected_role %}
+    <div class="btn-row" style="display:flex; gap:.75rem; margin-top:.5rem; margin-bottom:1rem; flex-wrap:wrap;">
+      <a href="{% url 'select_role' 'mentor' %}" class="btn-primary" style="margin:0;">Continue as Mentor</a>
+      <a href="{% url 'select_role' 'mentee' %}" class="btn-primary secondary" style="margin:0;">Continue as Mentee</a>
+    </div>
+    <p class="footer-links" style="margin-top:.5rem;">
+      <a href="{% url 'register' %}">Create an account</a>
+      <span class="divider">·</span>
+      <a href="{% url 'home' %}">Back to landing</a>
+    </p>
+    {% else %}
     <div>
       <a href="{% provider_login_url 'google' %}" class="btn-primary secondary" style="margin-top:0; margin-bottom:.75rem;">
         Continue with Google
@@ -35,8 +53,8 @@
       {% csrf_token %}
       <input type="hidden" name="next" value="{{ next }}" />
       <div class="form-group">
-        <label for="id_username">Username or email</label>
-        <input type="text" name="username" id="id_username" placeholder="Username or email" required autofocus>
+        <label for="id_username">Email or Username</label>
+        <input type="text" name="username" id="id_username" placeholder="you@example.com or username" required autofocus>
       </div>
       <div class="form-group">
         <label for="id_password">Password</label>
@@ -44,6 +62,7 @@
       </div>
       <button type="submit" class="btn-primary">Sign in</button>
     </form>
+    {% endif %}
     <p class="footer-links">
       <a href="{% url 'password_reset' %}">Forgot password?</a>
       <span class="divider">·</span>

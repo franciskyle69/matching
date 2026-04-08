@@ -23,10 +23,17 @@ def react_app(request):
         return HttpResponseNotFound(
             "React build not found. Run `npm install` and `npm run build:client` in material-shadcn-1.0.0."
         )
-    return HttpResponse(index_path.read_text(encoding="utf-8"))
+    response = HttpResponse(index_path.read_text(encoding="utf-8"))
+    # Avoid restoring sensitive authenticated SPA state from browser history cache.
+    response["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0, private"
+    response["Pragma"] = "no-cache"
+    response["Expires"] = "0"
+    return response
 
 
 def landing_page(request):
+    if request.user.is_authenticated:
+        return HttpResponseRedirect("/app/")
     index_path = Path(__file__).resolve().parent.parent / "frontend" / "landing" / "index.html"
     if not index_path.exists():
         return HttpResponseNotFound("Landing page not found. Move Agentix into frontend/landing.")

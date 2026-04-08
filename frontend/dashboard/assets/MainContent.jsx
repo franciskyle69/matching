@@ -1,7 +1,7 @@
 (function () {
   "use strict";
   const React = window.React;
-  const { useContext } = React;
+  const { useContext, useEffect } = React;
   const AppContext = window.DashboardApp.AppContext;
   const RouteRenderer = window.DashboardApp.RouteRenderer;
   const ErrorBoundary =
@@ -31,6 +31,7 @@
     const {
       authCheckDone,
       isAuthenticated,
+      isPendingApproval,
       showSignInPrompt,
       activeTab,
       user,
@@ -47,6 +48,15 @@
       setActiveTab,
     } = ctx;
 
+    useEffect(() => {
+      if (authCheckDone) return undefined;
+      const previousOverflow = document.body.style.overflow;
+      document.body.style.overflow = "hidden";
+      return () => {
+        document.body.style.overflow = previousOverflow;
+      };
+    }, [authCheckDone]);
+
     const SUBJECT_OPTIONS =
       (window.DashboardApp && window.DashboardApp.MENTOR_SUBJECT_OPTIONS) || [];
     const TOPIC_OPTIONS =
@@ -60,18 +70,17 @@
     return (
       <>
         {!authCheckDone && (
-          <div className="card">
-            <div className="loading-block">
-              <LoadingSpinner />
-              <div style={{ textAlign: "center" }}>
-                <p className="page-subtitle" style={{ marginBottom: 4 }}>
-                  Checking your session
-                  <span className="loading-ellipsis" />
-                </p>
-                <p className="muted" style={{ fontSize: 12 }}>
-                  This only takes a moment.
-                </p>
-              </div>
+          <div
+            className="session-check-overlay"
+            role="status"
+            aria-live="polite"
+            aria-busy="true"
+          >
+            <div className="session-check-panel">
+              <LoadingSpinner
+                title="Checking your session..."
+                subtitle="This will only take a moment."
+              />
             </div>
           </div>
         )}
@@ -87,6 +96,31 @@
             >
               <button className="btn" onClick={() => setActiveTab("signin")}>
                 Go to sign in
+              </button>
+            </div>
+          </div>
+        )}
+
+        {isAuthenticated && isPendingApproval && activeTab === "pending-approval" && (
+          <div className="card cta-card" style={{ maxWidth: 760, margin: "0 auto" }}>
+            <h1 className="page-title">Account Pending Approval</h1>
+            <p className="page-subtitle" style={{ marginBottom: 12 }}>
+              Your account is signed in but still waiting for coordinator approval.
+            </p>
+            <div className="alert alert-warning" role="status" style={{ marginBottom: 16 }}>
+              <strong>Status:</strong> Pending review.
+            </div>
+            <ul className="muted" style={{ marginTop: 0, marginBottom: 16, paddingLeft: 20 }}>
+              <li>Complete all required profile details.</li>
+              <li>Coordinator will review your account after submission.</li>
+              <li>You will get full dashboard access once approved.</li>
+            </ul>
+            <div className="btn-row" style={{ justifyContent: "flex-start", gap: 10 }}>
+              <button className="btn" onClick={() => setActiveTab("complete-profile")}>
+                Complete Required Information
+              </button>
+              <button className="btn secondary" onClick={() => setActiveTab("settings")}>
+                Open Account Settings
               </button>
             </div>
           </div>
@@ -377,9 +411,11 @@
           </div>
         )}
 
-        <ErrorBoundary>
-          <RouteRenderer activeTab={activeTab} />
-        </ErrorBoundary>
+        {!(isAuthenticated && isPendingApproval && activeTab === "pending-approval") && (
+          <ErrorBoundary>
+            <RouteRenderer activeTab={activeTab} />
+          </ErrorBoundary>
+        )}
       </>
     );
   }

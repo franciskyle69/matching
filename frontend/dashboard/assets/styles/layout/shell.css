@@ -1,0 +1,19 @@
+.app-shell,
+.app-main-shell,
+.app-content {
+  color: var(--text);
+}
+
+.app-content {
+  gap: var(--space-5);
+}
+
+.sidebar,
+.app-topbar {
+  border-color: var(--border);
+}
+
+[data-theme="light"] .sidebar,
+[data-theme="light"] .app-topbar {
+  background: var(--card);
+}

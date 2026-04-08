@@ -145,10 +145,10 @@
       <div className="sp-post-card">
         <div className="sp-post-header">
           <div className="sp-post-author-avatar">
-            {post.author_avatar ? <img src={post.author_avatar} alt="" /> : <span className="sp-post-author-fallback">{(post.author_username || "?")[0].toUpperCase()}</span>}
+            {post.author_avatar ? <img src={post.author_avatar} alt="" /> : <span className="sp-post-author-fallback">{(post.author_display_name || post.author_username || "?")[0].toUpperCase()}</span>}
           </div>
           <div className="sp-post-meta">
-            <span className="sp-post-author-name">{post.author_username}</span>
+            <span className="sp-post-author-name">{post.author_display_name || post.author_username}</span>
             <span className="sp-post-time">{relativeTime(post.created_at)}</span>
           </div>
           <span className={"sp-post-category-badge sp-cat-" + post.category}>
@@ -281,10 +281,10 @@
       <>
         <div className="sp-pm-header">
           <div className="sp-post-author-avatar">
-            {post.author_avatar ? <img src={post.author_avatar} alt="" /> : <span className="sp-post-author-fallback">{(post.author_username || "?")[0].toUpperCase()}</span>}
+            {post.author_avatar ? <img src={post.author_avatar} alt="" /> : <span className="sp-post-author-fallback">{(post.author_display_name || post.author_username || "?")[0].toUpperCase()}</span>}
           </div>
           <div className="sp-post-meta">
-            <span className="sp-post-author-name">{post.author_username}</span>
+            <span className="sp-post-author-name">{post.author_display_name || post.author_username}</span>
             <span className="sp-post-time">{relativeTime(post.created_at)}</span>
           </div>
           <span className={"sp-post-category-badge sp-cat-" + post.category}>
@@ -313,11 +313,11 @@
           {comments.map((c) => (
             <div key={c.id} className="sp-pm-comment">
               <div className="sp-pm-comment-avatar">
-                {c.author_avatar ? <img src={c.author_avatar} alt="" /> : <span className="sp-post-author-fallback">{(c.author_username || "?")[0].toUpperCase()}</span>}
+                {c.author_avatar ? <img src={c.author_avatar} alt="" /> : <span className="sp-post-author-fallback">{(c.author_display_name || c.author_username || "?")[0].toUpperCase()}</span>}
               </div>
               <div className="sp-pm-comment-body">
                 <div className="sp-pm-comment-bubble">
-                  <span className="sp-pm-comment-author">{c.author_username}</span>
+                  <span className="sp-pm-comment-author">{c.author_display_name || c.author_username}</span>
                   <span className="sp-pm-comment-text">{c.content}</span>
                 </div>
                 <span className="sp-pm-comment-time">{relativeTime(c.created_at)}</span>
@@ -450,9 +450,9 @@
       <aside className="sp-sidebar">
         <div className="sp-sidebar-identity">
           <div className="sp-avatar-wrap sp-avatar-wrap--lg">
-            {avatarUrl ? <img src={avatarUrl} alt={user.username} className="sp-avatar-img" /> : <span className="sp-avatar-fallback">{(user.username || "?")[0].toUpperCase()}</span>}
+            {avatarUrl ? <img src={avatarUrl} alt={user.display_name || user.full_name || user.username} className="sp-avatar-img" /> : <span className="sp-avatar-fallback">{(user.display_name || user.full_name || user.username || "?")[0].toUpperCase()}</span>}
           </div>
-          <h1 className="sp-profile-name">{user.username}</h1>
+          <h1 className="sp-profile-name">{user.display_name || user.full_name || user.username}</h1>
           <p className="sp-profile-subtitle">
             <span className={"prof-role-badge prof-role-badge--" + (isMentor ? "mentor" : isMentee ? "mentee" : "user")}>{isMentor ? "Mentor" : isMentee ? "Mentee" : "User"}</span>
           </p>
@@ -540,9 +540,9 @@
           <aside className="sp-sidebar">
             <div className="sp-sidebar-identity">
               <div className="sp-avatar-wrap sp-avatar-wrap--lg">
-                <img src={mentor.avatar_url || PLACEHOLDER_AVATAR} alt={match.mentor_username} className="sp-avatar-img" />
+                <img src={mentor.avatar_url || PLACEHOLDER_AVATAR} alt={match.mentor_display_name || match.mentor_username} className="sp-avatar-img" />
               </div>
-              <h1 className="sp-profile-name">{match.mentor_username}</h1>
+              <h1 className="sp-profile-name">{match.mentor_display_name || match.mentor_username}</h1>
               <p className="sp-profile-subtitle"><span className="prof-role-badge prof-role-badge--mentor">Mentor</span></p>
               {mentor.role && <span className="sp-profile-email">{mentor.role}</span>}
             </div>
@@ -670,9 +670,9 @@
           <aside className="sp-sidebar">
             <div className="sp-sidebar-identity">
               <div className="sp-avatar-wrap sp-avatar-wrap--lg">
-                {profile.avatar_url ? <img src={profile.avatar_url} alt={profile.username} className="sp-avatar-img" /> : <span className="sp-avatar-fallback">{(profile.username || "?")[0].toUpperCase()}</span>}
+                {profile.avatar_url ? <img src={profile.avatar_url} alt={profile.display_name || profile.full_name || profile.username} className="sp-avatar-img" /> : <span className="sp-avatar-fallback">{(profile.display_name || profile.full_name || profile.username || "?")[0].toUpperCase()}</span>}
               </div>
-              <h1 className="sp-profile-name">{profile.username}</h1>
+              <h1 className="sp-profile-name">{profile.display_name || profile.full_name || profile.username}</h1>
               <p className="sp-profile-subtitle">
                 <span className={"prof-role-badge prof-role-badge--" + (isMentor ? "mentor" : isMentee ? "mentee" : "user")}>{isMentor ? "Mentor" : isMentee ? "Mentee" : "User"}</span>
               </p>
@@ -747,17 +747,14 @@
               {tab === "posts" && (
                 <>
                   {postsLoading && (
-                    <div className="loading-block" style={{ minHeight: "200px" }}>
-                      {Spinner && <Spinner />}
-                      <p className="muted">Loading posts…</p>
-                    </div>
+                    <Spinner title="Loading posts…" subtitle="Fetching your posts" />
                   )}
                   {!postsLoading && posts.length === 0 && postsLoaded && <p className="muted" style={{ textAlign: "center", padding: "32px 0" }}>No posts yet.</p>}
                   {!postsLoading && posts.map((p) => <PostCard key={p.id} post={p} onLike={handleLike} onDelete={() => {}} isOwner={false} onOpen={setOpenPost} />)}
                   {!postsLoading && postsHasMore && (
                     <div className="sp-load-more-wrap">
                       <button type="button" className="sp-load-more-btn" onClick={() => loadPosts(posts.length)} disabled={postsLoadingMore}>
-                        {postsLoadingMore ? (<><Spinner inline /> Loading…</>) : "See more posts"}
+                        {postsLoadingMore ? <Spinner inline /> : "See more posts"}
                       </button>
                     </div>
                   )}
@@ -766,10 +763,7 @@
               {tab === "gallery" && (
                 <>
                   {galleryLoading && (
-                    <div className="loading-block" style={{ minHeight: "200px" }}>
-                      {Spinner && <Spinner />}
-                      <p className="muted">Loading gallery…</p>
-                    </div>
+                    <Spinner title="Loading gallery…" subtitle="Fetching images" />
                   )}
                   {!galleryLoading && <GalleryGrid images={galleryImages} onImageClick={handleGalleryImageClick} />}
                 </>
@@ -949,18 +943,15 @@
               {tab === "posts" && (
                 <>
                   {(posting || postsFeedLoading) && (
-                    <div className="loading-block sp-posting-overlay">
-                      {Spinner && <Spinner />}
-                      <p className="muted">{posting ? "Posting…" : "Loading posts…"}</p>
-                    </div>
+                    <Spinner title={posting ? "Posting…" : "Loading posts…"} subtitle={posting ? "Publishing your update" : "Fetching posts"} />
                   )}
-                  {!postsFeedLoading && <PostComposerTrigger avatarUrl={avatarUrl} username={user.username} onClick={() => setShowComposerModal(true)} />}
+                  {!postsFeedLoading && <PostComposerTrigger avatarUrl={avatarUrl} username={user.display_name || user.full_name || user.username} onClick={() => setShowComposerModal(true)} />}
                   {!postsFeedLoading && posts.length === 0 && postsLoaded && !posting && <p className="muted" style={{ textAlign: "center", padding: "32px 0" }}>No posts yet. Share your first achievement or update!</p>}
                   {!postsFeedLoading && posts.map((p) => <PostCard key={p.id} post={p} onLike={handleLike} onDelete={handleDelete} isOwner={p.author_id === user.id} onOpen={setOpenPost} />)}
                   {!postsFeedLoading && postsFeedHasMore && (
                     <div className="sp-load-more-wrap">
                       <button type="button" className="sp-load-more-btn" onClick={() => loadPostsFeed(posts.length)} disabled={postsFeedLoadingMore}>
-                        {postsFeedLoadingMore ? (<><Spinner inline /> Loading…</>) : "See more posts"}
+                        {postsFeedLoadingMore ? <Spinner inline /> : "See more posts"}
                       </button>
                     </div>
                   )}
@@ -969,10 +960,7 @@
               {tab === "gallery" && (
                 <>
                   {galleryLoading && (
-                    <div className="loading-block" style={{ minHeight: "200px" }}>
-                      {Spinner && <Spinner />}
-                      <p className="muted">Loading gallery…</p>
-                    </div>
+                    <Spinner title="Loading gallery…" subtitle="Fetching your images" />
                   )}
                   {!galleryLoading && <GalleryGrid images={galleryImages} onImageClick={handleGalleryImageClick} />}
                 </>

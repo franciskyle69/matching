@@ -9,6 +9,7 @@ from django.http import JsonResponse
 from django.utils import timezone
 from django.views.decorators.http import require_GET, require_http_methods
 
+from accounts.models import get_user_display_name
 from matching.models import (
     Announcement,
     AnnouncementRecipient,
@@ -69,23 +70,29 @@ def _announcements_queryset_for_user(request):
 
 def _serialize_announcement(ann):
     recipients = list(ann.recipients.select_related("user").all())
+    mentor_display_name = get_user_display_name(ann.mentor.user) or ann.mentor.user.username
     return {
         "id": ann.id,
         "message": ann.message,
         "mentor_id": ann.mentor_id,
+        "mentor_user_id": ann.mentor.user_id,
         "mentor_username": ann.mentor.user.username,
+        "mentor_display_name": mentor_display_name,
         "created_at": ann.created_at.isoformat(),
         "recipient_ids": [r.user_id for r in recipients],
         "recipient_usernames": [r.user.username for r in recipients],
+        "recipient_display_names": [get_user_display_name(r.user) or r.user.username for r in recipients],
     }
 
 
 def _serialize_comment(c):
+    author_display_name = get_user_display_name(c.author) or c.author.username
     return {
         "id": c.id,
         "content": c.content,
         "author_id": c.author_id,
         "author_username": c.author.username,
+        "author_display_name": author_display_name,
         "created_at": c.created_at.isoformat(),
     }
 
@@ -101,7 +108,14 @@ def announcements_list(request):
             Q(mentoringsession__mentor=mentor)
             | Q(menteementorrequest__mentor=mentor)
         ).select_related("user").distinct()
-        data["mentee_options"] = [{"id": mp.user_id, "username": mp.user.username} for mp in mentee_profiles]
+        data["mentee_options"] = [
+            {
+                "id": mp.user_id,
+                "username": mp.user.username,
+                "display_name": get_user_display_name(mp.user) or mp.user.username,
+            }
+            for mp in mentee_profiles
+        ]
     else:
         data["mentee_options"] = []
     return JsonResponse(data)

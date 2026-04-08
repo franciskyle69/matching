@@ -27,8 +27,8 @@
       <tbody>
         {% for s in upcoming %}
         <tr>
-          <td style="padding:.5rem; border-bottom:1px solid var(--border);">{{ s.mentor.user.username }}</td>
-          <td style="padding:.5rem; border-bottom:1px solid var(--border);">{{ s.mentee.user.username }}</td>
+          <td style="padding:.5rem; border-bottom:1px solid var(--border);">{% if s.mentor.user.first_name or s.mentor.user.last_name %}{{ s.mentor.user.first_name }} {{ s.mentor.user.last_name }}{% else %}{{ s.mentor.user.username }}{% endif %}</td>
+          <td style="padding:.5rem; border-bottom:1px solid var(--border);">{% if s.mentee.user.first_name or s.mentee.user.last_name %}{{ s.mentee.user.first_name }} {{ s.mentee.user.last_name }}{% else %}{{ s.mentee.user.username }}{% endif %}</td>
           <td style="padding:.5rem; border-bottom:1px solid var(--border);">{{ s.subject.name|default:"—" }}</td>
           <td style="padding:.5rem; border-bottom:1px solid var(--border);">{{ s.topic.name|default:"—" }}</td>
           <td style="padding:.5rem; border-bottom:1px solid var(--border);">{{ s.scheduled_at }}</td>
@@ -71,8 +71,8 @@
       <tbody>
         {% for s in history %}
         <tr>
-          <td style="padding:.5rem; border-bottom:1px solid var(--border);">{{ s.mentor.user.username }}</td>
-          <td style="padding:.5rem; border-bottom:1px solid var(--border);">{{ s.mentee.user.username }}</td>
+          <td style="padding:.5rem; border-bottom:1px solid var(--border);">{% if s.mentor.user.first_name or s.mentor.user.last_name %}{{ s.mentor.user.first_name }} {{ s.mentor.user.last_name }}{% else %}{{ s.mentor.user.username }}{% endif %}</td>
+          <td style="padding:.5rem; border-bottom:1px solid var(--border);">{% if s.mentee.user.first_name or s.mentee.user.last_name %}{{ s.mentee.user.first_name }} {{ s.mentee.user.last_name }}{% else %}{{ s.mentee.user.username }}{% endif %}</td>
           <td style="padding:.5rem; border-bottom:1px solid var(--border);">{{ s.subject.name|default:"—" }}</td>
           <td style="padding:.5rem; border-bottom:1px solid var(--border);">{{ s.topic.name|default:"—" }}</td>
           <td style="padding:.5rem; border-bottom:1px solid var(--border);">{{ s.scheduled_at }}</td>

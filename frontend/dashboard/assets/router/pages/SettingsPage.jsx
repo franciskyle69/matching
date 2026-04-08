@@ -3,7 +3,7 @@
   const React = window.React;
   const { useContext, useState, useEffect, useRef } = React;
   const AppContext = window.DashboardApp.AppContext;
-  const { getCookie, fetchJSON, DashboardIcon } =
+  const { getCookie, fetchJSON, DashboardIcon, LoadingSpinner } =
     window.DashboardApp.Utils || {};
 
   const BIO_MAX = 200;
@@ -13,6 +13,27 @@
   const filterTopicsForSubjects =
     window.DashboardApp.filterTopicsForSubjects ||
     ((subjects, topics) => (Array.isArray(topics) ? [...topics] : []));
+
+  function serializeMentorQuestionnaire(profile) {
+    return JSON.stringify({
+      subjects: profile.subjects || [],
+      topics: profile.topics || [],
+      expertise_level: profile.expertise_level ?? null,
+      role: profile.role || "",
+      capacity: profile.capacity ?? 3,
+      gender: profile.gender || "",
+      availability: profile.availability || [],
+    });
+  }
+
+  function serializeMenteeQuestionnaire(profile) {
+    return JSON.stringify({
+      subjects: profile.subjects || [],
+      topics: profile.topics || [],
+      difficulty_level: profile.difficulty_level ?? null,
+      availability: profile.availability || [],
+    });
+  }
 
   /** Inline pencil (always visible; avoids cache/missing DashboardIcon on Bio card) */
   function BioInterestsHeaderIcon() {
@@ -35,7 +56,80 @@
     );
   }
 
-  function BioAndInterestsCard({ bio, tags, onBioSave, onTagsSave }) {
+  function SettingsAccordionCard({
+    id,
+    title,
+    subtitle,
+    icon,
+    isOpen,
+    onToggle,
+    className = "",
+    bodyClassName = "",
+    titleAs = "h2",
+    children,
+  }) {
+    const TitleTag = titleAs;
+
+    return (
+      <div className={`settings-card settings-accordion-card ${className}`.trim()}>
+        <button
+          type="button"
+          className="settings-accordion-trigger"
+          aria-expanded={isOpen}
+          aria-controls={id + "-panel"}
+          onClick={onToggle}
+        >
+          <div className="settings-card-header-main settings-accordion-header-main">
+            <div className="settings-card-icon">{icon}</div>
+            <div>
+              <TitleTag
+                className={
+                  titleAs === "h1"
+                    ? "page-title settings-accordion-title"
+                    : "section-title settings-accordion-title"
+                }
+                style={{ borderBottom: "none", paddingBottom: 0 }}
+              >
+                {title}
+              </TitleTag>
+              {subtitle && (
+                <p className="page-subtitle settings-card-subtitle-tight settings-accordion-subtitle">
+                  {subtitle}
+                </p>
+              )}
+            </div>
+          </div>
+          <span
+            className={
+              "settings-accordion-chevron" + (isOpen ? " is-open" : "")
+            }
+            aria-hidden="true"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <polyline points="6 9 12 15 18 9" />
+            </svg>
+          </span>
+        </button>
+        {isOpen && (
+          <div
+            id={id + "-panel"}
+            className={`settings-accordion-body is-open ${bodyClassName}`.trim()}
+          >
+            <div className="settings-accordion-body-inner">{children}</div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  function BioAndInterestsCard({ bio, tags, onBioSave, onTagsSave, isOpen, onToggle }) {
     const [bioText, setBioText] = useState(bio);
     const [bioSaving, setBioSaving] = useState(false);
     const [localTags, setLocalTags] = useState(tags);
@@ -142,26 +236,15 @@
     const tagsChanged = JSON.stringify(localTags) !== JSON.stringify(tags);
 
     return (
-      <div className="settings-card settings-card--bio">
-        <div className="settings-card-header">
-          <div className="settings-card-header-main">
-            <div className="settings-card-icon">
-              <BioInterestsHeaderIcon />
-            </div>
-            <div>
-              <h2
-                className="section-title"
-                style={{ borderBottom: "none", paddingBottom: 0 }}
-              >
-                Bio & Interests
-              </h2>
-              <p className="page-subtitle settings-card-subtitle-tight">
-                Tell others about yourself and what you&apos;re interested in.
-              </p>
-            </div>
-          </div>
-        </div>
-
+      <SettingsAccordionCard
+        id="settings-bio"
+        title="Bio & Interests"
+        subtitle="Tell others about yourself and what you\'re interested in."
+        icon={<BioInterestsHeaderIcon />}
+        isOpen={isOpen}
+        onToggle={onToggle}
+        className="settings-card--bio"
+      >
         <div className="settings-bio-section">
           <div className="settings-section-label">Bio</div>
           <div className="form-group settings-bio-form-group">
@@ -275,7 +358,7 @@
             </button>
           </div>
         </div>
-      </div>
+      </SettingsAccordionCard>
     );
   }
 
@@ -284,6 +367,8 @@
     if (!ctx || !ctx.user) return null;
     const {
       user,
+      setError,
+      addToast,
       settingsForm,
       setSettingsForm,
       settingsSaving,
@@ -310,46 +395,50 @@
     const [menteeMatchingSavedAt, setMenteeMatchingSavedAt] = useState(0);
     const [mentorAvailabilityError, setMentorAvailabilityError] = useState("");
     const [menteeAvailabilityError, setMenteeAvailabilityError] = useState("");
+    const [openSections, setOpenSections] = useState({
+      account: false,
+      password: false,
+      bio: false,
+      general: false,
+      matching: false,
+    });
+    const [passwordEmail, setPasswordEmail] = useState("");
+    const [passwordVerificationCode, setPasswordVerificationCode] = useState("");
+    const [passwordForm, setPasswordForm] = useState({
+      new_password1: "",
+      new_password2: "",
+    });
+    const [passwordCodeSent, setPasswordCodeSent] = useState(false);
+    const [passwordCodeVerified, setPasswordCodeVerified] = useState(false);
+    const [passwordCodeSending, setPasswordCodeSending] = useState(false);
+    const [passwordCodeVerifying, setPasswordCodeVerifying] = useState(false);
+    const [passwordChanging, setPasswordChanging] = useState(false);
+    const [passwordResendSeconds, setPasswordResendSeconds] = useState(0);
+    const [passwordStatus, setPasswordStatus] = useState({
+      tone: "muted",
+      message: "",
+    });
+    const passwordCodeInputRef = useRef(null);
+    const passwordNewPasswordRef = useRef(null);
+    const mentorQuestionnaireSavedRef = useRef(
+      serializeMentorQuestionnaire(mentorProfile),
+    );
+    const menteeQuestionnaireSavedRef = useRef(
+      serializeMenteeQuestionnaire(menteeMatching),
+    );
 
     const mentorProfilePristine =
-      !user.mentor_questionnaire_completed && mentorProfileSavedAt === 0
-        ? true
-        : mentorProfileSavedAt !== 0 &&
-          JSON.stringify({
-            subjects: mentorProfile.subjects || [],
-            topics: mentorProfile.topics || [],
-            expertise_level: mentorProfile.expertise_level ?? null,
-            role: mentorProfile.role || "",
-            capacity: mentorProfile.capacity ?? 3,
-            gender: mentorProfile.gender || "",
-            availability: mentorProfile.availability || [],
-          }) ===
-            JSON.stringify({
-              subjects: mentorProfile.subjects || [],
-              topics: mentorProfile.topics || [],
-              expertise_level: mentorProfile.expertise_level ?? null,
-              role: mentorProfile.role || "",
-              capacity: mentorProfile.capacity ?? 3,
-              gender: mentorProfile.gender || "",
-              availability: mentorProfile.availability || [],
-            });
+      mentorQuestionnaireSavedRef.current ===
+      serializeMentorQuestionnaire(mentorProfile);
 
     const menteeMatchingPristine =
-      !user.mentee_questionnaire_completed && menteeMatchingSavedAt === 0
-        ? true
-        : menteeMatchingSavedAt !== 0 &&
-          JSON.stringify({
-            subjects: menteeMatching.subjects || [],
-            topics: menteeMatching.topics || [],
-            difficulty_level: menteeMatching.difficulty_level ?? null,
-            availability: menteeMatching.availability || [],
-          }) ===
-            JSON.stringify({
-              subjects: menteeMatching.subjects || [],
-              topics: menteeMatching.topics || [],
-              difficulty_level: menteeMatching.difficulty_level ?? null,
-              availability: menteeMatching.availability || [],
-            });
+      menteeQuestionnaireSavedRef.current ===
+      serializeMenteeQuestionnaire(menteeMatching);
+
+    const questionnaireSaving = mentorProfileSaving || menteeMatchingSaving;
+    const questionnaireSavingText = mentorProfileSaving
+      ? "Saving mentor questionnaire..."
+      : "Saving mentee questionnaire...";
 
     const mentorProfileJustSaved =
       mentorProfileSavedAt > 0 && Date.now() - mentorProfileSavedAt < 2000;
@@ -414,6 +503,16 @@
       return [`${start}-${end}`];
     }
 
+    function getPasswordStrengthIssues(password) {
+      const issues = [];
+      const value = String(password || "");
+      if (value.length < 8) issues.push("Use at least 8 characters.");
+      if (!/[a-z]/.test(value)) issues.push("Add a lowercase letter.");
+      if (!/[A-Z]/.test(value)) issues.push("Add an uppercase letter.");
+      if (!/\d/.test(value)) issues.push("Add at least one number.");
+      return issues;
+    }
+
     const [mentorAvailabilityDraft, setMentorAvailabilityDraft] = useState(() =>
       firstAvailabilityRange(mentorProfile.availability, "08:00", "17:00"),
     );
@@ -433,6 +532,190 @@
       );
     }, [menteeMatching.availability]);
 
+    useEffect(() => {
+      if (!passwordCodeSent && !passwordCodeVerified) {
+        setPasswordEmail(settingsForm.email || user.email || "");
+      }
+    }, [settingsForm.email, user.email, passwordCodeSent, passwordCodeVerified]);
+
+    useEffect(() => {
+      if (passwordResendSeconds <= 0) return undefined;
+      const timer = window.setInterval(() => {
+        setPasswordResendSeconds((current) => (current > 0 ? current - 1 : 0));
+      }, 1000);
+      return () => window.clearInterval(timer);
+    }, [passwordResendSeconds]);
+
+    function toggleSection(section) {
+      setOpenSections((current) => {
+        // If the clicked section is already open, close it
+        if (current[section]) {
+          return {
+            ...current,
+            [section]: false,
+          };
+        }
+        // Otherwise, close all sections and open only the clicked one
+        return {
+          account: false,
+          password: false,
+          bio: false,
+          general: false,
+          matching: false,
+          [section]: true,
+        };
+      });
+    }
+
+    async function handleSendPasswordCode() {
+      setError("");
+      setPasswordStatus({ tone: "muted", message: "" });
+      const email = String(passwordEmail || "").trim();
+      if (!email) {
+        setPasswordStatus({
+          tone: "error",
+          message: "Enter the email address that should receive the code.",
+        });
+        return;
+      }
+      setPasswordCodeSending(true);
+      const result = await fetchJSON("/api/me/password-code/send/", {
+        method: "POST",
+        headers: { "X-CSRFToken": getCookie("csrftoken") },
+        body: JSON.stringify({ email }),
+      });
+      setPasswordCodeSending(false);
+      if (!result.ok) {
+        const message =
+          result.data?.errors && typeof result.data.errors === "object"
+            ? Object.values(result.data.errors).flat().filter(Boolean).join(" ") ||
+              result.data?.error ||
+              "Unable to send verification code."
+            : result.data?.error || "Unable to send verification code.";
+        setPasswordCodeVerified(false);
+        setPasswordStatus({ tone: "error", message });
+        return;
+      }
+      setPasswordCodeSent(true);
+      setPasswordCodeVerified(false);
+      setPasswordVerificationCode("");
+      setPasswordForm({ new_password1: "", new_password2: "" });
+      setPasswordResendSeconds(Number(result.data?.cooldown_seconds || 60));
+      setPasswordStatus({
+        tone: "success",
+        message: result.data?.message || "Verification code sent.",
+      });
+      addToast(result.data?.message || "Verification code sent.");
+      window.setTimeout(() => {
+        passwordCodeInputRef.current?.focus();
+      }, 0);
+    }
+
+    async function handleVerifyPasswordCode() {
+      setError("");
+      setPasswordStatus({ tone: "muted", message: "" });
+      if (String(passwordVerificationCode || "").trim().length !== 6) {
+        setPasswordStatus({
+          tone: "error",
+          message: "Enter the 6-digit verification code.",
+        });
+        return;
+      }
+      setPasswordCodeVerifying(true);
+      const result = await fetchJSON("/api/me/password-code/verify/", {
+        method: "POST",
+        headers: { "X-CSRFToken": getCookie("csrftoken") },
+        body: JSON.stringify({ verification_code: passwordVerificationCode }),
+      });
+      setPasswordCodeVerifying(false);
+      if (!result.ok) {
+        const message =
+          result.data?.errors && typeof result.data.errors === "object"
+            ? Object.values(result.data.errors).flat().filter(Boolean).join(" ") ||
+              result.data?.error ||
+              "Invalid verification code."
+            : result.data?.error || "Invalid verification code.";
+        setPasswordCodeVerified(false);
+        setPasswordStatus({ tone: "error", message });
+        return;
+      }
+      setPasswordCodeVerified(true);
+      setPasswordStatus({
+        tone: "success",
+        message:
+          result.data?.message ||
+          "Code verified. You can now set a new password.",
+      });
+      addToast(result.data?.message || "Code verified.");
+      window.setTimeout(() => {
+        passwordNewPasswordRef.current?.focus();
+      }, 0);
+    }
+
+    async function handleChangePasswordWithCode() {
+      setError("");
+      setPasswordStatus({ tone: "muted", message: "" });
+      if (!passwordCodeVerified) {
+        setPasswordStatus({
+          tone: "error",
+          message: "Verify the code before updating your password.",
+        });
+        return;
+      }
+      setPasswordChanging(true);
+      const result = await fetchJSON("/api/me/password-code/change/", {
+        method: "POST",
+        headers: { "X-CSRFToken": getCookie("csrftoken") },
+        body: JSON.stringify({
+          new_password1: passwordForm.new_password1,
+          new_password2: passwordForm.new_password2,
+        }),
+      });
+      setPasswordChanging(false);
+      if (!result.ok) {
+        const errs = result.data?.errors;
+        const message =
+          errs && typeof errs === "object"
+            ? Object.values(errs).flat().filter(Boolean).join(" ") ||
+              "Unable to change password."
+            : result.data?.error || "Unable to change password.";
+        setPasswordStatus({ tone: "error", message });
+        return;
+      }
+      setPasswordForm({
+        new_password1: "",
+        new_password2: "",
+      });
+      setPasswordVerificationCode("");
+      setPasswordCodeSent(false);
+      setPasswordCodeVerified(false);
+      setPasswordResendSeconds(0);
+      setPasswordStatus({
+        tone: "success",
+        message: result.data?.message || "Password updated successfully.",
+      });
+      addToast(result.data?.message || "Password updated successfully.");
+    }
+
+    const passwordStrengthIssues = getPasswordStrengthIssues(
+      passwordForm.new_password1,
+    );
+    const passwordsMatch =
+      !!passwordForm.new_password1 &&
+      !!passwordForm.new_password2 &&
+      passwordForm.new_password1 === passwordForm.new_password2;
+    const canUpdatePassword =
+      passwordCodeVerified &&
+      passwordStrengthIssues.length === 0 &&
+      passwordsMatch &&
+      !passwordChanging;
+    const resendLabel =
+      passwordResendSeconds > 0
+        ? `Resend code (${passwordResendSeconds}s)`
+        : passwordCodeSent
+          ? "Resend code"
+          : "Send code";
+
     return (
       <div
         className={
@@ -444,35 +727,30 @@
               : "")
         }
       >
-        <div className="settings-page-grid">
-          <div className="settings-card settings-card--account">
-            <div className="settings-card-header">
-              <div className="settings-card-header-main">
-                <div className="settings-card-icon">
-                  <DashboardIcon name="user" size={20} />
-                </div>
-                <div>
-                  <h1 className="page-title">Account settings</h1>
-                  <p className="page-subtitle">
-                    Update your profile details used across the dashboard.
-                  </p>
-                </div>
-              </div>
+        {questionnaireSaving && (
+          <div
+            className="questionnaire-blocking-loader"
+            role="status"
+            aria-live="assertive"
+            aria-busy="true"
+          >
+            <div className="questionnaire-blocking-loader-content">
+              <LoadingSpinner inline={false} title={questionnaireSavingText} />
             </div>
+          </div>
+        )}
+        <div className="settings-page-grid">
+          <SettingsAccordionCard
+            id="settings-account"
+            title="Account settings"
+            subtitle="Update your profile details used across the dashboard."
+            icon={<DashboardIcon name="user" size={20} />}
+            isOpen={openSections.account}
+            onToggle={() => toggleSection("account")}
+            className="settings-card--account"
+            titleAs="h1"
+          >
             <div className="form-grid">
-              <div className="form-group">
-                <label>Username</label>
-                <input
-                  value={settingsForm.username}
-                  onChange={(e) =>
-                    setSettingsForm({
-                      ...settingsForm,
-                      username: e.target.value,
-                    })
-                  }
-                  placeholder="Your username"
-                />
-              </div>
               <div className="form-group">
                 <label>Email</label>
                 <input
@@ -506,7 +784,7 @@
                         />
                       ) : (
                         <div className="settings-avatar-fallback">
-                          {(settingsForm.username || user.username || "?")
+                          {(settingsForm.display_name || user.display_name || user.full_name || settingsForm.email || user.email || "?")
                             .slice(0, 1)
                             .toUpperCase()}
                         </div>
@@ -553,31 +831,205 @@
                 {settingsSaving ? "Saving..." : "Save changes"}
               </button>
             </div>
-          </div>
+          </SettingsAccordionCard>
+
+          <SettingsAccordionCard
+            id="settings-password"
+            title="Change password"
+            subtitle="Request a code, verify it, then update your password in a secure step-by-step flow."
+            icon={<DashboardIcon name="lock" size={20} />}
+            isOpen={openSections.password}
+            onToggle={() => toggleSection("password")}
+            className="settings-card--account"
+          >
+            <div className="settings-password-flow">
+              <section className="settings-password-step">
+                <div className="settings-password-step-header">
+                  <span className="settings-password-step-badge">1</span>
+                  <div>
+                    <div className="settings-password-step-title">Request verification code</div>
+                    <p className="field-helper settings-password-step-copy">
+                      We’ll send a 6-digit code to your account email.
+                    </p>
+                  </div>
+                </div>
+                <div className="form-group settings-password-email-group">
+                  <label>Email address</label>
+                  <input
+                    type="email"
+                    value={passwordEmail}
+                    readOnly
+                    aria-readonly="true"
+                    placeholder="you@example.com"
+                    autoComplete="email"
+                  />
+                  <p className="field-helper settings-password-step-copy">
+                    This must match the email on your account.
+                  </p>
+                </div>
+                <div className="settings-password-actions">
+                  <button
+                    type="button"
+                    className="btn secondary"
+                    onClick={handleSendPasswordCode}
+                    disabled={passwordCodeSending || passwordCodeVerifying || passwordChanging || !passwordEmail.trim() || passwordResendSeconds > 0}
+                  >
+                    {passwordCodeSending ? "Sending..." : resendLabel}
+                  </button>
+                </div>
+              </section>
+
+              <section className={"settings-password-step" + (passwordCodeSent ? "" : " is-muted")}>
+                <div className="settings-password-step-header">
+                  <span className="settings-password-step-badge">2</span>
+                  <div>
+                    <div className="settings-password-step-title">Enter verification code</div>
+                    <p className="field-helper settings-password-step-copy">
+                      Enter the 6-digit code sent to your email address.
+                    </p>
+                  </div>
+                </div>
+                <div className="form-group settings-password-code-group">
+                  <label>Verification code</label>
+                  <input
+                    ref={passwordCodeInputRef}
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={6}
+                    placeholder="123456"
+                    value={passwordVerificationCode}
+                    onChange={(e) => {
+                      const nextValue = e.target.value.replace(/\D/g, "").slice(0, 6);
+                      setPasswordVerificationCode(nextValue);
+                      setPasswordCodeVerified(false);
+                    }}
+                    disabled={!passwordCodeSent}
+                  />
+                  <p className="field-helper settings-password-step-copy">
+                    {passwordCodeSent
+                      ? "The code expires after 10 minutes."
+                      : "Send a code first to unlock this step."}
+                  </p>
+                </div>
+                <div className="settings-password-actions">
+                  <button
+                    type="button"
+                    className="btn secondary"
+                    onClick={handleVerifyPasswordCode}
+                    disabled={!passwordCodeSent || passwordCodeVerifying || passwordVerificationCode.length !== 6 || passwordCodeVerified}
+                  >
+                    {passwordCodeVerifying ? "Verifying..." : passwordCodeVerified ? "Code verified" : "Verify code"}
+                  </button>
+                </div>
+              </section>
+
+              <section className={"settings-password-step" + (passwordCodeVerified ? "" : " is-muted") }>
+                <div className="settings-password-step-header">
+                  <span className="settings-password-step-badge">3</span>
+                  <div>
+                    <div className="settings-password-step-title">Set your new password</div>
+                    <p className="field-helper settings-password-step-copy">
+                      These fields remain locked until your code is verified.
+                    </p>
+                  </div>
+                </div>
+                <div className="form-grid settings-password-grid">
+                  <div className="form-group">
+                    <label>New password</label>
+                    <input
+                      ref={passwordNewPasswordRef}
+                      type="password"
+                      value={passwordForm.new_password1}
+                      onChange={(e) =>
+                        setPasswordForm((prev) => ({
+                          ...prev,
+                          new_password1: e.target.value,
+                        }))
+                      }
+                      placeholder="Enter new password"
+                      disabled={!passwordCodeVerified}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Confirm new password</label>
+                    <input
+                      type="password"
+                      value={passwordForm.new_password2}
+                      onChange={(e) =>
+                        setPasswordForm((prev) => ({
+                          ...prev,
+                          new_password2: e.target.value,
+                        }))
+                      }
+                      placeholder="Confirm new password"
+                      disabled={!passwordCodeVerified}
+                    />
+                  </div>
+                </div>
+                <div className="settings-password-validation">
+                  {passwordStrengthIssues.length > 0 && (
+                    <ul className="settings-password-rules" aria-label="Password requirements">
+                      {passwordStrengthIssues.map((issue) => (
+                        <li key={issue} className="settings-password-validation-text is-error">
+                          {issue}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  {passwordCodeVerified && !passwordsMatch && passwordForm.new_password2 ? (
+                    <p className="field-helper settings-password-validation-text is-error">
+                      Passwords do not match.
+                    </p>
+                  ) : null}
+                  {passwordCodeVerified && passwordStrengthIssues.length === 0 && passwordsMatch ? (
+                    <p className="field-helper settings-password-validation-text is-success">
+                      Password looks good.
+                    </p>
+                  ) : null}
+                </div>
+                <div className="settings-password-actions settings-password-actions--primary">
+                  <button
+                    type="button"
+                    className="btn"
+                    onClick={handleChangePasswordWithCode}
+                    disabled={!canUpdatePassword}
+                  >
+                    {passwordChanging ? "Updating..." : "Update password"}
+                  </button>
+                </div>
+              </section>
+
+              {passwordStatus.message && (
+                <p
+                  className={"field-helper settings-password-feedback is-" + passwordStatus.tone}
+                  role="status"
+                  aria-live="polite"
+                >
+                  {passwordStatus.message}
+                </p>
+              )}
+            </div>
+          </SettingsAccordionCard>
+
           <BioAndInterestsCard
             bio={settingsForm.bio || ""}
             tags={Array.isArray(settingsForm.tags) ? settingsForm.tags : []}
             onBioSave={handleBioSave}
             onTagsSave={handleTagsSave}
+            isOpen={openSections.bio}
+            onToggle={() => toggleSection("bio")}
           />
 
           {user.role === "mentee" && (
-            <div className="settings-card settings-card--general">
-              <div className="settings-card-header">
-                <div className="settings-card-header-main">
-                  <div className="settings-card-icon">
-                    <DashboardIcon name="clipboardList" size={20} />
-                  </div>
-                  <div>
-                    <h2 className="section-title">General information</h2>
-                    <p className="page-subtitle">
-                      Some fields are managed by the school and shown for
-                      reference only.
-                    </p>
-                  </div>
-                </div>
-              </div>
-
+            <SettingsAccordionCard
+              id="settings-general"
+              title="General information"
+              subtitle="Some fields are managed by the school and shown for reference only."
+              icon={<DashboardIcon name="clipboardList" size={20} />}
+              isOpen={openSections.general}
+              onToggle={() => toggleSection("general")}
+              className="settings-card--general"
+            >
               <div className="settings-section-label">Identity</div>
               <div className="form-grid">
                 <div className="form-group">
@@ -712,30 +1164,18 @@
                     : "Save general information"}
                 </button>
               </div>
-            </div>
+            </SettingsAccordionCard>
           )}
           {(user.role === "mentor" || user.role === "mentee") && (
-            <div className="matching-questionnaire-card settings-card settings-card--matching settings-card--full-width">
-              <div className="settings-card-header">
-                <div className="settings-card-header-main">
-                  <div className="settings-card-icon">
-                    <DashboardIcon name="sparkles" size={20} />
-                  </div>
-                  <div>
-                    <h2
-                      className="section-title"
-                      style={{ borderBottom: "none", paddingBottom: 0 }}
-                    >
-                      Matching questionnaire
-                    </h2>
-                    <p className="page-subtitle matching-questionnaire-subtitle">
-                      Keep your mentoring preferences up to date so we can
-                      recommend the best mentors and mentees for you.
-                    </p>
-                  </div>
-                </div>
-              </div>
-
+            <SettingsAccordionCard
+              id="settings-matching"
+              title="Matching questionnaire"
+              subtitle="Keep your mentoring preferences up to date so we can recommend the best mentors and mentees for you."
+              icon={<DashboardIcon name="sparkles" size={20} />}
+              isOpen={openSections.matching}
+              onToggle={() => toggleSection("matching")}
+              className="matching-questionnaire-card settings-card--matching settings-card--full-width"
+            >
               {user.role === "mentor" && (
                 <div className="matching-questionnaire-flow">
                   <section className="matching-section-card">
@@ -1093,8 +1533,12 @@
                     <button
                       className="btn"
                       onClick={async () => {
-                        await handleMentorProfileSave();
-                        setMentorProfileSavedAt(Date.now());
+                        const saved = await handleMentorProfileSave();
+                        if (saved) {
+                          mentorQuestionnaireSavedRef.current =
+                            serializeMentorQuestionnaire(mentorProfile);
+                          setMentorProfileSavedAt(Date.now());
+                        }
                       }}
                       type="button"
                       disabled={mentorProfileSaving || mentorProfilePristine}
@@ -1404,8 +1848,12 @@
                           className="btn"
                           type="button"
                           onClick={async () => {
-                            await handleMenteeMatchingSave();
-                            setMenteeMatchingSavedAt(Date.now());
+                            const saved = await handleMenteeMatchingSave();
+                            if (saved) {
+                              menteeQuestionnaireSavedRef.current =
+                                serializeMenteeQuestionnaire(menteeMatching);
+                              setMenteeMatchingSavedAt(Date.now());
+                            }
                           }}
                           disabled={
                             menteeMatchingSaving || menteeMatchingPristine
@@ -1438,7 +1886,7 @@
                   )}
                 </div>
               )}
-            </div>
+            </SettingsAccordionCard>
           )}
         </div>
       </div>

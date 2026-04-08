@@ -1,0 +1,23 @@
+.table,
+.users-management-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table th,
+.table td,
+.users-management-table th,
+.users-management-table td {
+  border-bottom: 1px solid var(--border);
+}
+
+.table th,
+.users-management-table th {
+  color: var(--text-muted);
+  font-weight: 700;
+}
+
+.table td,
+.users-management-table td {
+  color: var(--text);
+}

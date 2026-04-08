@@ -24,7 +24,7 @@
           </div>
           <div className="btn-row" style={{ marginTop: "12px" }}>{subjectEditId ? <><button className="btn" onClick={handleUpdateSubject}>Save changes</button><button className="btn secondary" onClick={() => { setSubjectEditId(null); setSubjectForm({ name: "", description: "" }); }}>Cancel</button></> : <button className="btn" onClick={handleCreateSubject}>Add subject</button>}</div>
         </div>
-        {subjectsLoading && <div className="loading-block"><Spinner /><p className="muted">Loading subjects…</p></div>}
+        {subjectsLoading && <Spinner title="Loading subjects…" subtitle="Fetching available subjects" />}
         {!subjectsLoading && subjectsData.length === 0 && <div className="subjects-empty-msg">No subjects yet. Add one above.</div>}
         {!subjectsLoading && subjectsData.length > 0 && (
           <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>

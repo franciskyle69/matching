@@ -22,7 +22,7 @@
         <h1 className="page-title">Notifications</h1>
         <p className="page-subtitle">Session updates and activity.</p>
         <div className="notifications-header"><button className="btn secondary" onClick={handleMarkAllRead}>Mark all as read</button></div>
-        {notificationsLoading && <div className="loading-block"><Spinner /><p className="muted">Loading notifications...</p></div>}
+        {notificationsLoading && <Spinner title="Loading notifications…" subtitle="Fetching your updates" />}
         {!notificationsLoading && notifications.length === 0 && (
           <div className="fancy-empty notifications-empty">
             <span className="fancy-empty-icon" aria-hidden="true">

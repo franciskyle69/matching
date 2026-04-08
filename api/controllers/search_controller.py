@@ -4,6 +4,7 @@ from django.db.models import Q, Value, CharField, Case, When
 from django.http import JsonResponse
 from django.views.decorators.http import require_GET
 
+from accounts.models import get_user_display_name
 from matching.models import MentoringSession
 
 
@@ -42,6 +43,8 @@ def search(request):
     user_filter = (
         Q(username__icontains=q)
         | Q(email__icontains=q)
+        | Q(first_name__icontains=q)
+        | Q(last_name__icontains=q)
         | Q(mentor_profile__subjects__icontains=q)
         | Q(mentor_profile__topics__icontains=q)
         | Q(mentee_profile__program__icontains=q)
@@ -74,15 +77,19 @@ def search(request):
             {
                 "type": "user",
                 "id": u.id,
-                "label": u.username,
+                "label": get_user_display_name(u) or u.username,
                 "role": role,
                 "avatar_url": _user_avatar(u),
             }
         )
 
     for s in sessions:
-        mentor_name = getattr(getattr(s.mentor, "user", None), "username", "") or "Mentor"
-        mentee_name = getattr(getattr(s.mentee, "user", None), "username", "") or "Mentee"
+        mentor_user = getattr(s.mentor, "user", None)
+        mentee_user = getattr(s.mentee, "user", None)
+        mentor_name = get_user_display_name(mentor_user) if mentor_user else ""
+        mentee_name = get_user_display_name(mentee_user) if mentee_user else ""
+        mentor_name = mentor_name or "Mentor"
+        mentee_name = mentee_name or "Mentee"
         subject_name = s.subject.name if s.subject else "Session"
         topic_name = s.topic.name if s.topic else ""
         label = subject_name
@@ -164,6 +171,8 @@ def user_public_profile(request, user_id):
     return JsonResponse({
         "id": target.id,
         "username": target.username,
+        "display_name": get_user_display_name(target),
+        "full_name": get_user_display_name(target),
         "role": role,
         "avatar_url": avatar_url,
         "cover_url": cover_url,

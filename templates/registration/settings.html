@@ -28,6 +28,31 @@
       gap: .5rem;
       margin-top: .5rem;
     }
+    .settings-section {
+      margin-top: 1.25rem;
+      padding: 1rem;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: var(--surface);
+    }
+    .settings-section h2 {
+      margin: 0 0 .75rem;
+      font-size: 1.05rem;
+    }
+    .settings-section p {
+      margin: 0 0 .75rem;
+      color: var(--text-muted);
+      font-size: .95rem;
+    }
+    .settings-inline-actions {
+      display: flex;
+      gap: .5rem;
+      flex-wrap: wrap;
+      margin-top: .75rem;
+    }
+    .settings-inline-actions button {
+      min-width: 180px;
+    }
     .settings-actions a,
     .settings-actions form button {
       width: 100%;
@@ -58,16 +83,10 @@
 
   <form method="post" style="margin-top: 1.25rem;">
     {% csrf_token %}
-    <div class="form-group">
-      <label for="id_username">Username</label>
-      <input type="text" name="username" id="id_username" value="{{ form.username.value|default:'' }}" required>
-      {% if form.username.errors %}
-      <p class="errornote" style="margin-top:.5rem;">{{ form.username.errors.0 }}</p>
-      {% endif %}
-    </div>
+    <input type="hidden" name="action" value="save_account">
     <div class="form-group">
       <label for="id_email">Email</label>
-      <input type="email" name="email" id="id_email" value="{{ form.email.value|default:'' }}" placeholder="you@example.com">
+      <input type="email" name="email" id="id_email" value="{{ form.email.value|default:'' }}" placeholder="you@example.com" required>
       {% if form.email.errors %}
       <p class="errornote" style="margin-top:.5rem;">{{ form.email.errors.0 }}</p>
       {% endif %}
@@ -75,13 +94,53 @@
     <button type="submit" class="btn-primary">Save changes</button>
   </form>
 
+  <div class="settings-section">
+    <h2>Change Password</h2>
+    <p>Request a one-time verification code sent to your account email, then use it to set a new password.</p>
+
+    <form method="post">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="send_password_code">
+      <button type="submit" class="btn-primary secondary">Send verification code</button>
+    </form>
+
+    <form method="post" style="margin-top: .85rem;">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="change_password_with_code">
+
+      <div class="form-group">
+        <label for="id_verification_code">Verification code</label>
+        <input type="text" id="id_verification_code" name="verification_code" value="{{ password_form.verification_code.value|default:'' }}" maxlength="6" placeholder="123456" required>
+        {% if password_form.verification_code.errors %}
+        <p class="errornote" style="margin-top:.5rem;">{{ password_form.verification_code.errors.0 }}</p>
+        {% endif %}
+      </div>
+
+      <div class="form-group">
+        <label for="id_new_password1">New password</label>
+        <input type="password" id="id_new_password1" name="new_password1" required>
+      </div>
+
+      <div class="form-group">
+        <label for="id_new_password2">Confirm new password</label>
+        <input type="password" id="id_new_password2" name="new_password2" required>
+        {% if password_form.new_password2.errors %}
+        <p class="errornote" style="margin-top:.5rem;">{{ password_form.new_password2.errors.0 }}</p>
+        {% endif %}
+      </div>
+
+      <div class="settings-inline-actions">
+        <button type="submit" class="btn-primary">Update password</button>
+      </div>
+    </form>
+  </div>
+
   <div class="settings-actions">
     {% if is_mentor %}
       <a href="{% url 'mentor_questionnaire' %}" class="btn-primary secondary">Edit mentor questionnaire</a>
     {% elif is_mentee %}
       <a href="{% url 'mentee_questionnaire' %}" class="btn-primary secondary">Edit mentee questionnaire</a>
     {% endif %}
-    <a href="{% url 'password_change' %}" class="btn-primary secondary">Change password</a>
     <a href="/app/#matching" class="btn-primary secondary">Open matching dashboard</a>
     <a href="{% url 'home' %}" class="btn-primary secondary">Change role</a>
     <form method="post" action="{% url 'logout' %}">

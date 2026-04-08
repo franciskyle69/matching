@@ -11,6 +11,7 @@ from allauth.account.models import EmailAddress
 from allauth.socialaccount.models import SocialToken
 import requests
 
+from accounts.models import get_user_display_name
 from matching.forms import SubjectForm
 from matching.models import MentoringSession, MenteeMentorRequest, Notification, Subject, Topic
 from profiles.models import MenteeProfile
@@ -163,8 +164,8 @@ def _create_google_calendar_events_for_session(session: MentoringSession):
 
     mentor_user = session.mentor.user
     mentee_user = session.mentee.user
-    mentor_name = mentor_user.get_full_name() or mentor_user.username
-    mentee_name = mentee_user.get_full_name() or mentee_user.username
+    mentor_name = get_user_display_name(mentor_user) or mentor_user.username
+    mentee_name = get_user_display_name(mentee_user) or mentee_user.username
 
     description_parts = [
         f"Mentoring session with {mentee_name} (mentee). Mentor: {mentor_name}.",
@@ -313,6 +314,7 @@ def sessions_list(request):
             progress_by_mentee.append({
                 "mentee_id": m.id,
                 "mentee_username": m.user.username,
+                "mentee_display_name": get_user_display_name(m.user) or m.user.username,
                 "total_completed_minutes": total,
                 "progress_percent": pct,
                 "difficulty_subjects": (
@@ -450,12 +452,12 @@ def session_create(request):
     )
     Notification.objects.create(
         user=session.mentor.user,
-        message=f"New mentoring session scheduled with {session.mentee.user.username}.",
+        message=f"New mentoring session scheduled with {get_user_display_name(session.mentee.user) or session.mentee.user.username}.",
         action_tab="sessions",
     )
     Notification.objects.create(
         user=session.mentee.user,
-        message=f"New mentoring session scheduled with {session.mentor.user.username}.",
+        message=f"New mentoring session scheduled with {get_user_display_name(session.mentor.user) or session.mentor.user.username}.",
         action_tab="sessions",
     )
     from ..views import _send_session_scheduled_emails  # avoid circular import at top
@@ -551,12 +553,12 @@ def session_reschedule(request, session_id: int):
     if scheduled_at != old_time:
         Notification.objects.create(
             user=session.mentee.user,
-            message=f"Your session with {session.mentor.user.username} was rescheduled.",
+            message=f"Your session with {get_user_display_name(session.mentor.user) or session.mentor.user.username} was rescheduled.",
             action_tab="sessions",
         )
         Notification.objects.create(
             user=session.mentor.user,
-            message=f"Session with {session.mentee.user.username} was rescheduled.",
+            message=f"Session with {get_user_display_name(session.mentee.user) or session.mentee.user.username} was rescheduled.",
             action_tab="sessions",
         )
         logger.info("session_rescheduled", extra={"session_id": session.id})
@@ -602,7 +604,7 @@ def session_update_status(request, session_id: int):
     )
     Notification.objects.create(
         user=session.mentee.user,
-        message=f"Your session with {session.mentor.user.username} was marked {status}.",
+        message=f"Your session with {get_user_display_name(session.mentor.user) or session.mentor.user.username} was marked {status}.",
         action_tab="sessions",
     )
     _invalidate_sessions_cache_for_user(request.user.id)

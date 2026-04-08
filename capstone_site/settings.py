@@ -94,6 +94,7 @@ INSTALLED_APPS = [
     'profiles',
     'matching',
     'api',
+    'dbbackup',
     'allauth',
     'allauth.account',
     'allauth.socialaccount',
@@ -107,6 +108,7 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'accounts.jwt_middleware.JWTAuthenticationMiddleware',
     'axes.middleware.AxesMiddleware',  # Must be after AuthenticationMiddleware
     'allauth.account.middleware.AccountMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
@@ -241,7 +243,6 @@ PASSWORD_RESET_TIMEOUT = 600
 AUTHENTICATION_BACKENDS = [
     'axes.backends.AxesBackend',  # Must be first
     'accounts.auth_backends.EmailOrUsernameModelBackend',
-    'django.contrib.auth.backends.ModelBackend',
     'allauth.account.auth_backends.AuthenticationBackend',
 ]
 
@@ -250,8 +251,10 @@ SITE_ID = 1
 # django-allauth settings
 ACCOUNT_EMAIL_VERIFICATION = 'mandatory'
 ACCOUNT_UNIQUE_EMAIL = True
-ACCOUNT_SIGNUP_FIELDS = ['email*', 'username*', 'password1*', 'password2*']
+ACCOUNT_LOGIN_METHODS = {'email'}
+ACCOUNT_SIGNUP_FIELDS = ['email*', 'password1*', 'password2*']
 SOCIALACCOUNT_LOGIN_ON_GET = True
+SOCIALACCOUNT_AUTO_SIGNUP = True
 # Allow linking Google accounts to existing email/password accounts
 SOCIALACCOUNT_EMAIL_AUTHENTICATION_AUTO_CONNECT = True
 
@@ -348,3 +351,47 @@ AXES_COOLOFF_TIME = timedelta(minutes=15)  # Lockout duration: 15 minutes
 AXES_LOCKOUT_TEMPLATE = None  # Use DRF response for API lockouts
 AXES_VERBOSE = True  # Log detailed information about attempts
 AXES_RESET_ON_SUCCESS = True  # Reset counter on successful login
+
+# Authentication/session performance tuning
+SESSION_SAVE_EVERY_REQUEST = False
+SESSION_COOKIE_AGE = int(os.environ.get("SESSION_COOKIE_AGE", str(60 * 60 * 24 * 7)))
+
+REDIS_URL = os.environ.get("REDIS_URL", "").strip()
+if REDIS_URL:
+    CACHES = {
+        "default": {
+            "BACKEND": "django.core.cache.backends.redis.RedisCache",
+            "LOCATION": REDIS_URL,
+            "TIMEOUT": 300,
+            "KEY_PREFIX": "matching",
+        }
+    }
+    # Cache-backed session reads are much faster than DB-only sessions.
+    SESSION_ENGINE = "django.contrib.sessions.backends.cached_db"
+    SESSION_CACHE_ALIAS = "default"
+else:
+    CACHES = {
+        "default": {
+            "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+            "LOCATION": "matching-local-cache",
+            "TIMEOUT": 300,
+        }
+    }
+
+JWT_SECRET_KEY = os.environ.get("JWT_SECRET_KEY", SECRET_KEY)
+JWT_ACCESS_TTL_SECONDS = int(os.environ.get("JWT_ACCESS_TTL_SECONDS", "1800"))
+JWT_REFRESH_TTL_SECONDS = int(os.environ.get("JWT_REFRESH_TTL_SECONDS", str(60 * 60 * 24 * 14)))
+JWT_ROTATE_REFRESH_TOKENS = _env_bool("JWT_ROTATE_REFRESH_TOKENS", default=False)
+
+# django-dbbackup
+BACKUP_DIR = Path(os.environ.get("BACKUP_DIR", BASE_DIR / "backups"))
+BACKUP_DIR.mkdir(parents=True, exist_ok=True)
+
+# django-dbbackup v5 reads storage configuration from STORAGES["dbbackup"].
+STORAGES["dbbackup"] = {
+    "BACKEND": "django.core.files.storage.FileSystemStorage",
+    "OPTIONS": {
+        "location": str(BACKUP_DIR),
+    },
+}
+DBBACKUP_CLEANUP_KEEP = int(os.environ.get("DBBACKUP_CLEANUP_KEEP", "20"))

@@ -95,6 +95,7 @@
       loadGlobalSearch,
       isAuthenticated,
       loadUserProfile,
+      isPendingApproval,
     } = ctx;
 
     const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
@@ -150,6 +151,19 @@
       }
     };
     const goTo = (tabId) => {
+      if (isPendingApproval) {
+        const allowedPendingTabs = new Set([
+          "pending-approval",
+          "complete-profile",
+          "settings",
+        ]);
+        if (!allowedPendingTabs.has(tabId)) {
+          setActiveTab("pending-approval");
+          window.scrollTo(0, 0);
+          closeMobileMenu();
+          return;
+        }
+      }
       if (tabId === "sessions" && setSessionsPairMenteeId) setSessionsPairMenteeId(null);
       setActiveTab(tabId);
       window.scrollTo(0, 0);
@@ -163,7 +177,11 @@
     const isStaff = !!(user?.is_staff || user?.role === "staff");
 
     const filteredTabs = MAIN_TABS.filter((tab) => {
+      if (isPendingApproval) {
+        return tab.id === "complete-profile" || tab.id === "settings";
+      }
       if (tab.id === "subjects") return isStaff;
+      if (tab.id === "users") return isStaff;
       if (tab.id === "activity-logs") return isStaff;
       if (tab.id === "backup") return isStaff;
       if (tab.id === "matching") return !isStaff;
@@ -176,92 +194,97 @@
       return true;
     });
     const dashboardTab = filteredTabs.find((tab) => tab.id === "home");
-    const activityTabIds = new Set(["matching", "sessions", "announcements", "approvals", "subjects", "activity-logs", "backup"]);
+    const activityTabIds = new Set(["matching", "sessions", "announcements", "approvals", "subjects", "users", "activity-logs", "backup"]);
     const accountTabIds = new Set(["profile", "settings", "complete-profile"]);
     const activityTabs = filteredTabs.filter((tab) => activityTabIds.has(tab.id));
     const accountTabs = filteredTabs.filter((tab) => accountTabIds.has(tab.id));
 
     const role = user?.role;
-    const baseShortcuts = [
-      {
-        id: "matching",
-        label: "Go to Matching",
-        hint: "See mentor/mentee matches",
-        roles: ["mentor", "mentee", "staff"],
-        type: "shortcut",
-        actionTab: "matching",
-      },
-      {
-        id: "sessions",
-        label: "Go to Sessions",
-        hint: "View and schedule sessions",
-        roles: ["mentor", "mentee", "staff"],
-        type: "shortcut",
-        actionTab: "sessions",
-      },
-      {
-        id: "announcements",
-        label: "Go to Announcements",
-        hint: "Post or read announcements",
-        roles: ["mentor", "mentee", "staff"],
-        type: "shortcut",
-        actionTab: "announcements",
-      },
-      {
-        id: "settings",
-        label: "Go to Settings",
-        hint: "Update your profile and matching info",
-        roles: ["mentor", "mentee"],
-        type: "shortcut",
-        actionTab: "settings",
-      },
-      {
-        id: "general-info",
-        label: "Open general information",
-        hint: "Settings → your general info",
-        roles: ["mentee"],
-        type: "shortcut",
-        actionTab: "settings",
-      },
-      {
-        id: "mentee-questionnaire",
-        label: "Open mentee questionnaire",
-        hint: "Settings → mentee matching form",
-        roles: ["mentee"],
-        type: "shortcut",
-        actionTab: "settings",
-      },
-      {
-        id: "mentor-questionnaire",
-        label: "Open mentor questionnaire",
-        hint: "Settings → mentor profile form",
-        roles: ["mentor"],
-        type: "shortcut",
-        actionTab: "settings",
-      },
-      {
-        id: "approvals",
-        label: "Review approvals",
-        hint: "Approve mentors and mentees",
-        roles: ["staff"],
-        action: () => goTo("approvals"),
-      },
-      {
-        id: "subjects",
-        label: "Manage subjects",
-        hint: "Edit available subjects and topics",
-        roles: ["staff"],
-        action: () => goTo("subjects"),
-      },
-    ].filter((item) => {
-      if (!role && !isStaff) return true;
-      if (isStaff) return item.roles.includes("staff");
-      return !item.roles.length || item.roles.includes(role);
-    });
+    const baseShortcuts = isPendingApproval
+      ? []
+      : [
+          {
+            id: "matching",
+            label: "Go to Matching",
+            hint: "See mentor/mentee matches",
+            roles: ["mentor", "mentee", "staff"],
+            type: "shortcut",
+            actionTab: "matching",
+          },
+          {
+            id: "sessions",
+            label: "Go to Sessions",
+            hint: "View and schedule sessions",
+            roles: ["mentor", "mentee", "staff"],
+            type: "shortcut",
+            actionTab: "sessions",
+          },
+          {
+            id: "announcements",
+            label: "Go to Announcements",
+            hint: "Post or read announcements",
+            roles: ["mentor", "mentee", "staff"],
+            type: "shortcut",
+            actionTab: "announcements",
+          },
+          {
+            id: "settings",
+            label: "Go to Settings",
+            hint: "Update your profile and matching info",
+            roles: ["mentor", "mentee"],
+            type: "shortcut",
+            actionTab: "settings",
+          },
+          {
+            id: "general-info",
+            label: "Open general information",
+            hint: "Settings → your general info",
+            roles: ["mentee"],
+            type: "shortcut",
+            actionTab: "settings",
+          },
+          {
+            id: "mentee-questionnaire",
+            label: "Open mentee questionnaire",
+            hint: "Settings → mentee matching form",
+            roles: ["mentee"],
+            type: "shortcut",
+            actionTab: "settings",
+          },
+          {
+            id: "mentor-questionnaire",
+            label: "Open mentor questionnaire",
+            hint: "Settings → mentor profile form",
+            roles: ["mentor"],
+            type: "shortcut",
+            actionTab: "settings",
+          },
+          {
+            id: "approvals",
+            label: "Review approvals",
+            hint: "Approve mentors and mentees",
+            roles: ["staff"],
+            action: () => goTo("approvals"),
+          },
+          {
+            id: "subjects",
+            label: "Manage subjects",
+            hint: "Edit available subjects and topics",
+            roles: ["staff"],
+            action: () => goTo("subjects"),
+          },
+        ].filter((item) => {
+          if (!role && !isStaff) return true;
+          if (isStaff) return item.roles.includes("staff");
+          return !item.roles.length || item.roles.includes(role);
+        });
 
     const trimmedQuery = searchQuery.trim().toLowerCase();
     const activeTabMeta = MAIN_TABS.find((tab) => tab.id === activeTab);
-    const topbarTitle = activeTabMeta?.label || "Dashboard";
+    const topbarTitle =
+      activeTab === "pending-approval"
+        ? "Pending Approval"
+        : activeTabMeta?.label || "Dashboard";
 
     let shortcutMatches = [];
     if (trimmedQuery) {
@@ -276,9 +299,13 @@
     // prefers profiles over generic shortcuts like \"Go to Matching\".
     const suggestions = [...entitySuggestions, ...shortcutMatches].slice(0, 8);
     const showSuggestions =
-      isAuthenticated && searchFocused && trimmedQuery.length > 0;
+      isAuthenticated && !isPendingApproval && searchFocused && trimmedQuery.length > 0;
 
     useEffect(() => {
+      if (isPendingApproval) {
+        loadGlobalSearch("");
+        return;
+      }
       const q = searchQuery.trim();
       if (!q) {
         loadGlobalSearch("");
@@ -291,10 +318,11 @@
       // We intentionally depend only on searchQuery here. loadGlobalSearch
       // comes from context and is stable for the lifetime of the app, so
       // including it can cause unnecessary re-runs.
-    }, [searchQuery]);
+    }, [searchQuery, isPendingApproval]);
 
     function handleSuggestionSelect(item) {
       if (!item) return;
+      if (isPendingApproval) return;
       if (item.type === "shortcut" || item.actionTab) {
         const tab = item.actionTab || "home";
         setActiveTab(tab);
@@ -498,12 +526,14 @@
                 <div className="app-topbar-meta-title">{topbarTitle}</div>
               </div>
 
+              {!isPendingApproval ? (
+              <>
               <div className="app-topbar-search-wrapper">
                 <div className="app-topbar-search">
                   <input
                     type="search"
                     className="app-topbar-search-input"
-                    placeholder="Search users, sessions, actions…"
+                    placeholder={searchFocused ? "Search users, sessions, actions…" : ""}
                     aria-label="Global search"
                     value={searchQuery}
                     onChange={(e) => {
@@ -621,35 +651,43 @@
                   </div>
                 )}
               </div>
-
-              <button
-                type="button"
-                className="sidebar-icon-btn app-topbar-bell"
-                onClick={() => goTo("notifications")}
-                aria-label="Notifications"
-              >
-                <svg className="sidebar-icon-bell" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                  <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.73 21a2 2 0 0 1-3.46 0" />
-                </svg>
-                {unreadCount > 0 && <span className="nav-badge">{unreadCount > 99 ? "99+" : unreadCount}</span>}
-              </button>
-              <button
-                type="button"
-                className="app-topbar-avatar-btn"
-                onClick={() => goTo("profile")}
-                aria-label="Open profile"
-                title="Profile"
-              >
-                <div className="sidebar-avatar-wrapper">
-                  {user.avatar_url ? (
-                    <img src={user.avatar_url} alt={user.username || "Profile"} className="sidebar-avatar" />
-                  ) : (
-                    <div className="sidebar-avatar fallback">
-                      {(user.username || "?").slice(0, 1).toUpperCase()}
-                    </div>
-                  )}
+              <>
+                <button
+                  type="button"
+                  className="sidebar-icon-btn app-topbar-bell"
+                  onClick={() => goTo("notifications")}
+                  aria-label="Notifications"
+                >
+                  <svg className="sidebar-icon-bell" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.73 21a2 2 0 0 1-3.46 0" />
+                  </svg>
+                  {unreadCount > 0 && <span className="nav-badge">{unreadCount > 99 ? "99+" : unreadCount}</span>}
+                </button>
+                <button
+                  type="button"
+                  className="app-topbar-avatar-btn"
+                  onClick={() => goTo("profile")}
+                  aria-label="Open profile"
+                  title="Profile"
+                >
+                  <div className="sidebar-avatar-wrapper">
+                    {user.avatar_url ? (
+                      <img src={user.avatar_url} alt={user.display_name || user.full_name || user.username || "Profile"} className="sidebar-avatar" />
+                    ) : (
+                      <div className="sidebar-avatar fallback">
+                        {(user.display_name || user.full_name || user.username || "?").slice(0, 1).toUpperCase()}
+                      </div>
+                    )}
+                  </div>
+                </button>
+              </>
+              </>
+              ) : (
+                <div className="btn-row" style={{ margin: 0 }}>
+                  <button type="button" className="btn" onClick={() => goTo("complete-profile")}>Complete profile</button>
+                  <button type="button" className="btn secondary" onClick={() => goTo("settings")}>Account settings</button>
                 </div>
-              </button>
+              )}
             </header>
           )}
 

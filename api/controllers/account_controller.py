@@ -1,4 +1,7 @@
 from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth import update_session_auth_hash
+from django.contrib.auth.models import User
+from django.conf import settings
 from django.contrib.auth.tokens import default_token_generator
 from django.contrib.sites.shortcuts import get_current_site
 from django.contrib.auth.decorators import login_required
@@ -7,17 +10,41 @@ from django.http import JsonResponse
 from django.core.cache import cache
 from django.views.decorators.http import require_GET, require_http_methods
 from django.template.loader import render_to_string
+from django.utils.crypto import constant_time_compare
 from django.utils.encoding import force_bytes
 from django.utils.http import urlsafe_base64_encode
+import secrets
+import time
 
 from django.utils import timezone
 
 from matching.models import MentoringSession, MenteeMentorRequest
 from profiles.models import MentorProfile, MenteeProfile, InterestTag
 
-from accounts.forms import AccountSettingsForm, RegisterForm
-from accounts.views import ROLE_SESSION_KEY
+from accounts.forms import (
+    AccountSettingsForm,
+    RegisterForm,
+    PasswordChangeCodeRequestForm,
+    PasswordChangeCodeVerifyForm,
+    PasswordChangeUpdateForm,
+)
+from accounts.models import get_user_display_name
+from accounts.views import (
+    ROLE_SESSION_KEY,
+    PASSWORD_CHANGE_CODE_SESSION_KEY,
+    PASSWORD_CHANGE_CODE_EXPIRES_SESSION_KEY,
+    PASSWORD_CHANGE_CODE_ATTEMPTS_SESSION_KEY,
+    PASSWORD_CHANGE_CODE_VERIFIED_SESSION_KEY,
+    PASSWORD_CHANGE_CODE_EMAIL_SESSION_KEY,
+    PASSWORD_CHANGE_CODE_TTL_SECONDS,
+    PASSWORD_CHANGE_MAX_ATTEMPTS,
+)
 from accounts.auth_backends import EmailOrUsernameModelBackend
+from accounts.jwt_utils import (
+    issue_access_token,
+    issue_refresh_token,
+    decode_refresh_token,
+)
 from accounts.lockout_utils import (
     get_lockout_info,
     create_lockout_response,
@@ -44,7 +71,55 @@ from ..views import (
 )
 from matching.models import Notification, Subject, Topic
 from django.middleware.csrf import get_token
+from django.views.decorators.csrf import ensure_csrf_cookie
 from profiles.questionnaire_utils import filter_topics_for_subjects
+
+
+ME_CACHE_TTL_SECONDS = 30
+REMINDER_SWEEP_COOLDOWN_SECONDS = 300
+ME_CACHE_METRICS_LOG_EVERY = 100
+
+
+def _me_cache_key(user_id):
+    return f"api:me:v1:{user_id}"
+
+
+def _clear_me_cache(user_id):
+    cache.delete(_me_cache_key(user_id))
+
+
+def _record_me_cache_metric(hit: bool):
+    key = "api:me:cache:hits" if hit else "api:me:cache:misses"
+    other_key = "api:me:cache:misses" if hit else "api:me:cache:hits"
+    total_key = "api:me:cache:total"
+
+    cache.add(key, 0, None)
+    cache.add(other_key, 0, None)
+    cache.add(total_key, 0, None)
+
+    try:
+        cache.incr(key)
+        total = cache.incr(total_key)
+    except Exception:
+        # Some cache backends may not support atomic incr.
+        return
+
+    if total % ME_CACHE_METRICS_LOG_EVERY != 0:
+        return
+
+    hits = cache.get("api:me:cache:hits", 0) or 0
+    misses = cache.get("api:me:cache:misses", 0) or 0
+    requests = hits + misses
+    hit_rate = round((hits / requests) * 100, 2) if requests else 0.0
+    logger.info(
+        "me_cache_metrics",
+        extra={
+            "hits": hits,
+            "misses": misses,
+            "requests": requests,
+            "hit_rate_pct": hit_rate,
+        },
+    )
 
 
 def _parse_hhmm_to_minutes(value):
@@ -108,6 +183,7 @@ def health(request):
     return JsonResponse({"status": "ok"})
 
 
+@ensure_csrf_cookie
 @require_http_methods(["GET"])
 def csrf(request):
     return JsonResponse({"csrfToken": get_token(request)})
@@ -116,26 +192,30 @@ def csrf(request):
 @require_http_methods(["POST"])
 def auth_login(request):
     payload = _get_payload(request)
-    username = _get_str(payload, "username")
+    identifier = (
+        _get_str(payload, "identifier")
+        or _get_str(payload, "username")
+        or _get_str(payload, "email")
+    )
     password = _get_str(payload, "password")
     client_ip = request.META.get("REMOTE_ADDR")
-    if not username or not password:
+    if not identifier or not password:
         return JsonResponse(
-            {"error": "Username and password are required."}, status=400
+            {"error": "Email/username and password are required."}, status=400
         )
 
     # Allow valid credentials to sign in and reset limits immediately.
     backend = EmailOrUsernameModelBackend()
-    user = backend.authenticate(request, username=username, password=password)
+    user = backend.authenticate(request, identifier=identifier, password=password)
 
     if not user:
         # Trigger axes tracking/backoff path for failed credentials.
-        authenticate(request, username=username, password=password)
-        lockout_info = get_lockout_info(username, ip_address=client_ip)
+        authenticate(request, identifier=identifier, password=password)
+        lockout_info = get_lockout_info(identifier, ip_address=client_ip)
         if lockout_info["is_locked"]:
-            return create_lockout_response(username, ip_address=client_ip)
+            return create_lockout_response(identifier, ip_address=client_ip)
 
-        logger.warning("auth_login_failed", extra={"username": username})
+        logger.warning("auth_login_failed", extra={"identifier": identifier})
         return JsonResponse(
             {
                 "error": "Invalid credentials.",
@@ -174,21 +254,70 @@ def auth_login(request):
 
     # Successful authentication clears escalation progress.
     reset_lockout_progress(
-        username,
+        identifier,
         user.username,
         user.email,
         ip_address=client_ip,
     )
 
     logger.info("auth_login_success", extra={"user_id": user.id})
+    _clear_me_cache(user.id)
+    access_token = issue_access_token(user)
+    refresh_token = issue_refresh_token(user)
     audit_log(user, "login", "auth")
-    return JsonResponse({"status": "ok"})
+    return JsonResponse(
+        {
+            "status": "ok",
+            "access_token": access_token,
+            "refresh_token": refresh_token,
+            "token_type": "Bearer",
+            "expires_in": int(getattr(settings, "JWT_ACCESS_TTL_SECONDS", 1800)),
+        }
+    )
+
+
+@require_http_methods(["POST"])
+def auth_refresh(request):
+    payload = _get_payload(request)
+    refresh_token = _get_str(payload, "refresh_token")
+    if not refresh_token:
+        return JsonResponse({"error": "Refresh token is required."}, status=400)
+
+    decoded = decode_refresh_token(refresh_token)
+    if not decoded:
+        return JsonResponse({"error": "Invalid or expired refresh token."}, status=401)
+
+    user_id = decoded.get("uid")
+    try:
+        user = request.user if getattr(request.user, "is_authenticated", False) else None
+        if not user or user.id != user_id:
+            from django.contrib.auth.models import User
+
+            user = User.objects.get(id=user_id)
+    except User.DoesNotExist:
+        return JsonResponse({"error": "User not found."}, status=404)
+
+    if not user.is_active:
+        return JsonResponse({"error": "User account is inactive."}, status=401)
+
+    access_token = issue_access_token(user)
+    rotate_refresh = bool(getattr(settings, "JWT_ROTATE_REFRESH_TOKENS", False))
+    response = {
+        "status": "ok",
+        "access_token": access_token,
+        "token_type": "Bearer",
+        "expires_in": int(getattr(settings, "JWT_ACCESS_TTL_SECONDS", 1800)),
+    }
+    if rotate_refresh:
+        response["refresh_token"] = issue_refresh_token(user)
+    return JsonResponse(response)
 
 
 @login_required
 @require_http_methods(["POST"])
 def auth_logout(request):
     user = request.user
+    _clear_me_cache(user.id)
     logout(request)
     audit_log(user, "logout", "auth")
     return JsonResponse({"status": "ok"})
@@ -198,14 +327,18 @@ def auth_logout(request):
 def check_lockout(request):
     """Check if a user's account is currently locked (for auto-polling lockout status)."""
     payload = _get_payload(request)
-    username = _get_str(payload, "username")
-    if not username:
+    identifier = (
+        _get_str(payload, "identifier")
+        or _get_str(payload, "username")
+        or _get_str(payload, "email")
+    )
+    if not identifier:
         return JsonResponse(
-            {"error": "Username is required."}, status=400
+            {"error": "Email or username is required."}, status=400
         )
     
     lockout_info = get_lockout_info(
-        username,
+        identifier,
         ip_address=request.META.get("REMOTE_ADDR"),
     )
     return JsonResponse({
@@ -236,9 +369,31 @@ def auth_register(request):
     if not form.is_valid():
         return JsonResponse({"errors": form.errors}, status=400)
 
-    user = form.save(commit=False)
+    cleaned = form.cleaned_data
+    first_name = cleaned.get("first_name", "")
+    middle_name = cleaned.get("middle_name", "")
+    last_name = cleaned.get("last_name", "")
+    email = cleaned.get("email", "")
+    password = cleaned.get("password1", "")
+    base_username = "".join(part for part in [first_name, last_name] if part)
+    base_username = "".join(ch for ch in base_username.lower() if ch.isalnum())
+    if not base_username:
+        base_username = email.split("@")[0].lower()
+    username = base_username
+    suffix = 1
+    while User.objects.filter(username=username).exists():
+        suffix += 1
+        username = f"{base_username}{suffix}"
+
+    user = User.objects.create_user(
+        username=username,
+        email=email,
+        password=password,
+        first_name=first_name,
+        last_name=last_name,
+    )
     user.is_active = False
-    user.save()
+    user.save(update_fields=["is_active"])
 
     if role == "mentor":
         MentorProfile.objects.create(
@@ -305,8 +460,23 @@ def me(request):
 
     role_flags = _get_role_flags(request.user)
 
-    # Fire-and-forget check for any due session reminders whenever user hits /api/me/
-    _maybe_send_due_session_reminders()
+    force_refresh = str(request.GET.get("force", "")).strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+    if not force_refresh:
+        cached_payload = cache.get(_me_cache_key(request.user.id))
+        if cached_payload is not None:
+            _record_me_cache_metric(hit=True)
+            return JsonResponse(cached_payload)
+
+    _record_me_cache_metric(hit=False)
+
+    # Avoid running heavy reminder sweeps on every /api/me/ request.
+    if cache.add("api:me:due-reminders:sweep", "1", REMINDER_SWEEP_COOLDOWN_SECONDS):
+        _maybe_send_due_session_reminders()
     mentor = getattr(request.user, "mentor_profile", None)
     mentee = getattr(request.user, "mentee_profile", None)
 
@@ -507,84 +677,90 @@ def me(request):
             ),
         }
 
-    return JsonResponse(
-        {
-            "id": request.user.id,
-            "username": request.user.username,
-            "email": request.user.email,
-            "is_staff": request.user.is_staff,
-            "role": "mentor"
-            if role_flags["is_mentor"]
-            else "mentee"
-            if role_flags["is_mentee"]
-            else "staff"
-            if request.user.is_staff
-            else None,
-            "avatar_url": avatar_url,
-            "cover_url": cover_url,
-            "bio": bio,
-            "tags": tags,
-            "mentor_approved": get_mentor_approved(mentor) if mentor else None,
-            "mentee_approved": get_mentee_approved(mentee) if mentee else None,
-            "mentor_questionnaire_completed": mentor_q_completed if mentor else None,
-            "mentee_questionnaire_completed": mentee_q_completed if mentee else None,
-            "questionnaire_completed": mentor_q_completed
-            if role_flags["is_mentor"]
-            else mentee_q_completed
-            if role_flags["is_mentee"]
-            else False,
-            "mentee_info": mentee_info,
-            "mentee_general_info_completed": mentee_general_info_completed,
-            "mentor_info": mentor_info,
-            "mentee_matching": mentee_matching,
-            "stats": {
-                "total_mentors": total_mentors,
-                "total_mentees": total_mentees,
-                "total_sessions": total_sessions,
-                "completed_sessions": completed_sessions,
-                "completion_rate": completion_rate,
-                "week": {
-                    "start": start_of_week.isoformat(),
-                    "sessions": week_sessions,
-                    "completed_sessions": week_completed_sessions,
-                },
-                "term": {
-                    "start": term_start.isoformat(),
-                    "sessions": term_sessions,
-                    "completed_sessions": term_completed_sessions,
-                },
-                "user_progress": {
-                    "role": "mentor"
-                    if role_flags["is_mentor"]
-                    else "mentee"
-                    if role_flags["is_mentee"]
-                    else None,
-                    "sessions_completed": user_completed_sessions,
-                    "sessions_upcoming": user_upcoming_sessions,
-                    "days_to_first_session": days_to_first_session,
-                    "current_streak_weeks": current_streak_weeks,
-                    "mentees_count": MenteeMentorRequest.objects.filter(
-                        mentor=mentor, accepted=True
-                    )
-                    .values("mentee_id")
-                    .distinct()
-                    .count()
-                    if role_flags["is_mentor"] and mentor
-                    else None,
-                    "has_mentor": bool(
-                        MenteeMentorRequest.objects.filter(
-                            mentee=mentee, accepted=True
-                        ).exists()
-                    )
-                    if role_flags["is_mentee"] and mentee
-                    else False,
-                },
+    response_payload = {
+        "id": request.user.id,
+        "username": request.user.username,
+        "email": request.user.email,
+        "first_name": request.user.first_name or "",
+        "middle_name": "",
+        "last_name": request.user.last_name or "",
+        "full_name": get_user_display_name(request.user),
+        "display_name": get_user_display_name(request.user),
+        "is_staff": request.user.is_staff,
+        "role": "mentor"
+        if role_flags["is_mentor"]
+        else "mentee"
+        if role_flags["is_mentee"]
+        else "staff"
+        if request.user.is_staff
+        else None,
+        "avatar_url": avatar_url,
+        "cover_url": cover_url,
+        "bio": bio,
+        "tags": tags,
+        "mentor_approved": get_mentor_approved(mentor) if mentor else None,
+        "mentee_approved": get_mentee_approved(mentee) if mentee else None,
+        "mentor_questionnaire_completed": mentor_q_completed if mentor else None,
+        "mentee_questionnaire_completed": mentee_q_completed if mentee else None,
+        "questionnaire_completed": mentor_q_completed
+        if role_flags["is_mentor"]
+        else mentee_q_completed
+        if role_flags["is_mentee"]
+        else False,
+        "mentee_info": mentee_info,
+        "mentee_general_info_completed": mentee_general_info_completed,
+        "mentor_info": mentor_info,
+        "mentee_matching": mentee_matching,
+        "stats": {
+            "total_mentors": total_mentors,
+            "total_mentees": total_mentees,
+            "total_sessions": total_sessions,
+            "completed_sessions": completed_sessions,
+            "completion_rate": completion_rate,
+            "week": {
+                "start": start_of_week.isoformat(),
+                "sessions": week_sessions,
+                "completed_sessions": week_completed_sessions,
             },
-            "unread_notifications": Notification.objects.filter(
-                user=request.user, is_read=False
-            ).count(),
-        }
-    )
+            "term": {
+                "start": term_start.isoformat(),
+                "sessions": term_sessions,
+                "completed_sessions": term_completed_sessions,
+            },
+            "user_progress": {
+                "role": "mentor"
+                if role_flags["is_mentor"]
+                else "mentee"
+                if role_flags["is_mentee"]
+                else None,
+                "sessions_completed": user_completed_sessions,
+                "sessions_upcoming": user_upcoming_sessions,
+                "days_to_first_session": days_to_first_session,
+                "current_streak_weeks": current_streak_weeks,
+                "mentees_count": MenteeMentorRequest.objects.filter(
+                    mentor=mentor, accepted=True
+                )
+                .values("mentee_id")
+                .distinct()
+                .count()
+                if role_flags["is_mentor"] and mentor
+                else None,
+                "has_mentor": bool(
+                    MenteeMentorRequest.objects.filter(
+                        mentee=mentee, accepted=True
+                    ).exists()
+                )
+                if role_flags["is_mentee"] and mentee
+                else False,
+            },
+        },
+        "unread_notifications": Notification.objects.filter(
+            user=request.user, is_read=False
+        ).count(),
+    }
+
+    cache.set(_me_cache_key(request.user.id), response_payload, ME_CACHE_TTL_SECONDS)
+    return JsonResponse(response_payload)
 
 
 @login_required
@@ -596,17 +772,14 @@ def update_account(request):
             {
                 "errors": {
                     "__all__": [
-                        "Request body must be JSON with username and email."
+                        "Request body must be JSON with email."
                     ]
                 }
             },
             status=400,
         )
-    # Merge with current user so partial updates (e.g. username only) don't clear email
+    # Merge with current user so partial updates don't clear email.
     payload = {
-        "username": raw.get("username")
-        if raw.get("username") is not None
-        else request.user.username,
         "email": raw.get("email")
         if raw.get("email") is not None
         else (request.user.email or ""),
@@ -616,15 +789,157 @@ def update_account(request):
         errors = {k: list(v) for k, v in form.errors.items()}
         return JsonResponse({"errors": errors}, status=400)
     form.save()
+    _clear_me_cache(request.user.id)
     audit_log(request.user, "update", "account", request.user.id)
     logger.info("account_updated", extra={"user_id": request.user.id})
     return JsonResponse(
         {
             "id": request.user.id,
-            "username": request.user.username,
             "email": request.user.email,
+            "full_name": get_user_display_name(request.user),
+            "display_name": get_user_display_name(request.user),
         }
     )
+
+
+def _clear_password_change_code_session(request):
+    for key in (
+        PASSWORD_CHANGE_CODE_SESSION_KEY,
+        PASSWORD_CHANGE_CODE_EXPIRES_SESSION_KEY,
+        PASSWORD_CHANGE_CODE_ATTEMPTS_SESSION_KEY,
+        PASSWORD_CHANGE_CODE_VERIFIED_SESSION_KEY,
+        PASSWORD_CHANGE_CODE_EMAIL_SESSION_KEY,
+    ):
+        request.session.pop(key, None)
+
+
+@login_required
+@require_http_methods(["POST"])
+def send_password_change_code(request):
+    payload = _get_payload(request)
+    form = PasswordChangeCodeRequestForm(payload, user=request.user)
+    if not form.is_valid():
+        errors = {k: list(v) for k, v in form.errors.items()}
+        return JsonResponse({"errors": errors}, status=400)
+
+    if not request.user.email:
+        return JsonResponse(
+            {"error": "Add an email address first before changing password."},
+            status=400,
+        )
+
+    verification_code = f"{secrets.randbelow(1000000):06d}"
+    request.session[PASSWORD_CHANGE_CODE_SESSION_KEY] = verification_code
+    request.session[PASSWORD_CHANGE_CODE_EXPIRES_SESSION_KEY] = int(time.time()) + PASSWORD_CHANGE_CODE_TTL_SECONDS
+    request.session[PASSWORD_CHANGE_CODE_ATTEMPTS_SESSION_KEY] = 0
+    request.session[PASSWORD_CHANGE_CODE_VERIFIED_SESSION_KEY] = False
+    request.session[PASSWORD_CHANGE_CODE_EMAIL_SESSION_KEY] = form.cleaned_data["email"]
+
+    subject = "Your password change verification code"
+    body = (
+        f"Hello {request.user.get_username()},\n\n"
+        f"Your verification code is: {verification_code}\n"
+        f"This code expires in 10 minutes.\n\n"
+        "If you did not request this, you can ignore this email."
+    )
+
+    try:
+        EmailMultiAlternatives(subject, body, to=[request.user.email]).send()
+    except Exception:
+        _clear_password_change_code_session(request)
+        return JsonResponse(
+            {"error": "Unable to send verification code right now. Please try again."},
+            status=500,
+        )
+
+    return JsonResponse(
+        {
+            "status": "ok",
+            "message": "Verification code sent to your email.",
+            "cooldown_seconds": 60,
+        }
+    )
+
+
+@login_required
+@require_http_methods(["POST"])
+def verify_password_change_code(request):
+    payload = _get_payload(request)
+    form = PasswordChangeCodeVerifyForm(payload)
+    if not form.is_valid():
+        errors = {k: list(v) for k, v in form.errors.items()}
+        return JsonResponse({"errors": errors}, status=400)
+
+    stored_code = str(request.session.get(PASSWORD_CHANGE_CODE_SESSION_KEY, ""))
+    expires_at = int(request.session.get(PASSWORD_CHANGE_CODE_EXPIRES_SESSION_KEY, 0) or 0)
+    attempts = int(request.session.get(PASSWORD_CHANGE_CODE_ATTEMPTS_SESSION_KEY, 0) or 0)
+
+    if not stored_code or not expires_at:
+        return JsonResponse({"error": "Request a verification code first."}, status=400)
+
+    if int(time.time()) > expires_at:
+        _clear_password_change_code_session(request)
+        return JsonResponse({"error": "Verification code expired. Request a new one."}, status=400)
+
+    if attempts >= PASSWORD_CHANGE_MAX_ATTEMPTS:
+        _clear_password_change_code_session(request)
+        return JsonResponse(
+            {"error": "Too many incorrect attempts. Request a new verification code."},
+            status=429,
+        )
+
+    entered_code = form.cleaned_data["verification_code"]
+    if not constant_time_compare(entered_code, stored_code):
+        next_attempts = attempts + 1
+        request.session[PASSWORD_CHANGE_CODE_ATTEMPTS_SESSION_KEY] = next_attempts
+        remaining_attempts = max(PASSWORD_CHANGE_MAX_ATTEMPTS - next_attempts, 0)
+        return JsonResponse(
+            {
+                "error": "Invalid verification code.",
+                "remaining_attempts": remaining_attempts,
+            },
+            status=400,
+        )
+
+    request.session[PASSWORD_CHANGE_CODE_VERIFIED_SESSION_KEY] = True
+    return JsonResponse(
+        {
+            "status": "ok",
+            "message": "Code verified. You can now set a new password.",
+        }
+    )
+
+
+@login_required
+@require_http_methods(["POST"])
+def change_password_with_code(request):
+    payload = _get_payload(request)
+    form = PasswordChangeUpdateForm(payload, user=request.user)
+    if not form.is_valid():
+        errors = {k: list(v) for k, v in form.errors.items()}
+        return JsonResponse({"errors": errors}, status=400)
+
+    verified = bool(request.session.get(PASSWORD_CHANGE_CODE_VERIFIED_SESSION_KEY, False))
+    stored_email = str(request.session.get(PASSWORD_CHANGE_CODE_EMAIL_SESSION_KEY, "") or "").strip().lower()
+    current_email = str(request.user.email or "").strip().lower()
+    expires_at = int(request.session.get(PASSWORD_CHANGE_CODE_EXPIRES_SESSION_KEY, 0) or 0)
+    if not verified:
+        return JsonResponse({"error": "Verify your code before updating the password."}, status=400)
+
+    if not current_email or not stored_email or current_email != stored_email:
+        _clear_password_change_code_session(request)
+        return JsonResponse({"error": "Request a new verification code for your current email."}, status=400)
+
+    if int(time.time()) > expires_at:
+        _clear_password_change_code_session(request)
+        return JsonResponse({"error": "Verification code expired. Request a new one."}, status=400)
+
+    request.user.set_password(form.cleaned_data["new_password2"])
+    request.user.save(update_fields=["password"])
+    update_session_auth_hash(request, request.user)
+    _clear_password_change_code_session(request)
+    audit_log(request.user, "update", "password", request.user.id)
+    return JsonResponse({"status": "ok", "message": "Password changed successfully."})
 
 
 @login_required
@@ -690,6 +1005,7 @@ def upload_avatar(request):
             mentee.avatar_url = url
             mentee.save(update_fields=["avatar_url"])
 
+        _clear_me_cache(request.user.id)
         audit_log(request.user, "update", "avatar", request.user.id)
         return JsonResponse({"avatar_url": url})
     except Exception as e:
@@ -754,6 +1070,7 @@ def upload_cover(request):
         mentee.cover_url = url
         mentee.save(update_fields=["cover_url"])
 
+    _clear_me_cache(request.user.id)
     audit_log(request.user, "update", "cover", request.user.id)
     return JsonResponse({"cover_url": url})
 
@@ -800,6 +1117,7 @@ def update_mentee_profile(request):
         payload, "sex", getattr(mentee_profile, "sex", "")
     )
     mentee_profile.save()
+    _clear_me_cache(request.user.id)
     audit_log(request.user, "update", "mentee_profile", mentee_profile.id)
 
     return JsonResponse(
@@ -843,6 +1161,7 @@ def update_mentee_matching_profile(request):
           payload.get("availability")
       )
   mentee_profile.save()
+  _clear_me_cache(request.user.id)
   audit_log(request.user, "update", "mentee_matching", mentee_profile.id)
 
   mentee_subs = (
@@ -903,6 +1222,7 @@ def update_mentor_profile(request):
             payload.get("availability")
         )
     mentor_profile.save()
+    _clear_me_cache(request.user.id)
     audit_log(request.user, "update", "mentor_profile", mentor_profile.id)
 
     mentor_subs = (
@@ -960,6 +1280,7 @@ def update_bio(request):
     else:
         return JsonResponse({"error": "No profile found."}, status=404)
 
+    _clear_me_cache(request.user.id)
     audit_log(request.user, "update", "bio", request.user.id)
     return JsonResponse({"bio": bio})
 
@@ -1003,6 +1324,7 @@ def update_tags(request):
     else:
         return JsonResponse({"error": "No profile found."}, status=404)
 
+    _clear_me_cache(request.user.id)
     audit_log(request.user, "update", "interest_tags", request.user.id)
     return JsonResponse({"tags": [t.name for t in tag_objects]})
 

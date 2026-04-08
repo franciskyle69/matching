@@ -55,7 +55,7 @@
               ) : (
                 list.map((c) => (
                   <li key={c.id} className="comment-item">
-                    <span className="comment-author">{c.author_username}</span>
+                    <span className="comment-author">{c.author_display_name || c.author_username}</span>
                     <span className="comment-meta"> · {formatDate(c.created_at)}</span>
                     <p className="comment-content">{c.content}</p>
                   </li>
@@ -160,7 +160,7 @@
                       checked={announcementRecipientIds.includes(m.id)}
                       onChange={() => toggleRecipient(m.id)}
                     />
-                    <span>{m.username}</span>
+                    <span>{m.display_name || m.username}</span>
                   </label>
                 ))}
               </div>
@@ -178,7 +178,7 @@
                   (announcementTargetType === "specific" && announcementRecipientIds.length === 0)
                 }
               >
-                {postAnnouncementLoading ? <span className="loading-inline"><Spinner inline /> Posting…</span> : "Post announcement"}
+                {postAnnouncementLoading ? <Spinner inline /> : "Post announcement"}
               </button>
             </div>
           </div>
@@ -225,14 +225,14 @@
           {!announcementsLoading && announcements.length > 0 && announcements.map((ann) => (
             <article key={ann.id} className="announcement-card">
               <div className="announcement-header">
-                <span className="announcement-author">{ann.mentor_username}</span>
+                <span className="announcement-author">{ann.mentor_display_name || ann.mentor_username}</span>
                 <span className="announcement-date">{formatDate(ann.created_at)}</span>
-                {user.role === "mentor" && ann.mentor_username === user.username && handleDeleteAnnouncement && (
+                {user.role === "mentor" && ann.mentor_user_id === user.id && handleDeleteAnnouncement && (
                   <button type="button" className="btn danger small" style={{ marginLeft: "auto" }} onClick={() => handleDeleteAnnouncement(ann.id)}>Delete</button>
                 )}
               </div>
-              {(ann.recipient_usernames && ann.recipient_usernames.length > 0) ? (
-                <p className="announcement-to">To: {ann.recipient_usernames.join(", ")}</p>
+              {((ann.recipient_display_names && ann.recipient_display_names.length > 0) || (ann.recipient_usernames && ann.recipient_usernames.length > 0)) ? (
+                <p className="announcement-to">To: {(ann.recipient_display_names && ann.recipient_display_names.length > 0 ? ann.recipient_display_names : ann.recipient_usernames).join(", ")}</p>
               ) : (
                 <p className="announcement-to">To: Everyone</p>
               )}

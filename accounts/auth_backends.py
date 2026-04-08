@@ -1,35 +1,39 @@
 from django.contrib.auth.backends import ModelBackend
 from django.contrib.auth import get_user_model
-from django.db.models import Q
 
 
 class EmailOrUsernameModelBackend(ModelBackend):
     """
-    Authenticate with either username or email.
+    Authenticate with email or username.
     Uses the default Django ModelBackend for permission checks.
     """
 
     def authenticate(self, request, username=None, password=None, **kwargs):
         UserModel = get_user_model()
-        if username is None:
-            username = kwargs.get(UserModel.USERNAME_FIELD)
-        if username is None or password is None:
+        # Support identifier, email, or username parameters
+        identifier = kwargs.get("identifier") or kwargs.get("email") or username or kwargs.get(UserModel.USERNAME_FIELD)
+        
+        if identifier is None or password is None:
             return None
 
-        # Allow login by username or by email (case-insensitive).
-        try:
-            user = UserModel.objects.get(
-                Q(username__iexact=username) | Q(email__iexact=username)
-            )
-        except UserModel.DoesNotExist:
-            return None
-        except UserModel.MultipleObjectsReturned:
-            # If multiple users share the same email, fall back to username.
+        user = None
+        
+        # Check if identifier looks like an email (contains @) and try email lookup first
+        if "@" in identifier:
             try:
-                user = UserModel.objects.get(username__iexact=username)
+                user = UserModel.objects.get(email__iexact=identifier)
+            except UserModel.DoesNotExist:
+                pass
+            except UserModel.MultipleObjectsReturned:
+                user = UserModel.objects.filter(email__iexact=identifier).order_by("id").first()
+        
+        # If not found by email, try by username
+        if user is None:
+            try:
+                user = UserModel.objects.get(username=identifier)
             except UserModel.DoesNotExist:
                 return None
-
-        if user.check_password(password) and self.user_can_authenticate(user):
+        
+        if user and user.check_password(password) and self.user_can_authenticate(user):
             return user
         return None

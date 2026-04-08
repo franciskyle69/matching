@@ -2,6 +2,7 @@ from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 from django.views.decorators.http import require_GET, require_http_methods
 
+from accounts.models import get_user_display_name
 from matching.models import UserPost, PostComment, MentoringSession, MenteeMentorRequest
 
 from ..views import (
@@ -26,10 +27,12 @@ def _serialize_post(post, request_user=None):
     image_url = ""
     if post.image:
         image_url = post.image.url
+    author_display_name = get_user_display_name(post.author) or post.author.username
     return {
         "id": post.id,
         "author_id": post.author_id,
         "author_username": post.author.username,
+        "author_display_name": author_display_name,
         "author_avatar": _get_author_avatar(post.author),
         "text": post.text,
         "image_url": image_url,
@@ -42,10 +45,12 @@ def _serialize_post(post, request_user=None):
 
 
 def _serialize_comment(comment):
+    author_display_name = get_user_display_name(comment.author) or comment.author.username
     return {
         "id": comment.id,
         "author_id": comment.author_id,
         "author_username": comment.author.username,
+        "author_display_name": author_display_name,
         "author_avatar": _get_author_avatar(comment.author),
         "content": comment.content,
         "created_at": comment.created_at.isoformat(),

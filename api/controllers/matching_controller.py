@@ -5,6 +5,7 @@ from django.conf import settings
 from django.http import JsonResponse
 from django.views.decorators.http import require_GET, require_http_methods
 
+from accounts.models import get_user_display_name
 from matching.models import MentorProfile, MenteeProfile, Notification, MenteeMentorRequest
 from matching.services import (
     run_greedy_matching,
@@ -116,9 +117,11 @@ def run_matching(request):
             {
                 "mentor_id": mid,
                 "mentor_username": m.user.username if m else None,
+                "mentor_display_name": (get_user_display_name(m.user) or m.user.username) if m else None,
                 "mentor": _serialize_mentor_for_matching(m, request),
                 "mentee_id": eid,
                 "mentee_username": e.user.username if e else None,
+                "mentee_display_name": (get_user_display_name(e.user) or e.user.username) if e else None,
                 "mentee": _serialize_mentee_for_matching(e, request),
                 "score": round(float(score), 4),
                 "match_details": {
@@ -206,9 +209,11 @@ def mentee_recommendations(request):
             {
                 "mentor_id": mentor.id,
                 "mentor_username": mentor.user.username,
+                "mentor_display_name": get_user_display_name(mentor.user) or mentor.user.username,
                 "mentor": _serialize_mentor_for_matching(mentor, request),
                 "mentee_id": mentee_profile.id,
                 "mentee_username": mentee_profile.user.username,
+                "mentee_display_name": get_user_display_name(mentee_profile.user) or mentee_profile.user.username,
                 "mentee": _serialize_mentee_for_matching(mentee_profile, request),
                 "score": round(float(score), 4),
                 "match_details": {
@@ -264,12 +269,14 @@ def mentee_choose_mentor(request):
         accepted=True,
     ).count()
     if accepted_count >= capacity:
+        mentee_name = get_user_display_name(mentee_profile.user) or mentee_profile.user.username
+        mentor_name = get_user_display_name(mentor.user) or mentor.user.username
         _send_pairing_email(
             getattr(mentee_profile.user, "email", "") or "",
             "Mentor currently full",
             (
-                f"Hi {mentee_profile.user.username},\n\n"
-                f"{mentor.user.username} currently has a full mentee slot capacity. "
+                f"Hi {mentee_name},\n\n"
+                f"{mentor_name} currently has a full mentee slot capacity. "
                 "Please choose another mentor recommendation.\n\n"
                 "You can return to the Matching tab to pick another mentor."
             ),
@@ -296,14 +303,17 @@ def mentee_choose_mentor(request):
     cache.delete(f"sessions_list:{request.user.id}")
     cache.delete(f"sessions_list:{mentor.user_id}")
 
+    mentee_name = get_user_display_name(mentee_profile.user) or mentee_profile.user.username
+    mentor_name = get_user_display_name(mentor.user) or mentor.user.username
+
     Notification.objects.create(
         user=mentor.user,
-        message=f"{mentee_profile.user.username} has chosen you as a mentor. The pairing is now active.",
+        message=f"{mentee_name} has chosen you as a mentor. The pairing is now active.",
         action_tab="matching",
     )
     Notification.objects.create(
         user=mentee_profile.user,
-        message=f"You are now paired with {mentor.user.username}. You can schedule sessions in Sessions.",
+        message=f"You are now paired with {mentor_name}. You can schedule sessions in Sessions.",
         action_tab="sessions",
     )
 
@@ -311,8 +321,8 @@ def mentee_choose_mentor(request):
         getattr(mentor.user, "email", "") or "",
         "New mentee pairing confirmed",
         (
-            f"Hi {mentor.user.username},\n\n"
-            f"{mentee_profile.user.username} has been paired with you as a mentee.\n\n"
+            f"Hi {mentor_name},\n\n"
+            f"{mentee_name} has been paired with you as a mentee.\n\n"
             "Open Matching or Sessions in the dashboard to continue."
         ),
     )
@@ -320,8 +330,8 @@ def mentee_choose_mentor(request):
         getattr(mentee_profile.user, "email", "") or "",
         "Mentor pairing confirmed",
         (
-            f"Hi {mentee_profile.user.username},\n\n"
-            f"You are now paired with {mentor.user.username}.\n\n"
+            f"Hi {mentee_name},\n\n"
+            f"You are now paired with {mentor_name}.\n\n"
             "You can schedule sessions from the Sessions tab."
         ),
     )
@@ -365,6 +375,7 @@ def mentor_requests(request):
         data.append({
             "mentee_id": e.id,
             "mentee_username": e.user.username,
+            "mentee_display_name": get_user_display_name(e.user) or e.user.username,
             "created_at": r.created_at.isoformat(),
             "accepted": r.accepted,
             "accepted_at": r.accepted_at.isoformat() if r.accepted_at else None,
@@ -408,6 +419,7 @@ def mentor_profile_by_user_id(request, user_id):
     payload = {
         "mentor_id": mentor.id,
         "mentor_username": mentor.user.username,
+        "mentor_display_name": get_user_display_name(mentor.user) or mentor.user.username,
         "mentor": _serialize_mentor_for_matching(mentor, request),
         "match_details": {},
     }

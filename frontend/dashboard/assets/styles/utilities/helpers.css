@@ -1,0 +1,7 @@
+.u-text-muted { color: var(--text-muted) !important; }
+.u-card { background: var(--card) !important; border: 1px solid var(--border) !important; border-radius: var(--radius-md) !important; }
+.u-shadow-sm { box-shadow: var(--shadow-sm) !important; }
+.u-shadow-md { box-shadow: var(--shadow-md) !important; }
+.u-rounded-sm { border-radius: var(--radius-sm) !important; }
+.u-rounded-md { border-radius: var(--radius-md) !important; }
+.u-rounded-lg { border-radius: var(--radius-lg) !important; }

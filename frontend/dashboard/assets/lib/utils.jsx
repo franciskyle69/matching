@@ -36,16 +36,112 @@
     return "";
   }
 
-  function LoadingSpinner({ inline = false }) {
+  function getAuthToken() {
+    try {
+      return window.localStorage.getItem("auth_access_token") || "";
+    } catch {
+      return "";
+    }
+  }
+
+  function getRefreshToken() {
+    try {
+      return window.localStorage.getItem("auth_refresh_token") || "";
+    } catch {
+      return "";
+    }
+  }
+
+  function setAuthToken(token) {
+    try {
+      if (!token) {
+        window.localStorage.removeItem("auth_access_token");
+        return;
+      }
+      window.localStorage.setItem("auth_access_token", token);
+    } catch {
+      // Ignore storage failures in privacy-restricted browsers.
+    }
+  }
+
+  function setRefreshToken(token) {
+    try {
+      if (!token) {
+        window.localStorage.removeItem("auth_refresh_token");
+        return;
+      }
+      window.localStorage.setItem("auth_refresh_token", token);
+    } catch {
+      // Ignore storage failures in privacy-restricted browsers.
+    }
+  }
+
+  function clearAuthToken() {
+    setAuthToken("");
+  }
+
+  function clearAuthTokens() {
+    clearAuthToken();
+    setRefreshToken("");
+  }
+
+  let refreshInFlight = null;
+
+  async function refreshAccessToken() {
+    if (refreshInFlight) return refreshInFlight;
+    const refreshToken = getRefreshToken();
+    if (!refreshToken) return null;
+
+    refreshInFlight = (async () => {
+      try {
+        const response = await fetch("/api/auth/refresh/", {
+          method: "POST",
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ refresh_token: refreshToken }),
+        });
+        if (!response.ok) return null;
+        const data = await response.json().catch(() => null);
+        if (!data || !data.access_token) return null;
+        setAuthToken(data.access_token);
+        if (data.refresh_token) setRefreshToken(data.refresh_token);
+        return data.access_token;
+      } catch {
+        return null;
+      } finally {
+        refreshInFlight = null;
+      }
+    })();
+
+    return refreshInFlight;
+  }
+
+  function LoadingSpinner({ inline = false, title = null, subtitle = null }) {
+    // Unified spinner using the matching page's design system
+    // For inline use: compact spinner without text
+    // For block use: full spinner with optional title and subtitle
     return (
       <div
-        className={`loading-spinner-spinkit ${inline ? "loading-spinner-inline" : ""}`}
+        className={`unified-loading-spinner ${inline ? "unified-loading-spinner-inline" : "unified-loading-spinner-block"}`}
         role="status"
-        aria-label="Loading"
+        aria-label={title ? `${title}` : "Loading"}
       >
-        <div className="loading-spinner-glow" />
-        <div className="loading-spinner-ring" />
-        <div className="loading-spinner-ring loading-spinner-ring-inner" />
+        <div className="unified-loading-visual">
+          <div className="unified-loading-ring" />
+          <div className="unified-loading-dots">
+            <span className="unified-loading-dot" />
+            <span className="unified-loading-dot" />
+            <span className="unified-loading-dot" />
+          </div>
+        </div>
+        {!inline && title && (
+          <>
+            <p className="unified-loading-title">{title}</p>
+            {subtitle && <p className="unified-loading-subtitle">{subtitle}</p>}
+          </>
+        )}
       </div>
     );
   }
@@ -78,33 +174,54 @@
   }
 
   function MatchingLoadingAnimation() {
-    return (
-      <div className="matching-loading-block" role="status" aria-label="Running matching">
-        <div className="matching-loading-visual">
-          <div className="matching-loading-ring" />
-          <div className="matching-loading-dots">
-            <span className="matching-loading-dot" />
-            <span className="matching-loading-dot" />
-            <span className="matching-loading-dot" />
-          </div>
-        </div>
-        <p className="matching-loading-title">Running matching…</p>
-        <p className="matching-loading-subtitle">Finding mentor–mentee pairs</p>
-      </div>
-    );
+    return <LoadingSpinner title="Running matching…" subtitle="Finding mentor–mentee pairs" />;
   }
 
   async function fetchJSON(url, options = {}) {
     try {
       const isRaw = options.raw;
-      const fetchOpts = { credentials: "include", ...options };
+      const token = getAuthToken();
+      const isApiPath = typeof url === "string" && url.startsWith("/api/");
+      const isCookieAuthPath =
+        typeof url === "string" &&
+        (/^\/api\/csrf\/?$/.test(url) ||
+          /^\/api\/auth\/(login|register|check-lockout|refresh|logout)\/?$/.test(url));
+      const useToken = !!(token && isApiPath && !isCookieAuthPath);
+      const defaultCredentials = isCookieAuthPath ? "include" : useToken ? "omit" : "include";
+      const fetchOpts = { credentials: defaultCredentials, ...options };
       delete fetchOpts.raw;
       if (isRaw) {
         fetchOpts.headers = { ...(options.headers || {}) };
       } else {
         fetchOpts.headers = { "Content-Type": "application/json", ...(options.headers || {}) };
       }
-      const response = await fetch(url, fetchOpts);
+      if (useToken && !fetchOpts.headers.Authorization) {
+        fetchOpts.headers.Authorization = `Bearer ${token}`;
+      }
+      let response = await fetch(url, fetchOpts);
+      if (useToken && response.status === 401) {
+        const newAccessToken = await refreshAccessToken();
+        if (newAccessToken) {
+          const retryOpts = {
+            ...fetchOpts,
+            credentials: "omit",
+            headers: {
+              ...(fetchOpts.headers || {}),
+              Authorization: `Bearer ${newAccessToken}`,
+            },
+          };
+          response = await fetch(url, retryOpts);
+        } else {
+          clearAuthTokens();
+          const retryOpts = {
+            ...fetchOpts,
+            credentials: "include",
+            headers: { ...(fetchOpts.headers || {}) },
+          };
+          delete retryOpts.headers.Authorization;
+          response = await fetch(url, retryOpts);
+        }
+      }
       const contentType = response.headers.get("content-type") || "";
       if (!contentType.includes("application/json")) {
         return { ok: false, status: response.status, data: null };
@@ -254,6 +371,14 @@
             <circle cx="12" cy="7" r="4" />
           </svg>
         );
+      case "lock":
+        return (
+          <svg {...common}>
+            <rect x="4" y="11" width="16" height="9" rx="2" ry="2" />
+            <path d="M8 11V8a4 4 0 0 1 8 0v3" />
+            <path d="M12 14v3" />
+          </svg>
+        );
       case "clipboardList":
         return (
           <svg {...common}>
@@ -299,6 +424,13 @@
   window.DashboardApp.Utils = {
     formatMatchScore,
     getCookie,
+    getAuthToken,
+    getRefreshToken,
+    setAuthToken,
+    setRefreshToken,
+    clearAuthToken,
+    clearAuthTokens,
+    refreshAccessToken,
     fetchJSON,
     formatDate,
     LoadingSpinner,

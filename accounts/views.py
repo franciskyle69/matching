@@ -2,21 +2,33 @@ from django.shortcuts import render, redirect
 from django.contrib import messages
 from django.contrib.auth import login, logout, authenticate
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth import update_session_auth_hash
 from django.contrib.auth.forms import AuthenticationForm
 from django.contrib.auth.tokens import default_token_generator
 from django.contrib.sites.shortcuts import get_current_site
 from django.core.mail import EmailMultiAlternatives
 from django.template.loader import render_to_string
+from django.utils.crypto import constant_time_compare
 from django.utils.encoding import force_bytes
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.contrib.auth import get_user_model
+import secrets
+import time
 
-from .forms import RegisterForm, AccountSettingsForm
+from .forms import RegisterForm, AccountSettingsForm, PasswordChangeWithCodeForm
 from profiles.models import MentorProfile, MenteeProfile
 from matching.models import MentoringSession
 
 
 ROLE_SESSION_KEY = "selected_role"
+GOOGLE_OAUTH_ROLE_SESSION_KEY = "google_oauth_selected_role"
+PASSWORD_CHANGE_CODE_SESSION_KEY = "password_change_verification_code"
+PASSWORD_CHANGE_CODE_EXPIRES_SESSION_KEY = "password_change_verification_expires_at"
+PASSWORD_CHANGE_CODE_ATTEMPTS_SESSION_KEY = "password_change_verification_attempts"
+PASSWORD_CHANGE_CODE_VERIFIED_SESSION_KEY = "password_change_verification_verified"
+PASSWORD_CHANGE_CODE_EMAIL_SESSION_KEY = "password_change_verification_email"
+PASSWORD_CHANGE_CODE_TTL_SECONDS = 10 * 60
+PASSWORD_CHANGE_MAX_ATTEMPTS = 5
 
 
 def home(request):
@@ -84,7 +96,16 @@ def select_role(request, role: str):
     if role not in ("mentor", "mentee"):
         return redirect("home")
     request.session[ROLE_SESSION_KEY] = role
-    return redirect("login")
+    next_url = request.GET.get("next") or "/app/signin"
+    return redirect(next_url)
+
+
+def select_google_role(request, role: str):
+    if role not in ("mentor", "mentee"):
+        return redirect("/app/signin?role_required=1")
+    request.session[ROLE_SESSION_KEY] = role
+    request.session[GOOGLE_OAUTH_ROLE_SESSION_KEY] = role
+    return redirect("/accounts/google/login/?process=login&next=/app/signin%3Foauth%3Dgoogle")
 
 
 def login_view(request):
@@ -92,8 +113,24 @@ def login_view(request):
         return redirect("/app/")
     selected_role = request.session.get(ROLE_SESSION_KEY)
     if not selected_role:
-        messages.info(request, "Please choose Mentor or Mentee to continue.")
-        return redirect("home")
+        role_required = str(request.GET.get("role_required", "")).lower() in (
+            "1",
+            "true",
+            "yes",
+            "on",
+        )
+        form = AuthenticationForm(request)
+        if role_required:
+            messages.info(request, "Please choose Mentor or Mentee to continue.")
+        return render(
+            request,
+            "registration/login.html",
+            {
+                "form": form,
+                "selected_role": None,
+                "role_required": role_required,
+            },
+        )
 
     if request.method == "POST":
         form = AuthenticationForm(request, data=request.POST)
@@ -117,7 +154,15 @@ def login_view(request):
     else:
         form = AuthenticationForm(request)
 
-    return render(request, "registration/login.html", {"form": form, "selected_role": selected_role})
+    return render(
+        request,
+        "registration/login.html",
+        {
+            "form": form,
+            "selected_role": selected_role,
+            "role_required": False,
+        },
+    )
 
 
 def register(request):
@@ -214,12 +259,85 @@ def settings_view(request):
     is_mentor = hasattr(request.user, "mentor_profile")
     is_mentee = hasattr(request.user, "mentee_profile")
     role = "Mentor" if is_mentor else "Mentee" if is_mentee else "Unassigned"
+    password_form = PasswordChangeWithCodeForm(user=request.user)
+
+    def _clear_password_change_code_session():
+        for key in (
+            PASSWORD_CHANGE_CODE_SESSION_KEY,
+            PASSWORD_CHANGE_CODE_EXPIRES_SESSION_KEY,
+            PASSWORD_CHANGE_CODE_ATTEMPTS_SESSION_KEY,
+        ):
+            request.session.pop(key, None)
+
     if request.method == "POST":
-        form = AccountSettingsForm(request.POST, instance=request.user)
-        if form.is_valid():
-            form.save()
-            messages.success(request, "Account information updated.")
+        action = (request.POST.get("action") or "").strip()
+
+        if action == "save_account":
+            form = AccountSettingsForm(request.POST, instance=request.user)
+            if form.is_valid():
+                form.save()
+                messages.success(request, "Account information updated.")
+                return redirect("settings")
+        elif action == "send_password_code":
+            form = AccountSettingsForm(instance=request.user)
+            if not request.user.email:
+                messages.error(request, "Add an email address first before changing password.")
+                return redirect("settings")
+
+            verification_code = f"{secrets.randbelow(1000000):06d}"
+            request.session[PASSWORD_CHANGE_CODE_SESSION_KEY] = verification_code
+            request.session[PASSWORD_CHANGE_CODE_EXPIRES_SESSION_KEY] = int(time.time()) + PASSWORD_CHANGE_CODE_TTL_SECONDS
+            request.session[PASSWORD_CHANGE_CODE_ATTEMPTS_SESSION_KEY] = 0
+
+            subject = "Your password change verification code"
+            body = (
+                f"Hello {request.user.get_username()},\n\n"
+                f"Your verification code is: {verification_code}\n"
+                f"This code expires in 10 minutes.\n\n"
+                "If you did not request this, you can ignore this email."
+            )
+            try:
+                EmailMultiAlternatives(subject, body, to=[request.user.email]).send()
+                messages.success(request, "Verification code sent to your email.")
+            except Exception:
+                _clear_password_change_code_session()
+                messages.error(request, "Unable to send verification code right now. Please try again.")
+
             return redirect("settings")
+        elif action == "change_password_with_code":
+            form = AccountSettingsForm(instance=request.user)
+            password_form = PasswordChangeWithCodeForm(request.POST, user=request.user)
+            if password_form.is_valid():
+                stored_code = str(request.session.get(PASSWORD_CHANGE_CODE_SESSION_KEY, ""))
+                expires_at = int(request.session.get(PASSWORD_CHANGE_CODE_EXPIRES_SESSION_KEY, 0) or 0)
+                attempts = int(request.session.get(PASSWORD_CHANGE_CODE_ATTEMPTS_SESSION_KEY, 0) or 0)
+
+                if not stored_code or not expires_at:
+                    messages.error(request, "Request a verification code first.")
+                elif int(time.time()) > expires_at:
+                    _clear_password_change_code_session()
+                    messages.error(request, "Verification code expired. Request a new one.")
+                elif attempts >= PASSWORD_CHANGE_MAX_ATTEMPTS:
+                    _clear_password_change_code_session()
+                    messages.error(request, "Too many incorrect attempts. Request a new verification code.")
+                else:
+                    entered_code = password_form.cleaned_data["verification_code"]
+                    if not constant_time_compare(entered_code, stored_code):
+                        request.session[PASSWORD_CHANGE_CODE_ATTEMPTS_SESSION_KEY] = attempts + 1
+                        messages.error(request, "Invalid verification code.")
+                    else:
+                        request.user.set_password(password_form.cleaned_data["new_password2"])
+                        request.user.save(update_fields=["password"])
+                        update_session_auth_hash(request, request.user)
+                        _clear_password_change_code_session()
+                        messages.success(request, "Password changed successfully.")
+                        return redirect("settings")
+        else:
+            form = AccountSettingsForm(request.POST, instance=request.user)
+            if form.is_valid():
+                form.save()
+                messages.success(request, "Account information updated.")
+                return redirect("settings")
     else:
         form = AccountSettingsForm(instance=request.user)
 
@@ -231,5 +349,6 @@ def settings_view(request):
             "is_mentor": is_mentor,
             "is_mentee": is_mentee,
             "form": form,
+            "password_form": password_form,
         },
     )

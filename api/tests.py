@@ -18,7 +18,7 @@ class ApiAuthTests(TestCase):
     def test_login_success(self):
         res = self.client.post(
             "/api/auth/login/",
-            data=json.dumps({"username": "mentor1", "password": self.password}),
+            data=json.dumps({"email": "m1@test.com", "password": self.password}),
             content_type="application/json",
         )
         self.assertEqual(res.status_code, 200)
@@ -27,12 +27,12 @@ class ApiAuthTests(TestCase):
         for _ in range(8):
             self.client.post(
                 "/api/auth/login/",
-                data=json.dumps({"username": "mentor1", "password": "wrong"}),
+                data=json.dumps({"email": "m1@test.com", "password": "wrong"}),
                 content_type="application/json",
             )
         res = self.client.post(
             "/api/auth/login/",
-            data=json.dumps({"username": "mentor1", "password": "wrong"}),
+            data=json.dumps({"email": "m1@test.com", "password": "wrong"}),
             content_type="application/json",
         )
         self.assertEqual(res.status_code, 429)
@@ -48,7 +48,7 @@ class ApiSessionTests(TestCase):
 
         self.client.post(
             "/api/auth/login/",
-            data=json.dumps({"username": "mentor2", "password": "Pass123!"}),
+            data=json.dumps({"email": "m2@test.com", "password": "Pass123!"}),
             content_type="application/json",
         )
 
@@ -90,10 +90,15 @@ class ApiSessionTests(TestCase):
 
 class ApiMatchingTests(TestCase):
     def setUp(self):
-        self.admin = User.objects.create_user(username="admin1", password="AdminPass123!", is_staff=True)
+        self.admin = User.objects.create_user(
+            username="admin1",
+            email="admin1@test.com",
+            password="AdminPass123!",
+            is_staff=True,
+        )
         self.client.post(
             "/api/auth/login/",
-            data=json.dumps({"username": "admin1", "password": "AdminPass123!"}),
+            data=json.dumps({"email": "admin1@test.com", "password": "AdminPass123!"}),
             content_type="application/json",
         )
 

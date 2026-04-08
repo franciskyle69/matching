@@ -4,8 +4,8 @@
 <div class="card">
   <h1>Update Session</h1>
   <p>
-    Mentor: <strong>{{ session.mentor.user.username }}</strong><br>
-    Mentee: <strong>{{ session.mentee.user.username }}</strong><br>
+    Mentor: <strong>{% if session.mentor.user.first_name or session.mentor.user.last_name %}{{ session.mentor.user.first_name }} {{ session.mentor.user.last_name }}{% else %}{{ session.mentor.user.username }}{% endif %}</strong><br>
+    Mentee: <strong>{% if session.mentee.user.first_name or session.mentee.user.last_name %}{{ session.mentee.user.first_name }} {{ session.mentee.user.last_name }}{% else %}{{ session.mentee.user.username }}{% endif %}</strong><br>
     Time: <strong>{{ session.scheduled_at }}</strong>
   </p>
   <p>Mark this session as <strong>{{ status }}</strong>?</p>

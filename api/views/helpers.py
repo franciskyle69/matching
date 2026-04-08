@@ -12,16 +12,26 @@ from django.conf import settings
 from django.core.mail import EmailMultiAlternatives
 from django.template.loader import render_to_string
 
+from accounts.models import get_user_display_name
 from matching.models import AuditLog, MentoringSession, Notification, Subject, Topic
 from profiles.models import MenteeProfile
 
 logger = logging.getLogger(__name__)
 
 
+def _user_display_name(user):
+    name = get_user_display_name(user)
+    if name:
+        return name
+    if getattr(user, "email", ""):
+        return user.email
+    return getattr(user, "username", "") or ""
+
+
 def _send_session_scheduled_emails(session: MentoringSession, is_reschedule: bool = False):
     """Send session schedule details by email to mentee and mentor."""
-    mentor_username = session.mentor.user.username
-    mentee_username = session.mentee.user.username
+    mentor_name = _user_display_name(session.mentor.user)
+    mentee_name = _user_display_name(session.mentee.user)
     subject_name = session.subject.name if session.subject else ""
     topic_name = session.topic.name if session.topic else ""
     scheduled_at_str = timezone.localtime(session.scheduled_at).strftime("%A, %B %d, %Y at %I:%M %p")
@@ -29,8 +39,10 @@ def _send_session_scheduled_emails(session: MentoringSession, is_reschedule: boo
     notes = (session.notes or "").strip()
 
     context = {
-        "mentor_username": mentor_username,
-        "mentee_username": mentee_username,
+        "mentor_name": mentor_name,
+        "mentee_name": mentee_name,
+        "mentor_username": session.mentor.user.username,
+        "mentee_username": session.mentee.user.username,
         "subject_name": subject_name,
         "topic_name": topic_name,
         "scheduled_at": scheduled_at_str,
@@ -44,8 +56,8 @@ def _send_session_scheduled_emails(session: MentoringSession, is_reschedule: boo
 
     subject_prefix = "Mentoring session rescheduled – " if is_reschedule else "Mentoring session scheduled – "
     for recipient_user, recipient_name in [
-        (session.mentee.user, mentee_username),
-        (session.mentor.user, mentor_username),
+        (session.mentee.user, mentee_name),
+        (session.mentor.user, mentor_name),
     ]:
         email_addr = getattr(recipient_user, "email", None) or ""
         if not email_addr:
@@ -72,8 +84,8 @@ def _send_session_scheduled_emails(session: MentoringSession, is_reschedule: boo
 
 def _send_session_reminder_emails(session: MentoringSession, window_label: str):
     """Send reminder emails (e.g. 24h / 1h before) for a session."""
-    mentor_username = session.mentor.user.username
-    mentee_username = session.mentee.user.username
+    mentor_name = _user_display_name(session.mentor.user)
+    mentee_name = _user_display_name(session.mentee.user)
     subject_name = session.subject.name if session.subject else ""
     topic_name = session.topic.name if session.topic else ""
     scheduled_at_str = timezone.localtime(session.scheduled_at).strftime("%A, %B %d, %Y at %I:%M %p")
@@ -81,8 +93,10 @@ def _send_session_reminder_emails(session: MentoringSession, window_label: str):
     notes = (session.notes or "").strip()
 
     context = {
-        "mentor_username": mentor_username,
-        "mentee_username": mentee_username,
+        "mentor_name": mentor_name,
+        "mentee_name": mentee_name,
+        "mentor_username": session.mentor.user.username,
+        "mentee_username": session.mentee.user.username,
         "subject_name": subject_name,
         "topic_name": topic_name,
         "scheduled_at": scheduled_at_str,
@@ -96,8 +110,8 @@ def _send_session_reminder_emails(session: MentoringSession, window_label: str):
 
     subject_prefix = f"Reminder ({window_label}) – mentoring session at "
     for recipient_user, recipient_name in [
-        (session.mentee.user, mentee_username),
-        (session.mentor.user, mentor_username),
+        (session.mentee.user, mentee_name),
+        (session.mentor.user, mentor_name),
     ]:
         email_addr = getattr(recipient_user, "email", None) or ""
         if not email_addr:
@@ -136,14 +150,16 @@ def _maybe_send_due_session_reminders():
         scheduled_at__gt=now,
     )
     for session in soon_24h:
+        mentee_name = _user_display_name(session.mentee.user)
+        mentor_name = _user_display_name(session.mentor.user)
         Notification.objects.create(
             user=session.mentor.user,
-            message=f"Reminder: mentoring session with {session.mentee.user.username} is within 24 hours.",
+            message=f"Reminder: mentoring session with {mentee_name} is within 24 hours.",
             action_tab="sessions",
         )
         Notification.objects.create(
             user=session.mentee.user,
-            message=f"Reminder: mentoring session with {session.mentor.user.username} is within 24 hours.",
+            message=f"Reminder: mentoring session with {mentor_name} is within 24 hours.",
             action_tab="sessions",
         )
         _send_session_reminder_emails(session, "24 hours")
@@ -156,14 +172,16 @@ def _maybe_send_due_session_reminders():
         scheduled_at__gt=now,
     )
     for session in soon_1h:
+        mentee_name = _user_display_name(session.mentee.user)
+        mentor_name = _user_display_name(session.mentor.user)
         Notification.objects.create(
             user=session.mentor.user,
-            message=f"Reminder: mentoring session with {session.mentee.user.username} starts in less than 1 hour.",
+            message=f"Reminder: mentoring session with {mentee_name} starts in less than 1 hour.",
             action_tab="sessions",
         )
         Notification.objects.create(
             user=session.mentee.user,
-            message=f"Reminder: mentoring session with {session.mentor.user.username} starts in less than 1 hour.",
+            message=f"Reminder: mentoring session with {mentor_name} starts in less than 1 hour.",
             action_tab="sessions",
         )
         _send_session_reminder_emails(session, "1 hour")
@@ -209,6 +227,7 @@ def _serialize_mentor_for_matching(m, request=None):
         "id": m.id,
         "user_id": m.user_id,
         "username": m.user.username,
+        "display_name": _user_display_name(m.user),
         "subjects": subs or [],
         "topics": tops or [],
         "role": m.role or "",
@@ -241,6 +260,7 @@ def _serialize_mentee_for_matching(e, request=None):
     out = {
         "id": e.id,
         "username": e.user.username,
+        "display_name": _user_display_name(e.user),
         "subjects": subs or [],
         "topics": tops or [],
         "difficulty_level": e.difficulty_level,
@@ -450,8 +470,10 @@ def _serialize_session(session: MentoringSession):
         "id": session.id,
         "mentor_id": session.mentor_id,
         "mentor_username": session.mentor.user.username,
+        "mentor_display_name": _user_display_name(session.mentor.user),
         "mentee_id": session.mentee_id,
         "mentee_username": session.mentee.user.username,
+        "mentee_display_name": _user_display_name(session.mentee.user),
         "subject": session.subject.name if session.subject else None,
         "subject_id": session.subject_id,
         "topic": session.topic.name if session.topic else None,
@@ -483,7 +505,11 @@ def _serialize_topic(topic: Topic):
 
 
 def _serialize_mentee(mentee: MenteeProfile):
-    return {"id": mentee.id, "username": mentee.user.username}
+    return {
+        "id": mentee.id,
+        "username": mentee.user.username,
+        "display_name": _user_display_name(mentee.user),
+    }
 
 
 def get_subjects_list():

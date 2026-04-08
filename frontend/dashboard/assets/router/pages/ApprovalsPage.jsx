@@ -12,16 +12,17 @@
   }
 
   function MentorCard({ m, loading, onApprove, onReject, Spinner }) {
+    const displayName = m.display_name || m.full_name || m.username;
     return (
       <div className="approval-card">
         <div className="approval-card-header">
           <span className="approval-card-title">
-            {m.username}
+            {displayName}
             {m.general_info_complete && <span className="approval-badge-complete">Info complete</span>}
           </span>
           <div className="btn-row">
             {loading ? (
-              <span className="loading-inline"><Spinner inline /> Processing...</span>
+              <Spinner inline />
             ) : (
               <>
                 <button type="button" className="btn small" onClick={() => onApprove(m.id)}>Accept</button>
@@ -45,16 +46,17 @@
   }
 
   function MenteeCard({ m, loading, onApprove, onReject, Spinner }) {
+    const displayName = m.display_name || m.full_name || m.username;
     return (
       <div className="approval-card">
         <div className="approval-card-header">
           <span className="approval-card-title">
-            {m.username}
+            {displayName}
             {m.general_info_complete && <span className="approval-badge-complete">Info complete</span>}
           </span>
           <div className="btn-row">
             {loading ? (
-              <span className="loading-inline"><Spinner inline /> Processing...</span>
+              <Spinner inline />
             ) : (
               <>
                 <button type="button" className="btn small" onClick={() => onApprove(m.id)}>Accept</button>
@@ -102,7 +104,7 @@
       <div className="card">
         <h1 className="page-title">Approve users</h1>
         <p className="page-subtitle">Review and accept or reject pending mentor and mentee accounts.</p>
-        {approvalsLoading && <div className="loading-block"><Spinner /><p className="muted">Loading...</p></div>}
+        {approvalsLoading && <Spinner title="Loading approvals…" subtitle="Fetching pending users" />}
         {!approvalsLoading && (
           <div className="approvals-grid">
             <section className="approvals-section">

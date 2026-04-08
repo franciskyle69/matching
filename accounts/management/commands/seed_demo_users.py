@@ -3,14 +3,42 @@ import random
 from django.core.management.base import BaseCommand
 from django.contrib.auth.models import User
 from django.db.models import Q
-from django.db import IntegrityError
 
 from profiles.models import MentorProfile, MenteeProfile
 from profiles.forms import SUBJECT_CHOICES, TOPIC_CHOICES, RATING_CHOICES, ROLE_CHOICES
 
 
 class Command(BaseCommand):
-    help = "Seed 50 mentor and 50 mentee demo accounts (mentor1-50, mentee1-50)."
+    help = "Seed mentor/mentee demo accounts with realistic random full names."
+
+    FIRST_NAMES = [
+        "Nolan", "Mark", "Eve", "Allen", "Samantha", "Cecil", "Debbie", "William",
+        "Logan", "Maya", "Jordan", "Avery", "Theo", "Iris", "Ethan", "Liam",
+        "Noah", "Olivia", "Emma", "Sophia", "Amelia", "Lucas", "Mason", "Elijah",
+        "Harper", "Mila", "Aria", "Scarlett", "Camila", "Gianna", "Benjamin", "James",
+        "Henry", "Alexander", "Michael", "Daniel", "Sebastian", "Jack", "Aiden", "David",
+        "Matthew", "Levi", "Julian", "Leo", "Asher", "Ezra", "Nova", "Willow",
+        "Aurora", "Hazel", "Luna", "Violet", "Stella", "Zoey", "Grace", "Chloe",
+    ]
+    MIDDLE_NAMES = [
+        "", "", "", "Lee", "James", "Marie", "Rose", "Anne", "Mae", "Ray", "Kai", "Alex",
+        "Noel", "Jude", "Skye", "Reese", "Cole", "Blair", "Drew", "Lane",
+    ]
+    LAST_NAMES = [
+        "Grayson", "Smith", "Johnson", "Williams", "Brown", "Jones", "Garcia", "Miller",
+        "Davis", "Rodriguez", "Martinez", "Hernandez", "Lopez", "Gonzalez", "Wilson", "Anderson",
+        "Thomas", "Taylor", "Moore", "Jackson", "Martin", "Lee", "Perez", "Thompson",
+        "White", "Harris", "Sanchez", "Clark", "Ramirez", "Lewis", "Walker", "Young",
+        "Allen", "King", "Wright", "Scott", "Torres", "Nguyen", "Hill", "Flores",
+        "Green", "Adams", "Nelson", "Baker", "Hall", "Rivera", "Campbell", "Mitchell",
+        "Carter", "Roberts", "Gomez", "Phillips", "Evans", "Turner", "Diaz", "Parker",
+    ]
+
+    def _random_name_parts(self):
+        first_name = random.choice(self.FIRST_NAMES)
+        middle_name = random.choice(self.MIDDLE_NAMES)
+        last_name = random.choice(self.LAST_NAMES)
+        return first_name, middle_name, last_name
 
     def add_arguments(self, parser):
         parser.add_argument(
@@ -44,9 +72,13 @@ class Command(BaseCommand):
                 Q(username__regex=r"^mentor[0-9]+$") | Q(username__regex=r"^mentee[0-9]+$")
             )
             demo_count = demo_users_qs.count()
-            if demo_count:
+            if demo_count and username_table_exists:
                 self.stdout.write(self.style.WARNING(f"Deleting {demo_count} existing demo user(s) (mentorN/menteeN)…"))
                 demo_users_qs.delete()
+            elif demo_count and not username_table_exists:
+                self.stdout.write(self.style.WARNING(
+                    "Skipping reset delete because related UserName table is missing in this database."
+                ))
             else:
                 self.stdout.write("No existing mentorN/menteeN demo users to delete.")
 
@@ -66,19 +98,21 @@ class Command(BaseCommand):
         # Seed mentors: mentor1..mentorN
         for i in range(1, mentor_count + 1):
             username = f"mentor{i}"
-            if User.objects.filter(username=username).exists():
-                self.stdout.write(self.style.WARNING(f"Skipping existing user {username}"))
-                continue
-
-            try:
-                user = User.objects.create_user(
-                    username=username,
-                    email=f"{username}@example.com",
-                    password=username,
-                )
-            except IntegrityError:
-                self.stdout.write(self.style.WARNING(f"Skipping existing user {username}"))
-                continue
+            first_name, middle_name, last_name = self._random_name_parts()
+            user, created = User.objects.get_or_create(
+                username=username,
+                defaults={
+                    "email": f"{username}@example.com",
+                    "first_name": first_name,
+                    "last_name": last_name,
+                },
+            )
+            if not created:
+                user.email = f"{username}@example.com"
+                user.first_name = first_name
+                user.last_name = last_name
+            user.set_password(username)
+            user.save()
             # Randomized but reasonable defaults so mentors look "real"
             subjects_sample = random.sample(subject_labels, k=1) if subject_labels else []
             topics_sample = random.sample(topic_labels, k=1) if topic_labels else []
@@ -112,24 +146,31 @@ class Command(BaseCommand):
                 },
             )
             created_mentors += 1
-            self.stdout.write(self.style.SUCCESS(f"Created mentor user {username} (id={user.id}, profile_id={mentor_profile.id})"))
+            full_name = " ".join(
+                p for p in [first_name, middle_name, last_name] if p
+            )
+            self.stdout.write(self.style.SUCCESS(
+                f"Created mentor user {username} ({full_name}) (id={user.id}, profile_id={mentor_profile.id})"
+            ))
 
         # Seed mentees: mentee1..menteeN
         for i in range(1, mentee_count + 1):
             username = f"mentee{i}"
-            if User.objects.filter(username=username).exists():
-                self.stdout.write(self.style.WARNING(f"Skipping existing user {username}"))
-                continue
-
-            try:
-                user = User.objects.create_user(
-                    username=username,
-                    email=f"{username}@example.com",
-                    password=username,
-                )
-            except IntegrityError:
-                self.stdout.write(self.style.WARNING(f"Skipping existing user {username}"))
-                continue
+            first_name, middle_name, last_name = self._random_name_parts()
+            user, created = User.objects.get_or_create(
+                username=username,
+                defaults={
+                    "email": f"{username}@example.com",
+                    "first_name": first_name,
+                    "last_name": last_name,
+                },
+            )
+            if not created:
+                user.email = f"{username}@example.com"
+                user.first_name = first_name
+                user.last_name = last_name
+            user.set_password(username)
+            user.save()
             # Randomized mentee questionnaire answers so matching can run immediately
             mentee_subjects = random.sample(subject_labels, k=min(2, len(subject_labels))) if subject_labels else []
             mentee_topics = random.sample(topic_labels, k=min(3, len(topic_labels))) if topic_labels else []
@@ -165,7 +206,12 @@ class Command(BaseCommand):
                 },
             )
             created_mentees += 1
-            self.stdout.write(self.style.SUCCESS(f"Created mentee user {username} (id={user.id}, profile_id={mentee_profile.id})"))
+            full_name = " ".join(
+                p for p in [first_name, middle_name, last_name] if p
+            )
+            self.stdout.write(self.style.SUCCESS(
+                f"Created mentee user {username} ({full_name}) (id={user.id}, profile_id={mentee_profile.id})"
+            ))
 
         self.stdout.write(
             self.style.SUCCESS(

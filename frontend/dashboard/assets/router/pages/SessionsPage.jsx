@@ -117,9 +117,7 @@
                 disabled={saving}
               >
                 {saving ? (
-                  <span className="loading-inline">
-                    <Spinner inline /> Saving…
-                  </span>
+                  <Spinner inline />
                 ) : (
                   "Save"
                 )}
@@ -160,12 +158,14 @@
     weeklyLimitReached,
   }) {
     const showReschedule = rescheduleId === session.id;
+    const menteeLabel = session.mentee_display_name || session.mentee_username;
+    const mentorLabel = session.mentor_display_name || session.mentor_username;
     return (
       <div className="session-card" key={session.id}>
         <div className="session-card-header">
           <div className="session-card-main">
             <p className="session-card-title">
-              {session.mentee_username} with {session.mentor_username}
+              {menteeLabel} with {mentorLabel}
             </p>
             <p className="session-card-meta">
               {formatDate(session.scheduled_at)}
@@ -393,6 +393,7 @@
         : (options.mentees || []).map((m) => ({
             mentee_id: m.id,
             mentee_username: m.username,
+          mentee_display_name: m.display_name || m.username,
             total_completed_minutes: 0,
             progress_percent: 0,
             difficulty_subjects: Array.isArray(m.difficulty_subjects)
@@ -523,7 +524,7 @@
                     onClick={() => setSessionsPairMenteeId(entry.mentee_id)}
                   >
                     <span className="mentee-pair-card-name">
-                      {entry.mentee_username}
+                      {entry.mentee_display_name || entry.mentee_username}
                     </span>
                     <span className="mentee-pair-card-stats">
                       {formatMinutesAsHours(entry.total_completed_minutes)} /{" "}
@@ -563,7 +564,7 @@
             (e) => Number(e.mentee_id) === Number(sessionsPairMenteeId),
           )
         : null;
-    const pairMenteeName = pairEntry ? pairEntry.mentee_username : "Mentee";
+    const pairMenteeName = pairEntry ? (pairEntry.mentee_display_name || pairEntry.mentee_username) : "Mentee";
     const normalizeLabel = (value) =>
       String(value || "")
         .trim()
@@ -653,12 +654,12 @@
                   {myMentor.avatar_url ? (
                     <img
                       src={myMentor.avatar_url}
-                      alt={myMentor.username}
+                      alt={myMentor.display_name || myMentor.username}
                       className="sidebar-avatar"
                     />
                   ) : (
                     <div className="sidebar-avatar fallback">
-                      {(myMentor.username || "?").slice(0, 1).toUpperCase()}
+                      {(myMentor.display_name || myMentor.username || "?").slice(0, 1).toUpperCase()}
                     </div>
                   )}
                 </div>
@@ -668,7 +669,7 @@
                   Your official mentor
                 </p>
                 <p className="stat-value" style={{ marginBottom: 2 }}>
-                  {myMentor.username}
+                  {myMentor.display_name || myMentor.username}
                 </p>
                 {myMentor.accepted_at && (
                   <p className="muted" style={{ fontSize: "12px" }}>
@@ -711,12 +712,16 @@
         {!sessionsLoading &&
           !isStaffView &&
           !isMentor &&
-          (sessionsData.upcoming?.[0]?.mentor_username ||
+          (sessionsData.upcoming?.[0]?.mentor_display_name ||
+            sessionsData.history?.[0]?.mentor_display_name ||
+            sessionsData.upcoming?.[0]?.mentor_username ||
             sessionsData.history?.[0]?.mentor_username) && (
             <p className="sessions-mentor-dedicated">
               Your mentoring with{" "}
               <strong>
-                {sessionsData.upcoming?.[0]?.mentor_username ||
+                {sessionsData.upcoming?.[0]?.mentor_display_name ||
+                  sessionsData.history?.[0]?.mentor_display_name ||
+                  sessionsData.upcoming?.[0]?.mentor_username ||
                   sessionsData.history?.[0]?.mentor_username}
               </strong>
             </p>
@@ -794,10 +799,7 @@
           )}
         {sessionsLoading && (
           <>
-            <div className="loading-block" style={{ minHeight: "12rem" }}>
-              {OrbitingDotsLoader && <OrbitingDotsLoader size={60} speed={1} />}
-              <p className="muted">Loading sessions…</p>
-            </div>
+            <Spinner title="Loading sessions…" subtitle="Fetching your sessions" />
             <div className="sessions-section">
               <h3 className="sessions-section-title">Upcoming</h3>
               {[1, 2, 3].map((i) => (
@@ -1025,9 +1027,7 @@
                       }
                     >
                       {createSessionLoading ? (
-                        <span className="loading-inline">
-                          <Spinner inline /> Scheduling session…
-                        </span>
+                        <Spinner inline />
                       ) : (
                         "Schedule session"
                       )}
@@ -1145,8 +1145,8 @@
                     <div className="session-card-header">
                       <div className="session-card-main">
                         <p className="session-card-title">
-                          {session.mentee_username} with{" "}
-                          {session.mentor_username}
+                          {session.mentee_display_name || session.mentee_username} with{" "}
+                          {session.mentor_display_name || session.mentor_username}
                         </p>
                         <p className="session-card-meta">
                           {formatDate(session.scheduled_at)}

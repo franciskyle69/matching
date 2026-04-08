@@ -17,8 +17,8 @@
           Hi {{ recipient_name }}, a mentoring session has been scheduled with the following details.
         </p>
         <table style="width:100%; border-collapse:collapse; font-size:14px;">
-          <tr><td style="padding:8px 0; color:#64748b; border-bottom:1px solid #f1f5f9;">Mentor</td><td style="padding:8px 0; border-bottom:1px solid #f1f5f9;">{{ mentor_username }}</td></tr>
-          <tr><td style="padding:8px 0; color:#64748b; border-bottom:1px solid #f1f5f9;">Mentee</td><td style="padding:8px 0; border-bottom:1px solid #f1f5f9;">{{ mentee_username }}</td></tr>
+          <tr><td style="padding:8px 0; color:#64748b; border-bottom:1px solid #f1f5f9;">Mentor</td><td style="padding:8px 0; border-bottom:1px solid #f1f5f9;">{{ mentor_name|default:mentor_username }}</td></tr>
+          <tr><td style="padding:8px 0; color:#64748b; border-bottom:1px solid #f1f5f9;">Mentee</td><td style="padding:8px 0; border-bottom:1px solid #f1f5f9;">{{ mentee_name|default:mentee_username }}</td></tr>
           <tr><td style="padding:8px 0; color:#64748b; border-bottom:1px solid #f1f5f9;">Subject</td><td style="padding:8px 0; border-bottom:1px solid #f1f5f9;">{{ subject_name|default:"—" }}</td></tr>
           <tr><td style="padding:8px 0; color:#64748b; border-bottom:1px solid #f1f5f9;">Topic</td><td style="padding:8px 0; border-bottom:1px solid #f1f5f9;">{{ topic_name|default:"—" }}</td></tr>
           <tr><td style="padding:8px 0; color:#64748b; border-bottom:1px solid #f1f5f9;">Date &amp; time</td><td style="padding:8px 0; border-bottom:1px solid #f1f5f9;">{{ scheduled_at }}</td></tr>

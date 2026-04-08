@@ -3,7 +3,7 @@
 {% block content %}
 {% if user.is_authenticated %}
 <div class="card">
-  <h1>Welcome, {{ user.username }}</h1>
+  <h1>Welcome, {{ user.get_full_name|default:user.email }}</h1>
   <p style="color: var(--text-muted); margin-bottom: 1.5rem;">
     You are signed in. Use the actions below to explore the matching system.
   </p>

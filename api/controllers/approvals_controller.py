@@ -2,6 +2,7 @@ from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 from django.views.decorators.http import require_GET, require_http_methods
 
+from accounts.models import get_user_display_name
 from profiles.models import MentorProfile, MenteeProfile
 
 from ..views import _require_staff, audit_log, invalidate_approval_cache_mentor, invalidate_approval_cache_mentee
@@ -32,12 +33,15 @@ def _mentee_general_info_complete(mentee):
 
 def _serialize_mentor_detail(mentor):
     u = mentor.user
+    display_name = get_user_display_name(u) or u.username
     subs = mentor.subjects if isinstance(mentor.subjects, list) else (list(mentor.subjects) if mentor.subjects else [])
     tops = mentor.topics if isinstance(mentor.topics, list) else (list(mentor.topics) if mentor.topics else [])
     return {
         "id": mentor.id,
         "user_id": u.id,
         "username": u.username,
+        "display_name": display_name,
+        "full_name": display_name,
         "email": getattr(u, "email", "") or "",
         "program": mentor.program or "",
         "year_level": mentor.year_level,
@@ -56,10 +60,13 @@ def _serialize_mentor_detail(mentor):
 
 def _serialize_mentee_detail(mentee):
     u = mentee.user
+    display_name = get_user_display_name(u) or u.username
     return {
         "id": mentee.id,
         "user_id": u.id,
         "username": u.username,
+        "display_name": display_name,
+        "full_name": display_name,
         "email": getattr(u, "email", "") or "",
         "program": mentee.program or "",
         "year_level": mentee.year_level,
@@ -102,9 +109,9 @@ def pending_list(request):
     mentors_data = [_serialize_mentor_detail(m) for m in pending_mentors]
     mentees_data = [_serialize_mentee_detail(m) for m in pending_mentees]
 
-    # Sort: general info complete first, then by username
-    mentors_data.sort(key=lambda x: (not x.get("general_info_complete", False), (x.get("username") or "").lower()))
-    mentees_data.sort(key=lambda x: (not x.get("general_info_complete", False), (x.get("username") or "").lower()))
+    # Sort: general info complete first, then by display name.
+    mentors_data.sort(key=lambda x: (not x.get("general_info_complete", False), (x.get("display_name") or x.get("username") or "").lower()))
+    mentees_data.sort(key=lambda x: (not x.get("general_info_complete", False), (x.get("display_name") or x.get("username") or "").lower()))
 
     return JsonResponse({
         "pending_mentors": mentors_data,

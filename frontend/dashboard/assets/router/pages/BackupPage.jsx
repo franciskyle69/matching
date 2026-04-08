@@ -101,7 +101,7 @@
             Create New Backup
           </h2>
           <p className="backup-card-desc">
-            Creates a complete backup of all collections as a JSON file: users,
+            Creates a complete backup of all collections as a database backup file: users,
             mentors, mentees, subjects, sessions, announcements, and more.
             Stored in <code>{backupDir || "backups/"}</code>.
           </p>
@@ -113,9 +113,7 @@
               disabled={backupCreateLoading}
             >
               {backupCreateLoading ? (
-                <span className="loading-inline">
-                  <Spinner inline /> Creating…
-                </span>
+                <Spinner inline />
               ) : (
                 "Create Backup Now"
               )}
@@ -123,7 +121,7 @@
             <input
               type="file"
               ref={fileInputRef}
-              accept=".json"
+              accept=".json,.gz,.zip,.bz2,.sql,.psql,.dump,.backup"
               onChange={onFileChange}
               style={{ display: "none" }}
             />
@@ -134,9 +132,7 @@
               disabled={backupRestoreLoading}
             >
               {backupRestoreLoading ? (
-                <span className="loading-inline">
-                  <Spinner inline /> Restoring…
-                </span>
+                <Spinner inline />
               ) : (
                 "Upload & Restore"
               )}
@@ -173,10 +169,7 @@
             </button>
           </div>
           {backupsLoading && backups.length === 0 ? (
-            <div className="loading-block">
-              <Spinner />
-              <p className="muted">Loading backups…</p>
-            </div>
+            <Spinner title="Loading backups…" subtitle="Fetching available backup files" />
           ) : backups.length === 0 ? (
             <p className="muted backup-empty">
               No backups yet. Create one above.

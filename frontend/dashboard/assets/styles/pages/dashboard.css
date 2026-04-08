@@ -1,0 +1,10 @@
+[data-theme="light"] .home-dashboard-space,
+[data-theme="light"] .mentee-dashboard-v2 {
+  background: var(--bg);
+}
+
+[data-theme="light"] .home-dashboard-space .card,
+[data-theme="light"] .mentee-dashboard-v2 .mentee-v2-panel {
+  background: var(--card);
+  border-color: var(--border);
+}

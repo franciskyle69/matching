@@ -9,6 +9,7 @@ from profiles.models import MentorProfile, MenteeProfile
 
 User = get_user_model()
 ROLE_SESSION_KEY = "selected_role"
+GOOGLE_OAUTH_ROLE_SESSION_KEY = "google_oauth_selected_role"
 
 
 class RoleAwareSocialAccountAdapter(DefaultSocialAccountAdapter):
@@ -20,18 +21,17 @@ class RoleAwareSocialAccountAdapter(DefaultSocialAccountAdapter):
 
     def pre_social_login(self, request, sociallogin: SocialLogin):
         selected_role = request.session.get(ROLE_SESSION_KEY)
+        selected_google_role = request.session.get(GOOGLE_OAUTH_ROLE_SESSION_KEY)
         user = sociallogin.user
         email = sociallogin.email_addresses[0].email if sociallogin.email_addresses else None
         
-        # Check if a user with this email already exists (for account linking)
-        # This allows users to log in with Google even if they created account with email/password
+        # If a local account exists for this email, attach the social login to that user
+        # and continue normal login flow. Using 'connect' here forces allauth's
+        # /accounts/login/?next=/accounts/3rdparty/ fallback.
         if email and not user.pk:
             try:
-                existing_user = User.objects.get(email=email)
-                # Link the Google social account to the existing user account
+                existing_user = User.objects.get(email__iexact=email)
                 sociallogin.user = existing_user
-                sociallogin.state['process'] = 'connect'
-                messages.success(request, f"Google account successfully linked! You can now log in with either email/password or Google.")
             except User.DoesNotExist:
                 pass  # New user, continue with normal flow
         
@@ -49,58 +49,87 @@ class RoleAwareSocialAccountAdapter(DefaultSocialAccountAdapter):
                 request.session[ROLE_SESSION_KEY] = "mentee"
                 selected_role = "mentee"
 
+        if (
+            not selected_role
+            and selected_google_role in ("mentor", "mentee")
+            and not (is_mentor or is_mentee)
+        ):
+            request.session[ROLE_SESSION_KEY] = selected_google_role
+            selected_role = selected_google_role
+
+        # Brand new Google users must explicitly choose role for this OAuth attempt.
+        if not user.pk and selected_google_role not in ("mentor", "mentee"):
+            messages.info(request, "Please choose Mentor or Mentee before continuing with Google login.")
+            raise ImmediateHttpResponse(redirect("/app/signin?role_required=1"))
+
+        if not user.pk and selected_google_role in ("mentor", "mentee"):
+            request.session[ROLE_SESSION_KEY] = selected_google_role
+            selected_role = selected_google_role
+
         # If the social account maps to an existing user that has no profile yet,
         # require role selection first.
         if user.pk and not is_mentor and not is_mentee and not selected_role:
-            messages.info(request, "Please choose Mentor or Mentee before logging in with Google.")
-            raise ImmediateHttpResponse(redirect("home"))
+            messages.info(request, "Please choose Mentor or Mentee before continuing with Google login.")
+            raise ImmediateHttpResponse(redirect("/app/signin?role_required=1"))
         if user.pk and not is_mentor and not is_mentee and selected_role:
             if selected_role == "mentor":
                 MentorProfile.objects.create(
                     user=user,
                     program="BSIT",
                     year_level=4,
+                    approved=False,
                 )
             elif selected_role == "mentee":
                 MenteeProfile.objects.create(
                     user=user,
                     program="BSIT",
                     year_level=1,
+                    approved=False,
                 )
+
+    def _generate_unique_username(self, base_username):
+        base = "".join(
+            ch for ch in (base_username or "user") if ch.isalnum() or ch in "._-"
+        ).strip("._-")
+        if not base:
+            base = "user"
+        candidate = base[:150]
+        counter = 1
+        while User.objects.filter(username=candidate).exists():
+            suffix = str(counter)
+            candidate = f"{base[: max(1, 150 - len(suffix) - 1)]}_{suffix}"
+            counter += 1
+        return candidate
+
+    def populate_user(self, request, sociallogin, data):
+        user = super().populate_user(request, sociallogin, data)
+        if not getattr(user, "username", ""):
+            email = getattr(user, "email", "") or ""
+            base = email.split("@", 1)[0] if "@" in email else "user"
+            user.username = self._generate_unique_username(base)
+        return user
 
     def save_user(self, request, sociallogin, form=None):
         user = super().save_user(request, sociallogin, form)
         selected_role = request.session.get(ROLE_SESSION_KEY)
-
-        # Create the appropriate profile for a new user if missing.
-        if selected_role == "mentor":
-            # For testing/development, allow immediate dashboard access.
-            mentor_profile = getattr(user, "mentor_profile", None)
-            if mentor_profile is not None and not getattr(mentor_profile, "approved", False):
-                mentor_profile.approved = True
-                mentor_profile.save(update_fields=["approved"])
 
         if selected_role == "mentor" and not hasattr(user, "mentor_profile"):
             MentorProfile.objects.create(
                 user=user,
                 program="BSIT",
                 year_level=4,
-                approved=True,
+                approved=False,
             )
         elif selected_role == "mentee":
-            mentee_profile = getattr(user, "mentee_profile", None)
-            if mentee_profile is not None and not getattr(mentee_profile, "approved", False):
-                mentee_profile.approved = True
-                mentee_profile.save(update_fields=["approved"])
-
-        if selected_role == "mentee" and not hasattr(user, "mentee_profile"):
-            MenteeProfile.objects.create(
-                user=user,
-                program="BSIT",
-                year_level=1,
-                approved=True,
-            )
+            if not hasattr(user, "mentee_profile"):
+                MenteeProfile.objects.create(
+                    user=user,
+                    program="BSIT",
+                    year_level=1,
+                    approved=False,
+                )
+            request.session.pop(GOOGLE_OAUTH_ROLE_SESSION_KEY, None)
         return user
 
     def get_login_redirect_url(self, request):
-        return "/app/"
+        return "/app/signin?oauth=google"

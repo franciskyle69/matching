@@ -4,7 +4,13 @@
   const { useEffect, useMemo, useState, useRef } = React;
   const MAIN_TABS =
     (window.DashboardApp && window.DashboardApp.MAIN_TABS) || [];
-  const { getCookie, fetchJSON } =
+  const {
+    getCookie,
+    fetchJSON,
+    setAuthToken,
+    setRefreshToken,
+    clearAuthTokens,
+  } =
     (window.DashboardApp && window.DashboardApp.Utils) || {};
   const AppContext =
     (window.DashboardApp && window.DashboardApp.AppContext) ||
@@ -16,8 +22,26 @@
     window.DashboardApp.filterTopicsForSubjects ||
     ((subjects, topics) => (Array.isArray(topics) ? [...topics] : []));
 
+  function getIsPendingApproval(userData) {
+    return !!(
+      userData &&
+      ((userData.role === "mentor" && userData.mentor_approved === false) ||
+        (userData.role === "mentee" && userData.mentee_approved === false))
+    );
+  }
+
+  function replaceAppUrl(tab) {
+    const safeTab = tab || "signin";
+    window.history.replaceState(null, "", `/app/#${safeTab}`);
+  }
+
   function AppProviders() {
-    const [activeTab, setActiveTab] = useState("home");
+    const [activeTab, setActiveTab] = useState(() => {
+      const path = (window.location.pathname || "").replace(/\/+$/, "");
+      if (path.endsWith("/app/signin")) return "signin";
+      if (path.endsWith("/app/signup")) return "signup";
+      return "home";
+    });
     const [user, setUser] = useState(null);
     const [stats, setStats] = useState(null);
     const [unreadCount, setUnreadCount] = useState(0);
@@ -45,8 +69,8 @@
     const [notifications, setNotifications] = useState([]);
     const [settingsSaving, setSettingsSaving] = useState(false);
     const [settingsForm, setSettingsForm] = useState({
-      username: "",
       email: "",
+      display_name: "",
       avatar_url: "",
       bio: "",
       tags: [],
@@ -62,13 +86,16 @@
     });
     const [menteeProfileSaving, setMenteeProfileSaving] = useState(false);
     const [signInLoading, setSignInLoading] = useState(false);
+    const [signUpLoading, setSignUpLoading] = useState(false);
     const [signInForm, setSignInForm] = useState({
-      username: "",
+      identifier: "",
       password: "",
     });
     const [signUpForm, setSignUpForm] = useState({
       role: "mentor",
-      username: "",
+      first_name: "",
+      middle_name: "",
+      last_name: "",
       email: "",
       password1: "",
       password2: "",
@@ -166,6 +193,10 @@
     const prevActiveTabRef = useRef(activeTab);
     const lastMatchingRunRef = useRef(0);
     const lockoutCountdownRef = useRef(null);
+    const signInPathRef = useRef(false);
+    const meInFlightRef = useRef(null);
+    const meLastFetchTsRef = useRef(0);
+    const ME_MIN_FETCH_INTERVAL_MS = 30000;
     const [theme, setThemeState] = useState(() => {
       if (typeof window === "undefined") return "light";
       const stored = window.localStorage.getItem("theme");
@@ -177,6 +208,11 @@
 
     function toggleTheme() {
       setThemeState((prev) => (prev === "dark" ? "light" : "dark"));
+    }
+
+    function isSignInPathFlow() {
+      const path = (window.location.pathname || "").replace(/\/+$/, "");
+      return path.endsWith("/app/signin");
     }
 
     function addToast(message, type = "success") {
@@ -203,7 +239,18 @@
 
     useEffect(() => {
       fetchJSON("/api/csrf/");
-      loadMe();
+      loadMe({ force: false });
+    }, []);
+
+    useEffect(() => {
+      const onPageShow = (event) => {
+        const stale = Date.now() - meLastFetchTsRef.current > ME_MIN_FETCH_INTERVAL_MS;
+        if (event.persisted && stale) {
+          loadMe({ force: false });
+        }
+      };
+      window.addEventListener("pageshow", onPageShow);
+      return () => window.removeEventListener("pageshow", onPageShow);
     }, []);
 
     useEffect(() => {
@@ -217,6 +264,7 @@
     }, [authAlert]);
 
     useEffect(() => {
+      signInPathRef.current = isSignInPathFlow();
       const raw = window.location.hash.replace("#", "");
       if (raw.startsWith("sessions")) {
         setActiveTab("sessions");
@@ -228,14 +276,26 @@
         setMentorProfileHashId(m ? parseInt(m[1], 10) : null);
       } else if (MAIN_TABS.some((tab) => tab.id === raw)) {
         setActiveTab(raw);
+      } else if (isSignInPathFlow()) {
+        setActiveTab("signin");
       }
     }, []);
 
     useEffect(() => {
       if (!authCheckDone) return;
       const hash = window.location.hash.replace("#", "");
-      const validTabs = [...MAIN_TABS.map((t) => t.id), "signin", "signup"];
-      if (user && (hash === "signin" || hash === "signup")) {
+      const validTabs = [
+        ...MAIN_TABS.map((t) => t.id),
+        "signin",
+        "signup",
+        "pending-approval",
+      ];
+      if (
+        user &&
+        (hash === "signin" || hash === "signup") &&
+        !signInPathRef.current &&
+        !getIsPendingApproval(user)
+      ) {
         setActiveTab("home");
         window.history.replaceState(
           null,
@@ -254,6 +314,42 @@
         setActiveTab(hash);
       }
     }, [authCheckDone, user]);
+
+    useEffect(() => {
+      if (!authCheckDone) return;
+      if (!authRequired) return;
+      if (activeTab === "signin" || activeTab === "signup") return;
+      setActiveTab("signin");
+      replaceAppUrl("signin");
+    }, [authCheckDone, authRequired, activeTab]);
+
+    useEffect(() => {
+      if (!authCheckDone) return;
+      const path = (window.location.pathname || "").replace(/\/+$/, "");
+      const hasOauthParams =
+        /(?:^|&)oauth=/.test((window.location.search || "").replace(/^\?/, "")) ||
+        /(?:^|&)role_required=/.test((window.location.search || "").replace(/^\?/, ""));
+      const authPathVariant = path.endsWith("/app/signin") || path.endsWith("/app/signup");
+      if (!hasOauthParams && !authPathVariant) return;
+
+      if (authRequired || !user) {
+        replaceAppUrl("signin");
+        return;
+      }
+
+      if (getIsPendingApproval(user)) {
+        replaceAppUrl("pending-approval");
+        return;
+      }
+
+      const validTabIds = new Set([
+        ...MAIN_TABS.map((t) => t.id),
+        "complete-profile",
+        "settings",
+        "notifications",
+      ]);
+      replaceAppUrl(validTabIds.has(activeTab) ? activeTab : "home");
+    }, [authCheckDone, authRequired, user, activeTab]);
 
     useEffect(() => {
       const onHashChange = () => {
@@ -284,6 +380,19 @@
         window.location.hash = activeTab;
       }
     }, [activeTab, authCheckDone, sessionsPairMenteeId, mentorProfileHashId]);
+
+    useEffect(() => {
+      if (!authCheckDone || !user) return;
+      if (!getIsPendingApproval(user)) return;
+      const allowedPendingTabs = new Set([
+        "pending-approval",
+        "complete-profile",
+        "settings",
+      ]);
+      if (!allowedPendingTabs.has(activeTab)) {
+        setActiveTab("pending-approval");
+      }
+    }, [authCheckDone, user, activeTab]);
 
     useEffect(() => {
       document.title = "PeerLink";
@@ -379,43 +488,46 @@
 
     useEffect(() => {
       if (!user) return;
-      const onFocus = () => loadMe();
+      const onFocus = () => {
+        if (document.visibilityState !== "visible") return;
+        const stale = Date.now() - meLastFetchTsRef.current > ME_MIN_FETCH_INTERVAL_MS;
+        if (stale) loadMe({ force: false });
+      };
       window.addEventListener("focus", onFocus);
       return () => window.removeEventListener("focus", onFocus);
     }, [user]);
 
-    async function loadMe() {
-      const result = await fetchJSON("/api/me/");
+    async function loadMe(options = {}) {
+      const force = !!options.force;
+      if (!force && user && Date.now() - meLastFetchTsRef.current < ME_MIN_FETCH_INTERVAL_MS) {
+        return;
+      }
+      if (meInFlightRef.current) {
+        return meInFlightRef.current;
+      }
+
+      const requestPromise = fetchJSON(force ? "/api/me/?force=1" : "/api/me/");
+      meInFlightRef.current = requestPromise;
+      const result = await requestPromise;
+      meInFlightRef.current = null;
       setAuthCheckDone(true);
       if (!result.ok) {
+        if (result.status === 401 || result.status === 403) {
+          clearAuthTokens();
+        }
         setAuthRequired(true);
         setSessionsData(null);
         setActiveTab((prev) => (prev === "signup" ? "signup" : "signin"));
         return;
       }
-      const unapproved =
-        (result.data.role === "mentor" &&
-          result.data.mentor_approved === false) ||
-        (result.data.role === "mentee" &&
-          result.data.mentee_approved === false);
-      if (unapproved) {
-        fetch("/api/auth/logout/", {
-          method: "POST",
-          credentials: "include",
-          headers: {
-            "Content-Type": "application/json",
-            "X-CSRFToken": getCookie("csrftoken") || "",
-          },
-        }).catch(() => {});
-        window.location.replace("/");
-        return;
-      }
+      meLastFetchTsRef.current = Date.now();
+      const unapproved = getIsPendingApproval(result.data);
       setUser(result.data);
       setStats(result.data.stats);
       setUnreadCount(result.data.unread_notifications || 0);
       setSettingsForm({
-        username: result.data.username || "",
         email: result.data.email || "",
+        display_name: result.data.full_name || result.data.display_name || "",
         avatar_url: result.data.avatar_url || "",
         bio: result.data.bio || "",
         tags: Array.isArray(result.data.tags) ? [...result.data.tags] : [],
@@ -477,11 +589,23 @@
       const isMentor = result.data.role === "mentor";
       const generalCompleted = !!result.data.mentee_general_info_completed;
       const mentorQCompleted = !!result.data.mentor_questionnaire_completed;
-      setShowMenteeInfoModal(isMentee && !generalCompleted);
-      setShowMentorInfoModal(isMentor && !mentorQCompleted);
+      setShowMenteeInfoModal(!unapproved && isMentee && !generalCompleted);
+      setShowMentorInfoModal(!unapproved && isMentor && !mentorQCompleted);
       setAuthRequired(false);
+      if (unapproved) {
+        setAuthAlert({
+          severity: "warning",
+          title: "Account pending approval",
+          message:
+            "Complete your required information, then wait for coordinator approval.",
+        });
+        setActiveTab("pending-approval");
+        return;
+      }
       setActiveTab((prev) =>
-        ["signin", "signup"].includes(prev) ? "home" : prev,
+        ["signin", "signup", "pending-approval"].includes(prev)
+          ? "home"
+          : prev,
       );
     }
 
@@ -722,7 +846,7 @@
               fetchJSON("/api/auth/check-lockout/", {
                 method: "POST",
                 headers: { "X-CSRFToken": getCookie("csrftoken") },
-                body: JSON.stringify({ username: signInForm.username }),
+                body: JSON.stringify({ identifier: signInForm.identifier }),
               })
                 .then((response) => {
                   if (response.ok && !response.data?.is_locked) {
@@ -801,7 +925,13 @@
         }
         clearLockoutCountdown();
         setAuthAlert(null);
-        await loadMe();
+        if (result.data?.access_token) {
+          setAuthToken(result.data.access_token);
+        }
+        if (result.data?.refresh_token) {
+          setRefreshToken(result.data.refresh_token);
+        }
+        await loadMe({ force: true });
         setActiveTab("home");
       } finally {
         setSignInLoading(false);
@@ -812,29 +942,36 @@
       setError("");
       setAuthMessage("");
       setAuthAlert(null);
-      const result = await fetchJSON("/api/auth/register/", {
-        method: "POST",
-        headers: { "X-CSRFToken": getCookie("csrftoken") },
-        body: JSON.stringify(signUpForm),
-      });
-      if (!result.ok) {
-        const errs = result.data?.errors;
-        const message =
-          errs && typeof errs === "object"
-            ? Object.values(errs).flat().filter(Boolean).map(String).join(" ")
-            : result.data?.error || "Unable to create account.";
-        setError(message);
-        if (window.Swal && typeof window.Swal.fire === "function")
-          window.Swal.fire("Action failed", message, "error");
+      setSignUpLoading(true);
+      try {
+        const result = await fetchJSON("/api/auth/register/", {
+          method: "POST",
+          headers: { "X-CSRFToken": getCookie("csrftoken") },
+          body: JSON.stringify(signUpForm),
+        });
+        if (!result.ok) {
+          const errs = result.data?.errors;
+          const message =
+            errs && typeof errs === "object"
+              ? Object.values(errs).flat().filter(Boolean).map(String).join(" ")
+              : result.data?.error || "Unable to create account.";
+          setError(message);
+          if (window.Swal && typeof window.Swal.fire === "function")
+            window.Swal.fire("Action failed", message, "error");
+          setActiveTab("signin");
+          return;
+        }
+        const message = result.data?.message || "Account created.";
+        setAuthMessage(message);
         setActiveTab("signin");
-        return;
+      } finally {
+        setSignUpLoading(false);
       }
-      const message = result.data?.message || "Account created.";
-      setAuthMessage(message);
-      setActiveTab("signin");
     }
 
     function handleLogout() {
+      clearAuthTokens();
+      replaceAppUrl("signin");
       fetch("/api/auth/logout/", {
         method: "POST",
         credentials: "include",
@@ -1277,7 +1414,7 @@
         headers: { "X-CSRFToken": getCookie("csrftoken") },
       });
       loadNotifications();
-      loadMe();
+      setUnreadCount(0);
     }
 
     async function handleMarkRead(notificationId) {
@@ -1286,7 +1423,7 @@
         headers: { "X-CSRFToken": getCookie("csrftoken") },
       });
       loadNotifications();
-      loadMe();
+      setUnreadCount((prev) => Math.max(0, prev - 1));
     }
 
     async function handleSettingsSave() {
@@ -1309,7 +1446,7 @@
         return;
       }
       addToast("Settings saved.");
-      await loadMe();
+      await loadMe({ force: true });
       setSettingsSaving(false);
     }
 
@@ -1424,41 +1561,44 @@
         setError(message);
         if (window.Swal && typeof window.Swal.fire === "function")
           window.Swal.fire("Complete required fields", message, "warning");
-        return;
+        return false;
       }
       setMentorProfileSaving(true);
-      const payload = {
-        subjects: sanitizedSubjects,
-        topics: sanitizedTopics,
-        expertise_level: profile.expertise_level,
-        role: profile.role || "",
-        capacity: Math.max(1, Math.min(5, Number(profile.capacity || 1))),
-        gender: profile.gender || "",
-        availability: profile.availability || [],
-      };
-      const result = await fetchJSON("/api/me/mentor-profile/", {
-        method: "POST",
-        headers: { "X-CSRFToken": getCookie("csrftoken") },
-        body: JSON.stringify(payload),
-      });
-      if (!result.ok) {
-        setError(result.data?.error || "Unable to update mentor profile.");
+      try {
+        const payload = {
+          subjects: sanitizedSubjects,
+          topics: sanitizedTopics,
+          expertise_level: profile.expertise_level,
+          role: profile.role || "",
+          capacity: Math.max(1, Math.min(5, Number(profile.capacity || 1))),
+          gender: profile.gender || "",
+          availability: profile.availability || [],
+        };
+        const result = await fetchJSON("/api/me/mentor-profile/", {
+          method: "POST",
+          headers: { "X-CSRFToken": getCookie("csrftoken") },
+          body: JSON.stringify(payload),
+        });
+        if (!result.ok) {
+          setError(result.data?.error || "Unable to update mentor profile.");
+          return false;
+        }
+        setMentorProfile((prev) => ({ ...prev, ...result.data }));
+        await loadMe({ force: true });
+        // Invalidate any existing staff/mentor matching results to avoid stale pairs
+        setMatchingResults([]);
+        setLastRunMode(null);
+        setLastRunMinScore(null);
+        setUser((prev) =>
+          prev ? { ...prev, mentor_questionnaire_completed: true } : prev,
+        );
+        setShowMentorInfoModal(false);
+        setAuthMessage("Your mentor profile was updated.");
+        addToast("Profile saved.");
+        return true;
+      } finally {
         setMentorProfileSaving(false);
-        return;
       }
-      setMentorProfile((prev) => ({ ...prev, ...result.data }));
-      await loadMe();
-      // Invalidate any existing staff/mentor matching results to avoid stale pairs
-      setMatchingResults([]);
-      setLastRunMode(null);
-      setLastRunMinScore(null);
-      setUser((prev) =>
-        prev ? { ...prev, mentor_questionnaire_completed: true } : prev,
-      );
-      setShowMentorInfoModal(false);
-      setAuthMessage("Your mentor profile was updated.");
-      addToast("Profile saved.");
-      setMentorProfileSaving(false);
     }
 
     async function handleMenteeMatchingSave() {
@@ -1486,47 +1626,47 @@
         setError(message);
         if (window.Swal && typeof window.Swal.fire === "function")
           window.Swal.fire("Complete required fields", message, "warning");
-        return;
+        return false;
       }
       setMenteeMatchingSaving(true);
-      if (nextMatching) {
-        setMenteeMatching(nextMatching);
-      }
-      const payload = {
-        subjects: sanitizedSubjects,
-        topics: sanitizedTopics,
-        difficulty_level: matching.difficulty_level,
-        availability: matching.availability || [],
-      };
-      const result = await fetchJSON("/api/me/mentee-matching/", {
-        method: "POST",
-        headers: { "X-CSRFToken": getCookie("csrftoken") },
-        body: JSON.stringify(payload),
-      });
-      if (!result.ok) {
-        setError(
-          result.data?.error || "Unable to update mentee questionnaire.",
-        );
+      try {
+        const payload = {
+          subjects: sanitizedSubjects,
+          topics: sanitizedTopics,
+          difficulty_level: matching.difficulty_level,
+          availability: matching.availability || [],
+        };
+        const result = await fetchJSON("/api/me/mentee-matching/", {
+          method: "POST",
+          headers: { "X-CSRFToken": getCookie("csrftoken") },
+          body: JSON.stringify(payload),
+        });
+        if (!result.ok) {
+          setError(
+            result.data?.error || "Unable to update mentee questionnaire.",
+          );
+          return false;
+        }
+        setMenteeMatching((prev) => ({ ...prev, ...result.data }));
+        await loadMe({ force: true });
+        // Invalidate current recommendations so changes take effect immediately
+        setMenteeRecommendations([]);
+        setMenteeRecMeta({
+          empty_reason: null,
+          message: "",
+          suggested_time_slots: [],
+        });
+        setChosenMentorId(null);
+        if (activeTab === "matching") {
+          // Refresh recommendations right away if mentee is on Matching tab
+          loadMenteeRecommendations();
+        }
+        setAuthMessage("Your mentee questionnaire was updated.");
+        addToast("Questionnaire saved.");
+        return true;
+      } finally {
         setMenteeMatchingSaving(false);
-        return;
       }
-      setMenteeMatching((prev) => ({ ...prev, ...result.data }));
-      await loadMe();
-      // Invalidate current recommendations so changes take effect immediately
-      setMenteeRecommendations([]);
-      setMenteeRecMeta({
-        empty_reason: null,
-        message: "",
-        suggested_time_slots: [],
-      });
-      setChosenMentorId(null);
-      if (activeTab === "matching") {
-        // Refresh recommendations right away if mentee is on Matching tab
-        loadMenteeRecommendations();
-      }
-      setAuthMessage("Your mentee questionnaire was updated.");
-      addToast("Questionnaire saved.");
-      setMenteeMatchingSaving(false);
     }
 
     async function loadActivityLogs(params = {}) {
@@ -1588,8 +1728,9 @@
     }
 
     async function restoreBackup(file) {
-      if (!file || !file.name.endsWith(".json")) {
-        setError("Please select a .json backup file.");
+      const allowed = /\.(json|gz|zip|bz2|sql|psql|dump|backup)$/i;
+      if (!file || !allowed.test(file.name)) {
+        setError("Please select a valid backup file.");
         return;
       }
       setBackupRestoreLoading(true);
@@ -1724,12 +1865,20 @@
     }, [options.topics]);
 
     const isAuthenticated = !authRequired && user;
+    const isPendingApproval = getIsPendingApproval(user);
     const showSignInPrompt = !authCheckDone
       ? false
       : !isAuthenticated && !["signin", "signup"].includes(activeTab);
 
     useEffect(() => {
-      if (isAuthenticated && ["signin", "signup"].includes(activeTab)) {
+      const unapproved =
+        user && getIsPendingApproval(user);
+      if (
+        isAuthenticated &&
+        ["signin", "signup"].includes(activeTab) &&
+        !signInPathRef.current &&
+        !unapproved
+      ) {
         setActiveTab("home");
         window.history.replaceState(
           null,
@@ -1737,7 +1886,7 @@
           `${window.location.pathname}#home`,
         );
       }
-    }, [isAuthenticated, activeTab]);
+    }, [isAuthenticated, activeTab, user]);
 
     useEffect(() => {
       if (!authMessage) return;
@@ -1770,6 +1919,7 @@
       authAlert,
       setAuthAlert,
       signInLoading,
+      signUpLoading,
       signInForm,
       setSignInForm,
       signUpForm,
@@ -1907,6 +2057,7 @@
       theme,
       toggleTheme,
       isAuthenticated,
+      isPendingApproval,
       showSignInPrompt,
       menteeRecUpdating,
       addToast,

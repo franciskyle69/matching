@@ -4,7 +4,7 @@
 <div class="card">
   <h1>Reschedule Session</h1>
   <p style="color: var(--text-muted);">
-    Mentor: {{ session.mentor.user.username }} · Mentee: {{ session.mentee.user.username }}
+    Mentor: {% if session.mentor.user.first_name or session.mentor.user.last_name %}{{ session.mentor.user.first_name }} {{ session.mentor.user.last_name }}{% else %}{{ session.mentor.user.username }}{% endif %} · Mentee: {% if session.mentee.user.first_name or session.mentee.user.last_name %}{{ session.mentee.user.first_name }} {{ session.mentee.user.last_name }}{% else %}{{ session.mentee.user.username }}{% endif %}
   </p>
   <form method="post">
     {% csrf_token %}

@@ -441,13 +441,13 @@
       <div class="sidebar-profile">
         <div class="sidebar-avatar-wrapper">
           {% if user_avatar_url %}
-            <img src="{{ user_avatar_url }}" alt="{{ user.username }}" class="sidebar-avatar">
+            <img src="{{ user_avatar_url }}" alt="{{ user.get_full_name|default:user.email }}" class="sidebar-avatar">
           {% else %}
-            <div class="sidebar-avatar fallback">{{ user.username|slice:":1"|upper|default:"?" }}</div>
+            <div class="sidebar-avatar fallback">{{ user.get_full_name|default:user.email|slice:":1"|upper|default:"?" }}</div>
           {% endif %}
         </div>
         <div class="sidebar-profile-text">
-          <div class="sidebar-name">{{ user.username }}</div>
+          <div class="sidebar-name">{{ user.get_full_name|default:user.email }}</div>
           <div class="sidebar-role-line">
             {% if user_role %}<span class="sidebar-role-badge role-{{ user_role }}">{% if user_role == "mentor" %}Mentor{% else %}Mentee{% endif %}</span>{% endif %}
             {% if user.is_staff %}<span class="sidebar-role-badge staff">Staff</span>{% endif %}
@@ -473,6 +473,7 @@
       </div>
     </aside>
   {% else %}
+  {% block public_header %}
   <header class="app-header-simple">
     <a href="{% url 'home' %}" class="app-brand">
       <img src="{% static 'assets/logodark.svg' %}" alt="Mentoring Dashboard" />
@@ -482,6 +483,7 @@
       <a href="{% url 'register' %}">Sign up</a>
     </nav>
   </header>
+  {% endblock %}
   {% endif %}
   <main class="{% if user.is_authenticated %}app-content with-sidebar {% else %}main {% endif %}{% block main_class %}{% endblock %}">
     {% if messages %}
