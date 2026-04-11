@@ -461,8 +461,8 @@
       "Javascript",
       "UI/UX",
     ];
-    const MIN_AVAILABLE_TIME = "08:00";
-    const MAX_AVAILABLE_TIME = "20:00";
+    const MIN_AVAILABLE_TIME = "07:00";
+    const MAX_AVAILABLE_TIME = "22:00";
 
     function toMinutes(hhmm) {
       const parts = String(hhmm || "").split(":");
@@ -483,7 +483,7 @@
 
     function firstAvailabilityRange(
       slots,
-      fallbackStart = "08:00",
+      fallbackStart = "07:00",
       fallbackEnd = "17:00",
     ) {
       const first =
@@ -514,21 +514,21 @@
     }
 
     const [mentorAvailabilityDraft, setMentorAvailabilityDraft] = useState(() =>
-      firstAvailabilityRange(mentorProfile.availability, "08:00", "17:00"),
+      firstAvailabilityRange(mentorProfile.availability, "07:00", "17:00"),
     );
     const [menteeAvailabilityDraft, setMenteeAvailabilityDraft] = useState(() =>
-      firstAvailabilityRange(menteeMatching.availability, "08:00", "17:00"),
+      firstAvailabilityRange(menteeMatching.availability, "07:00", "17:00"),
     );
 
     useEffect(() => {
       setMentorAvailabilityDraft(
-        firstAvailabilityRange(mentorProfile.availability, "08:00", "17:00"),
+        firstAvailabilityRange(mentorProfile.availability, "07:00", "17:00"),
       );
     }, [mentorProfile.availability]);
 
     useEffect(() => {
       setMenteeAvailabilityDraft(
-        firstAvailabilityRange(menteeMatching.availability, "08:00", "17:00"),
+        firstAvailabilityRange(menteeMatching.availability, "07:00", "17:00"),
       );
     }, [menteeMatching.availability]);
 
@@ -1070,10 +1070,10 @@
                 <div className="form-group">
                   <label>Course / Program (read only)</label>
                   <input
-                    value={menteeProfile.program}
+                    value="BSIT"
                     readOnly
                     disabled
-                    placeholder="e.g. BSIT"
+                    placeholder="BSIT"
                   />
                   <p className="field-helper">
                     Set by your school. Contact an administrator if this is
@@ -1083,13 +1083,11 @@
                 <div className="form-group">
                   <label>Year level (read only)</label>
                   <input
-                    type="number"
-                    min="1"
-                    max="10"
-                    value={menteeProfile.year_level}
+                    type="text"
+                    value="1st Year"
                     readOnly
                     disabled
-                    placeholder="1"
+                    placeholder="1st Year"
                   />
                   <p className="field-helper">
                     Set by your school. Contact an administrator if this is
@@ -1120,16 +1118,34 @@
                 </div>
                 <div className="form-group">
                   <label>Admission Type *</label>
-                  <input
-                    value={menteeProfile.admission_type}
+                  <select
+                    value={menteeProfile.admission_type || ""}
                     onChange={(e) =>
                       setMenteeProfile({
                         ...menteeProfile,
                         admission_type: e.target.value,
                       })
                     }
-                    placeholder="e.g. Regular, Transferee"
-                  />
+                  >
+                    <option value="">Select admission type</option>
+                    <option value="regular">Regular</option>
+                    <option value="transferee">Transferee</option>
+                    <option value="shiftee">Shiftee</option>
+                    <option value="returnee">Returnee</option>
+                    <option value="irregular">Irregular</option>
+                    {menteeProfile.admission_type &&
+                      ![
+                        "regular",
+                        "transferee",
+                        "shiftee",
+                        "returnee",
+                        "irregular",
+                      ].includes(String(menteeProfile.admission_type).toLowerCase()) && (
+                        <option value={menteeProfile.admission_type}>
+                          {menteeProfile.admission_type}
+                        </option>
+                      )}
+                  </select>
                 </div>
               </div>
 
@@ -1395,7 +1411,7 @@
                   <section className="matching-section-card">
                     <div className="settings-section-label">Available time</div>
                     <p className="field-helper">
-                      Add one or more time ranges between 08:00 and 20:00.
+                      Add one or more time ranges between 07:00 and 22:00.
                     </p>
                     <div className="time-range-row">
                       <div className="time-field">
@@ -1486,8 +1502,8 @@
                       </p>
                     )}
                     <p className="field-helper">
-                      You can add multiple availability ranges between 08:00 and
-                      20:00. We&apos;ll match you with people whose times
+                      You can add multiple availability ranges between 07:00 and
+                      22:00. We&apos;ll match you with people whose times
                       overlap these ranges.
                     </p>
                     {Array.isArray(mentorProfile.availability) &&
@@ -1708,7 +1724,7 @@
                           Available time
                         </div>
                         <p className="field-helper">
-                          Add one or more time ranges between 08:00 and 20:00.
+                          Add one or more time ranges between 07:00 and 22:00.
                         </p>
                         <div className="time-range-row">
                           <div className="time-field">
@@ -1799,8 +1815,8 @@
                           </p>
                         )}
                         <p className="field-helper">
-                          You can add multiple availability ranges between 08:00
-                          and 20:00. We&apos;ll match you with people whose
+                          You can add multiple availability ranges between 07:00
+                          and 22:00. We&apos;ll match you with people whose
                           times overlap these ranges.
                         </p>
                         {Array.isArray(menteeMatching.availability) &&

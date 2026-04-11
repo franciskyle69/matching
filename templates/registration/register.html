@@ -62,7 +62,7 @@
     {% if form.errors %}
     <p class="errornote">Please correct the errors below.</p>
     {% endif %}
-    <form method="post" action="{% url 'register' %}" class="auth-panel-form">
+    <form method="post" action="{% url 'register' %}" class="auth-panel-form" enctype="multipart/form-data">
       {% csrf_token %}
       <div class="form-group">
         <label for="id_first_name">First name</label>
@@ -93,6 +93,14 @@
         {% endif %}
       </div>
       <div class="form-group">
+        <label for="id_student_verification_document">Student verification document</label>
+        <input type="file" name="student_verification_document" id="id_student_verification_document" accept=".pdf,.png,.jpg,.jpeg" required>
+        <p class="helptext" style="margin-top: .5rem; margin-bottom: 0;">Upload your registration form, current school ID, or COR (PDF/JPG/PNG, max 5 MB).</p>
+        {% if form.student_verification_document.errors %}
+        <p class="errornote" style="margin-top: .5rem; margin-bottom: 0;">{{ form.student_verification_document.errors.0 }}</p>
+        {% endif %}
+      </div>
+      <div class="form-group">
         <label for="id_password1">Password</label>
         <input type="password" name="password1" id="id_password1" placeholder="Password" required autocomplete="new-password">
         {% if form.password1.errors %}
@@ -105,6 +113,16 @@
         {% if form.password2.errors %}
         <p class="errornote" style="margin-top: .5rem; margin-bottom: 0;">{{ form.password2.errors.0 }}</p>
         {% endif %}
+        <div class="password-strength" data-password-strength>
+          <div class="password-strength-bar" aria-hidden="true">
+            <span class="password-strength-fill" data-password-strength-fill></span>
+          </div>
+          <ul class="password-strength-list" aria-label="Password requirements">
+            <li class="password-strength-item is-invalid" data-rule="length">At least 8 characters</li>
+            <li class="password-strength-item is-invalid" data-rule="number">Contains a number</li>
+            <li class="password-strength-item is-invalid" data-rule="special">Contains a special character</li>
+          </ul>
+        </div>
       </div>
       <div class="form-group">
         <label>Sign up as</label>
@@ -121,9 +139,6 @@
         <p class="errornote" style="margin-top: .5rem; margin-bottom: 0;">{{ form.role.errors.0 }}</p>
         {% endif %}
       </div>
-      {% if form.password1.help_text %}
-      <p class="helptext">{{ form.password1.help_text|safe }}</p>
-      {% endif %}
       <button type="submit" class="btn-primary">Create account</button>
     </form>
     <p class="footer-links">

@@ -227,6 +227,7 @@ def _serialize_mentor_for_matching(m, request=None):
         "id": m.id,
         "user_id": m.user_id,
         "username": m.user.username,
+        "email": m.user.email or "",
         "display_name": _user_display_name(m.user),
         "subjects": subs or [],
         "topics": tops or [],
@@ -260,6 +261,7 @@ def _serialize_mentee_for_matching(e, request=None):
     out = {
         "id": e.id,
         "username": e.user.username,
+        "email": e.user.email or "",
         "display_name": _user_display_name(e.user),
         "subjects": subs or [],
         "topics": tops or [],
@@ -457,7 +459,7 @@ def _get_str(payload, key, default=""):
     return str(value).strip()
 
 
-def _serialize_session(session: MentoringSession):
+def _serialize_session(session: MentoringSession, request=None):
     """Serialize a MentoringSession into a dictionary for API responses.
     
     Args:
@@ -469,11 +471,15 @@ def _serialize_session(session: MentoringSession):
     return {
         "id": session.id,
         "mentor_id": session.mentor_id,
+        "mentor_user_id": session.mentor.user_id,
         "mentor_username": session.mentor.user.username,
         "mentor_display_name": _user_display_name(session.mentor.user),
+        "mentor_avatar_url": _avatar_url(request, getattr(session.mentor, "avatar_url", "") or "") if request else (getattr(session.mentor, "avatar_url", "") or ""),
         "mentee_id": session.mentee_id,
+        "mentee_user_id": session.mentee.user_id,
         "mentee_username": session.mentee.user.username,
         "mentee_display_name": _user_display_name(session.mentee.user),
+        "mentee_avatar_url": _avatar_url(request, getattr(session.mentee, "avatar_url", "") or "") if request else (getattr(session.mentee, "avatar_url", "") or ""),
         "subject": session.subject.name if session.subject else None,
         "subject_id": session.subject_id,
         "topic": session.topic.name if session.topic else None,
@@ -497,7 +503,16 @@ def _serialize_notification(item: Notification):
 
 
 def _serialize_subject(subject: Subject):
-    return {"id": subject.id, "name": subject.name, "description": subject.description}
+    topics = getattr(subject, "topics", None)
+    topic_items = []
+    if topics is not None:
+        topic_items = [_serialize_topic(topic) for topic in topics.all().order_by("name")]
+    return {
+        "id": subject.id,
+        "name": subject.name,
+        "description": subject.description,
+        "topics": topic_items,
+    }
 
 
 def _serialize_topic(topic: Topic):
@@ -507,6 +522,7 @@ def _serialize_topic(topic: Topic):
 def _serialize_mentee(mentee: MenteeProfile):
     return {
         "id": mentee.id,
+        "user_id": mentee.user_id,
         "username": mentee.user.username,
         "display_name": _user_display_name(mentee.user),
     }
@@ -572,6 +588,38 @@ def _require_staff(request):
 
 # User approval status cache (mentor/mentee approved flag)
 APPROVAL_CACHE_TTL = 3600  # 1 hour
+APPROVAL_LIST_CACHE_TTL = 60  # 1 minute
+APPROVAL_LIST_CACHE_VERSION_KEY = "user_approval:pending_list:version"
+
+
+def get_approval_list_cache_key(staff_user_id):
+    """Return versioned cache key for pending approvals list per staff user."""
+    version = cache.get(APPROVAL_LIST_CACHE_VERSION_KEY)
+    if version is None:
+        version = 1
+        cache.set(APPROVAL_LIST_CACHE_VERSION_KEY, version, timeout=None)
+    try:
+        version = int(version)
+    except (TypeError, ValueError):
+        version = 1
+        cache.set(APPROVAL_LIST_CACHE_VERSION_KEY, version, timeout=None)
+    return f"user_approval:pending_list:v{version}:staff:{staff_user_id}"
+
+
+def bump_approval_list_cache_version():
+    """Invalidate all pending approvals list cache entries by bumping version."""
+    current = cache.get(APPROVAL_LIST_CACHE_VERSION_KEY)
+    if current is None:
+        cache.set(APPROVAL_LIST_CACHE_VERSION_KEY, 2, timeout=None)
+        return
+    try:
+        cache.incr(APPROVAL_LIST_CACHE_VERSION_KEY)
+    except Exception:
+        try:
+            next_version = int(current) + 1
+        except (TypeError, ValueError):
+            next_version = 2
+        cache.set(APPROVAL_LIST_CACHE_VERSION_KEY, next_version, timeout=None)
 
 
 def get_mentor_approved(mentor_profile):
@@ -602,7 +650,9 @@ def get_mentee_approved(mentee_profile):
 
 def invalidate_approval_cache_mentor(mentor_profile_id):
     cache.delete(f"user_approval:mentor:{mentor_profile_id}")
+    bump_approval_list_cache_version()
 
 
 def invalidate_approval_cache_mentee(mentee_profile_id):
     cache.delete(f"user_approval:mentee:{mentee_profile_id}")
+    bump_approval_list_cache_version()

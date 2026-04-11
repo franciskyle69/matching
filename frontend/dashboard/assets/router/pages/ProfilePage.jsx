@@ -445,6 +445,8 @@
     const availability = isMentor ? (mentorProfile.availability || []) : (menteeMatching.availability || []);
     const bio = user.bio || "";
     const tags = Array.isArray(user.tags) ? user.tags : [];
+    const usernameLooksLikeEmail = /@/.test(String(user.username || ""));
+    const accountEmail = user.email || (usernameLooksLikeEmail ? user.username : "");
 
     return (
       <aside className="sp-sidebar">
@@ -456,7 +458,7 @@
           <p className="sp-profile-subtitle">
             <span className={"prof-role-badge prof-role-badge--" + (isMentor ? "mentor" : isMentee ? "mentee" : "user")}>{isMentor ? "Mentor" : isMentee ? "Mentee" : "User"}</span>
           </p>
-          {user.email && <span className="sp-profile-email">{user.email}</span>}
+          <span className="sp-profile-email">{accountEmail || "Email not available"}</span>
         </div>
 
         {bio ? (
@@ -526,6 +528,9 @@
     const mentorSubjects = mentor.subjects?.length ? mentor.subjects : d.mentor_subjects || [];
     const mentorTopics = mentor.topics?.length ? mentor.topics : d.mentor_topics || [];
     const availability = Array.isArray(mentor.availability) ? mentor.availability : [];
+    const mentorEmail =
+      mentor.email ||
+      (/@/.test(String(match.mentor_username || "")) ? match.mentor_username : "");
 
     return (
       <div className="sp-wide">
@@ -544,7 +549,7 @@
               </div>
               <h1 className="sp-profile-name">{match.mentor_display_name || match.mentor_username}</h1>
               <p className="sp-profile-subtitle"><span className="prof-role-badge prof-role-badge--mentor">Mentor</span></p>
-              {mentor.role && <span className="sp-profile-email">{mentor.role}</span>}
+              <span className="sp-profile-email">{mentorEmail || "Email not available"}</span>
             </div>
             <div className="sp-profile-actions">
               {isMentee && typeof chooseMentor === "function" && match.mentor_id && (
@@ -656,6 +661,9 @@
     const bio = profile.bio || "";
     const tags = profile.tags || [];
     const details = profile.details || {};
+    const profileEmail =
+      profile.email ||
+      (/@/.test(String(profile.username || "")) ? profile.username : "");
 
     return (
       <div className="sp-wide">
@@ -676,6 +684,7 @@
               <p className="sp-profile-subtitle">
                 <span className={"prof-role-badge prof-role-badge--" + (isMentor ? "mentor" : isMentee ? "mentee" : "user")}>{isMentor ? "Mentor" : isMentee ? "Mentee" : "User"}</span>
               </p>
+              <span className="sp-profile-email">{profileEmail || "Email not available"}</span>
             </div>
 
             {bio ? <p className="sp-bio">{bio}</p> : <p className="sp-bio sp-bio--empty">No bio added yet</p>}

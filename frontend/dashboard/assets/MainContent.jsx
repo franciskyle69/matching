@@ -76,12 +76,7 @@
             aria-live="polite"
             aria-busy="true"
           >
-            <div className="session-check-panel">
-              <LoadingSpinner
-                title="Checking your session..."
-                subtitle="This will only take a moment."
-              />
-            </div>
+            <LoadingSpinner inline />
           </div>
         )}
         {showSignInPrompt && (
@@ -96,31 +91,6 @@
             >
               <button className="btn" onClick={() => setActiveTab("signin")}>
                 Go to sign in
-              </button>
-            </div>
-          </div>
-        )}
-
-        {isAuthenticated && isPendingApproval && activeTab === "pending-approval" && (
-          <div className="card cta-card" style={{ maxWidth: 760, margin: "0 auto" }}>
-            <h1 className="page-title">Account Pending Approval</h1>
-            <p className="page-subtitle" style={{ marginBottom: 12 }}>
-              Your account is signed in but still waiting for coordinator approval.
-            </p>
-            <div className="alert alert-warning" role="status" style={{ marginBottom: 16 }}>
-              <strong>Status:</strong> Pending review.
-            </div>
-            <ul className="muted" style={{ marginTop: 0, marginBottom: 16, paddingLeft: 20 }}>
-              <li>Complete all required profile details.</li>
-              <li>Coordinator will review your account after submission.</li>
-              <li>You will get full dashboard access once approved.</li>
-            </ul>
-            <div className="btn-row" style={{ justifyContent: "flex-start", gap: 10 }}>
-              <button className="btn" onClick={() => setActiveTab("complete-profile")}>
-                Complete Required Information
-              </button>
-              <button className="btn secondary" onClick={() => setActiveTab("settings")}>
-                Open Account Settings
               </button>
             </div>
           </div>
@@ -411,11 +381,9 @@
           </div>
         )}
 
-        {!(isAuthenticated && isPendingApproval && activeTab === "pending-approval") && (
-          <ErrorBoundary>
-            <RouteRenderer activeTab={activeTab} />
-          </ErrorBoundary>
-        )}
+        <ErrorBoundary>
+          <RouteRenderer activeTab={activeTab} />
+        </ErrorBoundary>
       </>
     );
   }

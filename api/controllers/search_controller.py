@@ -171,6 +171,7 @@ def user_public_profile(request, user_id):
     return JsonResponse({
         "id": target.id,
         "username": target.username,
+        "email": target.email or "",
         "display_name": get_user_display_name(target),
         "full_name": get_user_display_name(target),
         "role": role,

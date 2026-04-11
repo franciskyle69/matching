@@ -29,6 +29,21 @@
         (userData.role === "mentee" && userData.mentee_approved === false))
     );
   }
+  function getPendingApprovalLandingTab(userData) {
+    if (!userData) return "settings";
+    if (userData.must_change_password) return "settings";
+    if (userData.role === "mentee") {
+      return userData.mentee_general_info_completed ? "settings" : "complete-profile";
+    }
+    if (userData.role === "mentor") {
+      return userData.mentor_questionnaire_completed ? "settings" : "complete-profile";
+    }
+    return "settings";
+  }
+
+  function isPendingApprovalMessage(message) {
+    return /pending approval by coordinator/i.test(String(message || ""));
+  }
 
   function replaceAppUrl(tab) {
     const safeTab = tab || "signin";
@@ -87,6 +102,7 @@
     const [menteeProfileSaving, setMenteeProfileSaving] = useState(false);
     const [signInLoading, setSignInLoading] = useState(false);
     const [signUpLoading, setSignUpLoading] = useState(false);
+    const [logoutLoading, setLogoutLoading] = useState(false);
     const [signInForm, setSignInForm] = useState({
       identifier: "",
       password: "",
@@ -99,6 +115,7 @@
       email: "",
       password1: "",
       password2: "",
+      student_verification_document: null,
     });
     const [createSessionLoading, setCreateSessionLoading] = useState(false);
     const [createForm, setCreateForm] = useState({
@@ -126,7 +143,6 @@
       description: "",
     });
     const [subjectEditId, setSubjectEditId] = useState(null);
-    const [subjectDeleteId, setSubjectDeleteId] = useState(null);
     const [avatarUploading, setAvatarUploading] = useState(false);
     const [approvalsLoading, setApprovalsLoading] = useState(false);
     const [approvalActionKey, setApprovalActionKey] = useState(null);
@@ -180,6 +196,11 @@
     const [backupRestoreLoading, setBackupRestoreLoading] = useState(false);
     const [activityLogs, setActivityLogs] = useState([]);
     const [activityLogsLoading, setActivityLogsLoading] = useState(false);
+    const [activityLogsPage, setActivityLogsPage] = useState(1);
+    const [activityLogsPageSize, setActivityLogsPageSize] = useState(20);
+    const [activityLogsTotal, setActivityLogsTotal] = useState(0);
+    const [activityLogsTotalPages, setActivityLogsTotalPages] = useState(1);
+    const activityLogsCacheRef = useRef(new Map());
     const [globalSearchResults, setGlobalSearchResults] = useState([]);
     const [postsFeed, setPostsFeed] = useState([]);
     const [postsFeedLoaded, setPostsFeedLoaded] = useState(false);
@@ -288,7 +309,6 @@
         ...MAIN_TABS.map((t) => t.id),
         "signin",
         "signup",
-        "pending-approval",
       ];
       if (
         user &&
@@ -326,19 +346,34 @@
     useEffect(() => {
       if (!authCheckDone) return;
       const path = (window.location.pathname || "").replace(/\/+$/, "");
+      const search = window.location.search || "";
+      const normalizedSearch = search.replace(/^\?/, "");
       const hasOauthParams =
-        /(?:^|&)oauth=/.test((window.location.search || "").replace(/^\?/, "")) ||
-        /(?:^|&)role_required=/.test((window.location.search || "").replace(/^\?/, ""));
+        /(?:^|&)oauth=/.test(normalizedSearch) ||
+        /(?:^|&)role_required=/.test(normalizedSearch) ||
+        /(?:^|&)oauth_error=/.test(normalizedSearch) ||
+        /(?:^|&)activated=/.test(normalizedSearch) ||
+        /(?:^|&)activation_error=/.test(normalizedSearch);
       const authPathVariant = path.endsWith("/app/signin") || path.endsWith("/app/signup");
       if (!hasOauthParams && !authPathVariant) return;
 
       if (authRequired || !user) {
-        replaceAppUrl("signin");
+        // Keep OAuth query params only while on Sign In so the page can show the right UI state.
+        if (hasOauthParams) {
+          if (activeTab === "signup") {
+            replaceAppUrl("signup");
+            return;
+          }
+          window.history.replaceState(null, "", `/app/signin${search}`);
+          if (activeTab !== "signin") setActiveTab("signin");
+          return;
+        }
+        replaceAppUrl(activeTab === "signup" ? "signup" : "signin");
         return;
       }
 
       if (getIsPendingApproval(user)) {
-        replaceAppUrl("pending-approval");
+        replaceAppUrl(getPendingApprovalLandingTab(user));
         return;
       }
 
@@ -350,6 +385,51 @@
       ]);
       replaceAppUrl(validTabIds.has(activeTab) ? activeTab : "home");
     }, [authCheckDone, authRequired, user, activeTab]);
+
+    useEffect(() => {
+      if (!authCheckDone) return;
+      const params = new URLSearchParams(window.location.search || "");
+      const oauthError = (params.get("oauth_error") || "").toLowerCase();
+      if (!oauthError) return;
+
+      if (oauthError === "institutional_email") {
+        setAuthAlert({
+          severity: "error",
+          title: "Google sign-in blocked",
+          message:
+            "Use your institutional email account to continue with Google sign-in.",
+        });
+      } else if (oauthError === "missing_email") {
+        setAuthAlert({
+          severity: "error",
+          title: "Google sign-in failed",
+          message:
+            "We could not read your Google account email. Try another Google account.",
+        });
+      }
+    }, [authCheckDone]);
+
+    useEffect(() => {
+      if (!authCheckDone) return;
+      const params = new URLSearchParams(window.location.search || "");
+      const activated = (params.get("activated") || "").toLowerCase();
+      const activationError = (params.get("activation_error") || "").toLowerCase();
+
+      const isTruthy = (v) => ["1", "true", "yes", "on"].includes(v);
+      if (isTruthy(activated)) {
+        setAuthAlert({
+          severity: "success",
+          title: "Account activated",
+          message: "Your account has been activated. You can log in now.",
+        });
+      } else if (isTruthy(activationError)) {
+        setAuthAlert({
+          severity: "error",
+          title: "Activation failed",
+          message: "Activation link is invalid or expired.",
+        });
+      }
+    }, [authCheckDone]);
 
     useEffect(() => {
       const onHashChange = () => {
@@ -385,12 +465,11 @@
       if (!authCheckDone || !user) return;
       if (!getIsPendingApproval(user)) return;
       const allowedPendingTabs = new Set([
-        "pending-approval",
         "complete-profile",
         "settings",
       ]);
       if (!allowedPendingTabs.has(activeTab)) {
-        setActiveTab("pending-approval");
+        setActiveTab(getPendingApprovalLandingTab(user));
       }
     }, [authCheckDone, user, activeTab]);
 
@@ -596,14 +675,13 @@
         setAuthAlert({
           severity: "warning",
           title: "Account pending approval",
-          message:
-            "Complete your required information, then wait for coordinator approval.",
+          message: "Review or complete your information below, then wait for coordinator approval.",
         });
-        setActiveTab("pending-approval");
+        setActiveTab(getPendingApprovalLandingTab(result.data));
         return;
       }
       setActiveTab((prev) =>
-        ["signin", "signup", "pending-approval"].includes(prev)
+        ["signin", "signup"].includes(prev)
           ? "home"
           : prev,
       );
@@ -785,6 +863,7 @@
           const attemptsCount = lockoutData.attempts || 0;
           const failureLimit = lockoutData.failure_limit || 5;
           const remainingMinutes = lockoutData.remaining_minutes || 1;
+          const penaltyMinutes = lockoutData.penalty_minutes || remainingMinutes;
 
           // Parse locked_until from response, or calculate from remaining_minutes
           let lockedUntilTime = null;
@@ -834,7 +913,7 @@
               prev
                 ? {
                     ...prev,
-                    detail: `⏱️ Retry available: ${timeDisplay} (${timeStr})`,
+                    detail: `AXES lockout: ${attemptsCount} of ${failureLimit} failed login attempt(s). Retry in ${remainingMinutes} minute(s) (${timeDisplay} / ${timeStr}).`,
                   }
                 : null,
             );
@@ -863,9 +942,9 @@
 
           setAuthAlert({
             severity: "error",
-            title: "Account temporarily locked",
+            title: "Account temporarily locked by AXES",
             message: "Too many failed login attempts.",
-            detail: `⏱️ Retry available: checking...`,
+            detail: `AXES locked this account after ${attemptsCount} failed attempt(s) out of ${failureLimit}. Lockout duration: ${penaltyMinutes} minute(s).`,
             attempts: `${attemptsCount} of ${failureLimit}`,
           });
 
@@ -880,11 +959,20 @@
           return;
         }
 
+        if (result.status === 403 && result.data?.must_change_password) {
+          window.location.replace("/accounts/settings/?must_change_password=1");
+          return;
+        }
+
         if (!result.ok) {
           const errorMsg = result.data?.error || "Unable to sign in.";
           setError(errorMsg);
 
           // Show warning for regular failed attempts (before lockout)
+      if (result.data?.must_change_password) {
+        window.location.replace("/accounts/settings/?must_change_password=1");
+        return;
+      }
           if (result.status === 401 || result.status === 400) {
             const attemptData = result.data || {};
             if (
@@ -944,10 +1032,28 @@
       setAuthAlert(null);
       setSignUpLoading(true);
       try {
+        const formData = new FormData();
+        formData.append("role", signUpForm.role || "");
+        formData.append("first_name", signUpForm.first_name || "");
+        formData.append("middle_name", signUpForm.middle_name || "");
+        formData.append("last_name", signUpForm.last_name || "");
+        formData.append("email", signUpForm.email || "");
+        formData.append("password1", signUpForm.password1 || "");
+        formData.append("password2", signUpForm.password2 || "");
+        if (signUpForm.student_verification_document) {
+          formData.append(
+            "student_verification_document",
+            signUpForm.student_verification_document,
+          );
+        }
+
         const result = await fetchJSON("/api/auth/register/", {
           method: "POST",
-          headers: { "X-CSRFToken": getCookie("csrftoken") },
-          body: JSON.stringify(signUpForm),
+          headers: {
+            "X-CSRFToken": getCookie("csrftoken"),
+          },
+          body: formData,
+          raw: true,
         });
         if (!result.ok) {
           const errs = result.data?.errors;
@@ -956,31 +1062,51 @@
               ? Object.values(errs).flat().filter(Boolean).map(String).join(" ")
               : result.data?.error || "Unable to create account.";
           setError(message);
+          setAuthAlert({
+            severity: "error",
+            title: "Sign up failed",
+            message,
+            detail: result.data?.detail || "",
+          });
           if (window.Swal && typeof window.Swal.fire === "function")
             window.Swal.fire("Action failed", message, "error");
-          setActiveTab("signin");
           return;
         }
         const message = result.data?.message || "Account created.";
         setAuthMessage(message);
+        setSignUpForm({
+          role: "mentor",
+          first_name: "",
+          middle_name: "",
+          last_name: "",
+          email: "",
+          password1: "",
+          password2: "",
+          student_verification_document: null,
+        });
         setActiveTab("signin");
       } finally {
         setSignUpLoading(false);
       }
     }
 
-    function handleLogout() {
-      clearAuthTokens();
-      replaceAppUrl("signin");
-      fetch("/api/auth/logout/", {
-        method: "POST",
-        credentials: "include",
-        headers: {
-          "Content-Type": "application/json",
-          "X-CSRFToken": getCookie("csrftoken") || "",
-        },
-      }).catch(() => {});
-      window.location.replace("/");
+    async function handleLogout() {
+      if (logoutLoading) return;
+      setLogoutLoading(true);
+      try {
+        await fetch("/api/auth/logout/", {
+          method: "POST",
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json",
+            "X-CSRFToken": getCookie("csrftoken") || "",
+          },
+        }).catch(() => {});
+      } finally {
+        clearAuthTokens();
+        replaceAppUrl("signin");
+        window.location.replace("/");
+      }
     }
 
     async function loadSessions() {
@@ -1261,26 +1387,6 @@
       }
     }
 
-    async function handleCreateSubject() {
-      setError("");
-      const result = await fetchJSON("/api/subjects/create/", {
-        method: "POST",
-        headers: { "X-CSRFToken": getCookie("csrftoken") },
-        body: JSON.stringify(subjectForm),
-      });
-      if (!result.ok) {
-        const errs = result.data?.errors;
-        setError(
-          errs && typeof errs === "object"
-            ? Object.values(errs).flat().filter(Boolean).join(" ")
-            : result.data?.error || "Unable to create subject.",
-        );
-        return;
-      }
-      setSubjectForm({ name: "", description: "" });
-      loadSubjects();
-    }
-
     async function handleUpdateSubject() {
       if (!subjectEditId) return;
       setError("");
@@ -1300,21 +1406,6 @@
       }
       setSubjectEditId(null);
       setSubjectForm({ name: "", description: "" });
-      loadSubjects();
-    }
-
-    async function handleDeleteSubject(id) {
-      setError("");
-      const result = await fetchJSON(`/api/subjects/${id}/delete/`, {
-        method: "POST",
-        headers: { "X-CSRFToken": getCookie("csrftoken") },
-      });
-      if (!result.ok) {
-        setError(result.data?.error || "Unable to delete subject.");
-        setSubjectDeleteId(null);
-        return;
-      }
-      setSubjectDeleteId(null);
       loadSubjects();
     }
 
@@ -1670,16 +1761,68 @@
     }
 
     async function loadActivityLogs(params = {}) {
+      const page = Math.max(1, Number.parseInt(params.page ?? 1, 10) || 1);
+      const pageSize = Math.min(
+        100,
+        Math.max(1, Number.parseInt(params.page_size ?? 20, 10) || 20),
+      );
+      const normalizedSearch = (params.search || "").trim();
+      const normalizedDateFrom = params.date_from || "";
+      const normalizedDateTo = params.date_to || "";
+      const cacheKey = JSON.stringify({
+        page,
+        pageSize,
+        search: normalizedSearch,
+        date_from: normalizedDateFrom,
+        date_to: normalizedDateTo,
+      });
+      const cached = activityLogsCacheRef.current.get(cacheKey);
+      if (cached) {
+        setActivityLogs(cached.logs);
+        setActivityLogsPage(cached.page);
+        setActivityLogsPageSize(cached.page_size);
+        setActivityLogsTotal(cached.total);
+        setActivityLogsTotalPages(cached.total_pages);
+        setActivityLogsLoading(false);
+        return cached;
+      }
+
       setActivityLogsLoading(true);
       const q = new URLSearchParams();
-      if (params.search) q.set("search", params.search);
-      if (params.date_from) q.set("date_from", params.date_from);
-      if (params.date_to) q.set("date_to", params.date_to);
+      q.set("page", String(page));
+      q.set("page_size", String(pageSize));
+      if (normalizedSearch) q.set("search", normalizedSearch);
+      if (normalizedDateFrom) q.set("date_from", normalizedDateFrom);
+      if (normalizedDateTo) q.set("date_to", normalizedDateTo);
       const result = await fetchJSON(
         "/api/activity-logs/" + (q.toString() ? "?" + q.toString() : ""),
       );
-      if (result.ok) setActivityLogs(result.data.logs || []);
-      else setActivityLogs([]);
+      if (result.ok) {
+        const response = result.data || {};
+        const logs = response.logs || [];
+        const resolvedPage = response.page || page;
+        const resolvedPageSize = response.page_size || pageSize;
+        const resolvedTotal = response.total || logs.length || 0;
+        const resolvedTotalPages = response.total_pages || 1;
+        setActivityLogs(logs);
+        setActivityLogsPage(resolvedPage);
+        setActivityLogsPageSize(resolvedPageSize);
+        setActivityLogsTotal(resolvedTotal);
+        setActivityLogsTotalPages(resolvedTotalPages);
+        activityLogsCacheRef.current.set(cacheKey, {
+          logs,
+          page: resolvedPage,
+          page_size: resolvedPageSize,
+          total: resolvedTotal,
+          total_pages: resolvedTotalPages,
+        });
+      } else {
+        setActivityLogs([]);
+        setActivityLogsPage(page);
+        setActivityLogsPageSize(pageSize);
+        setActivityLogsTotal(0);
+        setActivityLogsTotalPages(1);
+      }
       setActivityLogsLoading(false);
     }
 
@@ -1896,6 +2039,7 @@
 
     useEffect(() => {
       if (!error) return;
+      if (isPendingApprovalMessage(error)) return;
       if (["signin", "signup"].includes(activeTab)) return;
       if (!(window.Swal && typeof window.Swal.fire === "function")) return;
       window.Swal.fire("Action failed", error, "error");
@@ -1905,6 +2049,7 @@
       user,
       setUser,
       stats,
+      pendingApprovalLandingTab: getPendingApprovalLandingTab(user),
       unreadCount,
       authRequired,
       setAuthRequired,
@@ -1920,6 +2065,7 @@
       setAuthAlert,
       signInLoading,
       signUpLoading,
+      logoutLoading,
       signInForm,
       setSignInForm,
       signUpForm,
@@ -1996,11 +2142,7 @@
       setSubjectForm,
       subjectEditId,
       setSubjectEditId,
-      subjectDeleteId,
-      setSubjectDeleteId,
-      handleCreateSubject,
       handleUpdateSubject,
-      handleDeleteSubject,
       loadSubjects,
       approvalsLoading,
       approvalActionKey,
@@ -2024,6 +2166,10 @@
       downloadBackup,
       activityLogs,
       activityLogsLoading,
+      activityLogsPage,
+      activityLogsPageSize,
+      activityLogsTotal,
+      activityLogsTotalPages,
       loadActivityLogs,
       postsFeed,
       postsFeedLoaded,

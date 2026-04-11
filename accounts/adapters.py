@@ -4,6 +4,7 @@ from django.contrib.auth import get_user_model
 from allauth.socialaccount.adapter import DefaultSocialAccountAdapter
 from allauth.socialaccount.models import SocialLogin
 from allauth.exceptions import ImmediateHttpResponse
+from django import forms
 
 from profiles.models import MentorProfile, MenteeProfile
 
@@ -23,7 +24,27 @@ class RoleAwareSocialAccountAdapter(DefaultSocialAccountAdapter):
         selected_role = request.session.get(ROLE_SESSION_KEY)
         selected_google_role = request.session.get(GOOGLE_OAUTH_ROLE_SESSION_KEY)
         user = sociallogin.user
-        email = sociallogin.email_addresses[0].email if sociallogin.email_addresses else None
+        email = None
+        if sociallogin.email_addresses:
+            email = sociallogin.email_addresses[0].email
+        if not email:
+            email = getattr(user, "email", None)
+        if not email:
+            email = sociallogin.account.extra_data.get("email") if getattr(sociallogin, "account", None) else None
+        
+        # Validate institutional email domain for Google OAuth
+        if email:
+            from accounts.forms import validate_institutional_email
+            try:
+                validate_institutional_email(email)
+            except forms.ValidationError as e:
+                messages.error(request, str(e))
+                raise ImmediateHttpResponse(
+                    redirect("/app/signin?oauth_error=institutional_email")
+                )
+        else:
+            messages.error(request, "Google account email could not be read.")
+            raise ImmediateHttpResponse(redirect("/app/signin?oauth_error=missing_email"))
         
         # If a local account exists for this email, attach the social login to that user
         # and continue normal login flow. Using 'connect' here forces allauth's

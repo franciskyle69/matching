@@ -10,7 +10,7 @@
     { id: "matching", label: "Matching", role: "non-staff" },
     { id: "sessions", label: "Sessions", role: "any" },
     { id: "announcements", label: "Announcements", role: "any" },
-    { id: "approvals", label: "Approvals", role: "staff" },
+    { id: "approvals", label: "User approvals", role: "staff" },
     { id: "subjects", label: "Subjects", role: "staff" },
     { id: "users", label: "Users", role: "staff" },
     { id: "activity-logs", label: "Activity Logs", role: "staff" },

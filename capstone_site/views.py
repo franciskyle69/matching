@@ -2,6 +2,8 @@ from pathlib import Path
 
 from django.http import HttpResponse, HttpResponseNotFound, HttpResponseRedirect
 
+from accounts.models import must_change_password
+
 
 def _matching_redirect(request, default_tab="sessions"):
     """Redirect old /matching/* Django pages to React app with appropriate hash."""
@@ -18,6 +20,8 @@ def _matching_redirect(request, default_tab="sessions"):
 
 
 def react_app(request):
+    if request.user.is_authenticated and must_change_password(request.user):
+        return HttpResponseRedirect("/accounts/settings/?must_change_password=1")
     index_path = Path(__file__).resolve().parent.parent / "frontend" / "dashboard" / "index.html"
     if not index_path.exists():
         return HttpResponseNotFound(
@@ -33,7 +37,16 @@ def react_app(request):
 
 def landing_page(request):
     if request.user.is_authenticated:
+        if must_change_password(request.user):
+            return HttpResponseRedirect("/accounts/settings/?must_change_password=1")
         return HttpResponseRedirect("/app/")
+    index_path = Path(__file__).resolve().parent.parent / "frontend" / "landing" / "index.html"
+    if not index_path.exists():
+        return HttpResponseNotFound("Landing page not found. Move Agentix into frontend/landing.")
+    return HttpResponse(index_path.read_text(encoding="utf-8"))
+
+
+def public_landing_page(request):
     index_path = Path(__file__).resolve().parent.parent / "frontend" / "landing" / "index.html"
     if not index_path.exists():
         return HttpResponseNotFound("Landing page not found. Move Agentix into frontend/landing.")

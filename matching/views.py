@@ -1,6 +1,7 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect, get_object_or_404
+from django.db.models import Prefetch
 from django.utils import timezone
 
 from profiles.models import MentorProfile, MenteeProfile
@@ -13,7 +14,9 @@ def subject_list(request):
     if not request.user.is_staff:
         messages.error(request, "Admins only.")
         return redirect("home")
-    subjects = Subject.objects.all().order_by("name")
+    subjects = Subject.objects.prefetch_related(
+        Prefetch("topics", queryset=Topic.objects.order_by("name"))
+    ).order_by("name")
     return render(request, "matching/subjects_list.html", {"subjects": subjects})
 
 
@@ -22,15 +25,8 @@ def subject_create(request):
     if not request.user.is_staff:
         messages.error(request, "Admins only.")
         return redirect("home")
-    if request.method == "POST":
-        form = SubjectForm(request.POST)
-        if form.is_valid():
-            form.save()
-            messages.success(request, "Subject created.")
-            return redirect("subjects_list")
-    else:
-        form = SubjectForm()
-    return render(request, "matching/subject_form.html", {"form": form, "title": "Add Subject"})
+    messages.error(request, "Subject creation is disabled. Subjects are predefined.")
+    return redirect("subjects_list")
 
 
 @login_required
@@ -38,7 +34,10 @@ def subject_edit(request, subject_id: int):
     if not request.user.is_staff:
         messages.error(request, "Admins only.")
         return redirect("home")
-    subject = get_object_or_404(Subject, id=subject_id)
+    subject = get_object_or_404(
+        Subject.objects.prefetch_related(Prefetch("topics", queryset=Topic.objects.order_by("name"))),
+        id=subject_id,
+    )
     if request.method == "POST":
         form = SubjectForm(request.POST, instance=subject)
         if form.is_valid():
@@ -47,7 +46,11 @@ def subject_edit(request, subject_id: int):
             return redirect("subjects_list")
     else:
         form = SubjectForm(instance=subject)
-    return render(request, "matching/subject_form.html", {"form": form, "title": "Edit Subject"})
+    return render(
+        request,
+        "matching/subject_form.html",
+        {"form": form, "title": "Edit Subject", "subject": subject, "topics": subject.topics.all()},
+    )
 
 
 @login_required
@@ -55,12 +58,8 @@ def subject_delete(request, subject_id: int):
     if not request.user.is_staff:
         messages.error(request, "Admins only.")
         return redirect("home")
-    subject = get_object_or_404(Subject, id=subject_id)
-    if request.method == "POST":
-        subject.delete()
-        messages.success(request, "Subject deleted.")
-        return redirect("subjects_list")
-    return render(request, "matching/subject_delete.html", {"subject": subject})
+    messages.error(request, "Subject deletion is disabled. Subjects are predefined.")
+    return redirect("subjects_list")
 
 
 @login_required

@@ -1,7 +1,7 @@
-(function () {
+﻿(function () {
   "use strict";
   const React = window.React;
-  const { useContext, useState } = React;
+  const { useContext, useEffect, useState } = React;
   const AppContext = window.DashboardApp.AppContext;
   const Utils = window.DashboardApp.Utils || {};
   const { formatDate, LoadingSpinner, OrbitingDotsLoader } = Utils;
@@ -68,6 +68,388 @@
     }
   }
 
+  function getInitials(label) {
+    return String(label || "?")
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((part) => part[0])
+      .join("")
+      .toUpperCase() || "?";
+  }
+
+  function Avatar({ avatarUrl, label, size = "md" }) {
+    return (
+      <div className={`session-avatar session-avatar-${size}`} aria-hidden="true">
+        {avatarUrl ? (
+          <img className="session-avatar-image" src={avatarUrl} alt="" />
+        ) : (
+          <div className="session-avatar-fallback">{getInitials(label)}</div>
+        )}
+      </div>
+    );
+  }
+
+  const SessionAvatar = Avatar;
+
+  function StatusBadge({ status }) {
+    const normalized = String(status || "scheduled").toLowerCase();
+    let cls = "session-status-scheduled";
+    if (normalized === "completed") cls = "session-status-completed";
+    else if (normalized === "cancelled") cls = "session-status-cancelled";
+    return (
+      <span className={`session-status-badge ${cls}`}>
+        {normalized}
+      </span>
+    );
+  }
+
+  function SectionHeader({ label, title, count = 0 }) {
+    return (
+      <div className="sessions-section-header">
+        {label ? <p className="sessions-section-label">{label}</p> : null}
+        <div className="sessions-section-title-row">
+          <h3 className="sessions-section-title">{title}</h3>
+          {count > 0 ? <span className="sessions-count-badge">{count}</span> : null}
+        </div>
+      </div>
+    );
+  }
+
+  function extractMeetingLink(session) {
+    const candidate = [session.notes, session.meeting_notes].find((value) =>
+      /https?:\/\//i.test(String(value || "")),
+    );
+    if (!candidate) return "";
+    const match = String(candidate).match(/https?:\/\/[^\s)]+/i);
+    return match ? match[0] : "";
+  }
+
+  function getSessionNotesPreview(session) {
+    return session.notes || session.meeting_notes || "";
+  }
+
+  function truncateLinkText(value) {
+    if (!value) return "";
+    return value.length > 56 ? value.slice(0, 56) + "..." : value;
+  }
+
+  function SessionCommentsPanel({
+    sessionId,
+    commentsByKey,
+    loadComments,
+    addComment,
+    commentKey,
+  }) {
+    const [input, setInput] = useState("");
+    const [submitting, setSubmitting] = useState(false);
+    const Spinner = Utils.LoadingSpinner;
+    const keyFn =
+      typeof commentKey === "function" ? commentKey : (t, id) => t + ":" + id;
+    const key = keyFn("session", sessionId);
+    const list = commentsByKey[key] || [];
+    const loaded = Array.isArray(commentsByKey[key]);
+
+    useEffect(() => {
+      if (!loaded) loadComments("session", sessionId);
+    }, [loaded, sessionId, loadComments]);
+
+    async function handleSubmit() {
+      const text = (input || "").trim();
+      if (!text || submitting) return;
+      setSubmitting(true);
+      try {
+        await addComment("session", sessionId, text);
+        setInput("");
+      } finally {
+        setSubmitting(false);
+      }
+    }
+
+    return (
+      <div className="session-comments-panel">
+        <ul className="session-comment-list" aria-label="Comments">
+          {!loaded ? (
+            <li className="session-comment-item muted">Loading comments...</li>
+          ) : list.length === 0 ? (
+            <li className="session-comment-item muted">No comments yet.</li>
+          ) : (
+            list.map((comment) => (
+              <li key={comment.id} className="session-comment-item">
+                <span className="session-comment-author">
+                  {comment.author_display_name || comment.author_username}
+                </span>
+                <span className="session-comment-meta">
+                  {formatDate(comment.created_at)}
+                </span>
+                <p className="session-comment-content">{comment.content}</p>
+              </li>
+            ))
+          )}
+        </ul>
+        <div className="session-comment-input-row">
+          <textarea
+            className="session-comment-input"
+            placeholder="Add a comment..."
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            rows={2}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                handleSubmit();
+              }
+            }}
+          />
+          <button
+            type="button"
+            className="btn secondary small"
+            onClick={handleSubmit}
+            disabled={!input.trim() || submitting}
+          >
+            {submitting ? <Spinner inline /> : "Comment"}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  function ProgressCard({ title, completedMinutes, targetHours, percent, avatarUrl, avatarLabel }) {
+    const safePercent = Math.max(0, Math.min(100, percent || 0));
+    return (
+      <div className="session-progress-card">
+        <div className="session-progress-header">
+          <div className="session-progress-title-wrap">
+            <SessionAvatar avatarUrl={avatarUrl} label={avatarLabel || title} />
+            <div>
+              <p className="session-progress-title">{title}</p>
+              <p className="session-progress-meta">
+                {formatMinutesAsHours(completedMinutes)} / {targetHours}h
+              </p>
+            </div>
+          </div>
+          <p className="session-progress-percent">{Math.round(safePercent)}%</p>
+        </div>
+        <div
+          className="progress-bar-wrap session-progress-bar"
+          role="progressbar"
+          aria-valuenow={Math.round(safePercent)}
+          aria-valuemin={0}
+          aria-valuemax={100}
+        >
+          <div
+            className="progress-bar-fill"
+            style={{ width: safePercent + "%" }}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  function SessionForm({
+    pairMenteeName,
+    difficultySubjects,
+    difficultyTopics,
+    createForm,
+    setCreateForm,
+    options,
+    topicsBySubject,
+    selectedSubjectNeedsHelp,
+    selectedTopicNeedsHelp,
+    minDateTimeLocal,
+    createWeeklyLimitReached,
+    handleCreateSession,
+    sessionsPairMenteeId,
+    createSessionLoading,
+    weeklySessionLimitMinutes,
+  }) {
+    const Spinner = LoadingSpinner;
+    const durationPresets = [30, 60, 90];
+
+    return (
+      <section className="session-form-card">
+        <div className="session-form-header">
+          <div>
+            <h2 className="session-form-title">New session with {pairMenteeName}</h2>
+            <p className="session-form-subtitle">
+              Schedule a focused session without leaving the page.
+            </p>
+          </div>
+          <span className="session-form-kicker">Official pair</span>
+        </div>
+
+        <div className="session-focus-note">
+          <strong>Mentee needs help in:</strong>
+          {difficultySubjects.length === 0 && difficultyTopics.length === 0 ? (
+            <span className="muted"> No specific difficulty areas reported yet.</span>
+          ) : (
+            <div className="session-focus-chips">
+              {difficultySubjects.map((name) => (
+                <span key={`subj-${name}`} className="session-focus-chip needs-help">
+                  {name}
+                  <span className="session-focus-badge">Needs Help</span>
+                </span>
+              ))}
+              {difficultyTopics.map((name) => (
+                <span key={`topic-${name}`} className="session-focus-chip needs-help">
+                  {name}
+                  <span className="session-focus-badge">Needs Help</span>
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="form-grid session-form-grid">
+          <div
+            className={
+              "session-create-field " + (selectedSubjectNeedsHelp ? "needs-help" : "")
+            }
+          >
+            <label>Subject</label>
+            <select
+              value={createForm.subject_id}
+              onChange={(e) =>
+                setCreateForm({
+                  ...createForm,
+                  subject_id: e.target.value,
+                  topic_id: "",
+                })
+              }
+            >
+              <option value="">Select subject</option>
+              {(options.subjects || []).map((subject) => {
+                const needsHelp = difficultySubjects.includes(subject.name);
+                return (
+                  <option key={subject.id} value={subject.id}>
+                    {subject.name}
+                    {needsHelp ? " - Needs Help" : ""}
+                  </option>
+                );
+              })}
+            </select>
+            {selectedSubjectNeedsHelp && (
+              <p className="session-needs-help-helper">
+                This subject is marked as a difficulty area.
+              </p>
+            )}
+          </div>
+          <div
+            className={
+              "session-create-field " + (selectedTopicNeedsHelp ? "needs-help" : "")
+            }
+          >
+            <label>Topic</label>
+            <select
+              value={createForm.topic_id}
+              onChange={(e) =>
+                setCreateForm({
+                  ...createForm,
+                  topic_id: e.target.value,
+                })
+              }
+            >
+              <option value="">Select topic</option>
+              {(topicsBySubject[createForm.subject_id] || []).map((topic) => {
+                const needsHelp = difficultyTopics.includes(topic.name);
+                return (
+                  <option key={topic.id} value={topic.id}>
+                    {topic.name}
+                    {needsHelp ? " - Needs Help" : ""}
+                  </option>
+                );
+              })}
+            </select>
+            {selectedTopicNeedsHelp && (
+              <p className="session-needs-help-helper">
+                This topic is marked as a difficulty area.
+              </p>
+            )}
+          </div>
+          <div>
+            <label htmlFor="create-session-date-time">Date & time</label>
+            <input
+              id="create-session-date-time"
+              type="datetime-local"
+              min={minDateTimeLocal}
+              value={createForm.scheduled_at}
+              onFocus={openNativeDateTimePicker}
+              onClick={openNativeDateTimePicker}
+              onChange={(e) =>
+                setCreateForm({
+                  ...createForm,
+                  scheduled_at: e.target.value,
+                })
+              }
+            />
+            {createWeeklyLimitReached && (
+              <p className="session-needs-help-helper">
+                This week already has {Math.round(weeklySessionLimitMinutes / 60)} hours of completed sessions. Choose another week.
+              </p>
+            )}
+          </div>
+          <div>
+            <label>Duration</label>
+            <div className="duration-presets session-duration-segments">
+              {durationPresets.map((minutes) => (
+                <button
+                  key={minutes}
+                  type="button"
+                  className={
+                    Number(createForm.duration_minutes) === minutes ? "active" : ""
+                  }
+                  onClick={() =>
+                    setCreateForm({
+                      ...createForm,
+                      duration_minutes: minutes,
+                    })
+                  }
+                >
+                  {minutes} min
+                </button>
+              ))}
+            </div>
+            <input
+              type="number"
+              min="15"
+              step="15"
+              value={createForm.duration_minutes}
+              onChange={(e) =>
+                setCreateForm({
+                  ...createForm,
+                  duration_minutes: e.target.value,
+                })
+              }
+            />
+          </div>
+          <div style={{ gridColumn: "1 / -1" }}>
+            <label>Notes (optional)</label>
+            <textarea
+              value={createForm.notes}
+              onChange={(e) =>
+                setCreateForm({
+                  ...createForm,
+                  notes: e.target.value,
+                })
+              }
+              placeholder="Add agenda, links, or materials for the session."
+            />
+          </div>
+        </div>
+
+        <div className="session-form-actions">
+          <button
+            className="btn"
+            onClick={() => handleCreateSession(sessionsPairMenteeId)}
+            disabled={createSessionLoading || createWeeklyLimitReached}
+          >
+            {createSessionLoading ? <Spinner inline /> : "Schedule Session"}
+          </button>
+        </div>
+      </section>
+    );
+  }
+
   function MeetingNotesBlock({ session, onSave }) {
     const [editing, setEditing] = useState(false);
     const [editValue, setEditValue] = useState(session.meeting_notes || "");
@@ -106,7 +488,7 @@
             <textarea
               value={editValue}
               onChange={(e) => setEditValue(e.target.value)}
-              placeholder="Take meeting notes…"
+              placeholder="Take meeting notes..."
               rows={3}
             />
             <div className="btn-row" style={{ marginTop: "8px" }}>
@@ -139,9 +521,11 @@
     );
   }
 
-  function SessionCardWithReschedule({
+  function SessionCard({
     session,
     isMentor,
+    allowMentorActions = true,
+    onOpenProfile,
     rescheduleId,
     rescheduleForm,
     setRescheduleForm,
@@ -156,72 +540,143 @@
     loadComments,
     addComment,
     weeklyLimitReached,
+    minDateTimeLocal,
   }) {
+    const [commentsOpen, setCommentsOpen] = useState(false);
     const showReschedule = rescheduleId === session.id;
-    const menteeLabel = session.mentee_display_name || session.mentee_username;
-    const mentorLabel = session.mentor_display_name || session.mentor_username;
+    const subjectLabel = [session.subject, session.topic].filter(Boolean).join(" - ");
+    const extraMeta = session.duration_minutes ? `${session.duration_minutes} min` : "";
+    const meetingLink = extractMeetingLink(session);
+    const notesPreview = getSessionNotesPreview(session);
+    const mentorName = session.mentor_display_name || session.mentor_username || "Mentor";
+    const menteeName = session.mentee_display_name || session.mentee_username || "Mentee";
+    const mentorUserId = session.mentor_user_id;
+    const menteeUserId = session.mentee_user_id;
+    const primaryUserId = isMentor ? menteeUserId : mentorUserId;
+    const partyAvatarUrl = isMentor ? session.mentee_avatar_url : session.mentor_avatar_url;
+    const partyAvatarLabel = isMentor
+      ? session.mentee_display_name || session.mentee_username || "Mentee"
+      : session.mentor_display_name || session.mentor_username || "Mentor";
+
     return (
       <div className="session-card" key={session.id}>
         <div className="session-card-header">
           <div className="session-card-main">
-            <p className="session-card-title">
-              {menteeLabel} with {mentorLabel}
+            <div className="session-card-title-row">
+              <button
+                type="button"
+                className="session-avatar-btn"
+                onClick={() => onOpenProfile && onOpenProfile(primaryUserId)}
+                aria-label={`Open profile for ${isMentor ? menteeName : mentorName}`}
+              >
+                <SessionAvatar
+                avatarUrl={partyAvatarUrl}
+                label={partyAvatarLabel}
+                size="sm"
+              />
+              </button>
+              <div className="session-card-identity">
+                <button
+                  type="button"
+                  className="session-profile-link session-card-title"
+                  onClick={() => onOpenProfile && onOpenProfile(menteeUserId)}
+                >
+                  {menteeName}
+                </button>
+                <p className="session-card-secondary">
+                  with{" "}
+                  <button
+                    type="button"
+                    className="session-profile-link"
+                    onClick={() => onOpenProfile && onOpenProfile(mentorUserId)}
+                  >
+                    {mentorName}
+                  </button>
+                </p>
+              </div>
+              <StatusBadge status={session.status} />
+            </div>
+            <div className="session-card-meta-row">
+              <span className="session-card-meta">{formatDate(session.scheduled_at)}</span>
+              {subjectLabel ? <span className="session-card-divider">•</span> : null}
+              {subjectLabel ? <span className="session-card-meta">{subjectLabel}</span> : null}
+              {extraMeta ? <span className="session-card-divider">•</span> : null}
+              {extraMeta ? <span className="session-card-meta">{extraMeta}</span> : null}
+            </div>
+            <div className="session-card-link-row">
+              {meetingLink ? (
+                <a
+                  className="session-card-link"
+                  href={meetingLink}
+                  target="_blank"
+                  rel="noreferrer noopener"
+                >
+                  <span className="session-card-link-icon" aria-hidden="true">↗</span>
+                  <span>{truncateLinkText(meetingLink) || "Open meeting link"}</span>
+                </a>
+              ) : (
+                <p className="session-card-link-muted">No meeting link</p>
+              )}
+            </div>
+            <p className="session-card-notes" title={notesPreview || "No notes yet"}>
+              {notesPreview || "No notes yet"}
             </p>
-            <p className="session-card-meta">
-              {formatDate(session.scheduled_at)}
-            </p>
-            <p className="session-card-subject">
-              {session.subject || "No subject"}
-              {session.topic ? " · " + session.topic : ""}
-              {(session.duration_minutes || 0) > 0
-                ? " · " + session.duration_minutes + " min"
-                : ""}
-            </p>
-            {session.notes && (
-              <div className="session-card-notes">{session.notes}</div>
-            )}
           </div>
-          <span className={"status-pill " + session.status}>
-            {session.status}
-          </span>
         </div>
-        {isMentor && (
-          <div className="session-card-actions">
+        <div className="session-card-actions">
+          {isMentor && allowMentorActions && (
             <button
-              className="btn secondary small"
+              className="btn secondary small session-action-btn"
               onClick={() => {
                 setRescheduleId(session.id);
                 setRescheduleForm({
                   subject_id: session.subject_id || "",
                   topic_id: session.topic_id || "",
-                  scheduled_at: session.scheduled_at
-                    ? session.scheduled_at.slice(0, 16)
-                    : "",
+                  scheduled_at: session.scheduled_at ? session.scheduled_at.slice(0, 16) : "",
                   duration_minutes: session.duration_minutes || 60,
-                  notes: session.notes || "",
+                  notes: session.notes || session.meeting_notes || "",
                 });
               }}
             >
-              Reschedule
+              Edit
             </button>
-            <button
-              className="btn small"
-              onClick={() => handleStatusUpdate(session.id, "completed")}
-            >
-              Mark completed
-            </button>
-            <button
-              className="btn danger small"
-              onClick={() => handleStatusUpdate(session.id, "cancelled")}
-            >
-              Cancel session
-            </button>
-          </div>
+          )}
+          <button
+            className="btn secondary small session-action-btn ghost"
+            onClick={() => setCommentsOpen((current) => !current)}
+          >
+            {commentsOpen ? "Hide comments" : "View comments"}
+          </button>
+          {isMentor && allowMentorActions && (
+            <>
+              <button
+                className="btn small session-action-btn"
+                onClick={() => handleStatusUpdate(session.id, "completed")}
+              >
+                Mark completed
+              </button>
+              <button
+                className="btn danger small session-action-btn"
+                onClick={() => handleStatusUpdate(session.id, "cancelled")}
+              >
+                Cancel session
+              </button>
+            </>
+          )}
+        </div>
+        {commentsOpen && (
+          <SessionCommentsPanel
+            sessionId={session.id}
+            commentsByKey={commentsByKey || {}}
+            loadComments={loadComments || (() => {})}
+            addComment={addComment || (async () => {})}
+            commentKey={commentKey}
+          />
         )}
         {showReschedule && (
           <div className="session-reschedule-panel">
             <h3>Change date or details</h3>
-            <div className="form-grid">
+            <div className="form-grid session-form-grid session-reschedule-grid">
               <div>
                 <label>Subject</label>
                 <select
@@ -235,9 +690,9 @@
                   }
                 >
                   <option value="">Select subject</option>
-                  {(options.subjects || []).map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.name}
+                  {(options.subjects || []).map((subject) => (
+                    <option key={subject.id} value={subject.id}>
+                      {subject.name}
                     </option>
                   ))}
                 </select>
@@ -254,13 +709,11 @@
                   }
                 >
                   <option value="">Select topic</option>
-                  {(topicsBySubject[rescheduleForm.subject_id] || []).map(
-                    (t) => (
-                      <option key={t.id} value={t.id}>
-                        {t.name}
-                      </option>
-                    ),
-                  )}
+                  {(topicsBySubject[rescheduleForm.subject_id] || []).map((topic) => (
+                    <option key={topic.id} value={topic.id}>
+                      {topic.name}
+                    </option>
+                  ))}
                 </select>
               </div>
               <div>
@@ -312,11 +765,10 @@
             </div>
             {weeklyLimitReached && (
               <p className="session-needs-help-helper">
-                This week already has 2 hours of completed sessions. Choose
-                another week.
+                This week already has 2 hours of completed sessions. Choose another week.
               </p>
             )}
-            <div className="btn-row" style={{ marginTop: "12px" }}>
+            <div className="btn-row session-reschedule-actions">
               <button
                 className="btn"
                 onClick={() => handleReschedule(session.id)}
@@ -339,17 +791,11 @@
             onSave={handleUpdateMeetingNotes}
           />
         )}
-        <CommentThread
-          targetType="session"
-          targetId={session.id}
-          comments={commentsByKey}
-          loadComments={loadComments}
-          addComment={addComment}
-          commentKey={commentKey}
-        />
       </div>
     );
   }
+
+  const SessionCardWithReschedule = SessionCard;
 
   function SessionsPage() {
     const ctx = useContext(AppContext);
@@ -374,6 +820,7 @@
       commentKey,
       loadComments,
       addComment,
+      loadUserProfile,
       sessionsPairMenteeId,
       setSessionsPairMenteeId,
       myMentor,
@@ -392,6 +839,7 @@
         ? progressByMentee
         : (options.mentees || []).map((m) => ({
             mentee_id: m.id,
+            user_id: m.user_id,
             mentee_username: m.username,
           mentee_display_name: m.display_name || m.username,
             total_completed_minutes: 0,
@@ -434,25 +882,6 @@
       return buckets;
     }
 
-    const commentKeyFn =
-      typeof commentKey === "function" ? commentKey : (t, id) => t + ":" + id;
-    const sessionCardProps = {
-      isMentor,
-      rescheduleId,
-      rescheduleForm,
-      setRescheduleForm,
-      setRescheduleId,
-      options,
-      topicsBySubject,
-      handleReschedule,
-      handleStatusUpdate,
-      handleUpdateMeetingNotes,
-      commentsByKey: commentsByKey || {},
-      commentKey: commentKeyFn,
-      loadComments: loadComments || (() => {}),
-      addComment: addComment || (async () => {}),
-    };
-
     const targetHours = sessionsData.progress_target_hours ?? 12;
 
     if (isMentor && !isStaffView && sessionsPairMenteeId == null) {
@@ -461,7 +890,7 @@
           <h1 className="page-title">Sessions</h1>
           <p className="page-subtitle">
             Choose a mentee to view sessions and schedule new ones. Only
-            official mentor–mentee pairs from Matching are shown.
+            official mentor-mentee pairs from Matching are shown.
           </p>
           {sessionsLoading && (
             <div className="sessions-section">
@@ -494,12 +923,8 @@
                 </svg>
               </span>
               <p className="muted">You have no official mentees yet.</p>
-              <p
-                className="muted"
-                style={{ marginTop: "8px", fontSize: "14px" }}
-              >
-                Go to Matching to review mentee requests and accept your first
-                mentee.
+              <p className="muted" style={{ marginTop: "8px", fontSize: "14px" }}>
+                Go to Matching to review mentee requests and accept your first mentee.
               </p>
               <div className="btn-row" style={{ marginTop: "10px" }}>
                 <button
@@ -517,19 +942,33 @@
               <h3 className="sessions-section-title">My mentees</h3>
               <div className="mentee-pair-cards">
                 {acceptedMentees.map((entry) => (
-                  <button
-                    type="button"
+                  <div
                     key={entry.mentee_id}
                     className="mentee-pair-card"
-                    onClick={() => setSessionsPairMenteeId(entry.mentee_id)}
                   >
-                    <span className="mentee-pair-card-name">
-                      {entry.mentee_display_name || entry.mentee_username}
-                    </span>
+                        <div className="mentee-pair-card-top">
+                          <button
+                            type="button"
+                            className="session-avatar-btn"
+                            onClick={() => openProfileFromSessions(entry.user_id)}
+                            aria-label={`Open profile for ${entry.mentee_display_name || entry.mentee_username}`}
+                          >
+                            <SessionAvatar
+                              avatarUrl={entry.avatar_url}
+                              label={entry.mentee_display_name || entry.mentee_username}
+                              size="sm"
+                            />
+                          </button>
+                          <button
+                            type="button"
+                            className="session-profile-link mentee-pair-card-name"
+                            onClick={() => openProfileFromSessions(entry.user_id)}
+                          >
+                            {entry.mentee_display_name || entry.mentee_username}
+                          </button>
+                        </div>
                     <span className="mentee-pair-card-stats">
-                      {formatMinutesAsHours(entry.total_completed_minutes)} /{" "}
-                      {targetHours}h ({Math.round(entry.progress_percent || 0)}
-                      %)
+                      {formatMinutesAsHours(entry.total_completed_minutes)} / {targetHours}h ({Math.round(entry.progress_percent || 0)}%)
                     </span>
                     <div
                       className="progress-bar-wrap small"
@@ -540,16 +979,26 @@
                     >
                       <div
                         className="progress-bar-fill"
-                        style={{
-                          width:
-                            Math.min(100, entry.progress_percent || 0) + "%",
-                        }}
+                        style={{ width: Math.min(100, entry.progress_percent || 0) + "%" }}
                       />
                     </div>
-                    <span className="mentee-pair-card-action">
-                      View sessions →
-                    </span>
-                  </button>
+                    <div className="mentee-pair-card-actions">
+                      <button
+                        type="button"
+                        className="btn secondary small"
+                        onClick={() => openProfileFromSessions(entry.user_id)}
+                      >
+                        View profile
+                      </button>
+                      <button
+                        type="button"
+                        className="btn small"
+                        onClick={() => setSessionsPairMenteeId(entry.mentee_id)}
+                      >
+                        View sessions
+                      </button>
+                    </div>
+                  </div>
                 ))}
               </div>
             </section>
@@ -619,6 +1068,30 @@
       !!rescheduleId &&
       !!rescheduleForm.scheduled_at &&
       rescheduleWeeklyCompletedMinutes >= weeklySessionLimitMinutes;
+    const commentKeyFn =
+      typeof commentKey === "function" ? commentKey : (t, id) => t + ":" + id;
+    function openProfileFromSessions(userId) {
+      if (!userId || typeof loadUserProfile !== "function") return;
+      loadUserProfile(userId);
+    }
+    const sessionCardProps = {
+      isMentor,
+      onOpenProfile: openProfileFromSessions,
+      rescheduleId,
+      rescheduleForm,
+      setRescheduleForm,
+      setRescheduleId,
+      options,
+      topicsBySubject,
+      handleReschedule,
+      handleStatusUpdate,
+      handleUpdateMeetingNotes,
+      commentsByKey: commentsByKey || {},
+      commentKey: commentKeyFn,
+      loadComments: loadComments || (() => {}),
+      addComment: addComment || (async () => {}),
+      minDateTimeLocal,
+    };
 
     return (
       <div className="home-dashboard-space sessions-page">
@@ -628,7 +1101,7 @@
             className="sessions-back-link"
             onClick={() => setSessionsPairMenteeId(null)}
           >
-            ← Back to my mentees
+            Back to my mentees
           </button>
         )}
         <h1 className="page-title">
@@ -636,11 +1109,11 @@
             ? `Sessions with ${pairMenteeName}`
             : "Sessions"}
         </h1>
-        <p className="page-subtitle">
+        <p className="page-subtitle sessions-page-subtitle">
           {isStaffView
             ? "View all mentoring sessions."
             : isMentor && sessionsPairMenteeId != null
-              ? "Schedule and manage sessions for this mentee. Only official mentor–mentee pairs (accepted in Matching) can create sessions."
+              ? "Schedule and manage sessions for this mentee. Only official mentor-mentee pairs (accepted in Matching) can create sessions."
               : "Schedule and manage mentoring sessions."}
         </p>
         {!sessionsLoading && !isStaffView && !isMentor && myMentor && (
@@ -649,7 +1122,11 @@
             style={{ marginTop: "8px" }}
           >
             <div className="mentee-official-mentor-main">
-              <div className="mentee-official-mentor-avatar">
+              <button
+                type="button"
+                className="mentee-official-mentor-avatar"
+                onClick={() => openProfileFromSessions(myMentor.user_id)}
+              >
                 <div className="sidebar-avatar-wrapper">
                   {myMentor.avatar_url ? (
                     <img
@@ -663,14 +1140,19 @@
                     </div>
                   )}
                 </div>
-              </div>
+              </button>
               <div className="mentee-official-mentor-text">
                 <p className="stat-label" style={{ marginBottom: 2 }}>
                   Your official mentor
                 </p>
-                <p className="stat-value" style={{ marginBottom: 2 }}>
+                <button
+                  type="button"
+                  className="session-profile-link stat-value"
+                  style={{ marginBottom: 2 }}
+                  onClick={() => openProfileFromSessions(myMentor.user_id)}
+                >
                   {myMentor.display_name || myMentor.username}
-                </p>
+                </button>
                 {myMentor.accepted_at && (
                   <p className="muted" style={{ fontSize: "12px" }}>
                     Accepted {formatDate(myMentor.accepted_at)}
@@ -696,7 +1178,7 @@
             >
               <p className="muted" style={{ margin: 0 }}>
                 This mentee is not in your official list. Only accepted
-                mentor–mentee pairs can schedule sessions. Go to Matching to
+                mentor-mentee pairs can schedule sessions. Go to Matching to
                 accept mentees.
               </p>
               <button
@@ -718,88 +1200,54 @@
             sessionsData.history?.[0]?.mentor_username) && (
             <p className="sessions-mentor-dedicated">
               Your mentoring with{" "}
-              <strong>
+              <button
+                type="button"
+                className="session-profile-link"
+                style={{ fontWeight: 700 }}
+                onClick={() =>
+                  openProfileFromSessions(
+                    sessionsData.upcoming?.[0]?.mentor_user_id ||
+                      sessionsData.history?.[0]?.mentor_user_id,
+                  )
+                }
+              >
                 {sessionsData.upcoming?.[0]?.mentor_display_name ||
                   sessionsData.history?.[0]?.mentor_display_name ||
                   sessionsData.upcoming?.[0]?.mentor_username ||
                   sessionsData.history?.[0]?.mentor_username}
-              </strong>
+              </button>
             </p>
           )}
         {!sessionsLoading &&
           !isStaffView &&
           !isMentor &&
           sessionsData.progress != null && (
-            <div className="progress-block progress-block-mentee">
-              <h3 className="progress-block-title">Mentoring progress</h3>
-              <p className="progress-block-text">
-                {formatMinutesAsHours(
-                  sessionsData.progress.total_completed_minutes,
-                )}{" "}
-                / {sessionsData.progress_target_hours ?? 12}h
-                <span className="progress-percent">
-                  {" "}
-                  ({Math.round(sessionsData.progress.progress_percent || 0)}%)
-                </span>
-              </p>
-              <div
-                className="progress-bar-wrap"
-                role="progressbar"
-                aria-valuenow={Math.round(
-                  sessionsData.progress.progress_percent || 0,
-                )}
-                aria-valuemin={0}
-                aria-valuemax={100}
-              >
-                <div
-                  className="progress-bar-fill"
-                  style={{
-                    width:
-                      Math.min(
-                        100,
-                        sessionsData.progress.progress_percent || 0,
-                      ) + "%",
-                  }}
-                />
-              </div>
-            </div>
-          )}
+          <ProgressCard
+            title="Mentoring progress"
+            completedMinutes={sessionsData.progress.total_completed_minutes}
+            targetHours={sessionsData.progress_target_hours ?? 12}
+            percent={sessionsData.progress.progress_percent}
+            avatarUrl={myMentor?.avatar_url || ""}
+            avatarLabel={myMentor?.display_name || myMentor?.username || "Mentor"}
+          />
+        )}
         {!sessionsLoading &&
           isMentor &&
           !isStaffView &&
           sessionsPairMenteeId != null &&
           pairEntry && (
-            <div className="progress-block progress-block-mentee">
-              <h3 className="progress-block-title">
-                Progress with {pairMenteeName}
-              </h3>
-              <p className="progress-block-text">
-                {formatMinutesAsHours(pairEntry.total_completed_minutes)} /{" "}
-                {targetHours}h
-                <span className="progress-percent">
-                  {" "}
-                  ({Math.round(pairEntry.progress_percent || 0)}%)
-                </span>
-              </p>
-              <div
-                className="progress-bar-wrap"
-                role="progressbar"
-                aria-valuenow={Math.round(pairEntry.progress_percent || 0)}
-                aria-valuemin={0}
-                aria-valuemax={100}
-              >
-                <div
-                  className="progress-bar-fill"
-                  style={{
-                    width: Math.min(100, pairEntry.progress_percent || 0) + "%",
-                  }}
-                />
-              </div>
-            </div>
-          )}
+          <ProgressCard
+            title={`Progress with ${pairMenteeName}`}
+            completedMinutes={pairEntry.total_completed_minutes}
+            targetHours={targetHours}
+            percent={pairEntry.progress_percent}
+            avatarUrl={pairEntry.avatar_url || ""}
+            avatarLabel={pairMenteeName}
+          />
+        )}
         {sessionsLoading && (
           <>
-            <Spinner title="Loading sessions…" subtitle="Fetching your sessions" />
+            <Spinner />
             <div className="sessions-section">
               <h3 className="sessions-section-title">Upcoming</h3>
               {[1, 2, 3].map((i) => (
@@ -826,222 +1274,30 @@
               !isStaffView &&
               sessionsPairMenteeId != null &&
               pairEntry && (
-                <div className="session-create-card">
-                  <h2>New session with {pairMenteeName}</h2>
-                  <div
-                    className="session-focus-note"
-                    title="These are areas where the mentee marked 'Have Difficulty' in their questionnaire."
-                  >
-                    <strong>Mentee needs help in:</strong>
-                    {difficultySubjects.size === 0 &&
-                    difficultyTopics.size === 0 ? (
-                      <span className="muted">
-                        {" "}
-                        No specific difficulty areas reported yet.
-                      </span>
-                    ) : (
-                      <div className="session-focus-chips">
-                        {(pairEntry?.difficulty_subjects || []).map((name) => (
-                          <span
-                            key={`subj-${name}`}
-                            className="session-focus-chip needs-help"
-                          >
-                            {name}{" "}
-                            <span className="session-focus-badge">
-                              Needs Help
-                            </span>
-                          </span>
-                        ))}
-                        {(pairEntry?.difficulty_topics || []).map((name) => (
-                          <span
-                            key={`topic-${name}`}
-                            className="session-focus-chip needs-help"
-                          >
-                            {name}{" "}
-                            <span className="session-focus-badge">
-                              Needs Help
-                            </span>
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                  <div className="form-grid">
-                    <div
-                      className={
-                        "session-create-field " +
-                        (selectedSubjectNeedsHelp ? "needs-help" : "")
-                      }
-                    >
-                      <label>Subject</label>
-                      <select
-                        value={createForm.subject_id}
-                        onChange={(e) =>
-                          setCreateForm({
-                            ...createForm,
-                            subject_id: e.target.value,
-                            topic_id: "",
-                          })
-                        }
-                      >
-                        <option value="">Select subject</option>
-                        {(options.subjects || []).map((s) => {
-                          const needsHelp = difficultySubjects.has(
-                            normalizeLabel(s.name),
-                          );
-                          return (
-                            <option key={s.id} value={s.id}>
-                              {s.name}
-                              {needsHelp ? " - Needs Help" : ""}
-                            </option>
-                          );
-                        })}
-                      </select>
-                      {selectedSubjectNeedsHelp && (
-                        <p className="session-needs-help-helper">
-                          This subject is marked as a difficulty area.
-                        </p>
-                      )}
-                    </div>
-                    <div
-                      className={
-                        "session-create-field " +
-                        (selectedTopicNeedsHelp ? "needs-help" : "")
-                      }
-                    >
-                      <label>Topic</label>
-                      <select
-                        value={createForm.topic_id}
-                        onChange={(e) =>
-                          setCreateForm({
-                            ...createForm,
-                            topic_id: e.target.value,
-                          })
-                        }
-                      >
-                        <option value="">Select topic</option>
-                        {(topicsBySubject[createForm.subject_id] || []).map(
-                          (t) => {
-                            const needsHelp = difficultyTopics.has(
-                              normalizeLabel(t.name),
-                            );
-                            return (
-                              <option key={t.id} value={t.id}>
-                                {t.name}
-                                {needsHelp ? " - Needs Help" : ""}
-                              </option>
-                            );
-                          },
-                        )}
-                      </select>
-                      {selectedTopicNeedsHelp && (
-                        <p className="session-needs-help-helper">
-                          This topic is marked as a difficulty area.
-                        </p>
-                      )}
-                    </div>
-                    <div>
-                      <label htmlFor="create-session-date-time">
-                        Date & time
-                      </label>
-                      <input
-                        id="create-session-date-time"
-                        type="datetime-local"
-                        min={minDateTimeLocal}
-                        value={createForm.scheduled_at}
-                        onFocus={openNativeDateTimePicker}
-                        onClick={openNativeDateTimePicker}
-                        onChange={(e) =>
-                          setCreateForm({
-                            ...createForm,
-                            scheduled_at: e.target.value,
-                          })
-                        }
-                      />
-                      {createWeeklyLimitReached && (
-                        <p className="session-needs-help-helper">
-                          This week already has 2 hours of completed sessions.
-                          Choose another week.
-                        </p>
-                      )}
-                    </div>
-                    <div>
-                      <label>Duration</label>
-                      <div
-                        className="duration-presets"
-                        style={{ marginBottom: "8px" }}
-                      >
-                        {[30, 60, 90].map((m) => (
-                          <button
-                            key={m}
-                            type="button"
-                            className={
-                              Number(createForm.duration_minutes) === m
-                                ? "active"
-                                : ""
-                            }
-                            onClick={() =>
-                              setCreateForm({
-                                ...createForm,
-                                duration_minutes: m,
-                              })
-                            }
-                          >
-                            {m} min
-                          </button>
-                        ))}
-                      </div>
-                      <input
-                        type="number"
-                        min="15"
-                        step="15"
-                        value={createForm.duration_minutes}
-                        onChange={(e) =>
-                          setCreateForm({
-                            ...createForm,
-                            duration_minutes: e.target.value,
-                          })
-                        }
-                      />
-                    </div>
-                    <div style={{ gridColumn: "1 / -1" }}>
-                      <label>Notes (optional)</label>
-                      <textarea
-                        value={createForm.notes}
-                        onChange={(e) =>
-                          setCreateForm({
-                            ...createForm,
-                            notes: e.target.value,
-                          })
-                        }
-                        placeholder="Agenda, materials…"
-                      />
-                    </div>
-                  </div>
-                  <div className="btn-row" style={{ marginTop: "16px" }}>
-                    <button
-                      className="btn"
-                      onClick={() => handleCreateSession(sessionsPairMenteeId)}
-                      disabled={
-                        createSessionLoading || createWeeklyLimitReached
-                      }
-                    >
-                      {createSessionLoading ? (
-                        <Spinner inline />
-                      ) : (
-                        "Schedule session"
-                      )}
-                    </button>
-                  </div>
-                </div>
+                <SessionForm
+                  pairMenteeName={pairMenteeName}
+                  difficultySubjects={Array.from(difficultySubjects)}
+                  difficultyTopics={Array.from(difficultyTopics)}
+                  createForm={createForm}
+                  setCreateForm={setCreateForm}
+                  options={options}
+                  topicsBySubject={topicsBySubject}
+                  selectedSubjectNeedsHelp={selectedSubjectNeedsHelp}
+                  selectedTopicNeedsHelp={selectedTopicNeedsHelp}
+                  minDateTimeLocal={minDateTimeLocal}
+                  createWeeklyLimitReached={createWeeklyLimitReached}
+                  handleCreateSession={handleCreateSession}
+                  sessionsPairMenteeId={sessionsPairMenteeId}
+                  createSessionLoading={createSessionLoading}
+                  weeklySessionLimitMinutes={weeklySessionLimitMinutes}
+                />
               )}
             <section className="sessions-section">
-              <h3 className="sessions-section-title">
-                Upcoming
-                {upcomingForPair.length > 0 && (
-                  <span className="count">{upcomingForPair.length}</span>
-                )}
-              </h3>
+              <SectionHeader
+                label="Schedule"
+                title="Upcoming Sessions"
+                count={upcomingForPair.length}
+              />
               {upcomingForPair.length === 0 && (
                 <div className="fancy-empty sessions-empty">
                   <span className="fancy-empty-icon" aria-hidden="true">
@@ -1075,10 +1331,11 @@
                     <>
                       <div className="sessions-subheading">Today</div>
                       {upcomingBuckets.today.map((session) => (
-                        <SessionCardWithReschedule
+                        <SessionCard
                           key={session.id}
                           session={session}
                           {...sessionCardProps}
+                          allowMentorActions
                           weeklyLimitReached={rescheduleWeeklyLimitReached}
                         />
                       ))}
@@ -1086,12 +1343,13 @@
                   )}
                   {upcomingBuckets.week.length > 0 && (
                     <>
-                      <div className="sessions-subheading">This week</div>
+                      <div className="sessions-subheading">This Week</div>
                       {upcomingBuckets.week.map((session) => (
-                        <SessionCardWithReschedule
+                        <SessionCard
                           key={session.id}
                           session={session}
                           {...sessionCardProps}
+                          allowMentorActions
                           weeklyLimitReached={rescheduleWeeklyLimitReached}
                         />
                       ))}
@@ -1101,10 +1359,11 @@
                     <>
                       <div className="sessions-subheading">Later</div>
                       {upcomingBuckets.later.map((session) => (
-                        <SessionCardWithReschedule
+                        <SessionCard
                           key={session.id}
                           session={session}
                           {...sessionCardProps}
+                          allowMentorActions
                           weeklyLimitReached={rescheduleWeeklyLimitReached}
                         />
                       ))}
@@ -1114,12 +1373,11 @@
               )}
             </section>
             <section className="sessions-section">
-              <h3 className="sessions-section-title">
-                Past sessions
-                {historyForPair.length > 0 && (
-                  <span className="count">{historyForPair.length}</span>
-                )}
-              </h3>
+              <SectionHeader
+                label="Archive"
+                title="Past Sessions"
+                count={historyForPair.length}
+              />
               {historyForPair.length === 0 ? (
                 <div className="fancy-empty sessions-empty">
                   <span className="fancy-empty-icon" aria-hidden="true">
@@ -1141,40 +1399,12 @@
                 </div>
               ) : (
                 historyForPair.map((session) => (
-                  <div className="session-card history-card" key={session.id}>
-                    <div className="session-card-header">
-                      <div className="session-card-main">
-                        <p className="session-card-title">
-                          {session.mentee_display_name || session.mentee_username} with{" "}
-                          {session.mentor_display_name || session.mentor_username}
-                        </p>
-                        <p className="session-card-meta">
-                          {formatDate(session.scheduled_at)}
-                        </p>
-                        <p className="session-card-subject">
-                          {session.subject || "No subject"}
-                          {session.topic ? " · " + session.topic : ""}
-                        </p>
-                      </div>
-                      <span className={"status-pill " + session.status}>
-                        {session.status}
-                      </span>
-                    </div>
-                    {handleUpdateMeetingNotes && (
-                      <MeetingNotesBlock
-                        session={session}
-                        onSave={handleUpdateMeetingNotes}
-                      />
-                    )}
-                    <CommentThread
-                      targetType="session"
-                      targetId={session.id}
-                      comments={commentsByKey || {}}
-                      loadComments={loadComments || (() => {})}
-                      addComment={addComment || (async () => {})}
-                      commentKey={commentKeyFn}
-                    />
-                  </div>
+                  <SessionCard
+                    key={session.id}
+                    session={session}
+                    {...sessionCardProps}
+                    allowMentorActions={false}
+                  />
                 ))
               )}
             </section>
@@ -1188,3 +1418,5 @@
   window.DashboardApp.Pages = window.DashboardApp.Pages || {};
   window.DashboardApp.Pages.sessions = SessionsPage;
 })();
+
+

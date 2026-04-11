@@ -2,6 +2,12 @@ from django.db import models
 from django.contrib.auth.models import User
 
 
+def verification_document_upload_path(instance, filename):
+    role = "mentor" if getattr(instance._meta, "model_name", "") == "mentorprofile" else "mentee"
+    user_id = getattr(instance, "user_id", "unknown")
+    return f"verification_documents/{role}/user_{user_id}/{filename}"
+
+
 class InterestTag(models.Model):
     name = models.CharField(max_length=50, unique=True)
 
@@ -35,6 +41,10 @@ class MentorProfile(models.Model):
     topics = models.JSONField(default=list, blank=True)
     expertise_level = models.PositiveSmallIntegerField(null=True, blank=True)
     gender = models.CharField(max_length=10, choices=GENDER_CHOICES, blank=True, default="")
+    verification_document = models.FileField(
+        upload_to=verification_document_upload_path,
+        blank=True,
+    )
     approved = models.BooleanField(default=False)
 
     def __str__(self):
@@ -71,6 +81,10 @@ class MenteeProfile(models.Model):
         max_length=20,
         choices=PREFERRED_GENDER_CHOICES,
         default="no_preference",
+    )
+    verification_document = models.FileField(
+        upload_to=verification_document_upload_path,
+        blank=True,
     )
     approved = models.BooleanField(default=False)
 

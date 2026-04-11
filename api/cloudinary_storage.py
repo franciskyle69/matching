@@ -23,6 +23,14 @@ def _cloudinary_configured():
     return bool(os.environ.get("CLOUDINARY_CLOUD_NAME", "").strip())
 
 
+def _resource_type_for_name(name):
+    """Use raw uploads for document-like files to keep URLs browser-safe for download/preview."""
+    ext = Path(str(name or "")).suffix.lower()
+    if ext in {".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx", ".txt", ".csv"}:
+        return "raw"
+    return "auto"
+
+
 @deconstructible
 class CloudinaryStorage(Storage):
     """Upload files to Cloudinary; map path -> URL in CloudinaryMediaFile."""
@@ -38,6 +46,7 @@ class CloudinaryStorage(Storage):
 
         name_safe = name.replace("\\", "/")
         folder = Path(name_safe).parent.as_posix() if "/" in name_safe else ""
+        resource_type = _resource_type_for_name(name_safe)
 
         import cloudinary
         import cloudinary.uploader
@@ -56,6 +65,7 @@ class CloudinaryStorage(Storage):
                 result = cloudinary.uploader.upload(
                     tmp_path,
                     folder=folder or None,
+                    resource_type=resource_type,
                     use_filename=True,
                     unique_filename=True,
                 )
@@ -109,13 +119,14 @@ class CloudinaryStorage(Storage):
             if _cloudinary_configured() and getattr(rec, "public_id", None):
                 import cloudinary
                 import cloudinary.uploader
+                resource_type = _resource_type_for_name(name)
                 cloudinary.config(
                     cloud_name=os.environ.get("CLOUDINARY_CLOUD_NAME", "").strip(),
                     api_key=os.environ.get("CLOUDINARY_API_KEY", "").strip(),
                     api_secret=os.environ.get("CLOUDINARY_API_SECRET", "").strip(),
                 )
                 try:
-                    cloudinary.uploader.destroy(rec.public_id)
+                    cloudinary.uploader.destroy(rec.public_id, resource_type=resource_type)
                 except Exception:
                     pass
             rec.delete()

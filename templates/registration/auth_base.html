@@ -108,6 +108,12 @@
     .auth-card-standalone .btn-primary:hover {
       background: linear-gradient(135deg, #22177A 0%, #120c55 100%);
     }
+    .auth-card-standalone .btn-primary:disabled {
+      background: rgba(255, 255, 255, 0.18);
+      color: rgba(255, 255, 255, 0.55);
+      cursor: not-allowed;
+      box-shadow: none;
+    }
     .auth-card-standalone .auth-link {
       margin-top: 20px;
       text-align: center;
@@ -130,6 +136,56 @@
       padding: 10px 12px;
       border-radius: 10px;
       margin-bottom: 16px;
+    }
+    .auth-card-standalone .password-strength {
+      margin-top: 8px;
+      padding: 12px 14px 14px;
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      background: rgba(15, 23, 42, 0.42);
+    }
+    .auth-card-standalone .password-strength-bar {
+      height: 8px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.12);
+      overflow: hidden;
+      margin-bottom: 12px;
+    }
+    .auth-card-standalone .password-strength-fill {
+      display: block;
+      width: 0%;
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, #f59e0b 0%, #f97316 100%);
+      transition: width .2s ease;
+    }
+    .auth-card-standalone .password-strength-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: grid;
+      gap: 6px;
+      font-size: 13px;
+    }
+    .auth-card-standalone .password-strength-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      color: #fca5a5;
+      transition: color .15s ease;
+    }
+    .auth-card-standalone .password-strength-item::before {
+      content: "•";
+      line-height: 1;
+      font-size: 16px;
+      margin-top: -1px;
+      color: currentColor;
+    }
+    .auth-card-standalone .password-strength-item.is-valid {
+      color: #86efac;
+    }
+    .auth-card-standalone .password-strength-item.is-invalid {
+      color: #fca5a5;
     }
     .auth-card-standalone .success-note {
       font-size: 13px;
@@ -156,5 +212,71 @@
       {% block content %}{% endblock %}
     </div>
   </div>
+  <script>
+    (function() {
+      function evaluatePassword(value) {
+        return {
+          length: value.length >= 8,
+          number: /[0-9]/.test(value),
+          special: /[^A-Za-z0-9]/.test(value),
+        };
+      }
+
+      function updateWidget(widget) {
+        const form = widget.closest("form");
+        if (!form) return;
+
+        const passwordInput = form.querySelector('input[type="password"]');
+        const submitButton = form.querySelector('button[type="submit"]');
+        if (!passwordInput) return;
+
+        const value = passwordInput.value || "";
+        const rules = evaluatePassword(value);
+        const entries = ["length", "number", "special"];
+        let passed = 0;
+
+        entries.forEach((rule) => {
+          const element = widget.querySelector(`[data-rule="${rule}"]`);
+          if (!element) return;
+
+          const isValid = !!rules[rule];
+          element.classList.toggle("is-valid", isValid);
+          element.classList.toggle("is-invalid", !isValid);
+          passed += isValid ? 1 : 0;
+        });
+
+        const fill = widget.querySelector("[data-password-strength-fill]");
+        if (fill) {
+          fill.style.width = `${Math.round((passed / entries.length) * 100)}%`;
+        }
+
+        if (submitButton) {
+          submitButton.disabled = passed < entries.length;
+        }
+      }
+
+      function initPasswordWidgets() {
+        document.querySelectorAll("[data-password-strength]").forEach((widget) => {
+          const form = widget.closest("form");
+          if (!form) return;
+
+          const passwordInput = form.querySelector('input[type="password"]');
+          if (!passwordInput) return;
+
+          const refresh = () => updateWidget(widget);
+          passwordInput.addEventListener("input", refresh);
+          passwordInput.addEventListener("change", refresh);
+          refresh();
+        });
+      }
+
+      if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", initPasswordWidgets);
+      } else {
+        initPasswordWidgets();
+      }
+    })();
+  </script>
+  {% block extra_js %}{% endblock %}
 </body>
 </html>

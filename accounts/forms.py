@@ -9,6 +9,35 @@ ROLE_CHOICES = (
 )
 
 
+CREATE_USER_ROLE_CHOICES = ROLE_CHOICES + (("staff", "Staff"),)
+
+
+def is_institutional_email(email):
+    """Check if email matches one of the configured institutional domains. Returns bool."""
+    from django.conf import settings
+    allowed_domains = getattr(settings, 'ALLOWED_EMAIL_DOMAINS', [])
+    
+    if not allowed_domains:
+        return True  # No restrictions
+    
+    email_lower = email.lower()
+    return any(email_lower.endswith(domain.lower()) for domain in allowed_domains)
+
+
+def validate_institutional_email(email):
+    """Validate that email matches one of the configured institutional domains. Raises ValidationError."""
+    from django.conf import settings
+    allowed_domains = getattr(settings, 'ALLOWED_EMAIL_DOMAINS', [])
+    
+    if allowed_domains:
+        if not is_institutional_email(email):
+            domains_str = ", ".join(allowed_domains)
+            raise forms.ValidationError(
+                f"You must sign up with an institutional email address "
+                f"({domains_str}). Contact support if this is incorrect."
+            )
+
+
 class RegisterForm(forms.Form):
     """
     Extended registration form that lets the user choose
@@ -20,8 +49,17 @@ class RegisterForm(forms.Form):
     last_name = forms.CharField(required=True)
     email = forms.EmailField(required=True)
     role = forms.ChoiceField(choices=ROLE_CHOICES, widget=forms.RadioSelect)
+    student_verification_document = forms.FileField(required=True)
     password1 = forms.CharField(widget=forms.PasswordInput)
     password2 = forms.CharField(widget=forms.PasswordInput)
+
+    MAX_VERIFICATION_DOC_SIZE = 5 * 1024 * 1024  # 5 MB
+    ALLOWED_VERIFICATION_EXTENSIONS = {".pdf", ".png", ".jpg", ".jpeg"}
+    ALLOWED_VERIFICATION_MIME_TYPES = {
+        "application/pdf",
+        "image/png",
+        "image/jpeg",
+    }
 
     def clean_first_name(self):
         first_name = (self.cleaned_data.get("first_name") or "").strip()
@@ -44,7 +82,28 @@ class RegisterForm(forms.Form):
             raise forms.ValidationError("Email is required.")
         if User.objects.filter(email__iexact=email).exists():
             raise forms.ValidationError("This email is already in use.")
+        validate_institutional_email(email)
         return email
+
+    def clean_student_verification_document(self):
+        uploaded = self.cleaned_data.get("student_verification_document")
+        if not uploaded:
+            raise forms.ValidationError("Please upload proof that you are currently enrolled.")
+
+        name = (uploaded.name or "").lower()
+        dot = name.rfind(".")
+        ext = name[dot:] if dot >= 0 else ""
+        if ext not in self.ALLOWED_VERIFICATION_EXTENSIONS:
+            raise forms.ValidationError("Upload a PDF, JPG, or PNG file.")
+
+        content_type = (getattr(uploaded, "content_type", "") or "").lower()
+        if content_type and content_type not in self.ALLOWED_VERIFICATION_MIME_TYPES:
+            raise forms.ValidationError("Only PDF, JPG, or PNG files are allowed.")
+
+        if int(getattr(uploaded, "size", 0) or 0) > self.MAX_VERIFICATION_DOC_SIZE:
+            raise forms.ValidationError("File is too large. Maximum size is 5 MB.")
+
+        return uploaded
 
     def clean(self):
         cleaned_data = super().clean()
@@ -58,6 +117,68 @@ class RegisterForm(forms.Form):
             except forms.ValidationError as exc:
                 self.add_error("password2", exc)
         return cleaned_data
+
+    def save(self, commit: bool = True):
+        cleaned = self.cleaned_data
+        first_name = cleaned.get("first_name", "")
+        last_name = cleaned.get("last_name", "")
+        email = cleaned.get("email", "")
+        password = cleaned.get("password1", "")
+
+        base_username = "".join(part for part in [first_name, last_name] if part)
+        base_username = "".join(ch for ch in base_username.lower() if ch.isalnum())
+        if not base_username:
+            base_username = email.split("@")[0].lower()
+
+        username = base_username
+        suffix = 1
+        while User.objects.filter(username=username).exists():
+            suffix += 1
+            username = f"{base_username}{suffix}"
+
+        user = User(
+            username=username,
+            email=email,
+            first_name=first_name,
+            last_name=last_name,
+            is_active=False,
+        )
+        user.set_password(password)
+        if commit:
+            user.save()
+        return user
+
+
+class CoordinatorCreateUserForm(forms.Form):
+    first_name = forms.CharField(required=True)
+    middle_name = forms.CharField(required=False)
+    last_name = forms.CharField(required=True)
+    email = forms.EmailField(required=True)
+    role = forms.ChoiceField(choices=CREATE_USER_ROLE_CHOICES, widget=forms.RadioSelect)
+
+    def clean_first_name(self):
+        first_name = (self.cleaned_data.get("first_name") or "").strip()
+        if not first_name:
+            raise forms.ValidationError("First name is required.")
+        return first_name
+
+    def clean_middle_name(self):
+        return (self.cleaned_data.get("middle_name") or "").strip()
+
+    def clean_last_name(self):
+        last_name = (self.cleaned_data.get("last_name") or "").strip()
+        if not last_name:
+            raise forms.ValidationError("Last name is required.")
+        return last_name
+
+    def clean_email(self):
+        email = (self.cleaned_data.get("email") or "").strip()
+        if not email:
+            raise forms.ValidationError("Email is required.")
+        if User.objects.filter(email__iexact=email).exists():
+            raise forms.ValidationError("This email is already in use.")
+        validate_institutional_email(email)
+        return email
 
 
 class AccountSettingsForm(forms.ModelForm):

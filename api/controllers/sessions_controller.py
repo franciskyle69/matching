@@ -1,6 +1,7 @@
 from datetime import timedelta
 
 from django.contrib.auth.decorators import login_required
+from django.conf import settings
 from django.db.models import Sum
 from django.http import JsonResponse
 from django.views.decorators.http import require_GET, require_http_methods
@@ -19,6 +20,7 @@ from profiles.models import MenteeProfile
 from ..views import (
     _require_mentor,
     _serialize_session,
+    _avatar_url,
     audit_log,
     _serialize_subject,
     _serialize_topic,
@@ -146,6 +148,9 @@ def _create_google_calendar_events_for_session(session: MentoringSession):
     Create a Google Calendar event on each participant's calendar (mentor and mentee) so it appears for both.
     Uses clear title, date/time in description, and "Take meeting notes". Adds the other party as attendee when possible.
     """
+    if not getattr(settings, "ENABLE_GOOGLE_CALENDAR", False):
+        return
+
     tz_name = timezone.get_current_timezone_name() or "UTC"
     start = timezone.localtime(session.scheduled_at)
     if timezone.is_naive(start):
@@ -313,8 +318,10 @@ def sessions_list(request):
             pct = min(100, round(100 * total / TARGET_MINUTES, 1))
             progress_by_mentee.append({
                 "mentee_id": m.id,
+                "user_id": m.user_id,
                 "mentee_username": m.user.username,
                 "mentee_display_name": get_user_display_name(m.user) or m.user.username,
+                "avatar_url": _avatar_url(request, m.avatar_url) if getattr(m, "avatar_url", "") else "",
                 "total_completed_minutes": total,
                 "progress_percent": pct,
                 "difficulty_subjects": (
@@ -348,8 +355,8 @@ def sessions_list(request):
             progress = {"total_completed_minutes": 0, "progress_percent": 0, "target_hours": progress_target_hours}
 
     payload = {
-        "upcoming": [_serialize_session(item) for item in upcoming],
-        "history": [_serialize_session(item) for item in history],
+        "upcoming": [_serialize_session(item, request=request) for item in upcoming],
+        "history": [_serialize_session(item, request=request) for item in history],
         "options": {
             "mentees": mentee_options,
             "subjects": [_serialize_subject(s) for s in Subject.objects.order_by("name")],
@@ -466,7 +473,7 @@ def session_create(request):
     _create_google_calendar_events_for_session(session)
     _invalidate_sessions_cache_for_user(request.user.id)
     _invalidate_sessions_cache_for_user(session.mentee.user_id)
-    return JsonResponse({"session": _serialize_session(session)})
+    return JsonResponse({"session": _serialize_session(session, request=request)})
 
 
 @login_required
@@ -568,7 +575,7 @@ def session_reschedule(request, session_id: int):
 
     _invalidate_sessions_cache_for_user(request.user.id)
     _invalidate_sessions_cache_for_user(session.mentee.user_id)
-    return JsonResponse({"session": _serialize_session(session)})
+    return JsonResponse({"session": _serialize_session(session, request=request)})
 
 
 @login_required
@@ -609,7 +616,7 @@ def session_update_status(request, session_id: int):
     )
     _invalidate_sessions_cache_for_user(request.user.id)
     _invalidate_sessions_cache_for_user(session.mentee.user_id)
-    return JsonResponse({"session": _serialize_session(session)})
+    return JsonResponse({"session": _serialize_session(session, request=request)})
 
 
 @login_required
@@ -640,5 +647,5 @@ def session_update_meeting_notes(request, session_id: int):
     audit_log(request.user, "update_notes", "session", session.id)
     _invalidate_sessions_cache_for_user(session.mentor.user_id)
     _invalidate_sessions_cache_for_user(session.mentee.user_id)
-    return JsonResponse({"session": _serialize_session(session)})
+    return JsonResponse({"session": _serialize_session(session, request=request)})
 

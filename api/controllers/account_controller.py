@@ -29,6 +29,7 @@ from accounts.forms import (
     PasswordChangeUpdateForm,
 )
 from accounts.models import get_user_display_name
+from accounts.models import must_change_password, set_must_change_password
 from accounts.views import (
     ROLE_SESSION_KEY,
     PASSWORD_CHANGE_CODE_SESSION_KEY,
@@ -230,6 +231,38 @@ def auth_login(request):
             {"error": "Please verify your email before logging in."}, status=401
         )
 
+    if must_change_password(user):
+        login(request, user, backend="accounts.auth_backends.EmailOrUsernameModelBackend")
+        if hasattr(user, "mentor_profile"):
+            request.session[ROLE_SESSION_KEY] = "mentor"
+        elif hasattr(user, "mentee_profile"):
+            request.session[ROLE_SESSION_KEY] = "mentee"
+        reset_lockout_progress(
+            identifier,
+            user.username,
+            user.email,
+            ip_address=client_ip,
+        )
+        logger.info("auth_login_password_change_required", extra={"user_id": user.id})
+        return JsonResponse(
+            {
+                "status": "password_change_required",
+                "must_change_password": True,
+                "message": "You must change your password before continuing.",
+                "change_password_url": "/accounts/settings/?must_change_password=1",
+            },
+            status=403,
+        )
+    
+    # Check if user's email is institutional
+    from accounts.forms import is_institutional_email
+    if not is_institutional_email(user.email):
+        domains_str = ", ".join(getattr(settings, 'ALLOWED_EMAIL_DOMAINS', []))
+        logger.warning("auth_login_non_institutional", extra={"user_id": user.id, "email": user.email})
+        return JsonResponse(
+            {"error": f"Login restricted to institutional accounts ({domains_str})."}, status=401
+        )
+
     # No longer call django.authenticate for successful login; use explicit backend.
     # This guarantees valid credentials can reset lockout state.
     login(request, user, backend="accounts.auth_backends.EmailOrUsernameModelBackend")
@@ -240,17 +273,6 @@ def auth_login(request):
         request.session[ROLE_SESSION_KEY] = "mentor"
     elif is_mentee:
         request.session[ROLE_SESSION_KEY] = "mentee"
-
-    # Allow immediate dashboard access during testing/development.
-    # The dashboard gates access on mentor_profile.approved / mentee_profile.approved.
-    mentor_profile = getattr(user, "mentor_profile", None)
-    mentee_profile = getattr(user, "mentee_profile", None)
-    if mentor_profile is not None and not getattr(mentor_profile, "approved", False):
-        mentor_profile.approved = True
-        mentor_profile.save(update_fields=["approved"])
-    if mentee_profile is not None and not getattr(mentee_profile, "approved", False):
-        mentee_profile.approved = True
-        mentee_profile.save(update_fields=["approved"])
 
     # Successful authentication clears escalation progress.
     reset_lockout_progress(
@@ -272,6 +294,7 @@ def auth_login(request):
             "refresh_token": refresh_token,
             "token_type": "Bearer",
             "expires_in": int(getattr(settings, "JWT_ACCESS_TTL_SECONDS", 1800)),
+            "must_change_password": False,
         }
     )
 
@@ -353,102 +376,151 @@ def check_lockout(request):
 
 @require_http_methods(["POST"])
 def auth_register(request):
-    payload = _get_payload(request)
-    if not _rate_limit(f"register:{request.META.get('REMOTE_ADDR')}", 5, 300):
+    try:
+        content_type = (request.content_type or "").lower()
+        if "multipart/form-data" in content_type:
+            payload = request.POST
+        else:
+            payload = _get_payload(request)
+        if not _rate_limit(f"register:{request.META.get('REMOTE_ADDR')}", 5, 300):
+            return JsonResponse(
+                {"error": "Too many signups. Try again later."}, status=429
+            )
+
+        role = payload.get("role")
+        from ..views import _validate_role  # avoid circular import at top
+
+        if not _validate_role(role):
+            return JsonResponse({"error": "Role is required."}, status=400)
+
+        form = RegisterForm(payload, request.FILES)
+        if not form.is_valid():
+            return JsonResponse({"errors": form.errors}, status=400)
+
+        cleaned = form.cleaned_data
+        first_name = cleaned.get("first_name", "")
+        middle_name = cleaned.get("middle_name", "")
+        last_name = cleaned.get("last_name", "")
+        email = cleaned.get("email", "")
+        password = cleaned.get("password1", "")
+        verification_document = cleaned.get("student_verification_document")
+        base_username = "".join(part for part in [first_name, last_name] if part)
+        base_username = "".join(ch for ch in base_username.lower() if ch.isalnum())
+        if not base_username:
+            base_username = email.split("@")[0].lower()
+        username = base_username
+        suffix = 1
+        while User.objects.filter(username=username).exists():
+            suffix += 1
+            username = f"{base_username}{suffix}"
+
+        try:
+            user = User.objects.create_user(
+                username=username,
+                email=email,
+                password=password,
+                first_name=first_name,
+                last_name=last_name,
+            )
+            user.is_active = False
+            user.save(update_fields=["is_active"])
+        except Exception as exc:
+            logger.exception("auth_register_user_create_failed", extra={"email": email, "role": role})
+            return JsonResponse(
+                {
+                    "error": "Unable to create account at the moment. Please try again.",
+                    "detail": str(exc),
+                },
+                status=400,
+            )
+
+        try:
+            if role == "mentor":
+                MentorProfile.objects.create(
+                    user=user,
+                    program="BSIT",
+                    year_level=4,
+                    verification_document=verification_document,
+                    approved=False,
+                )
+            else:
+                MenteeProfile.objects.create(
+                    user=user,
+                    program="BSIT",
+                    year_level=1,
+                    campus="",
+                    student_id_no="",
+                    contact_no="",
+                    admission_type="",
+                    sex="",
+                    verification_document=verification_document,
+                    approved=False,
+                )
+        except Exception as exc:
+            logger.exception("auth_register_profile_create_failed", extra={"email": email, "role": role})
+            user.delete()
+            return JsonResponse(
+                {
+                    "error": "Unable to save your verification document. Please upload a valid PDF, JPG, or PNG and try again.",
+                    "detail": str(exc),
+                },
+                status=400,
+            )
+
+        try:
+            current_site = get_current_site(request)
+            subject = "Activate your account"
+            text_message = render_to_string(
+                "registration/activation_email.txt",
+                {
+                    "user": user,
+                    "domain": current_site.domain,
+                    "uid": urlsafe_base64_encode(force_bytes(user.pk)),
+                    "token": default_token_generator.make_token(user),
+                    "protocol": "https" if request.is_secure() else "http",
+                },
+            )
+            html_message = render_to_string(
+                "registration/activation_email.html",
+                {
+                    "user": user,
+                    "domain": current_site.domain,
+                    "uid": urlsafe_base64_encode(force_bytes(user.pk)),
+                    "token": default_token_generator.make_token(user),
+                    "protocol": "https" if request.is_secure() else "http",
+                },
+            )
+            email_message = EmailMultiAlternatives(subject, text_message, to=[user.email])
+            email_message.attach_alternative(html_message, "text/html")
+            email_message.send()
+        except Exception as exc:
+            logger.exception("auth_register_email_phase_failed", extra={"user_id": user.id, "email": user.email})
+            user.delete()
+            return JsonResponse(
+                {
+                    "error": "Account could not be created because activation email could not be sent. Please try again.",
+                    "detail": str(exc),
+                },
+                status=400,
+            )
+
+        audit_log(user, "register", "auth", user.id)
+        logger.info("auth_register", extra={"user_id": user.id, "role": role})
         return JsonResponse(
-            {"error": "Too many signups. Try again later."}, status=429
+            {
+                "status": "ok",
+                "message": "Check your email to activate your account.",
+            }
         )
-
-    role = payload.get("role")
-    from ..views import _validate_role  # avoid circular import at top
-
-    if not _validate_role(role):
-        return JsonResponse({"error": "Role is required."}, status=400)
-
-    form = RegisterForm(payload)
-    if not form.is_valid():
-        return JsonResponse({"errors": form.errors}, status=400)
-
-    cleaned = form.cleaned_data
-    first_name = cleaned.get("first_name", "")
-    middle_name = cleaned.get("middle_name", "")
-    last_name = cleaned.get("last_name", "")
-    email = cleaned.get("email", "")
-    password = cleaned.get("password1", "")
-    base_username = "".join(part for part in [first_name, last_name] if part)
-    base_username = "".join(ch for ch in base_username.lower() if ch.isalnum())
-    if not base_username:
-        base_username = email.split("@")[0].lower()
-    username = base_username
-    suffix = 1
-    while User.objects.filter(username=username).exists():
-        suffix += 1
-        username = f"{base_username}{suffix}"
-
-    user = User.objects.create_user(
-        username=username,
-        email=email,
-        password=password,
-        first_name=first_name,
-        last_name=last_name,
-    )
-    user.is_active = False
-    user.save(update_fields=["is_active"])
-
-    if role == "mentor":
-        MentorProfile.objects.create(
-            user=user,
-            program="BSIT",
-            year_level=4,
-            approved=True,
+    except Exception as exc:
+        logger.exception("auth_register_unhandled_error")
+        return JsonResponse(
+            {
+                "error": "Unable to create account right now. Please try again.",
+                "detail": str(exc),
+            },
+            status=400,
         )
-    else:
-        MenteeProfile.objects.create(
-            user=user,
-            program="BSIT",
-            year_level=1,
-            campus="",
-            student_id_no="",
-            contact_no="",
-            admission_type="",
-            sex="",
-            approved=True,
-        )
-
-    current_site = get_current_site(request)
-    subject = "Activate your account"
-    text_message = render_to_string(
-        "registration/activation_email.txt",
-        {
-            "user": user,
-            "domain": current_site.domain,
-            "uid": urlsafe_base64_encode(force_bytes(user.pk)),
-            "token": default_token_generator.make_token(user),
-            "protocol": "https" if request.is_secure() else "http",
-        },
-    )
-    html_message = render_to_string(
-        "registration/activation_email.html",
-        {
-            "user": user,
-            "domain": current_site.domain,
-            "uid": urlsafe_base64_encode(force_bytes(user.pk)),
-            "token": default_token_generator.make_token(user),
-            "protocol": "https" if request.is_secure() else "http",
-        },
-    )
-    email = EmailMultiAlternatives(subject, text_message, to=[user.email])
-    email.attach_alternative(html_message, "text/html")
-    email.send()
-
-    audit_log(user, "register", "auth", user.id)
-    logger.info("auth_register", extra={"user_id": user.id, "role": role})
-    return JsonResponse(
-        {
-            "status": "ok",
-            "message": "Check your email to activate your account.",
-        }
-    )
 
 
 @login_required
@@ -480,11 +552,18 @@ def me(request):
     mentor = getattr(request.user, "mentor_profile", None)
     mentee = getattr(request.user, "mentee_profile", None)
 
-    # Global stats
+    # Staff gets global stats; mentors/mentees get their own session stats.
     total_mentors = MentorProfile.objects.count()
     total_mentees = MenteeProfile.objects.count()
-    total_sessions = MentoringSession.objects.count()
-    completed_sessions = MentoringSession.objects.filter(status="completed").count()
+    if mentor:
+        scoped_sessions_qs = MentoringSession.objects.filter(mentor=mentor)
+    elif mentee:
+        scoped_sessions_qs = MentoringSession.objects.filter(mentee=mentee)
+    else:
+        scoped_sessions_qs = MentoringSession.objects.all()
+
+    total_sessions = scoped_sessions_qs.count()
+    completed_sessions = scoped_sessions_qs.filter(status="completed").count()
     completion_rate = 0
     if total_sessions > 0:
         completion_rate = round((completed_sessions / total_sessions) * 100)
@@ -493,7 +572,7 @@ def me(request):
     # Define "this week" as Monday 00:00 -> now
     start_of_week = now - timezone.timedelta(days=now.weekday())
     start_of_week = start_of_week.replace(hour=0, minute=0, second=0, microsecond=0)
-    week_sessions_qs = MentoringSession.objects.filter(scheduled_at__gte=start_of_week)
+    week_sessions_qs = scoped_sessions_qs.filter(scheduled_at__gte=start_of_week)
     week_sessions = week_sessions_qs.count()
     week_completed_sessions = week_sessions_qs.filter(status="completed").count()
 
@@ -506,7 +585,7 @@ def me(request):
         term_start = timezone.datetime(
             now.year, 1, 1, tzinfo=timezone.get_current_timezone()
         )
-    term_qs = MentoringSession.objects.filter(scheduled_at__gte=term_start)
+    term_qs = scoped_sessions_qs.filter(scheduled_at__gte=term_start)
     term_sessions = term_qs.count()
     term_completed_sessions = term_qs.filter(status="completed").count()
 
@@ -687,6 +766,7 @@ def me(request):
         "full_name": get_user_display_name(request.user),
         "display_name": get_user_display_name(request.user),
         "is_staff": request.user.is_staff,
+        "must_change_password": must_change_password(request.user),
         "role": "mentor"
         if role_flags["is_mentor"]
         else "mentee"
@@ -936,6 +1016,7 @@ def change_password_with_code(request):
 
     request.user.set_password(form.cleaned_data["new_password2"])
     request.user.save(update_fields=["password"])
+    set_must_change_password(request.user, False)
     update_session_auth_hash(request, request.user)
     _clear_password_change_code_session(request)
     audit_log(request.user, "update", "password", request.user.id)

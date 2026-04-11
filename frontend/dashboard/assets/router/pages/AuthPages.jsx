@@ -52,9 +52,7 @@ import { Alert as MuiAlert } from "@mui/material";
             aria-live="assertive"
             aria-busy="true"
           >
-            <div className="session-check-panel">
-              <LoadingSpinner title="Signing you in..." subtitle="Please wait" />
-            </div>
+            <LoadingSpinner inline />
           </div>
         )}
         <div className="auth-card">
@@ -361,9 +359,7 @@ import { Alert as MuiAlert } from "@mui/material";
             aria-live="assertive"
             aria-busy="true"
           >
-            <div className="session-check-panel">
-              <LoadingSpinner title="Creating your account..." subtitle="Please wait" />
-            </div>
+            <LoadingSpinner inline />
           </div>
         )}
         <div className="auth-card">
@@ -473,6 +469,29 @@ import { Alert as MuiAlert } from "@mui/material";
                     setSignUpForm({ ...signUpForm, email: e.target.value })
                   }
                 />
+              </div>
+              <div className="auth-field">
+                <label>Student verification document</label>
+                <input
+                  type="file"
+                  accept=".pdf,.png,.jpg,.jpeg"
+                  required
+                  onChange={(e) => {
+                    const file = e.target.files && e.target.files[0] ? e.target.files[0] : null;
+                    setSignUpForm({
+                      ...signUpForm,
+                      student_verification_document: file,
+                    });
+                  }}
+                />
+                <small className="muted">
+                  Upload your registration form, current school ID, or COR (PDF/JPG/PNG, max 5 MB).
+                </small>
+                {signUpForm.student_verification_document && (
+                  <small className="muted">
+                    Selected: {signUpForm.student_verification_document.name}
+                  </small>
+                )}
               </div>
               <div className="auth-field auth-password-wrap">
                 <label>Password</label>

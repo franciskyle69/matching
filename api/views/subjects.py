@@ -5,7 +5,7 @@ from django.contrib.auth.decorators import login_required
 from matching.forms import SubjectForm
 from matching.models import Subject
 
-from .helpers import _get_payload, _require_role, _require_staff, logger
+from .helpers import _get_payload, _require_role, _require_staff, _serialize_subject, logger
 from .helpers import invalidate_subjects_cache
 from ..views import get_subjects_list
 
@@ -23,18 +23,11 @@ def subjects_list(request):
 @login_required
 @require_http_methods(["POST"])
 def subject_create(request):
-    err = _require_staff(request)
-    if err:
-        return err
-    payload = _get_payload(request)
-    form = SubjectForm(payload)
-    if not form.is_valid():
-        errors = {k: list(v) for k, v in form.errors.items()}
-        return JsonResponse({"errors": errors}, status=400)
-    subject = form.save()
-    invalidate_subjects_cache()
-    logger.info("subject_created", extra={"user_id": request.user.id, "subject_id": subject.id})
-    return JsonResponse({"subject": _serialize_subject(subject)})
+    _ = request
+    return JsonResponse(
+        {"error": "Subject creation is disabled. Subjects are predefined."},
+        status=405,
+    )
 
 
 @login_required
@@ -60,13 +53,8 @@ def subject_update(request, subject_id: int):
 @login_required
 @require_http_methods(["POST"])
 def subject_delete(request, subject_id: int):
-    err = _require_staff(request)
-    if err:
-        return err
-    subject = Subject.objects.filter(id=subject_id).first()
-    if not subject:
-        return JsonResponse({"error": "Subject not found."}, status=404)
-    subject.delete()
-    invalidate_subjects_cache()
-    logger.info("subject_deleted", extra={"user_id": request.user.id, "subject_id": subject_id})
-    return JsonResponse({"status": "ok"})
+    _ = subject_id
+    return JsonResponse(
+        {"error": "Subject deletion is disabled. Subjects are predefined."},
+        status=405,
+    )

@@ -79,6 +79,17 @@
     );
   }
 
+  function getPendingApprovalLandingTab(userData) {
+    if (!userData) return "settings";
+    if (userData.role === "mentee") {
+      return userData.mentee_general_info_completed ? "settings" : "complete-profile";
+    }
+    if (userData.role === "mentor") {
+      return userData.mentor_questionnaire_completed ? "settings" : "complete-profile";
+    }
+    return "settings";
+  }
+
   function Layout() {
     const ctx = useContext(AppContext);
     if (!ctx) return null;
@@ -91,6 +102,7 @@
       theme,
       toggleTheme,
       handleLogout,
+      logoutLoading,
       globalSearchResults,
       loadGlobalSearch,
       isAuthenticated,
@@ -153,12 +165,11 @@
     const goTo = (tabId) => {
       if (isPendingApproval) {
         const allowedPendingTabs = new Set([
-          "pending-approval",
           "complete-profile",
           "settings",
         ]);
         if (!allowedPendingTabs.has(tabId)) {
-          setActiveTab("pending-approval");
+          setActiveTab(getPendingApprovalLandingTab(user));
           window.scrollTo(0, 0);
           closeMobileMenu();
           return;
@@ -281,10 +292,7 @@
 
     const trimmedQuery = searchQuery.trim().toLowerCase();
     const activeTabMeta = MAIN_TABS.find((tab) => tab.id === activeTab);
-    const topbarTitle =
-      activeTab === "pending-approval"
-        ? "Pending Approval"
-        : activeTabMeta?.label || "Dashboard";
+    const topbarTitle = activeTabMeta?.label || "Dashboard";
 
     let shortcutMatches = [];
     if (trimmedQuery) {
@@ -499,11 +507,21 @@
                     </>
                   )}
                 </button>
-                <button type="button" className="btn secondary sidebar-logout-btn" onClick={handleLogout}>
-                  <svg className="sidebar-logout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" y1="12" x2="9" y2="12" />
-                  </svg>
-                  <span className="sidebar-logout-text">Log out</span>
+                <button
+                  type="button"
+                  className="btn secondary sidebar-logout-btn"
+                  onClick={handleLogout}
+                  disabled={logoutLoading}
+                  aria-busy={logoutLoading ? "true" : "false"}
+                >
+                  {logoutLoading ? (
+                    <span className="sidebar-logout-spinner" aria-hidden="true" />
+                  ) : (
+                    <svg className="sidebar-logout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" y1="12" x2="9" y2="12" />
+                    </svg>
+                  )}
+                  <span className="sidebar-logout-text">{logoutLoading ? "Logging out..." : "Log out"}</span>
                 </button>
                 <a href="#" className="sidebar-help-card" onClick={(e) => e.preventDefault()}>
                   <div className="sidebar-help-icon">?</div>

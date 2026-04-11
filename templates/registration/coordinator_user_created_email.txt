@@ -1,0 +1,14 @@
+Hi {{ user.get_full_name|default:user.email }},
+
+Your account has been created by a coordinator.
+
+Login URL: {{ protocol }}://{{ domain }}/accounts/login/
+Username: {{ user.username }}
+Temporary password: {{ password }}
+
+Please sign in and change your password after your first login.
+
+If you were not expecting this account, you can ignore this email.
+
+—
+Academic mentoring system

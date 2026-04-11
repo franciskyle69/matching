@@ -16,6 +16,7 @@ import secrets
 import time
 
 from .forms import RegisterForm, AccountSettingsForm, PasswordChangeWithCodeForm
+from .models import must_change_password, set_must_change_password
 from profiles.models import MentorProfile, MenteeProfile
 from matching.models import MentoringSession
 
@@ -41,6 +42,8 @@ def home(request):
     is_mentee = False
     stats = None
     if request.user.is_authenticated:
+        if must_change_password(request.user):
+            return redirect("settings")
         is_mentor = hasattr(request.user, "mentor_profile")
         is_mentee = hasattr(request.user, "mentee_profile")
 
@@ -110,44 +113,56 @@ def select_google_role(request, role: str):
 
 def login_view(request):
     if request.user.is_authenticated:
+        if must_change_password(request.user):
+            return redirect("settings")
         return redirect("/app/")
     selected_role = request.session.get(ROLE_SESSION_KEY)
-    if not selected_role:
-        role_required = str(request.GET.get("role_required", "")).lower() in (
-            "1",
-            "true",
-            "yes",
-            "on",
-        )
-        form = AuthenticationForm(request)
-        if role_required:
-            messages.info(request, "Please choose Mentor or Mentee to continue.")
-        return render(
-            request,
-            "registration/login.html",
-            {
-                "form": form,
-                "selected_role": None,
-                "role_required": role_required,
-            },
-        )
+    role_required = str(request.GET.get("role_required", "")).lower() in (
+        "1",
+        "true",
+        "yes",
+        "on",
+    )
+
+    if request.method != "POST" and role_required:
+        messages.info(request, "Please choose Mentor or Mentee to continue.")
 
     if request.method == "POST":
         form = AuthenticationForm(request, data=request.POST)
         if form.is_valid():
             user = form.get_user()
+            
+            # Check if user's email is institutional
+            from accounts.forms import is_institutional_email
+            if not is_institutional_email(user.email):
+                from django.conf import settings
+                domains_str = ", ".join(getattr(settings, 'ALLOWED_EMAIL_DOMAINS', []))
+                messages.error(request, f"Login restricted to institutional accounts ({domains_str}).")
+                return redirect("login")
+            
             if not user.is_active:
                 messages.error(request, "Please verify your email before logging in.")
                 return redirect("login")
-            is_mentor = hasattr(user, "mentor_profile")
-            is_mentee = hasattr(user, "mentee_profile")
 
-            if selected_role == "mentor" and not is_mentor:
-                messages.error(request, "This account is not registered as a mentor.")
-                return redirect("login")
-            if selected_role == "mentee" and not is_mentee:
-                messages.error(request, "This account is not registered as a mentee.")
-                return redirect("login")
+            if must_change_password(user):
+                login(request, user)
+                if hasattr(user, "mentor_profile"):
+                    request.session[ROLE_SESSION_KEY] = "mentor"
+                elif hasattr(user, "mentee_profile"):
+                    request.session[ROLE_SESSION_KEY] = "mentee"
+                messages.info(request, "Please change your temporary password before continuing.")
+                return redirect("settings")
+
+            if selected_role:
+                is_mentor = hasattr(user, "mentor_profile")
+                is_mentee = hasattr(user, "mentee_profile")
+
+                if selected_role == "mentor" and not is_mentor:
+                    messages.error(request, "This account is not registered as a mentor.")
+                    return redirect("login")
+                if selected_role == "mentee" and not is_mentee:
+                    messages.error(request, "This account is not registered as a mentee.")
+                    return redirect("login")
 
             login(request, user)
             return redirect("home")
@@ -160,7 +175,7 @@ def login_view(request):
         {
             "form": form,
             "selected_role": selected_role,
-            "role_required": False,
+            "role_required": role_required,
         },
     )
 
@@ -175,24 +190,27 @@ def register(request):
         return redirect("/app/")
 
     if request.method == "POST":
-        form = RegisterForm(request.POST)
+        form = RegisterForm(request.POST, request.FILES)
         if form.is_valid():
-            user = form.save(commit=False)
-            user.is_active = False
-            user.save()
+            user = form.save(commit=True)
             role = form.cleaned_data.get("role")
+            verification_document = form.cleaned_data.get("student_verification_document")
 
             if role == "mentor":
                 MentorProfile.objects.create(
                     user=user,
                     program="BSIT",
                     year_level=4,
+                    verification_document=verification_document,
+                    approved=False,
                 )
             else:
                 MenteeProfile.objects.create(
                     user=user,
                     program="BSIT",
                     year_level=1,
+                    verification_document=verification_document,
+                    approved=False,
                 )
             current_site = get_current_site(request)
             subject = "Activate your account"
@@ -239,10 +257,10 @@ def activate_account(request, uidb64: str, token: str):
         user.is_active = True
         user.save()
         messages.success(request, "Your account has been activated. You can log in now.")
-        return redirect("login")
+        return redirect("/app/signin?activated=1")
 
     messages.error(request, "Activation link is invalid or expired.")
-    return redirect("register")
+    return redirect("/app/signin?activation_error=1")
 
 
 @login_required
@@ -328,6 +346,7 @@ def settings_view(request):
                     else:
                         request.user.set_password(password_form.cleaned_data["new_password2"])
                         request.user.save(update_fields=["password"])
+                        set_must_change_password(request.user, False)
                         update_session_auth_hash(request, request.user)
                         _clear_password_change_code_session()
                         messages.success(request, "Password changed successfully.")

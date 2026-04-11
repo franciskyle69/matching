@@ -1,11 +1,19 @@
 from django.contrib.auth.decorators import login_required
+from django.core.cache import cache
 from django.http import JsonResponse
 from django.views.decorators.http import require_GET, require_http_methods
 
 from accounts.models import get_user_display_name
 from profiles.models import MentorProfile, MenteeProfile
 
-from ..views import _require_staff, audit_log, invalidate_approval_cache_mentor, invalidate_approval_cache_mentee
+from ..views import (
+    _require_staff,
+    APPROVAL_LIST_CACHE_TTL,
+    audit_log,
+    get_approval_list_cache_key,
+    invalidate_approval_cache_mentor,
+    invalidate_approval_cache_mentee,
+)
 
 
 def _mentor_general_info_complete(mentor):
@@ -31,7 +39,7 @@ def _mentee_general_info_complete(mentee):
     )
 
 
-def _serialize_mentor_detail(mentor):
+def _serialize_mentor_detail(mentor, request=None):
     u = mentor.user
     display_name = get_user_display_name(u) or u.username
     subs = mentor.subjects if isinstance(mentor.subjects, list) else (list(mentor.subjects) if mentor.subjects else [])
@@ -53,12 +61,14 @@ def _serialize_mentor_detail(mentor):
         "expertise_level": mentor.expertise_level,
         "capacity": getattr(mentor, "capacity", 1),
         "interests": mentor.interests or "",
+        "verification_document_url": _verification_document_url(mentor, request),
+        "verification_document_name": mentor.verification_document.name.rsplit("/", 1)[-1] if getattr(mentor, "verification_document", None) else "",
         "approved": mentor.approved,
         "general_info_complete": _mentor_general_info_complete(mentor),
     }
 
 
-def _serialize_mentee_detail(mentee):
+def _serialize_mentee_detail(mentee, request=None):
     u = mentee.user
     display_name = get_user_display_name(u) or u.username
     return {
@@ -81,9 +91,29 @@ def _serialize_mentee_detail(mentee):
         "topics": mentee.topics if isinstance(mentee.topics, list) else (list(mentee.topics) if mentee.topics else []),
         "difficulty_level": mentee.difficulty_level,
         "interests": mentee.interests or "",
+        "verification_document_url": _verification_document_url(mentee, request),
+        "verification_document_name": mentee.verification_document.name.rsplit("/", 1)[-1] if getattr(mentee, "verification_document", None) else "",
         "approved": mentee.approved,
         "general_info_complete": _mentee_general_info_complete(mentee),
     }
+
+
+def _verification_document_url(profile_obj, request):
+    file_obj = getattr(profile_obj, "verification_document", None)
+    if not file_obj:
+        return ""
+    try:
+        url = file_obj.url or ""
+    except Exception:
+        return ""
+    if not url:
+        return ""
+    if url.startswith("http://") or url.startswith("https://"):
+        return url
+    normalized = url if url.startswith("/") else f"/{url}"
+    if request is None:
+        return normalized
+    return request.build_absolute_uri(normalized)
 
 
 @login_required
@@ -92,6 +122,11 @@ def pending_list(request):
     err = _require_staff(request)
     if err:
         return err
+
+    cache_key = get_approval_list_cache_key(request.user.id)
+    cached_payload = cache.get(cache_key)
+    if cached_payload is not None:
+        return JsonResponse(cached_payload)
 
     pending_mentors = (
         MentorProfile.objects.select_related("user")
@@ -106,17 +141,19 @@ def pending_list(request):
         .order_by("user__username")
     )
 
-    mentors_data = [_serialize_mentor_detail(m) for m in pending_mentors]
-    mentees_data = [_serialize_mentee_detail(m) for m in pending_mentees]
+    mentors_data = [_serialize_mentor_detail(m, request) for m in pending_mentors]
+    mentees_data = [_serialize_mentee_detail(m, request) for m in pending_mentees]
 
     # Sort: general info complete first, then by display name.
     mentors_data.sort(key=lambda x: (not x.get("general_info_complete", False), (x.get("display_name") or x.get("username") or "").lower()))
     mentees_data.sort(key=lambda x: (not x.get("general_info_complete", False), (x.get("display_name") or x.get("username") or "").lower()))
 
-    return JsonResponse({
+    payload = {
         "pending_mentors": mentors_data,
         "pending_mentees": mentees_data,
-    })
+    }
+    cache.set(cache_key, payload, timeout=APPROVAL_LIST_CACHE_TTL)
+    return JsonResponse(payload)
 
 
 @login_required
@@ -140,7 +177,7 @@ def approve_mentor(request):
     mentor.save(update_fields=["approved"])
     audit_log(request.user, "approve", "mentor_approval", mentor.id)
     invalidate_approval_cache_mentor(mentor.id)
-    return JsonResponse({"status": "ok", "mentor": _serialize_mentor_detail(mentor)})
+    return JsonResponse({"status": "ok", "mentor": _serialize_mentor_detail(mentor, request)})
 
 
 @login_required
@@ -164,7 +201,7 @@ def reject_mentor(request):
     mentor.save(update_fields=["approved"])
     audit_log(request.user, "reject", "mentor_approval", mentor.id)
     invalidate_approval_cache_mentor(mentor.id)
-    return JsonResponse({"status": "ok", "mentor": _serialize_mentor_detail(mentor)})
+    return JsonResponse({"status": "ok", "mentor": _serialize_mentor_detail(mentor, request)})
 
 
 @login_required
@@ -188,7 +225,7 @@ def approve_mentee(request):
     mentee.save(update_fields=["approved"])
     audit_log(request.user, "approve", "mentee_approval", mentee.id)
     invalidate_approval_cache_mentee(mentee.id)
-    return JsonResponse({"status": "ok", "mentee": _serialize_mentee_detail(mentee)})
+    return JsonResponse({"status": "ok", "mentee": _serialize_mentee_detail(mentee, request)})
 
 
 @login_required
@@ -212,4 +249,4 @@ def reject_mentee(request):
     mentee.save(update_fields=["approved"])
     audit_log(request.user, "reject", "mentee_approval", mentee.id)
     invalidate_approval_cache_mentee(mentee.id)
-    return JsonResponse({"status": "ok", "mentee": _serialize_mentee_detail(mentee)})
+    return JsonResponse({"status": "ok", "mentee": _serialize_mentee_detail(mentee, request)})

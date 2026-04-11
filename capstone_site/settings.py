@@ -209,7 +209,11 @@ STATICFILES_DIRS = [
 MEDIA_URL = 'media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
-# Default file storage: Cloudinary (if set) else Google Drive else filesystem
+# Feature flags: explicitly disable Google integrations unless enabled.
+ENABLE_GOOGLE_CALENDAR = _env_bool("ENABLE_GOOGLE_CALENDAR", default=False)
+ENABLE_GOOGLE_DRIVE_API = _env_bool("ENABLE_GOOGLE_DRIVE_API", default=False)
+
+# Default file storage: Cloudinary (if set) else filesystem.
 STORAGES = {
     "staticfiles": {
         "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
@@ -217,8 +221,6 @@ STORAGES = {
 }
 if os.environ.get("CLOUDINARY_CLOUD_NAME"):
     STORAGES["default"] = {"BACKEND": "api.cloudinary_storage.CloudinaryStorage"}
-elif os.environ.get("DRIVE_SERVICE_ACCOUNT_JSON"):
-    STORAGES["default"] = {"BACKEND": "api.drive_storage.GoogleDriveStorage"}
 else:
     STORAGES["default"] = {
         "BACKEND": "django.core.files.storage.FileSystemStorage",
@@ -263,8 +265,6 @@ SOCIALACCOUNT_PROVIDERS = {
         "SCOPE": [
             "profile",
             "email",
-            "https://www.googleapis.com/auth/calendar.events",
-            "https://www.googleapis.com/auth/drive.file",  # Create/access app-created Drive files
         ],
         "AUTH_PARAMS": {"prompt": "select_account", "access_type": "offline"},
         "APP": {
@@ -300,6 +300,11 @@ EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER')
 EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD')
 
 DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', EMAIL_HOST_USER)
+
+# Institutional email domains restriction (optional, comma-separated)
+# Set in .env as ALLOWED_EMAIL_DOMAINS=@domain1.edu,@domain2.edu
+# Leave empty to allow any email
+ALLOWED_EMAIL_DOMAINS = _env_csv('ALLOWED_EMAIL_DOMAINS')
 
 # Logging: lower verbosity in production so expensive views (like matching) aren't slowed by logging
 LOGGING = {

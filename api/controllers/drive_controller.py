@@ -3,6 +3,7 @@ Google Drive integration: upload/list files using the user's Google OAuth token.
 Uses the same token as Google Calendar (sessions_controller); requires Drive scope in settings.
 """
 import requests
+from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
@@ -12,6 +13,13 @@ from ..views import _get_payload, logger
 
 DRIVE_API_BASE = "https://www.googleapis.com/drive/v3"
 DRIVE_UPLOAD_BASE = "https://www.googleapis.com/upload/drive/v3"
+
+
+def _drive_disabled_response():
+    return JsonResponse(
+        {"error": "Google Drive integration is disabled."},
+        status=410,
+    )
 
 
 def _drive_request(user, method, url, **kwargs):
@@ -40,6 +48,9 @@ def drive_upload(request):
     Body (JSON): { "filename": "name.txt", "content_base64": "<base64>", "mime_type": "text/plain" }
     Or multipart form: file + optional "folder_id".
     """
+    if not getattr(settings, "ENABLE_GOOGLE_DRIVE_API", False):
+        return _drive_disabled_response()
+
     user = request.user
 
     # Support JSON body with base64 content (e.g. from frontend)
@@ -122,6 +133,9 @@ def drive_list(request):
     List files in the user's Drive that were created by this app (drive.file scope).
     Query params: pageSize (default 20), pageToken (optional), q (optional Drive query).
     """
+    if not getattr(settings, "ENABLE_GOOGLE_DRIVE_API", False):
+        return _drive_disabled_response()
+
     user = request.user
     page_size = min(int(request.GET.get("pageSize", 20)), 100)
     page_token = request.GET.get("pageToken") or ""
@@ -161,5 +175,8 @@ def drive_list(request):
 @require_http_methods(["GET"])
 def drive_connected(request):
     """Check if the current user has Google Drive connected (has a valid token)."""
+    if not getattr(settings, "ENABLE_GOOGLE_DRIVE_API", False):
+        return JsonResponse({"connected": False})
+
     token = _get_google_access_token(request.user)
     return JsonResponse({"connected": bool(token)})

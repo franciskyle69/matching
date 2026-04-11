@@ -82,6 +82,7 @@ from .controllers.posts_controller import (
 from .controllers.users_controller import (
     users_list,
     user_detail,
+    user_create,
     user_update,
     user_activate_deactivate,
     user_delete,
@@ -177,6 +178,7 @@ urlpatterns = [
     path('gallery/', gallery, name='api-gallery'),
     path('profile-stats/', profile_stats, name='api-profile-stats'),
     path('users/', users_list, name='api-users-list'),
+    path('users/create/', user_create, name='api-users-create'),
     path('users/<int:user_id>/', user_detail, name='api-users-detail'),
     path('users/<int:user_id>/update/', user_update, name='api-users-update'),
     path('users/<int:user_id>/activate-deactivate/', user_activate_deactivate, name='api-users-activate-deactivate'),

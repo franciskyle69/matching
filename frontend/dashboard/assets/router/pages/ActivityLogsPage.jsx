@@ -18,7 +18,15 @@
     const isStaff = !!(ctx.user.is_staff || ctx.user.role === "staff");
     if (!isStaff) return null;
 
-    const { activityLogs, activityLogsLoading, loadActivityLogs } = ctx;
+    const {
+      activityLogs,
+      activityLogsLoading,
+      activityLogsPage,
+      activityLogsPageSize,
+      activityLogsTotal,
+      activityLogsTotalPages,
+      loadActivityLogs,
+    } = ctx;
     const [search, setSearch] = useState("");
     const [dateFrom, setDateFrom] = useState("");
     const [dateTo, setDateTo] = useState("");
@@ -26,11 +34,37 @@
     const Spinner = LoadingSpinner;
 
     useEffect(() => {
-      loadActivityLogs({});
+      loadActivityLogs({ page: 1, page_size: activityLogsPageSize });
     }, []);
+
+    const showingFrom = activityLogsTotal === 0 ? 0 : (activityLogsPage - 1) * activityLogsPageSize + 1;
+    const showingTo = activityLogsTotal === 0 ? 0 : Math.min(activityLogsPage * activityLogsPageSize, activityLogsTotal);
+
+    function loadPage(nextPage) {
+      loadActivityLogs({
+        page: nextPage,
+        page_size: activityLogsPageSize,
+        search: search.trim() || undefined,
+        date_from: dateFrom || undefined,
+        date_to: dateTo || undefined,
+      });
+    }
 
     function handleSearch() {
       loadActivityLogs({
+        page: 1,
+        page_size: activityLogsPageSize,
+        search: search.trim() || undefined,
+        date_from: dateFrom || undefined,
+        date_to: dateTo || undefined,
+      });
+    }
+
+    function handlePageSizeChange(event) {
+      const nextPageSize = Number.parseInt(event.target.value, 10) || 20;
+      loadActivityLogs({
+        page: 1,
+        page_size: nextPageSize,
         search: search.trim() || undefined,
         date_from: dateFrom || undefined,
         date_to: dateTo || undefined,
@@ -68,6 +102,23 @@
           <button type="button" className="btn" onClick={handleSearch} disabled={activityLogsLoading}>
             {activityLogsLoading ? <Spinner inline /> : "Search"}
           </button>
+        </div>
+
+        <div className="activity-logs-toolbar">
+          <div className="activity-logs-summary">
+            {activityLogsTotal === 0
+              ? "No activity logs found."
+              : `Showing ${showingFrom}-${showingTo} of ${activityLogsTotal} logs`}
+          </div>
+          <label className="activity-logs-page-size">
+            <span>Rows per page</span>
+            <select className="page-size-select" value={activityLogsPageSize} onChange={handlePageSizeChange} disabled={activityLogsLoading}>
+              <option value="10">10</option>
+              <option value="20">20</option>
+              <option value="50">50</option>
+              <option value="100">100</option>
+            </select>
+          </label>
         </div>
 
         <div className="table-wrapper">
@@ -108,6 +159,28 @@
               )}
             </tbody>
           </table>
+        </div>
+
+        <div className="pagination-section activity-logs-pagination">
+          <div className="pagination-info">Page {activityLogsPage} of {activityLogsTotalPages}</div>
+          <div className="pagination-controls">
+            <button
+              type="button"
+              className="btn btn-secondary"
+              disabled={activityLogsLoading || activityLogsPage <= 1}
+              onClick={() => loadPage(activityLogsPage - 1)}
+            >
+              Previous
+            </button>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              disabled={activityLogsLoading || activityLogsPage >= activityLogsTotalPages}
+              onClick={() => loadPage(activityLogsPage + 1)}
+            >
+              Next
+            </button>
+          </div>
         </div>
       </div>
     );

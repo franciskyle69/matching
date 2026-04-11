@@ -1,8 +1,13 @@
+import secrets
+
 from django.contrib.auth.models import User
+from django.core.mail import EmailMultiAlternatives
+from django.contrib.sites.shortcuts import get_current_site
 from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods, require_GET
 from django.contrib.auth.decorators import login_required
 from django.db.models import Q
+from django.template.loader import render_to_string
 
 from ..views import (
     _get_payload,
@@ -11,8 +16,11 @@ from ..views import (
     audit_log,
     logger,
 )
+from accounts.forms import CoordinatorCreateUserForm
+from accounts.models import set_must_change_password
 from accounts.models import get_user_display_name
 from profiles.models import MentorProfile, MenteeProfile
+from matching.models import MenteeMentorRequest
 
 
 def _parse_bool_query(value):
@@ -46,6 +54,8 @@ def _serialize_user(user):
         role = "mentor"
     elif mentee:
         role = "mentee"
+    elif user.is_staff:
+        role = "staff"
     else:
         role = "none"
     
@@ -59,11 +69,29 @@ def _serialize_user(user):
         "display_name": get_user_display_name(user),
         "is_staff": user.is_staff,
         "is_active": user.is_active,
+        "must_change_password": bool(getattr(getattr(user, "security_state", None), "must_change_password", False)),
         "date_joined": user.date_joined.isoformat(),
         "role": role,
         "mentor_approved": mentor.approved if mentor else None,
         "mentee_approved": mentee.approved if mentee else None,
     }
+
+
+def _generate_temp_password(length=14):
+    specials = "!@#$%^&*"
+    while True:
+        password = [
+            secrets.choice("abcdefghijklmnopqrstuvwxyz"),
+            secrets.choice("ABCDEFGHIJKLMNOPQRSTUVWXYZ"),
+            secrets.choice("0123456789"),
+            secrets.choice(specials),
+        ]
+        alphabet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789" + specials
+        password.extend(secrets.choice(alphabet) for _ in range(max(0, length - len(password))))
+        secrets.SystemRandom().shuffle(password)
+        candidate = "".join(password)
+        if any(ch.islower() for ch in candidate) and any(ch.isupper() for ch in candidate) and any(ch.isdigit() for ch in candidate) and any(ch in specials for ch in candidate):
+            return candidate
 
 
 @login_required
@@ -166,6 +194,99 @@ def users_list(request):
 
 
 @login_required
+@require_http_methods(["POST"])
+def user_create(request):
+    err = _require_staff(request)
+    if err:
+        return err
+    try:
+        payload = _get_payload(request)
+        form = CoordinatorCreateUserForm(payload)
+        if not form.is_valid():
+            return JsonResponse({"ok": False, "errors": form.errors}, status=400)
+
+        cleaned = form.cleaned_data
+        first_name = cleaned.get("first_name", "")
+        last_name = cleaned.get("last_name", "")
+        email = cleaned.get("email", "")
+        role = cleaned.get("role", "mentor")
+        if role == "staff":
+            user.is_staff = True
+            user.save(update_fields=["is_staff"])
+
+        base_username = "".join(part for part in [first_name, last_name] if part)
+        base_username = "".join(ch for ch in base_username.lower() if ch.isalnum())
+        if not base_username:
+            base_username = email.split("@")[0].lower()
+
+        username = base_username
+        suffix = 1
+        while User.objects.filter(username=username).exists():
+            suffix += 1
+            username = f"{base_username}{suffix}"
+
+        temp_password = _generate_temp_password()
+        user = User.objects.create_user(
+            username=username,
+            email=email,
+            password=temp_password,
+            first_name=first_name,
+            last_name=last_name,
+        )
+        user.is_active = True
+        user.save(update_fields=["is_active"])
+
+        if role == "mentor":
+            MentorProfile.objects.create(
+                user=user,
+                program="BSIT",
+                year_level=4,
+                verification_document="",
+                approved=False,
+            )
+        else:
+            MenteeProfile.objects.create(
+                user=user,
+                program="BSIT",
+                year_level=1,
+                campus="",
+                student_id_no="",
+                contact_no="",
+                admission_type="",
+                sex="",
+                verification_document="",
+                approved=False,
+            )
+
+        set_must_change_password(user, True)
+
+        current_site = get_current_site(request)
+        context = {
+            "user": user,
+            "domain": current_site.domain,
+            "protocol": "https" if request.is_secure() else "http",
+            "password": temp_password,
+            "role": role,
+        }
+        subject = "Your account has been created"
+        text_message = render_to_string("registration/coordinator_user_created_email.txt", context)
+        html_message = render_to_string("registration/coordinator_user_created_email.html", context)
+        email_message = EmailMultiAlternatives(subject, text_message, to=[user.email])
+        email_message.attach_alternative(html_message, "text/html")
+        email_message.send()
+
+        audit_log(request.user, "user_create", f"Created user: {user.username}", "success")
+        return JsonResponse({
+            "ok": True,
+            "message": "User created and password emailed.",
+            "user": _serialize_user(user),
+        })
+    except Exception as e:
+        logger.exception(f"Error in user_create: {e}")
+        return JsonResponse({"ok": False, "error": str(e)}, status=500)
+
+
+@login_required
 @require_GET
 def user_detail(request, user_id):
     """Get details of a specific user"""
@@ -194,7 +315,23 @@ def user_detail(request, user_id):
                 "approved": mentor.approved,
                 "subjects": mentor.subjects,
                 "topics": mentor.topics,
+                "verification_document_url": mentor.verification_document.url if mentor.verification_document else "",
+                "verification_document_name": mentor.verification_document.name.split("/")[-1] if mentor.verification_document else "",
             }
+
+            mentor_connections = MenteeMentorRequest.objects.filter(
+                mentor=mentor,
+                accepted=True,
+            ).select_related("mentee__user")
+            user_data["mentor_connections"] = [
+                {
+                    "user_id": relation.mentee.user_id,
+                    "username": relation.mentee.user.username,
+                    "display_name": get_user_display_name(relation.mentee.user),
+                    "accepted_at": relation.accepted_at.isoformat() if relation.accepted_at else None,
+                }
+                for relation in mentor_connections
+            ]
         
         if mentee:
             user_data["mentee_profile"] = {
@@ -208,7 +345,23 @@ def user_detail(request, user_id):
                 "approved": mentee.approved,
                 "subjects": mentee.subjects,
                 "topics": mentee.topics,
+                "verification_document_url": mentee.verification_document.url if mentee.verification_document else "",
+                "verification_document_name": mentee.verification_document.name.split("/")[-1] if mentee.verification_document else "",
             }
+
+            mentee_connections = MenteeMentorRequest.objects.filter(
+                mentee=mentee,
+                accepted=True,
+            ).select_related("mentor__user")
+            user_data["mentee_connections"] = [
+                {
+                    "user_id": relation.mentor.user_id,
+                    "username": relation.mentor.user.username,
+                    "display_name": get_user_display_name(relation.mentor.user),
+                    "accepted_at": relation.accepted_at.isoformat() if relation.accepted_at else None,
+                }
+                for relation in mentee_connections
+            ]
         
         return JsonResponse({
             "ok": True,

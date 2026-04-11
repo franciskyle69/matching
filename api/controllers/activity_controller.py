@@ -7,6 +7,7 @@ from django.utils import timezone
 from django.views.decorators.http import require_GET
 from django.db.models import Q
 from django.utils.dateparse import parse_date
+from math import ceil
 
 from matching.models import AuditLog
 
@@ -59,7 +60,29 @@ def activity_logs_list(request):
         if parsed:
             qs = qs.filter(created_at__date__lte=parsed)
 
-    qs = qs.order_by("-created_at")[:500]
+    total_count = qs.count()
+
+    try:
+        page = max(1, int(request.GET.get("page", 1)))
+    except (TypeError, ValueError):
+        page = 1
+
+    try:
+        page_size = int(request.GET.get("page_size", 20))
+    except (TypeError, ValueError):
+        page_size = 20
+
+    if page_size < 1:
+        page_size = 20
+    if page_size > 100:
+        page_size = 100
+
+    total_pages = max(1, ceil(total_count / page_size)) if page_size else 1
+    if page > total_pages:
+        page = total_pages
+
+    offset = (page - 1) * page_size
+    qs = qs.order_by("-created_at")[offset:offset + page_size]
 
     logs = []
     for log in qs:
@@ -84,4 +107,11 @@ def activity_logs_list(request):
             "status": "Success",
         })
 
-    return JsonResponse({"logs": logs})
+    return JsonResponse({
+        "logs": logs,
+        "total": total_count,
+        "page": page,
+        "page_size": page_size,
+        "total_pages": total_pages,
+        "last_page": total_pages,
+    })
