@@ -3842,6 +3842,7 @@ button:focus-visible {
 
 .time-input-wrapper {
   position: relative;
+  cursor: pointer;
 }
 
 .time-input-wrapper::before {
@@ -3856,7 +3857,76 @@ button:focus-visible {
 }
 
 .time-input {
+  width: 100%;
   padding-left: 30px;
+  cursor: pointer;
+}
+
+.time-input:read-only {
+  caret-color: transparent;
+}
+
+.availability-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.availability-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border: 1px solid var(--slate-200);
+  border-radius: 12px;
+  background: #f9fafb;
+  padding: 8px 10px;
+  animation: pillIn 0.24s ease-out both;
+}
+
+.availability-item.is-editing {
+  border-color: #352c90;
+  box-shadow: 0 0 0 2px rgba(53, 44, 144, 0.14);
+}
+
+.availability-item-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--slate-800);
+}
+
+.availability-item-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.availability-action-btn {
+  border: 1px solid var(--slate-300);
+  background: #fff;
+  color: var(--slate-700);
+  border-radius: 8px;
+  padding: 4px 8px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background-color 0.18s ease,
+    border-color 0.18s ease,
+    color 0.18s ease;
+}
+
+.availability-action-btn:hover {
+  background: #eef2ff;
+  border-color: #a5b4fc;
+  color: #312e81;
+}
+
+.availability-action-btn--danger:hover {
+  background: #fee2e2;
+  border-color: #fca5a5;
+  color: #b91c1c;
 }
 
 .role-badge {
@@ -7426,6 +7496,44 @@ button:focus-visible {
 
 [data-theme="dark"] .time-input-wrapper::before {
   opacity: 0.85;
+}
+
+[data-theme="dark"] .time-input {
+  background-color: #0b1220;
+  border-color: #334155;
+  color: #e2e8f0;
+}
+
+[data-theme="dark"] .time-input::-webkit-calendar-picker-indicator {
+  filter: invert(1) brightness(1.2);
+  opacity: 0.95;
+}
+
+[data-theme="dark"] .availability-item {
+  background: rgba(15, 23, 42, 0.85);
+  border-color: #334155;
+}
+
+[data-theme="dark"] .availability-item-label {
+  color: var(--text-primary);
+}
+
+[data-theme="dark"] .availability-action-btn {
+  background: rgba(15, 23, 42, 0.9);
+  border-color: #475569;
+  color: var(--text-primary);
+}
+
+[data-theme="dark"] .availability-action-btn:hover {
+  background: #22177a;
+  border-color: #605ea1;
+  color: #f8fafc;
+}
+
+[data-theme="dark"] .availability-action-btn--danger:hover {
+  background: rgba(153, 27, 27, 0.28);
+  border-color: #ef4444;
+  color: #fecaca;
 }
 
 [data-theme="dark"] .app-topbar {

@@ -421,7 +421,7 @@
                 </button>
                 <span className="sidebar-header-title">
                   <img
-                    src="/static/assets/logoreal.svg"
+                    src={theme === "dark" ? "/static/assets/logoreal.svg" : "/static/assets/logodark.svg"}
                     alt="Mentoring Dashboard"
                     className="sidebar-logo"
                   />
@@ -523,14 +523,6 @@
                   )}
                   <span className="sidebar-logout-text">{logoutLoading ? "Logging out..." : "Log out"}</span>
                 </button>
-                <a href="#" className="sidebar-help-card" onClick={(e) => e.preventDefault()}>
-                  <div className="sidebar-help-icon">?</div>
-                  <div className="sidebar-help-content">
-                    <div className="sidebar-help-title">Need help?</div>
-                    <div className="sidebar-help-sub">Please check our docs</div>
-                    <span className="sidebar-help-cta">Documentation</span>
-                  </div>
-                </a>
               </div>
             </aside>
           </>

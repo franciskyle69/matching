@@ -362,6 +362,66 @@
     );
   }
 
+  function TimePickerField({ id, label, value, min, max, onChange }) {
+    const inputRef = useRef(null);
+    const [pickerSupported, setPickerSupported] = useState(false);
+
+    useEffect(() => {
+      const node = inputRef.current;
+      setPickerSupported(!!node && typeof node.showPicker === "function");
+    }, []);
+
+    function openPicker() {
+      const node = inputRef.current;
+      if (!node) return;
+      if (pickerSupported && typeof node.showPicker === "function") {
+        try {
+          node.showPicker();
+        } catch (_) {
+          setPickerSupported(false);
+        }
+      }
+    }
+
+    return (
+      <div className="time-field">
+        <label htmlFor={id}>{label}</label>
+        <div
+          className="time-input-wrapper"
+          onClick={(e) => {
+            const node = inputRef.current;
+            if (!node) return;
+            if (e.target !== node) {
+              node.focus();
+            }
+            if (pickerSupported) {
+              openPicker();
+            }
+          }}
+        >
+          <input
+            ref={inputRef}
+            id={id}
+            type="time"
+            className="time-input"
+            min={min}
+            max={max}
+            value={value}
+            readOnly={pickerSupported}
+            onClick={openPicker}
+            onFocus={() => {
+              if (pickerSupported) openPicker();
+            }}
+            onKeyDown={(e) => {
+              if (pickerSupported) e.preventDefault();
+            }}
+            onChange={onChange}
+          />
+        </div>
+      </div>
+    );
+  }
+
   function SettingsPage() {
     const ctx = useContext(AppContext);
     if (!ctx || !ctx.user) return null;
@@ -436,6 +496,20 @@
       serializeMenteeQuestionnaire(menteeMatching);
 
     const questionnaireSaving = mentorProfileSaving || menteeMatchingSaving;
+        // Sync the saved ref whenever menteeMatching changes and we're not actively saving
+        useEffect(() => {
+          if (!menteeMatchingSaving) {
+            menteeQuestionnaireSavedRef.current =
+              serializeMenteeQuestionnaire(menteeMatching);
+          }
+        }, [menteeMatching, menteeMatchingSaving]);
+          // Sync the mentor saved ref whenever mentorProfile changes and we're not actively saving
+          useEffect(() => {
+            if (!mentorProfileSaving) {
+              mentorQuestionnaireSavedRef.current =
+                serializeMentorQuestionnaire(mentorProfile);
+            }
+          }, [mentorProfile, mentorProfileSaving]);
     const questionnaireSavingText = mentorProfileSaving
       ? "Saving mentor questionnaire..."
       : "Saving mentee questionnaire...";
@@ -503,6 +577,111 @@
       return [`${start}-${end}`];
     }
 
+    function parseAvailabilityRange(slot) {
+      const text = String(slot || "");
+      const parts = text.split("-");
+      if (parts.length !== 2) return null;
+      const start = parts[0];
+      const end = parts[1];
+      const startMinutes = toMinutes(start);
+      const endMinutes = toMinutes(end);
+      if (startMinutes == null || endMinutes == null || startMinutes >= endMinutes)
+        return null;
+      return { start, end, startMinutes, endMinutes };
+    }
+
+    function rangesOverlap(a, b) {
+      return a.startMinutes < b.endMinutes && b.startMinutes < a.endMinutes;
+    }
+
+    function formatTimeLabel(hhmm) {
+      const minutes = toMinutes(hhmm);
+      if (minutes == null) return String(hhmm || "");
+      const h24 = Math.floor(minutes / 60);
+      const mins = minutes % 60;
+      const suffix = h24 >= 12 ? "PM" : "AM";
+      const h12 = ((h24 + 11) % 12) + 1;
+      return `${h12}:${String(mins).padStart(2, "0")} ${suffix}`;
+    }
+
+    function formatAvailabilityLabel(slot) {
+      const parsed = parseAvailabilityRange(slot);
+      if (!parsed) return String(slot || "");
+      return `${formatTimeLabel(parsed.start)} - ${formatTimeLabel(parsed.end)}`;
+    }
+
+    function sortAvailabilityRanges(slots) {
+      return [...slots].sort((a, b) => {
+        const one = parseAvailabilityRange(a);
+        const two = parseAvailabilityRange(b);
+        if (!one || !two) return String(a).localeCompare(String(b));
+        return one.startMinutes - two.startMinutes;
+      });
+    }
+
+    function buildAvailabilityUpdate(currentAvailability, draft, editingIndex) {
+      if (!draft.start || !draft.end) {
+        return {
+          error: "Select both start and end time before adding a timeframe.",
+          next: null,
+        };
+      }
+
+      const newSlots = toSingleAvailabilityRange(draft.start, draft.end);
+      if (!Array.isArray(newSlots) || newSlots.length === 0) {
+        return {
+          error: "Choose a valid range where start time is earlier than end time.",
+          next: null,
+        };
+      }
+
+      const newSlot = newSlots[0];
+      const parsedNewSlot = parseAvailabilityRange(newSlot);
+      if (!parsedNewSlot) {
+        return {
+          error: "Choose a valid timeframe.",
+          next: null,
+        };
+      }
+
+      const current = Array.isArray(currentAvailability)
+        ? [...currentAvailability]
+        : [];
+
+      const hasDuplicate = current.some(
+        (slot, idx) => idx !== editingIndex && String(slot) === newSlot,
+      );
+      if (hasDuplicate) {
+        return { error: "That timeframe already exists.", next: null };
+      }
+
+      const hasOverlap = current.some((slot, idx) => {
+        if (idx === editingIndex) return false;
+        const parsed = parseAvailabilityRange(slot);
+        if (!parsed) return false;
+        return rangesOverlap(parsedNewSlot, parsed);
+      });
+      if (hasOverlap) {
+        return {
+          error: "Timeframes cannot overlap with existing ranges.",
+          next: null,
+        };
+      }
+
+      const next = [...current];
+      if (
+        editingIndex != null &&
+        editingIndex >= 0 &&
+        editingIndex < next.length
+      ) {
+        next[editingIndex] = newSlot;
+      } else {
+        next.push(newSlot);
+      }
+
+      return { error: "", next: sortAvailabilityRanges(next) };
+    }
+
     function getPasswordStrengthIssues(password) {
       const issues = [];
       const value = String(password || "");
@@ -513,24 +692,18 @@
       return issues;
     }
 
-    const [mentorAvailabilityDraft, setMentorAvailabilityDraft] = useState(() =>
-      firstAvailabilityRange(mentorProfile.availability, "07:00", "17:00"),
-    );
-    const [menteeAvailabilityDraft, setMenteeAvailabilityDraft] = useState(() =>
-      firstAvailabilityRange(menteeMatching.availability, "07:00", "17:00"),
-    );
-
-    useEffect(() => {
-      setMentorAvailabilityDraft(
-        firstAvailabilityRange(mentorProfile.availability, "07:00", "17:00"),
-      );
-    }, [mentorProfile.availability]);
-
-    useEffect(() => {
-      setMenteeAvailabilityDraft(
-        firstAvailabilityRange(menteeMatching.availability, "07:00", "17:00"),
-      );
-    }, [menteeMatching.availability]);
+    const [mentorAvailabilityDraft, setMentorAvailabilityDraft] = useState({
+      start: "",
+      end: "",
+    });
+    const [menteeAvailabilityDraft, setMenteeAvailabilityDraft] = useState({
+      start: "",
+      end: "",
+    });
+    const [mentorAvailabilityEditingIndex, setMentorAvailabilityEditingIndex] =
+      useState(null);
+    const [menteeAvailabilityEditingIndex, setMenteeAvailabilityEditingIndex] =
+      useState(null);
 
     useEffect(() => {
       if (!passwordCodeSent && !passwordCodeVerified) {
@@ -1414,44 +1587,34 @@
                       Add one or more time ranges between 07:00 and 22:00.
                     </p>
                     <div className="time-range-row">
-                      <div className="time-field">
-                        <label>Start time</label>
-                        <div className="time-input-wrapper">
-                          <input
-                            type="time"
-                            className="time-input"
-                            min={MIN_AVAILABLE_TIME}
-                            max={MAX_AVAILABLE_TIME}
-                            value={mentorAvailabilityDraft.start}
-                            onChange={(e) => {
-                              setMentorAvailabilityError("");
-                              setMentorAvailabilityDraft({
-                                ...mentorAvailabilityDraft,
-                                start: e.target.value,
-                              });
-                            }}
-                          />
-                        </div>
-                      </div>
-                      <div className="time-field">
-                        <label>End time</label>
-                        <div className="time-input-wrapper">
-                          <input
-                            type="time"
-                            className="time-input"
-                            min={MIN_AVAILABLE_TIME}
-                            max={MAX_AVAILABLE_TIME}
-                            value={mentorAvailabilityDraft.end}
-                            onChange={(e) => {
-                              setMentorAvailabilityError("");
-                              setMentorAvailabilityDraft({
-                                ...mentorAvailabilityDraft,
-                                end: e.target.value,
-                              });
-                            }}
-                          />
-                        </div>
-                      </div>
+                      <TimePickerField
+                        id="mentor-start-time"
+                        label="Start time"
+                        min={MIN_AVAILABLE_TIME}
+                        max={MAX_AVAILABLE_TIME}
+                        value={mentorAvailabilityDraft.start}
+                        onChange={(e) => {
+                          setMentorAvailabilityError("");
+                          setMentorAvailabilityDraft({
+                            ...mentorAvailabilityDraft,
+                            start: e.target.value,
+                          });
+                        }}
+                      />
+                      <TimePickerField
+                        id="mentor-end-time"
+                        label="End time"
+                        min={MIN_AVAILABLE_TIME}
+                        max={MAX_AVAILABLE_TIME}
+                        value={mentorAvailabilityDraft.end}
+                        onChange={(e) => {
+                          setMentorAvailabilityError("");
+                          setMentorAvailabilityDraft({
+                            ...mentorAvailabilityDraft,
+                            end: e.target.value,
+                          });
+                        }}
+                      />
                     </div>
                     <div
                       className="btn-row"
@@ -1460,38 +1623,47 @@
                       <button
                         type="button"
                         className="btn secondary small"
+                        disabled={
+                          !mentorAvailabilityDraft.start ||
+                          !mentorAvailabilityDraft.end
+                        }
                         onClick={() => {
-                          const newSlots = toSingleAvailabilityRange(
-                            mentorAvailabilityDraft.start,
-                            mentorAvailabilityDraft.end,
+                          const { error, next } = buildAvailabilityUpdate(
+                            mentorProfile.availability,
+                            mentorAvailabilityDraft,
+                            mentorAvailabilityEditingIndex,
                           );
-                          if (
-                            !Array.isArray(newSlots) ||
-                            newSlots.length === 0
-                          ) {
-                            setMentorAvailabilityError(
-                              "Choose a valid range where start time is earlier than end time.",
-                            );
+                          if (!next) {
+                            setMentorAvailabilityError(error);
                             return;
                           }
                           setMentorAvailabilityError("");
-                          const current = Array.isArray(
-                            mentorProfile.availability,
-                          )
-                            ? [...mentorProfile.availability]
-                            : [];
-                          newSlots.forEach((slot) => {
-                            if (!current.includes(slot)) current.push(slot);
-                          });
                           const updated = {
                             ...mentorProfile,
-                            availability: current,
+                            availability: next,
                           };
                           setMentorProfile(updated);
+                          setMentorAvailabilityDraft({ start: "", end: "" });
+                          setMentorAvailabilityEditingIndex(null);
                         }}
                       >
-                        Add timeframe
+                        {mentorAvailabilityEditingIndex != null
+                          ? "Update timeframe"
+                          : "Add timeframe"}
                       </button>
+                      {mentorAvailabilityEditingIndex != null && (
+                        <button
+                          type="button"
+                          className="btn ghost small"
+                          onClick={() => {
+                            setMentorAvailabilityEditingIndex(null);
+                            setMentorAvailabilityDraft({ start: "", end: "" });
+                            setMentorAvailabilityError("");
+                          }}
+                        >
+                          Cancel edit
+                        </button>
+                      )}
                     </div>
                     {mentorAvailabilityError && (
                       <p
@@ -1508,30 +1680,68 @@
                     </p>
                     {Array.isArray(mentorProfile.availability) &&
                       mentorProfile.availability.length > 0 && (
-                        <div className="availability-tags">
-                          {mentorProfile.availability.map((slot) => (
-                            <button
-                              key={slot}
-                              type="button"
-                              className="availability-tag"
-                              onClick={() => {
-                                const next = mentorProfile.availability.filter(
-                                  (s) => s !== slot,
-                                );
-                                setMentorProfile({
-                                  ...mentorProfile,
-                                  availability: next,
-                                });
-                              }}
+                        <div className="availability-list" aria-live="polite">
+                          {mentorProfile.availability.map((slot, idx) => (
+                            <div
+                              key={`${slot}-${idx}`}
+                              className={
+                                "availability-item" +
+                                (mentorAvailabilityEditingIndex === idx
+                                  ? " is-editing"
+                                  : "")
+                              }
                             >
-                              <span>{slot}</span>
-                              <span
-                                className="availability-tag-remove"
-                                aria-hidden="true"
-                              >
-                                ×
+                              <span className="availability-item-label">
+                                {formatAvailabilityLabel(slot)}
                               </span>
-                            </button>
+                              <div className="availability-item-actions">
+                                <button
+                                  type="button"
+                                  className="availability-action-btn"
+                                  onClick={() => {
+                                    const parsed = parseAvailabilityRange(slot);
+                                    if (!parsed) return;
+                                    setMentorAvailabilityDraft({
+                                      start: parsed.start,
+                                      end: parsed.end,
+                                    });
+                                    setMentorAvailabilityEditingIndex(idx);
+                                    setMentorAvailabilityError("");
+                                  }}
+                                >
+                                  Edit
+                                </button>
+                                <button
+                                  type="button"
+                                  className="availability-action-btn availability-action-btn--danger"
+                                  onClick={() => {
+                                    const next = mentorProfile.availability.filter(
+                                      (_, i) => i !== idx,
+                                    );
+                                    setMentorProfile({
+                                      ...mentorProfile,
+                                      availability: next,
+                                    });
+                                    if (mentorAvailabilityEditingIndex === idx) {
+                                      setMentorAvailabilityEditingIndex(null);
+                                      setMentorAvailabilityDraft({
+                                        start: "",
+                                        end: "",
+                                      });
+                                    } else if (
+                                      mentorAvailabilityEditingIndex != null &&
+                                      mentorAvailabilityEditingIndex > idx
+                                    ) {
+                                      setMentorAvailabilityEditingIndex(
+                                        mentorAvailabilityEditingIndex - 1,
+                                      );
+                                    }
+                                  }}
+                                >
+                                  Remove
+                                </button>
+                              </div>
+                            </div>
                           ))}
                         </div>
                       )}
@@ -1551,8 +1761,6 @@
                       onClick={async () => {
                         const saved = await handleMentorProfileSave();
                         if (saved) {
-                          mentorQuestionnaireSavedRef.current =
-                            serializeMentorQuestionnaire(mentorProfile);
                           setMentorProfileSavedAt(Date.now());
                         }
                       }}
@@ -1727,44 +1935,34 @@
                           Add one or more time ranges between 07:00 and 22:00.
                         </p>
                         <div className="time-range-row">
-                          <div className="time-field">
-                            <label>Start time</label>
-                            <div className="time-input-wrapper">
-                              <input
-                                type="time"
-                                className="time-input"
-                                min={MIN_AVAILABLE_TIME}
-                                max={MAX_AVAILABLE_TIME}
-                                value={menteeAvailabilityDraft.start}
-                                onChange={(e) => {
-                                  setMenteeAvailabilityError("");
-                                  setMenteeAvailabilityDraft({
-                                    ...menteeAvailabilityDraft,
-                                    start: e.target.value,
-                                  });
-                                }}
-                              />
-                            </div>
-                          </div>
-                          <div className="time-field">
-                            <label>End time</label>
-                            <div className="time-input-wrapper">
-                              <input
-                                type="time"
-                                className="time-input"
-                                min={MIN_AVAILABLE_TIME}
-                                max={MAX_AVAILABLE_TIME}
-                                value={menteeAvailabilityDraft.end}
-                                onChange={(e) => {
-                                  setMenteeAvailabilityError("");
-                                  setMenteeAvailabilityDraft({
-                                    ...menteeAvailabilityDraft,
-                                    end: e.target.value,
-                                  });
-                                }}
-                              />
-                            </div>
-                          </div>
+                          <TimePickerField
+                            id="mentee-start-time"
+                            label="Start time"
+                            min={MIN_AVAILABLE_TIME}
+                            max={MAX_AVAILABLE_TIME}
+                            value={menteeAvailabilityDraft.start}
+                            onChange={(e) => {
+                              setMenteeAvailabilityError("");
+                              setMenteeAvailabilityDraft({
+                                ...menteeAvailabilityDraft,
+                                start: e.target.value,
+                              });
+                            }}
+                          />
+                          <TimePickerField
+                            id="mentee-end-time"
+                            label="End time"
+                            min={MIN_AVAILABLE_TIME}
+                            max={MAX_AVAILABLE_TIME}
+                            value={menteeAvailabilityDraft.end}
+                            onChange={(e) => {
+                              setMenteeAvailabilityError("");
+                              setMenteeAvailabilityDraft({
+                                ...menteeAvailabilityDraft,
+                                end: e.target.value,
+                              });
+                            }}
+                          />
                         </div>
                         <div
                           className="btn-row"
@@ -1773,38 +1971,47 @@
                           <button
                             type="button"
                             className="btn secondary small"
+                            disabled={
+                              !menteeAvailabilityDraft.start ||
+                              !menteeAvailabilityDraft.end
+                            }
                             onClick={() => {
-                              const newSlots = toSingleAvailabilityRange(
-                                menteeAvailabilityDraft.start,
-                                menteeAvailabilityDraft.end,
+                              const { error, next } = buildAvailabilityUpdate(
+                                menteeMatching.availability,
+                                menteeAvailabilityDraft,
+                                menteeAvailabilityEditingIndex,
                               );
-                              if (
-                                !Array.isArray(newSlots) ||
-                                newSlots.length === 0
-                              ) {
-                                setMenteeAvailabilityError(
-                                  "Choose a valid range where start time is earlier than end time.",
-                                );
+                              if (!next) {
+                                setMenteeAvailabilityError(error);
                                 return;
                               }
                               setMenteeAvailabilityError("");
-                              const current = Array.isArray(
-                                menteeMatching.availability,
-                              )
-                                ? [...menteeMatching.availability]
-                                : [];
-                              newSlots.forEach((slot) => {
-                                if (!current.includes(slot)) current.push(slot);
-                              });
                               const updated = {
                                 ...menteeMatching,
-                                availability: current,
+                                availability: next,
                               };
                               setMenteeMatching(updated);
+                              setMenteeAvailabilityDraft({ start: "", end: "" });
+                              setMenteeAvailabilityEditingIndex(null);
                             }}
                           >
-                            Add timeframe
+                            {menteeAvailabilityEditingIndex != null
+                              ? "Update timeframe"
+                              : "Add timeframe"}
                           </button>
+                          {menteeAvailabilityEditingIndex != null && (
+                            <button
+                              type="button"
+                              className="btn ghost small"
+                              onClick={() => {
+                                setMenteeAvailabilityEditingIndex(null);
+                                setMenteeAvailabilityDraft({ start: "", end: "" });
+                                setMenteeAvailabilityError("");
+                              }}
+                            >
+                              Cancel edit
+                            </button>
+                          )}
                         </div>
                         {menteeAvailabilityError && (
                           <p
@@ -1821,31 +2028,69 @@
                         </p>
                         {Array.isArray(menteeMatching.availability) &&
                           menteeMatching.availability.length > 0 && (
-                            <div className="availability-tags">
-                              {menteeMatching.availability.map((slot) => (
-                                <button
-                                  key={slot}
-                                  type="button"
-                                  className="availability-tag"
-                                  onClick={() => {
-                                    const next =
-                                      menteeMatching.availability.filter(
-                                        (s) => s !== slot,
-                                      );
-                                    setMenteeMatching({
-                                      ...menteeMatching,
-                                      availability: next,
-                                    });
-                                  }}
+                            <div className="availability-list" aria-live="polite">
+                              {menteeMatching.availability.map((slot, idx) => (
+                                <div
+                                  key={`${slot}-${idx}`}
+                                  className={
+                                    "availability-item" +
+                                    (menteeAvailabilityEditingIndex === idx
+                                      ? " is-editing"
+                                      : "")
+                                  }
                                 >
-                                  <span>{slot}</span>
-                                  <span
-                                    className="availability-tag-remove"
-                                    aria-hidden="true"
-                                  >
-                                    ×
+                                  <span className="availability-item-label">
+                                    {formatAvailabilityLabel(slot)}
                                   </span>
-                                </button>
+                                  <div className="availability-item-actions">
+                                    <button
+                                      type="button"
+                                      className="availability-action-btn"
+                                      onClick={() => {
+                                        const parsed = parseAvailabilityRange(slot);
+                                        if (!parsed) return;
+                                        setMenteeAvailabilityDraft({
+                                          start: parsed.start,
+                                          end: parsed.end,
+                                        });
+                                        setMenteeAvailabilityEditingIndex(idx);
+                                        setMenteeAvailabilityError("");
+                                      }}
+                                    >
+                                      Edit
+                                    </button>
+                                    <button
+                                      type="button"
+                                      className="availability-action-btn availability-action-btn--danger"
+                                      onClick={() => {
+                                        const next =
+                                          menteeMatching.availability.filter(
+                                            (_, i) => i !== idx,
+                                          );
+                                        setMenteeMatching({
+                                          ...menteeMatching,
+                                          availability: next,
+                                        });
+                                        if (menteeAvailabilityEditingIndex === idx) {
+                                          setMenteeAvailabilityEditingIndex(null);
+                                          setMenteeAvailabilityDraft({
+                                            start: "",
+                                            end: "",
+                                          });
+                                        } else if (
+                                          menteeAvailabilityEditingIndex != null &&
+                                          menteeAvailabilityEditingIndex > idx
+                                        ) {
+                                          setMenteeAvailabilityEditingIndex(
+                                            menteeAvailabilityEditingIndex - 1,
+                                          );
+                                        }
+                                      }}
+                                    >
+                                      Remove
+                                    </button>
+                                  </div>
+                                </div>
                               ))}
                             </div>
                           )}
@@ -1866,8 +2111,6 @@
                           onClick={async () => {
                             const saved = await handleMenteeMatchingSave();
                             if (saved) {
-                              menteeQuestionnaireSavedRef.current =
-                                serializeMenteeQuestionnaire(menteeMatching);
                               setMenteeMatchingSavedAt(Date.now());
                             }
                           }}
