@@ -820,7 +820,7 @@
     }
 
     async function chooseMentor(mentorId) {
-      if (!user || user.role !== "mentee") return;
+      if (!user || user.role !== "mentee") return { ok: false };
       setError("");
       const result = await fetchJSON("/api/matching/mentee-choose-mentor/", {
         method: "POST",
@@ -832,16 +832,18 @@
         setError(message);
         if (window.Swal && typeof window.Swal.fire === "function")
           window.Swal.fire("Unable to connect mentor", message, "error");
-        return;
+        return { ok: false, code: result.data?.code || null, error: message };
       }
       const successMessage = "Mentor matched successfully. You can now schedule sessions.";
       setAuthMessage(successMessage);
       if (window.Swal && typeof window.Swal.fire === "function")
         window.Swal.fire("Mentor matched", successMessage, "success");
       setChosenMentorId(mentorId);
-      loadMyMentor();
-      loadSessions();
+      await loadMyMentor();
+      await loadSessions();
+      await loadMenteeRecommendations();
       loadMentorRequests();
+      return { ok: true };
     }
 
     async function handleSignIn() {

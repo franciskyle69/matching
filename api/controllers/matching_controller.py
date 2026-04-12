@@ -2,6 +2,8 @@ from django.contrib.auth.decorators import login_required
 from django.core.cache import cache
 from django.core.mail import send_mail
 from django.conf import settings
+from django.db import transaction
+from django.db.models import Count
 from django.http import JsonResponse
 from django.views.decorators.http import require_GET, require_http_methods
 
@@ -174,6 +176,15 @@ def mentee_recommendations(request):
         limit=limit,
         min_score=min_score,
     )
+    mentor_ids = [mentor.id for mentor, _score in recommendations]
+    accepted_rows = (
+        MenteeMentorRequest.objects.filter(accepted=True, mentor_id__in=mentor_ids)
+        .values("mentor_id")
+        .annotate(total=Count("id"))
+    )
+    accepted_counts = {
+        int(row["mentor_id"]): int(row["total"] or 0) for row in accepted_rows
+    }
     data = []
     mentee_subjects = (
         mentee_profile.subjects
@@ -189,6 +200,8 @@ def mentee_recommendations(request):
     mentee_top_set = {str(x).strip().lower() for x in mentee_topics if x}
 
     for mentor, score in recommendations:
+        capacity = max(int(getattr(mentor, "capacity", 0) or 0), 0)
+        slots_left = max(capacity - int(accepted_counts.get(mentor.id, 0)), 0)
         mentor_subjects = (
             mentor.subjects
             if isinstance(mentor.subjects, list)
@@ -211,6 +224,8 @@ def mentee_recommendations(request):
                 "mentor_username": mentor.user.username,
                 "mentor_display_name": get_user_display_name(mentor.user) or mentor.user.username,
                 "mentor": _serialize_mentor_for_matching(mentor, request),
+                "slots_left": slots_left,
+                "is_available": slots_left > 0,
                 "mentee_id": mentee_profile.id,
                 "mentee_username": mentee_profile.user.username,
                 "mentee_display_name": get_user_display_name(mentee_profile.user) or mentee_profile.user.username,
@@ -259,46 +274,52 @@ def mentee_choose_mentor(request):
     mentor_id = _get_int(payload, "mentor_id")
     if not mentor_id:
         return JsonResponse({"error": "mentor_id is required."}, status=400)
-    mentor = MentorProfile.objects.select_related("user").filter(id=mentor_id).first()
-    if not mentor:
-        return JsonResponse({"error": "Mentor not found."}, status=404)
-
-    capacity = max(int(getattr(mentor, "capacity", 0) or 0), 0)
-    accepted_count = MenteeMentorRequest.objects.filter(
-        mentor=mentor,
-        accepted=True,
-    ).count()
-    if accepted_count >= capacity:
-        mentee_name = get_user_display_name(mentee_profile.user) or mentee_profile.user.username
-        mentor_name = get_user_display_name(mentor.user) or mentor.user.username
-        _send_pairing_email(
-            getattr(mentee_profile.user, "email", "") or "",
-            "Mentor currently full",
-            (
-                f"Hi {mentee_name},\n\n"
-                f"{mentor_name} currently has a full mentee slot capacity. "
-                "Please choose another mentor recommendation.\n\n"
-                "You can return to the Matching tab to pick another mentor."
-            ),
+    with transaction.atomic():
+        mentor = (
+            MentorProfile.objects.select_for_update()
+            .select_related("user")
+            .filter(id=mentor_id)
+            .first()
         )
-        return JsonResponse(
-            {
-                "error": "This mentor has reached their mentee slot limit. Please choose another mentor.",
-                "code": "mentor_capacity_full",
-            },
-            status=409,
+        if not mentor:
+            return JsonResponse({"error": "Mentor not found."}, status=404)
+
+        capacity = max(int(getattr(mentor, "capacity", 0) or 0), 0)
+        accepted_count = MenteeMentorRequest.objects.filter(
+            mentor=mentor,
+            accepted=True,
+        ).count()
+        if accepted_count >= capacity:
+            mentee_name = get_user_display_name(mentee_profile.user) or mentee_profile.user.username
+            mentor_name = get_user_display_name(mentor.user) or mentor.user.username
+            _send_pairing_email(
+                getattr(mentee_profile.user, "email", "") or "",
+                "Mentor currently full",
+                (
+                    f"Hi {mentee_name},\n\n"
+                    f"{mentor_name} currently has a full mentee slot capacity. "
+                    "Please choose another mentor recommendation.\n\n"
+                    "You can return to the Matching tab to pick another mentor."
+                ),
+            )
+            return JsonResponse(
+                {
+                    "error": "This mentor is no longer available",
+                    "code": "mentor_capacity_full",
+                },
+                status=409,
+            )
+
+        from django.utils import timezone
+
+        req, _created = MenteeMentorRequest.objects.get_or_create(
+            mentee=mentee_profile,
+            mentor=mentor,
         )
-
-    from django.utils import timezone
-
-    req, _created = MenteeMentorRequest.objects.get_or_create(
-        mentee=mentee_profile,
-        mentor=mentor,
-    )
-    if not req.accepted:
-        req.accepted = True
-        req.accepted_at = timezone.now()
-        req.save(update_fields=["accepted", "accepted_at"])
+        if not req.accepted:
+            req.accepted = True
+            req.accepted_at = timezone.now()
+            req.save(update_fields=["accepted", "accepted_at"])
 
     cache.delete(f"sessions_list:{request.user.id}")
     cache.delete(f"sessions_list:{mentor.user_id}")
@@ -366,12 +387,36 @@ def mentor_requests(request):
             {"error": "Mentor account pending approval."},
             status=403,
         )
-    requests_list = MenteeMentorRequest.objects.filter(mentor=mentor_profile).select_related("mentee", "mentee__user").order_by("-created_at")
+    with transaction.atomic():
+        mentor_locked = MentorProfile.objects.select_for_update().filter(id=mentor_profile.id).first()
+        if not mentor_locked:
+            return JsonResponse({"error": "Mentor profile required."}, status=403)
+        requests_list = list(
+            MenteeMentorRequest.objects.filter(mentor=mentor_locked)
+            .select_related("mentee", "mentee__user")
+            .order_by("-created_at")
+        )
+        accepted_count = sum(1 for r in requests_list if r.accepted)
+        capacity = max(int(getattr(mentor_locked, "capacity", 0) or 0), 0)
+        for r in requests_list:
+            if r.accepted:
+                continue
+            if accepted_count >= capacity:
+                continue
+            from django.utils import timezone
+
+            r.accepted = True
+            r.accepted_at = timezone.now()
+            r.save(update_fields=["accepted", "accepted_at"])
+            accepted_count += 1
+
     data = []
     for r in requests_list:
         e = r.mentee
         subjects = e.subjects if isinstance(e.subjects, list) else ([e.subjects] if e.subjects else [])
         topics = e.topics if isinstance(e.topics, list) else ([e.topics] if e.topics else [])
+        slots_left = max(capacity - accepted_count, 0)
+        status = "official" if r.accepted else "not_available"
         data.append({
             "mentee_id": e.id,
             "mentee_username": e.user.username,
@@ -380,6 +425,8 @@ def mentor_requests(request):
             "accepted": r.accepted,
             "accepted_at": r.accepted_at.isoformat() if r.accepted_at else None,
             "request_id": r.id,
+            "status": status,
+            "slots_left": slots_left,
             "mentee_subjects": subjects,
             "mentee_topics": topics,
             "mentee_difficulty_level": e.difficulty_level,

@@ -45,6 +45,68 @@ TARGET_MINUTES = MENTORING_COMPLETION_HOURS * 60  # 720
 WEEKLY_SESSION_LIMIT_MINUTES = 120
 
 
+def _normalise_label(value):
+    return str(value or "").strip().lower()
+
+
+def _normalise_profile_values(value):
+    if isinstance(value, list):
+        return [str(item or "").strip() for item in value if str(item or "").strip()]
+    if value:
+        text = str(value).strip()
+        return [text] if text else []
+    return []
+
+
+def _get_pair_match_context(mentor_profile, mentee_profile):
+    mentor_subjects = _normalise_profile_values(getattr(mentor_profile, "subjects", []))
+    mentee_subjects = _normalise_profile_values(getattr(mentee_profile, "subjects", []))
+    mentor_topics = _normalise_profile_values(getattr(mentor_profile, "topics", []))
+    mentee_topics = _normalise_profile_values(getattr(mentee_profile, "topics", []))
+
+    mentor_subject_set = {_normalise_label(item) for item in mentor_subjects}
+    mentee_subject_set = {_normalise_label(item) for item in mentee_subjects}
+    mentor_topic_set = {_normalise_label(item) for item in mentor_topics}
+    mentee_topic_set = {_normalise_label(item) for item in mentee_topics}
+
+    matched_subject_keys = mentor_subject_set.intersection(mentee_subject_set)
+    matched_topic_keys = mentor_topic_set.intersection(mentee_topic_set)
+
+    subjects = Subject.objects.order_by("name")
+    subject_key_to_obj = {_normalise_label(item.name): item for item in subjects}
+
+    matched_subject_objs = [
+        subject_key_to_obj[key]
+        for key in sorted(matched_subject_keys)
+        if key in subject_key_to_obj
+    ]
+
+    matched_subject_ids = [item.id for item in matched_subject_objs]
+    matched_subject_names = [item.name for item in matched_subject_objs]
+
+    # Keep topic labels user-facing; these can include values outside Topic table.
+    topic_key_to_label = {
+        _normalise_label(item): item
+        for item in mentor_topics + mentee_topics
+        if _normalise_label(item)
+    }
+    matched_topic_names = [
+        topic_key_to_label[key]
+        for key in sorted(matched_topic_keys)
+        if key in topic_key_to_label
+    ]
+
+    locked_subject = matched_subject_objs[0] if matched_subject_objs else None
+
+    return {
+        "matched_subject_ids": matched_subject_ids,
+        "matched_subjects": matched_subject_names,
+        "matched_topics": matched_topic_names,
+        "locked_subject_id": locked_subject.id if locked_subject else None,
+        "locked_subject_name": locked_subject.name if locked_subject else "",
+    }
+
+
 def _invalidate_sessions_cache_for_user(user_id):
     cache.delete(f"sessions_list:{user_id}")
 
@@ -286,6 +348,7 @@ def sessions_list(request):
             id__in=accepted_mentee_ids
         ).select_related("user"):
             item = _serialize_mentee(m)
+            match_ctx = _get_pair_match_context(mentor, m)
             item["difficulty_subjects"] = (
                 m.subjects
                 if isinstance(m.subjects, list)
@@ -297,6 +360,11 @@ def sessions_list(request):
                 else ([m.topics] if m.topics else [])
             )
             item["difficulty_level"] = m.difficulty_level
+            item["matched_subject_ids"] = match_ctx["matched_subject_ids"]
+            item["matched_subjects"] = match_ctx["matched_subjects"]
+            item["matched_topics"] = match_ctx["matched_topics"]
+            item["locked_subject_id"] = match_ctx["locked_subject_id"]
+            item["locked_subject_name"] = match_ctx["locked_subject_name"]
             mentee_options.append(item)
     else:
         mentee_options = []
@@ -309,6 +377,7 @@ def sessions_list(request):
         for m in MenteeProfile.objects.filter(
             id__in=accepted_mentee_ids or []
         ).select_related("user"):
+            match_ctx = _get_pair_match_context(mentor, m)
             total = (
                 MentoringSession.objects.filter(
                     mentor=mentor, mentee=m, status="completed"
@@ -335,6 +404,11 @@ def sessions_list(request):
                     else ([m.topics] if m.topics else [])
                 ),
                 "difficulty_level": m.difficulty_level,
+                "matched_subject_ids": match_ctx["matched_subject_ids"],
+                "matched_subjects": match_ctx["matched_subjects"],
+                "matched_topics": match_ctx["matched_topics"],
+                "locked_subject_id": match_ctx["locked_subject_id"],
+                "locked_subject_name": match_ctx["locked_subject_name"],
             })
     elif mentee:
         acc = MenteeMentorRequest.objects.filter(mentee=mentee, accepted=True).select_related("mentor").first()
@@ -415,7 +489,30 @@ def session_create(request):
     # creation when an explicit "accepted" relationship hasn't been created yet.
     # Duplicate scheduling is still prevented by conflict detection below.
 
-    subject = Subject.objects.filter(id=subject_id).first() if subject_id else None
+    match_ctx = _get_pair_match_context(mentor_profile, mentee)
+    matched_subject_ids = list(match_ctx["matched_subject_ids"])
+    locked_subject_id = match_ctx["locked_subject_id"]
+    if not matched_subject_ids:
+        return JsonResponse(
+            {
+                "error": "This mentor-mentee pair has no matched subject. Update matching preferences before scheduling.",
+            },
+            status=400,
+        )
+
+    selected_subject_id = subject_id or locked_subject_id
+    if selected_subject_id not in matched_subject_ids:
+        return JsonResponse(
+            {
+                "error": "Subject must be one of the matched subjects for this mentor-mentee pair.",
+                "locked_subject_id": locked_subject_id,
+                "locked_subject_name": match_ctx["locked_subject_name"],
+                "matched_subject_ids": matched_subject_ids,
+            },
+            status=400,
+        )
+
+    subject = Subject.objects.filter(id=selected_subject_id).first()
     topic = Topic.objects.filter(id=topic_id).first() if topic_id else None
     if topic and subject and topic.subject_id != subject.id:
         return JsonResponse(
@@ -518,11 +615,30 @@ def session_reschedule(request, session_id: int):
             status=400,
         )
 
-    subject = (
-        Subject.objects.filter(id=subject_id).first()
-        if subject_id
-        else session.subject
-    )
+    match_ctx = _get_pair_match_context(mentor_profile, session.mentee)
+    matched_subject_ids = list(match_ctx["matched_subject_ids"])
+    locked_subject_id = match_ctx["locked_subject_id"]
+    if not matched_subject_ids:
+        return JsonResponse(
+            {
+                "error": "This mentor-mentee pair has no matched subject. Update matching preferences before rescheduling.",
+            },
+            status=400,
+        )
+
+    selected_subject_id = subject_id or session.subject_id or locked_subject_id
+    if selected_subject_id not in matched_subject_ids:
+        return JsonResponse(
+            {
+                "error": "Subject must be one of the matched subjects for this mentor-mentee pair.",
+                "locked_subject_id": locked_subject_id,
+                "locked_subject_name": match_ctx["locked_subject_name"],
+                "matched_subject_ids": matched_subject_ids,
+            },
+            status=400,
+        )
+
+    subject = Subject.objects.filter(id=selected_subject_id).first()
     topic = (
         Topic.objects.filter(id=topic_id).first() if topic_id else session.topic
     )

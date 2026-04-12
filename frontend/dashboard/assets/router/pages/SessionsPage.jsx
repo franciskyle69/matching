@@ -250,11 +250,14 @@
     pairMenteeName,
     difficultySubjects,
     difficultyTopics,
+    matchedTopics,
     createForm,
     setCreateForm,
-    options,
+    selectedMatchedSubjectId,
+    isSubjectLocked,
+    matchedSubjectOptions,
+    lockedSubjectName,
     topicsBySubject,
-    selectedSubjectNeedsHelp,
     selectedTopicNeedsHelp,
     minDateTimeLocal,
     createWeeklyLimitReached,
@@ -300,38 +303,55 @@
           )}
         </div>
 
+        {matchedTopics.length > 0 && (
+          <div className="session-focus-note">
+            <strong>Matched skills basis:</strong>
+            <div className="session-focus-chips">
+              {matchedTopics.map((name) => (
+                <span key={`matched-topic-${name}`} className="session-focus-chip">
+                  {name}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
         <div className="form-grid session-form-grid">
-          <div
-            className={
-              "session-create-field " + (selectedSubjectNeedsHelp ? "needs-help" : "")
-            }
-          >
+          <div className="session-create-field needs-help">
             <label>Subject</label>
-            <select
-              value={createForm.subject_id}
-              onChange={(e) =>
-                setCreateForm({
-                  ...createForm,
-                  subject_id: e.target.value,
-                  topic_id: "",
-                })
-              }
-            >
-              <option value="">Select subject</option>
-              {(options.subjects || []).map((subject) => {
-                const needsHelp = difficultySubjects.includes(subject.name);
-                return (
-                  <option key={subject.id} value={subject.id}>
-                    {subject.name}
-                    {needsHelp ? " - Needs Help" : ""}
-                  </option>
-                );
-              })}
-            </select>
-            {selectedSubjectNeedsHelp && (
-              <p className="session-needs-help-helper">
-                This subject is marked as a difficulty area.
-              </p>
+            {isSubjectLocked ? (
+              <>
+                <div className="session-focus-chip needs-help" style={{ display: "inline-flex" }}>
+                  Subject: {lockedSubjectName || "No matched subject"} (Locked)
+                </div>
+                <p className="session-needs-help-helper">
+                  This subject is based on your matched session and cannot be changed.
+                </p>
+              </>
+            ) : (
+              <>
+                <select
+                  value={selectedMatchedSubjectId}
+                  onChange={(e) =>
+                    setCreateForm((prev) => ({
+                      ...prev,
+                      subject_id: e.target.value,
+                      topic_id: "",
+                    }))
+                  }
+                  disabled={matchedSubjectOptions.length === 0}
+                >
+                  <option value="">Select matched subject</option>
+                  {matchedSubjectOptions.map((subject) => (
+                    <option key={subject.id} value={subject.id}>
+                      {subject.name}
+                    </option>
+                  ))}
+                </select>
+                <p className="session-needs-help-helper">
+                  You can choose among your matched subjects.
+                </p>
+              </>
             )}
           </div>
           <div
@@ -348,9 +368,10 @@
                   topic_id: e.target.value,
                 })
               }
+              disabled={!selectedMatchedSubjectId}
             >
-              <option value="">Select topic</option>
-              {(topicsBySubject[createForm.subject_id] || []).map((topic) => {
+              <option value="">{selectedMatchedSubjectId ? "Select topic" : "No topic available"}</option>
+              {(topicsBySubject[selectedMatchedSubjectId] || []).map((topic) => {
                 const needsHelp = difficultyTopics.includes(topic.name);
                 return (
                   <option key={topic.id} value={topic.id}>
@@ -441,7 +462,7 @@
           <button
             className="btn"
             onClick={() => handleCreateSession(sessionsPairMenteeId)}
-            disabled={createSessionLoading || createWeeklyLimitReached}
+            disabled={createSessionLoading || createWeeklyLimitReached || !selectedMatchedSubjectId}
           >
             {createSessionLoading ? <Spinner inline /> : "Schedule Session"}
           </button>
@@ -924,7 +945,7 @@
               </span>
               <p className="muted">You have no official mentees yet.</p>
               <p className="muted" style={{ marginTop: "8px", fontSize: "14px" }}>
-                Go to Matching to review mentee requests and accept your first mentee.
+                Go to Matching to view your official mentees after they select you.
               </p>
               <div className="btn-row" style={{ marginTop: "10px" }}>
                 <button
@@ -1018,6 +1039,26 @@
       String(value || "")
         .trim()
         .toLowerCase();
+    const lockedSubjectId = pairEntry?.locked_subject_id
+      ? String(pairEntry.locked_subject_id)
+      : "";
+    const matchedSubjectIds = Array.isArray(pairEntry?.matched_subject_ids)
+      ? pairEntry.matched_subject_ids.map((id) => String(id))
+      : [];
+    const isSubjectLocked = matchedSubjectIds.length <= 1;
+    const matchedSubjectOptions = (options.subjects || []).filter((subject) =>
+      matchedSubjectIds.includes(String(subject.id)),
+    );
+    const lockedSubjectName =
+      pairEntry?.locked_subject_name ||
+      (lockedSubjectId
+        ? ((options.subjects || []).find(
+            (s) => String(s.id) === String(lockedSubjectId),
+          ) || {}).name || ""
+        : "");
+    const matchedTopics = Array.isArray(pairEntry?.matched_topics)
+      ? pairEntry.matched_topics
+      : [];
     const difficultySubjects = new Set(
       (pairEntry?.difficulty_subjects || pairEntry?.subjects || []).map(
         normalizeLabel,
@@ -1028,19 +1069,56 @@
         normalizeLabel,
       ),
     );
-    const selectedSubject = (options.subjects || []).find(
-      (s) => String(s.id) === String(createForm.subject_id),
-    );
-    const selectedTopic = (topicsBySubject[createForm.subject_id] || []).find(
+    const selectedMatchedSubjectId =
+      (createForm.subject_id && matchedSubjectIds.includes(String(createForm.subject_id))
+        ? String(createForm.subject_id)
+        : isSubjectLocked
+          ? String(lockedSubjectId || "")
+          : String(matchedSubjectIds[0] || ""));
+
+    const selectedTopic = (topicsBySubject[selectedMatchedSubjectId] || []).find(
       (t) => String(t.id) === String(createForm.topic_id),
-    );
-    const selectedSubjectNeedsHelp = !!(
-      selectedSubject &&
-      difficultySubjects.has(normalizeLabel(selectedSubject.name))
     );
     const selectedTopicNeedsHelp = !!(
       selectedTopic && difficultyTopics.has(normalizeLabel(selectedTopic.name))
     );
+
+    useEffect(() => {
+      if (!isMentor) return;
+      const defaultSubjectId = isSubjectLocked
+        ? String(lockedSubjectId || "")
+        : String(matchedSubjectIds[0] || "");
+      const nextSubjectId =
+        createForm.subject_id && matchedSubjectIds.includes(String(createForm.subject_id))
+          ? String(createForm.subject_id)
+          : defaultSubjectId;
+      const allowedTopics = topicsBySubject[nextSubjectId] || [];
+      setCreateForm((prev) => {
+        const hasTopic = allowedTopics.some(
+          (topic) => String(topic.id) === String(prev.topic_id),
+        );
+        const nextTopicId = hasTopic ? prev.topic_id : "";
+        if (
+          String(prev.subject_id || "") === String(nextSubjectId) &&
+          String(prev.topic_id || "") === String(nextTopicId)
+        ) {
+          return prev;
+        }
+        return {
+          ...prev,
+          subject_id: nextSubjectId,
+          topic_id: nextTopicId,
+        };
+      });
+    }, [
+      isMentor,
+      isSubjectLocked,
+      lockedSubjectId,
+      matchedSubjectIds,
+      createForm.subject_id,
+      topicsBySubject,
+      setCreateForm,
+    ]);
     const upcomingForPair =
       isMentor && sessionsPairMenteeId != null
         ? (sessionsData.upcoming || []).filter(
@@ -1179,7 +1257,7 @@
               <p className="muted" style={{ margin: 0 }}>
                 This mentee is not in your official list. Only accepted
                 mentor-mentee pairs can schedule sessions. Go to Matching to
-                accept mentees.
+                check your current official pairings.
               </p>
               <button
                 type="button"
@@ -1278,11 +1356,14 @@
                   pairMenteeName={pairMenteeName}
                   difficultySubjects={Array.from(difficultySubjects)}
                   difficultyTopics={Array.from(difficultyTopics)}
+                  matchedTopics={matchedTopics}
                   createForm={createForm}
                   setCreateForm={setCreateForm}
-                  options={options}
+                  selectedMatchedSubjectId={selectedMatchedSubjectId}
+                  isSubjectLocked={isSubjectLocked}
+                  matchedSubjectOptions={matchedSubjectOptions}
+                  lockedSubjectName={lockedSubjectName}
                   topicsBySubject={topicsBySubject}
-                  selectedSubjectNeedsHelp={selectedSubjectNeedsHelp}
                   selectedTopicNeedsHelp={selectedTopicNeedsHelp}
                   minDateTimeLocal={minDateTimeLocal}
                   createWeeklyLimitReached={createWeeklyLimitReached}

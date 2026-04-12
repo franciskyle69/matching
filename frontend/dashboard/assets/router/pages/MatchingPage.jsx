@@ -45,6 +45,7 @@
     const [showMoreMentors, setShowMoreMentors] = useState(false);
     const [selectedMentorDetails, setSelectedMentorDetails] = useState(null);
     const [expandedMentorId, setExpandedMentorId] = useState(null);
+    const [unavailableMentorIds, setUnavailableMentorIds] = useState([]);
 
     const isMentee = user.role === "mentee";
     const menteeQuestionnaireCompleted = !!(user.mentee_questionnaire_completed ?? user.questionnaire_completed);
@@ -74,6 +75,24 @@
       didAutoLoadRecsRef.current = true;
       loadMenteeRecommendations();
     }, [isMentee, menteeQuestionnaireCompleted, menteeRecLoading, menteeRecUpdating, loadMenteeRecommendations]);
+
+    useEffect(() => {
+      const recommendationIds = new Set((menteeRecommendations || []).map((item) => item.mentor_id));
+      setUnavailableMentorIds((current) => current.filter((id) => recommendationIds.has(id)));
+    }, [menteeRecommendations]);
+
+    async function handleChooseMentor(mentorId) {
+      const result = await chooseMentor(mentorId);
+      if (result?.ok) {
+        setUnavailableMentorIds([]);
+        return;
+      }
+      if (result?.code === "mentor_capacity_full") {
+        setUnavailableMentorIds((current) =>
+          current.includes(mentorId) ? current : [...current, mentorId],
+        );
+      }
+    }
 
     function openMentorProfileInNewTab(match) {
       const mentorUserId = match.mentor && match.mentor.user_id != null ? match.mentor.user_id : null;
@@ -202,9 +221,9 @@
                 )}
                 {pending.length > 0 && (
                   <div className="match-mentee-list" style={{ marginBottom: "24px" }}>
-                    <div className="section-title">Unaccepted requests</div>
+                    <div className="section-title">Not available</div>
                     <p className="page-subtitle" style={{ marginTop: "-8px", marginBottom: "12px" }}>
-                      These are older requests created before auto-accept was enabled.
+                      These mentees could not be auto-confirmed because your capacity is full.
                     </p>
                     {pending.map((r) => (
                       <div key={r.mentee_id} className="match-card match-card-mentee-list">
@@ -213,7 +232,7 @@
                             <p className="match-card-title">Mentee: {r.mentee_display_name || r.mentee_username}</p>
                             <div className="notification-time">{formatDate(r.created_at)}</div>
                           </div>
-                          <span className="match-request-badge">Pending</span>
+                          <span className="match-request-badge">Not Available</span>
                         </div>
                         <div className="match-card-body">
                           {r.mentee_subjects?.length > 0 && <p><strong>Subjects:</strong> {r.mentee_subjects.join(", ")}</p>}
@@ -327,7 +346,14 @@
                 const { percentage, label, tier } = formatMatchScore(match.score);
                 const commonSubjects = d.common_subjects || [];
                 const commonTopics = d.common_topics || [];
-                const isRequested = chosenMentorId === match.mentor_id;
+                const isOfficialPair = chosenMentorId === match.mentor_id;
+                const isNotAvailable = unavailableMentorIds.includes(match.mentor_id);
+                const slotsLeft = Number(match.slots_left ?? mentor.capacity ?? 0);
+                const statusText = isOfficialPair
+                  ? "Official Pair"
+                  : isNotAvailable
+                    ? "Not Available"
+                    : null;
 
                 const chips = [];
                 if (mentor.program) chips.push(mentor.program);
@@ -361,7 +387,7 @@
                     key={match.mentor_id + "-" + idx}
                     className={
                       "match-card match-card-mentee-list" +
-                      (isRequested ? " match-card-requested" : "") +
+                      (isOfficialPair ? " match-card-requested" : "") +
                       (isExpanded ? " match-card-expanded" : "")
                     }
                   >
@@ -442,6 +468,12 @@
                             ))}
                           </ul>
                         </div>
+                        {slotsLeft >= 0 && (
+                          <p className="match-card-subtitle">{slotsLeft} slot{slotsLeft === 1 ? "" : "s"} left</p>
+                        )}
+                        {statusText && (
+                          <p className="match-card-subtitle"><strong>Status:</strong> {statusText}</p>
+                        )}
                         <div className="btn-row" style={{ marginTop: "8px", justifyContent: "flex-start" }}>
                           <button
                             type="button"
@@ -455,8 +487,17 @@
                           </button>
                         </div>
                         <div className="btn-row" style={{ marginTop: "12px" }}>
-                          <button type="button" className="btn small" onClick={() => chooseMentor(match.mentor_id)} disabled={isRequested}>
-                            {isRequested ? "Requested" : "Choose this mentor"}
+                          <button
+                            type="button"
+                            className="btn small"
+                            onClick={() => handleChooseMentor(match.mentor_id)}
+                            disabled={isOfficialPair || isNotAvailable}
+                          >
+                            {isOfficialPair
+                              ? "Official Pair"
+                              : isNotAvailable
+                                ? "Not Available"
+                                : "Choose this mentor"}
                           </button>
                         </div>
                       </div>
@@ -491,10 +532,12 @@
                   const { percentage, label, tier } = formatMatchScore(match.score);
                   const commonSubjects = d.common_subjects || [];
                   const commonTopics = d.common_topics || [];
-                  const isRequested = chosenMentorId === match.mentor_id;
+                  const isOfficialPair = chosenMentorId === match.mentor_id;
+                  const isNotAvailable = unavailableMentorIds.includes(match.mentor_id);
                   const mentorSubjects = (mentor.subjects && mentor.subjects.length ? mentor.subjects : d.mentor_subjects || []);
                   const mentorTopics = (mentor.topics && mentor.topics.length ? mentor.topics : d.mentor_topics || []);
                   const mentorAvailability = Array.isArray(mentor.availability) ? mentor.availability.join(", ") : "";
+                  const slotsLeft = Number(match.slots_left ?? mentor.capacity ?? 0);
 
                   let whySentence = `This mentor is a ${label.toLowerCase()} match based on your subjects, topics, and difficulty level.`;
                   if (commonSubjects.length && commonTopics.length) {
@@ -508,7 +551,7 @@
                   return (
                     <div
                       key={"modal-" + match.mentor_id + "-" + idx}
-                      className={"match-card match-card-mentee-list" + (isRequested ? " match-card-requested" : "")}
+                      className={"match-card match-card-mentee-list" + (isOfficialPair ? " match-card-requested" : "")}
                       style={{ marginBottom: "12px" }}
                     >
                       <div className="match-card-header">
@@ -544,6 +587,11 @@
                             {mentorAvailability}
                           </p>
                         )}
+                        {slotsLeft >= 0 && (
+                          <p>
+                            <strong>Remaining slots:</strong> {slotsLeft}
+                          </p>
+                        )}
                         <p className="match-reason">
                           <strong>Why this match:</strong> {whySentence}
                         </p>
@@ -552,12 +600,16 @@
                             type="button"
                             className="btn small"
                             onClick={() => {
-                              chooseMentor(match.mentor_id);
+                              handleChooseMentor(match.mentor_id);
                               setShowMoreMentors(false);
                             }}
-                            disabled={isRequested}
+                            disabled={isOfficialPair || isNotAvailable}
                           >
-                            {isRequested ? "Requested" : "Choose this mentor"}
+                            {isOfficialPair
+                              ? "Official Pair"
+                              : isNotAvailable
+                                ? "Not Available"
+                                : "Choose this mentor"}
                           </button>
                         </div>
                       </div>
@@ -597,6 +649,8 @@
                 const mentor = match.mentor || {};
                 const d = match.match_details || {};
                 const { percentage, label, tier } = formatMatchScore(match.score);
+                const isOfficialPair = chosenMentorId === match.mentor_id;
+                const isNotAvailable = unavailableMentorIds.includes(match.mentor_id);
                 const mentorSubjects = (mentor.subjects && mentor.subjects.length ? mentor.subjects : d.mentor_subjects || []);
                 const mentorTopics = (mentor.topics && mentor.topics.length ? mentor.topics : d.mentor_topics || []);
                 return (
@@ -662,11 +716,16 @@
                         type="button"
                         className="btn small"
                         onClick={() => {
-                          chooseMentor(match.mentor_id);
+                          handleChooseMentor(match.mentor_id);
                           setSelectedMentorDetails(null);
                         }}
+                        disabled={isOfficialPair || isNotAvailable}
                       >
-                        Choose this mentor
+                        {isOfficialPair
+                          ? "Official Pair"
+                          : isNotAvailable
+                            ? "Not Available"
+                            : "Choose this mentor"}
                       </button>
                     </div>
                   </>

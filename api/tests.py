@@ -42,15 +42,22 @@ class ApiSessionTests(TestCase):
     def setUp(self):
         self.mentor_user = User.objects.create_user(username="mentor2", email="m2@test.com", password="Pass123!")
         self.mentee_user = User.objects.create_user(username="mentee2", email="e2@test.com", password="Pass123!")
-        self.mentor = MentorProfile.objects.create(user=self.mentor_user, program="BSIT", year_level=4, approved=True)
-        self.mentee = MenteeProfile.objects.create(user=self.mentee_user, program="BSIT", year_level=1)
         self.subject = Subject.objects.create(name="Intro to IT")
-
-        self.client.post(
-            "/api/auth/login/",
-            data=json.dumps({"email": "m2@test.com", "password": "Pass123!"}),
-            content_type="application/json",
+        self.mentor = MentorProfile.objects.create(
+            user=self.mentor_user,
+            program="BSIT",
+            year_level=4,
+            approved=True,
+            subjects=[self.subject.name],
         )
+        self.mentee = MenteeProfile.objects.create(
+            user=self.mentee_user,
+            program="BSIT",
+            year_level=1,
+            subjects=[self.subject.name],
+        )
+
+        self.client.force_login(self.mentor_user)
 
     def test_create_session_and_conflict(self):
         scheduled_at = (timezone.now() + timedelta(days=1)).isoformat()
@@ -81,6 +88,24 @@ class ApiSessionTests(TestCase):
         )
         self.assertEqual(res_conflict.status_code, 400)
 
+    def test_create_session_rejects_subject_tampering(self):
+        other_subject, _ = Subject.objects.get_or_create(name="Computer Programming")
+        scheduled_at = (timezone.now() + timedelta(days=2)).isoformat()
+        res = self.client.post(
+            "/api/sessions/create/",
+            data=json.dumps(
+                {
+                    "mentee_id": self.mentee.id,
+                    "subject_id": other_subject.id,
+                    "scheduled_at": scheduled_at,
+                    "duration_minutes": 60,
+                }
+            ),
+            content_type="application/json",
+        )
+        self.assertEqual(res.status_code, 400)
+        self.assertIn("matched", (res.json().get("error") or "").lower())
+
     def test_notifications_mark_all(self):
         Notification.objects.create(user=self.mentor_user, message="Test 1")
         Notification.objects.create(user=self.mentor_user, message="Test 2")
@@ -96,11 +121,7 @@ class ApiMatchingTests(TestCase):
             password="AdminPass123!",
             is_staff=True,
         )
-        self.client.post(
-            "/api/auth/login/",
-            data=json.dumps({"email": "admin1@test.com", "password": "AdminPass123!"}),
-            content_type="application/json",
-        )
+        self.client.force_login(self.admin)
 
     def test_run_matching_admin(self):
         res = self.client.get("/api/matching/run/")
