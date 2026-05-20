@@ -7,9 +7,6 @@ API views package: request handlers and shared helpers.
 
 from .helpers import (
     logger,
-    _send_session_scheduled_emails,
-    _send_session_reminder_emails,
-    _maybe_send_due_session_reminders,
     _avatar_url,
     _serialize_mentor_for_matching,
     _serialize_mentee_for_matching,
@@ -18,6 +15,7 @@ from .helpers import (
     _get_int,
     _get_str,
     _get_role_flags,
+    _resolve_account_role,
     _validate_role,
     _rate_limit,
     audit_log,
@@ -31,7 +29,6 @@ from .helpers import (
     get_approval_list_cache_key,
     invalidate_approval_cache_mentor,
     invalidate_approval_cache_mentee,
-    _serialize_session,
     _serialize_notification,
     _serialize_subject,
     _serialize_topic,
@@ -39,7 +36,6 @@ from .helpers import (
     get_subjects_list,
     invalidate_subjects_cache,
     _parse_datetime,
-    _has_conflict,
 )
 from .notifications import (
     notifications_list,
@@ -58,9 +54,6 @@ from .mentees import mentees_list
 
 __all__ = [
     "logger",
-    "_send_session_scheduled_emails",
-    "_send_session_reminder_emails",
-    "_maybe_send_due_session_reminders",
     "_avatar_url",
     "_serialize_mentor_for_matching",
     "_serialize_mentee_for_matching",
@@ -69,6 +62,7 @@ __all__ = [
     "_get_int",
     "_get_str",
     "_get_role_flags",
+    "_resolve_account_role",
     "_validate_role",
     "_rate_limit",
     "_require_mentor",
@@ -81,7 +75,6 @@ __all__ = [
     "get_approval_list_cache_key",
     "invalidate_approval_cache_mentor",
     "invalidate_approval_cache_mentee",
-    "_serialize_session",
     "_serialize_notification",
     "_serialize_subject",
     "_serialize_topic",
@@ -89,7 +82,6 @@ __all__ = [
     "get_subjects_list",
     "invalidate_subjects_cache",
     "_parse_datetime",
-    "_has_conflict",
     "notifications_list",
     "notifications_mark_all_read",
     "notification_mark_read",

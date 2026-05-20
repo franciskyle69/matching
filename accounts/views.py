@@ -18,9 +18,6 @@ import time
 from .forms import RegisterForm, AccountSettingsForm, PasswordChangeWithCodeForm
 from .models import must_change_password, set_must_change_password
 from profiles.models import MentorProfile, MenteeProfile
-from matching.models import MentoringSession
-
-
 ROLE_SESSION_KEY = "selected_role"
 GOOGLE_OAUTH_ROLE_SESSION_KEY = "google_oauth_selected_role"
 PASSWORD_CHANGE_CODE_SESSION_KEY = "password_change_verification_code"
@@ -75,17 +72,9 @@ def home(request):
 
         total_mentors = MentorProfile.objects.count()
         total_mentees = MenteeProfile.objects.count()
-        total_sessions = MentoringSession.objects.count()
-        completed_sessions = MentoringSession.objects.filter(status="completed").count()
-        completion_rate = 0
-        if total_sessions > 0:
-            completion_rate = round((completed_sessions / total_sessions) * 100)
         stats = {
             "total_mentors": total_mentors,
             "total_mentees": total_mentees,
-            "total_sessions": total_sessions,
-            "completed_sessions": completed_sessions,
-            "completion_rate": completion_rate,
         }
 
     return render(
@@ -201,6 +190,7 @@ def register(request):
                     user=user,
                     program="BSIT",
                     year_level=4,
+                    role=form.cleaned_data.get("mentor_role") or "",
                     verification_document=verification_document,
                     approved=False,
                 )

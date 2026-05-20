@@ -31,13 +31,6 @@ from .controllers.matching_controller import (
     my_mentor,
     mentor_profile_by_user_id,
 )
-from .controllers.sessions_controller import (
-    sessions_list,
-    session_create,
-    session_reschedule,
-    session_update_status,
-    session_update_meeting_notes,
-)
 from .controllers.approvals_controller import (
     pending_list,
     approve_mentor,
@@ -130,11 +123,6 @@ urlpatterns = [
     path('me/password-code/verify/', verify_password_change_code, name='api-me-password-code-verify'),
     path('me/password-code/change/', change_password_with_code, name='api-me-password-code-change'),
     path('tags/suggestions/', tag_suggestions, name='api-tags-suggestions'),
-    path('sessions/', sessions_list, name='api-sessions-list'),
-    path('sessions/create/', session_create, name='api-sessions-create'),
-    path('sessions/<int:session_id>/reschedule/', session_reschedule, name='api-sessions-reschedule'),
-    path('sessions/<int:session_id>/status/', session_update_status, name='api-sessions-status'),
-    path('sessions/<int:session_id>/meeting-notes/', session_update_meeting_notes, name='api-sessions-meeting-notes'),
     path('approvals/pending/', pending_list, name='api-approvals-pending'),
     path('approvals/approve-mentor/', approve_mentor, name='api-approvals-approve-mentor'),
     path('approvals/reject-mentor/', reject_mentor, name='api-approvals-reject-mentor'),

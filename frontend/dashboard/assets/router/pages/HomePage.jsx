@@ -4,7 +4,7 @@
   const { useContext, useEffect, useRef } = React;
   const AppContext = window.DashboardApp.AppContext;
   const Utils = window.DashboardApp.Utils || {};
-  const { formatDate } = Utils;
+  const { formatDate, MentorRoleBadge } = Utils;
 
   function formatMinutesAsHours(min) {
     const m = Number(min) || 0;
@@ -120,94 +120,32 @@
       stats,
       authCheckDone,
       setActiveTab,
-      sessionsData,
-      sessionsLoading,
       menteeRecommendations,
       myMentor,
       theme,
       mentorRequests,
+      mentorProfile,
     } = ctx;
     if (!authCheckDone) return null;
     if (!user) {
       return (
         <div className="card cta-card">
           <h1 className="page-title">Mentor–Mentee Matching</h1>
-          <p className="page-subtitle" style={{ marginBottom: 0 }}>Connect with mentors or mentees and schedule sessions in one place.</p>
+          <p className="page-subtitle" style={{ marginBottom: 0 }}>Connect with mentors or mentees through smart matching in one place.</p>
           <div className="btn-row">
-            <button className="btn" onClick={() => setActiveTab("signup")}>Get started</button>
-            <button className="btn secondary" onClick={() => setActiveTab("signin")}>I already have an account</button>
+            <button className="btn" onClick={() => { window.location.href = "/portal/"; }}>Get started</button>
+            <button className="btn secondary" onClick={() => { window.location.href = "/portal/"; }}>I already have an account</button>
           </div>
         </div>
       );
     }
 
-    const menteeHoursChartRef = useRef(null);
     const staffOverviewChartRef = useRef(null);
 
     if (user.role === "mentee") {
-      const upcoming = sessionsData?.upcoming || [];
-      const nextSession = upcoming[0];
       const hasQuestionnaire = !!(user.mentee_questionnaire_completed ?? user.questionnaire_completed);
       const matchCount = (menteeRecommendations || []).length;
       const userProgress = stats && stats.user_progress;
-
-      useEffect(() => {
-        if (!sessionsData?.progress || !window.Chart) return;
-        const canvas = document.getElementById("mentee-hours-chart");
-        if (!canvas) return;
-        if (menteeHoursChartRef.current) {
-          menteeHoursChartRef.current.destroy();
-        }
-        const targetHours = sessionsData.progress_target_hours ?? 12;
-        const completedMinutes = sessionsData.progress.total_completed_minutes || 0;
-        const completedHours = Math.round((completedMinutes / 60) * 10) / 10;
-        const remainingHours = Math.max(0, targetHours - completedHours);
-        const isDark = theme === "dark";
-        const completedColor = isDark ? "#605EA1" : "#22177A";
-        const remainingColor = isDark ? "#334155" : "#e5e7eb";
-        const legendTextColor = isDark ? "#cbd5f5" : "#475569";
-        const centerTextColor = isDark ? "#e2e8f0" : "#111827";
-
-        menteeHoursChartRef.current = new window.Chart(canvas, {
-          type: "doughnut",
-          data: {
-            labels: ["Completed hours", "Remaining"],
-            datasets: [
-              {
-                data: [completedHours, remainingHours],
-                backgroundColor: [completedColor, remainingColor],
-              },
-            ],
-          },
-          options: {
-            plugins: {
-              legend: {
-                position: "bottom",
-                labels: { color: legendTextColor },
-              },
-            },
-            cutout: "65%",
-          },
-          plugins: [
-            {
-              id: "menteeCenterText",
-              afterDraw(chart) {
-                const { ctx, chartArea: { width, height } } = chart;
-                ctx.save();
-                ctx.font = "bold 14px system-ui, -apple-system, BlinkMacSystemFont, sans-serif";
-                ctx.fillStyle = centerTextColor;
-                ctx.textAlign = "center";
-                ctx.textBaseline = "middle";
-                const centerX = chart.getDatasetMeta(0).data[0].x;
-                const centerY = chart.getDatasetMeta(0).data[0].y;
-                const text = `${completedHours}h / ${targetHours}h`;
-                ctx.fillText(text, centerX, centerY);
-                ctx.restore();
-              },
-            },
-          ],
-        });
-      }, [sessionsData, theme]);
 
       return (
         <div className="home-dashboard-space mentee-dashboard mentee-dashboard-v2">
@@ -217,12 +155,12 @@
                 Welcome back{user.full_name || user.display_name ? `, ${user.full_name || user.display_name}` : user.username ? `, ${user.username}` : ""}
               </h1>
               <p className="mentee-v2-subtitle">
-                A focused view of your mentoring journey, upcoming sessions, and next best actions.
+                A focused view of your mentoring journey, matching, and next best actions.
               </p>
             </div>
             <div className="mentee-v2-hero-actions">
               <button type="button" className="btn" onClick={() => setActiveTab("matching")}>Find mentors</button>
-              <button type="button" className="btn secondary" onClick={() => setActiveTab("sessions")}>Open sessions</button>
+              <button type="button" className="btn secondary" onClick={() => setActiveTab("announcements")}>Announcements</button>
             </div>
           </section>
 
@@ -231,9 +169,9 @@
               <MenteeDashIcon name="users" size={16} />
               <span>Find mentors</span>
             </button>
-            <button type="button" className="mentee-v2-quickbar-btn" onClick={() => setActiveTab("sessions")}>
+            <button type="button" className="mentee-v2-quickbar-btn" onClick={() => setActiveTab("matching")}>
               <MenteeDashIcon name="plus" size={16} />
-              <span>Book session</span>
+              <span>View matches</span>
             </button>
             <button type="button" className="mentee-v2-quickbar-btn" onClick={() => setActiveTab("matching")}>
               <MenteeDashIcon name="barChart" size={16} />
@@ -258,18 +196,18 @@
               </article>
               <article className="mentee-v2-metric-card">
                 <span className="mentee-v2-metric-icon"><MenteeDashIcon name="calendar" /></span>
-                <p className="mentee-v2-metric-label">Total sessions</p>
-                <p className="mentee-v2-metric-value">{(userProgress?.sessions_completed ?? 0) + (userProgress?.sessions_upcoming ?? upcoming.length)}</p>
+                <p className="mentee-v2-metric-label">Has mentor</p>
+                <p className="mentee-v2-metric-value">{userProgress?.has_mentor ? "Yes" : "No"}</p>
               </article>
               <article className="mentee-v2-metric-card">
                 <span className="mentee-v2-metric-icon"><MenteeDashIcon name="clock" /></span>
-                <p className="mentee-v2-metric-label">Hours progress</p>
-                <p className="mentee-v2-metric-value">{Math.round(sessionsData?.progress?.progress_percent || 0)}%</p>
+                <p className="mentee-v2-metric-label">Recommendations</p>
+                <p className="mentee-v2-metric-value">{matchCount}</p>
               </article>
               <article className="mentee-v2-metric-card">
                 <span className="mentee-v2-metric-icon"><MenteeDashIcon name="pending" /></span>
-                <p className="mentee-v2-metric-label">Pending sessions</p>
-                <p className="mentee-v2-metric-value">{userProgress?.sessions_upcoming ?? upcoming.length}</p>
+                <p className="mentee-v2-metric-label">Pairings</p>
+                <p className="mentee-v2-metric-value">{stats?.accepted_pairings ?? 0}</p>
               </article>
             </div>
           </section>
@@ -297,7 +235,7 @@
                       {myMentor.accepted_at && <p className="mentee-v2-muted">Mentor accepted {formatDate(myMentor.accepted_at)}</p>}
                     </div>
                   </div>
-                  <button type="button" className="btn small" onClick={() => setActiveTab("sessions")}>Go to sessions</button>
+                  <button type="button" className="btn small" onClick={() => setActiveTab("matching")}>View matching</button>
                 </div>
               ) : (
                 <div className="mentee-v2-empty-state">
@@ -309,73 +247,15 @@
               {!hasQuestionnaire && (
                 <div className="mentee-v2-inline-cta">
                   <span><MenteeDashIcon name="sparkles" size={16} /></span>
-                  <p>Complete your questionnaire to unlock better mentor matches.</p>
-                  <button type="button" className="btn secondary small" onClick={() => setActiveTab("settings")}>Complete now</button>
+                  <p>Set your mentoring subjects and topics to unlock better mentor matches.</p>
+                  <button type="button" className="btn secondary small" onClick={() => setActiveTab("mentoring-preferences")}>Set preferences</button>
                 </div>
               )}
             </section>
 
-            <section className="mentee-v2-panel mentee-v2-schedule">
-              <div className="mentee-v2-section-head">
-                <h2>Schedule</h2>
-                <p>Your next sessions</p>
-              </div>
-              <ul className="mentee-v2-session-list">
-                {upcoming.slice(0, 3).map((s) => (
-                  <li key={s.id} className="mentee-v2-session-item">
-                    <div>
-                      <p className="mentee-v2-session-title">{s.subject || "Mentoring session"}{s.topic ? ` · ${s.topic}` : ""}</p>
-                      <p className="mentee-v2-muted">with {s.mentor_display_name || s.mentor_username}</p>
-                    </div>
-                    <p className="mentee-v2-session-date">{formatDate(s.scheduled_at)}</p>
-                  </li>
-                ))}
-                {upcoming.length === 0 && (
-                  <li className="mentee-v2-empty-state">
-                    <p>No upcoming sessions yet.</p>
-                    <button type="button" className="btn secondary small" onClick={() => setActiveTab("sessions")}>Book your first session</button>
-                  </li>
-                )}
-              </ul>
-            </section>
           </div>
 
           <div className="mentee-v2-main-grid">
-            <section className="mentee-v2-panel mentee-v2-progress">
-              <div className="mentee-v2-section-head">
-                <h2>Progress</h2>
-                <p>Goal tracking and consistency</p>
-              </div>
-              {sessionsData?.progress ? (
-                <>
-                  <div className="mentee-v2-progress-head">
-                    <p>{formatMinutesAsHours(sessionsData.progress.total_completed_minutes)} of {(sessionsData.progress_target_hours ?? 12)}h</p>
-                    <span>{Math.round(sessionsData.progress.progress_percent || 0)}%</span>
-                  </div>
-                  <div className="progress-bar-wrap" role="progressbar" aria-valuenow={Math.round(sessionsData.progress.progress_percent || 0)} aria-valuemin={0} aria-valuemax={100}>
-                    <div className="progress-bar-fill" style={{ width: `${Math.min(100, sessionsData.progress.progress_percent || 0)}%` }} />
-                  </div>
-                </>
-              ) : (
-                <p className="mentee-v2-muted">Progress data will appear after your first completed session.</p>
-              )}
-
-              <div className="mentee-v2-mini-stats">
-                <div>
-                  <p className="mentee-v2-mini-label">Completed</p>
-                  <p className="mentee-v2-mini-value">{userProgress?.sessions_completed ?? 0}</p>
-                </div>
-                <div>
-                  <p className="mentee-v2-mini-label">Upcoming</p>
-                  <p className="mentee-v2-mini-value">{userProgress?.sessions_upcoming ?? upcoming.length}</p>
-                </div>
-                <div>
-                  <p className="mentee-v2-mini-label">Streak</p>
-                  <p className="mentee-v2-mini-value">{userProgress?.current_streak_weeks ?? 0}w</p>
-                </div>
-              </div>
-            </section>
-
             <section className="mentee-v2-panel mentee-v2-activity">
               <div className="mentee-v2-section-head">
                 <h2>Recent activity</h2>
@@ -391,25 +271,7 @@
                     </div>
                   </li>
                 )}
-                {nextSession && (
-                  <li className="mentee-v2-timeline-item">
-                    <span className="mentee-v2-timeline-icon"><MenteeDashIcon name="calendar" size={14} /></span>
-                    <div>
-                      <p className="mentee-v2-timeline-title">Upcoming session booked</p>
-                      <p className="mentee-v2-muted">{formatDate(nextSession.scheduled_at)} with {nextSession.mentor_display_name || nextSession.mentor_username}</p>
-                    </div>
-                  </li>
-                )}
-                {userProgress && (userProgress.sessions_completed ?? 0) > 0 && (
-                  <li className="mentee-v2-timeline-item">
-                    <span className="mentee-v2-timeline-icon"><MenteeDashIcon name="check" size={14} /></span>
-                    <div>
-                      <p className="mentee-v2-timeline-title">Sessions completed</p>
-                      <p className="mentee-v2-muted">You have completed {userProgress.sessions_completed} session{userProgress.sessions_completed === 1 ? "" : "s"}.</p>
-                    </div>
-                  </li>
-                )}
-                {(!matchCount && !nextSession && !(userProgress && (userProgress.sessions_completed ?? 0) > 0)) && (
+                {!matchCount && (
                   <li className="mentee-v2-empty-state">
                     <p>No recent activity yet.</p>
                     <button type="button" className="btn secondary small" onClick={() => setActiveTab("matching")}>Start exploring mentors</button>
@@ -422,8 +284,6 @@
       );
     }
 
-    const weekStats = stats && stats.week;
-    const termStats = stats && stats.term;
     const userProgress = stats && stats.user_progress;
 
     useEffect(() => {
@@ -435,7 +295,7 @@
       }
       const totalMentors = stats.total_mentors ?? 0;
       const totalMentees = stats.total_mentees ?? 0;
-      const totalSessions = stats.total_sessions ?? 0;
+      const acceptedPairings = stats.accepted_pairings ?? 0;
       const isDark = theme === "dark";
       const legendTextColor = isDark ? "#cbd5f5" : "#475569";
       const staffColors = isDark
@@ -445,10 +305,10 @@
       staffOverviewChartRef.current = new window.Chart(canvas, {
         type: "doughnut",
         data: {
-          labels: ["Mentors", "Mentees", "Sessions"],
+          labels: ["Mentors", "Mentees", "Pairings"],
           datasets: [
             {
-              data: [totalMentors, totalMentees, totalSessions],
+              data: [totalMentors, totalMentees, acceptedPairings],
               backgroundColor: staffColors,
             },
           ],
@@ -473,18 +333,197 @@
 
     const totalMentors = stats?.total_mentors ?? 0;
     const totalMentees = stats?.total_mentees ?? 0;
-    const totalSessions = stats?.total_sessions ?? 0;
-    const completionRate = stats?.completion_rate ?? 0;
-    const yourSessionsCompleted = userProgress?.sessions_completed ?? 0;
+    const acceptedPairings = stats?.accepted_pairings ?? 0;
 
-    const pendingMentorRequests =
-      user.role === "mentor" ? (mentorRequests || []).filter((r) => !r.accepted).length : 0;
-    const mentorMenteesCount = stats?.user_progress?.mentees_count ?? 0;
-    const progressByMentee =
-      user.role === "mentor" ? ((sessionsData && sessionsData.progress_by_mentee) || []) : [];
-    const upcomingSessionsList =
-      user.role === "mentor" ? ((sessionsData && sessionsData.upcoming) || []) : [];
-    const targetHours = sessionsData?.progress_target_hours ?? 12;
+    if (user.role === "mentor") {
+      const acceptedRequests = Array.isArray(mentorRequests)
+        ? mentorRequests.filter((request) => request.accepted)
+        : [];
+      const pendingRequests = Array.isArray(mentorRequests)
+        ? mentorRequests.filter((request) => !request.accepted)
+        : [];
+      const mentorCapacity = Math.max(
+        1,
+        Number(mentorProfile?.capacity ?? userProgress?.mentor_capacity ?? 3) || 3,
+      );
+      const capacityUsed = Math.min(mentorCapacity, acceptedRequests.length);
+      const capacityPct = Math.round((capacityUsed / mentorCapacity) * 100);
+      const subjects = Array.isArray(mentorProfile?.subjects)
+        ? mentorProfile.subjects
+        : [];
+      const topics = Array.isArray(mentorProfile?.topics)
+        ? mentorProfile.topics
+        : [];
+      const availability = Array.isArray(mentorProfile?.availability)
+        ? mentorProfile.availability
+        : [];
+      const mentorType = mentorProfile?.role || user.mentor_role || "";
+      const profileReady = !!(
+        user.mentor_questionnaire_completed ||
+        subjects.length ||
+        topics.length ||
+        mentorProfile?.expertise_level
+      );
+
+      return (
+        <div className="home-dashboard-space mentor-dashboard-v2">
+          <div className="home-space-glow" aria-hidden="true" />
+
+          <section className="mentor-v2-hero">
+            <div className="mentor-v2-hero-copy">
+              <div className="mentor-v2-eyebrow">Mentor Dashboard</div>
+              <h1 className="mentor-v2-title">
+                Welcome back{user.full_name || user.display_name ? `, ${user.full_name || user.display_name}` : user.username ? `, ${user.username}` : ""}
+              </h1>
+              <p className="mentor-v2-subtitle">
+                Track your mentees, keep your mentoring profile ready, and jump into the next action.
+              </p>
+              <div className="mentor-v2-status-row">
+                {mentorType && MentorRoleBadge ? (
+                  <MentorRoleBadge role={mentorType} prominent />
+                ) : null}
+                <span className={"mentor-v2-status-pill " + (user.mentor_approved ? "is-approved" : "is-pending")}>
+                  {user.mentor_approved ? "Coordinator approved" : "Pending coordinator approval"}
+                </span>
+              </div>
+            </div>
+            <div className="mentor-v2-hero-actions">
+              <button type="button" className="btn" onClick={() => setActiveTab("matching")}>
+                View mentees
+              </button>
+              <button type="button" className="btn secondary" onClick={() => setActiveTab("settings")}>
+                Update profile
+              </button>
+            </div>
+          </section>
+
+          <section className="mentor-v2-metric-grid" aria-label="Mentor summary">
+            <article className="mentor-v2-metric-card is-primary">
+              <span className="mentor-v2-metric-icon"><MenteeDashIcon name="users" /></span>
+              <p className="mentor-v2-metric-label">Your mentees</p>
+              <p className="mentor-v2-metric-value">{acceptedRequests.length}</p>
+              <p className="mentor-v2-metric-help">Official mentees assigned to you</p>
+            </article>
+            <article className="mentor-v2-metric-card">
+              <span className="mentor-v2-metric-icon"><MenteeDashIcon name="barChart" /></span>
+              <p className="mentor-v2-metric-label">Capacity used</p>
+              <p className="mentor-v2-metric-value">{capacityUsed}/{mentorCapacity}</p>
+              <div className="mentor-v2-progress" aria-hidden="true">
+                <span style={{ width: `${capacityPct}%` }} />
+              </div>
+            </article>
+            <article className="mentor-v2-metric-card">
+              <span className="mentor-v2-metric-icon"><MenteeDashIcon name="pending" /></span>
+              <p className="mentor-v2-metric-label">Capacity notices</p>
+              <p className="mentor-v2-metric-value">{pendingRequests.length}</p>
+              <p className="mentor-v2-metric-help">Mentees waiting because capacity is full</p>
+            </article>
+            <article className="mentor-v2-metric-card">
+              <span className="mentor-v2-metric-icon"><MenteeDashIcon name="check" /></span>
+              <p className="mentor-v2-metric-label">Profile readiness</p>
+              <p className="mentor-v2-metric-value">{profileReady ? "Ready" : "Needs setup"}</p>
+              <p className="mentor-v2-metric-help">{subjects.length} subject{subjects.length === 1 ? "" : "s"} selected</p>
+            </article>
+          </section>
+
+          <div className="mentor-v2-main-grid">
+            <section className="mentor-v2-panel mentor-v2-panel--wide">
+              <div className="mentor-v2-panel-head">
+                <div>
+                  <h2>Your mentees</h2>
+                  <p>Official mentees currently connected to you.</p>
+                </div>
+                <button type="button" className="btn secondary small" onClick={() => setActiveTab("matching")}>
+                  Open matching
+                </button>
+              </div>
+              {acceptedRequests.length > 0 ? (
+                <div className="mentor-v2-mentee-list">
+                  {acceptedRequests.slice(0, 4).map((request) => (
+                    <article key={request.mentee_id} className="mentor-v2-mentee-card">
+                      <div className="mentor-v2-avatar">
+                        {(request.mentee_display_name || request.mentee_username || "?").slice(0, 1).toUpperCase()}
+                      </div>
+                      <div className="mentor-v2-mentee-body">
+                        <div className="mentor-v2-mentee-top">
+                          <h3>{request.mentee_display_name || request.mentee_username}</h3>
+                          <span>Accepted {formatDate(request.accepted_at)}</span>
+                        </div>
+                        <p>
+                          {(request.mentee_subjects || []).slice(0, 2).join(", ") ||
+                            "No subjects selected yet"}
+                          {request.mentee_difficulty_level != null
+                            ? ` • Difficulty ${request.mentee_difficulty_level}/5`
+                            : ""}
+                        </p>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              ) : (
+                <div className="mentor-v2-empty">
+                  <MenteeDashIcon name="users" size={22} />
+                  <p>No official mentees yet. Once matching assigns mentees to you, they will appear here.</p>
+                  <button type="button" className="btn secondary small" onClick={() => setActiveTab("matching")}>
+                    Check matching
+                  </button>
+                </div>
+              )}
+            </section>
+
+            <aside className="mentor-v2-panel">
+              <div className="mentor-v2-panel-head">
+                <div>
+                  <h2>Mentoring profile</h2>
+                  <p>What mentees are matched against.</p>
+                </div>
+              </div>
+              <div className="mentor-v2-profile-list">
+                <div>
+                  <span>Subjects</span>
+                  <strong>{subjects.length ? subjects.join(", ") : "Not set"}</strong>
+                </div>
+                <div>
+                  <span>Topics</span>
+                  <strong>{topics.length ? topics.join(", ") : "Not set"}</strong>
+                </div>
+                <div>
+                  <span>Availability</span>
+                  <strong>{availability.length ? availability.join(", ") : "Not set"}</strong>
+                </div>
+                <div>
+                  <span>Expertise</span>
+                  <strong>{mentorProfile?.expertise_level ? `${mentorProfile.expertise_level}/5` : "Not set"}</strong>
+                </div>
+              </div>
+              {!profileReady && (
+                <div className="mentor-v2-warning">
+                  Complete your mentor profile so matching can recommend you accurately.
+                </div>
+              )}
+              <button type="button" className="btn mentor-v2-full-btn" onClick={() => setActiveTab("settings")}>
+                Update mentoring profile
+              </button>
+            </aside>
+          </div>
+
+          <section className="mentor-v2-quick-actions" aria-label="Quick actions">
+            <button type="button" onClick={() => setActiveTab("matching")}>
+              <MenteeDashIcon name="users" size={16} />
+              <span>Manage mentees</span>
+            </button>
+            <button type="button" onClick={() => setActiveTab("announcements")}>
+              <MenteeDashIcon name="megaphone" size={16} />
+              <span>Post announcement</span>
+            </button>
+            <button type="button" onClick={() => setActiveTab("settings")}>
+              <MenteeDashIcon name="user" size={16} />
+              <span>Account settings</span>
+            </button>
+          </section>
+        </div>
+      );
+    }
 
     return (
       <div className="home-dashboard-space mentor-staff-dashboard">
@@ -500,16 +539,16 @@
             <div className="home-mini-stat-value">{totalMentees}</div>
           </div>
           <div className="home-mini-stat">
-            <div className="home-mini-stat-label">All-time sessions</div>
-            <div className="home-mini-stat-value">{totalSessions}</div>
+            <div className="home-mini-stat-label">Accepted pairings</div>
+            <div className="home-mini-stat-value">{acceptedPairings}</div>
           </div>
           <div className="home-mini-stat">
-            <div className="home-mini-stat-label">Your sessions completed</div>
-            <div className="home-mini-stat-value">{yourSessionsCompleted}</div>
+            <div className="home-mini-stat-label">Your mentees</div>
+            <div className="home-mini-stat-value">{userProgress?.mentees_count ?? 0}</div>
           </div>
           <div className="home-mini-stat">
-            <div className="home-mini-stat-label">Completion rate</div>
-            <div className="home-mini-stat-value">{completionRate}%</div>
+            <div className="home-mini-stat-label">Mentor pairings (system)</div>
+            <div className="home-mini-stat-value">{acceptedPairings}</div>
           </div>
         </div>
 
@@ -534,182 +573,27 @@
           <aside className="home-analytics-card">
             <div className="home-analytics-header">
               <div className="home-analytics-title">Analytics</div>
-              <div className="home-analytics-sub">
-                {termStats ? `${termStats.sessions ?? 0} this term` : "System overview"}
-              </div>
+              <div className="home-analytics-sub">System overview</div>
             </div>
 
-            <div className="home-analytics-ring" aria-label="Mentors, mentees, and sessions distribution">
+            <div className="home-analytics-ring" aria-label="Mentors, mentees, and pairings distribution">
               <canvas id="staff-overview-chart" height="180" />
             </div>
 
             <div className="home-analytics-tabs" aria-hidden="true">
               <span className="home-analytics-tab is-active">Mentors</span>
               <span className="home-analytics-tab">Mentees</span>
-              <span className="home-analytics-tab">Sessions</span>
+              <span className="home-analytics-tab">Pairings</span>
             </div>
 
             <div className="home-analytics-foot">
               <span className="home-analytics-chip">
-                This week: {weekStats?.sessions ?? 0} sessions
-              </span>
-              <span className="home-analytics-chip">
-                Avg completion: {completionRate}%
+                Accepted pairings: {acceptedPairings}
               </span>
             </div>
           </aside>
         </div>
 
-        {user.role === "mentor" && (
-          <>
-            <div className="quick-actions-section">
-              <h2 className="section-title">Quick actions</h2>
-              <div className="quick-actions-grid">
-                <button
-                  type="button"
-                  className="quick-action-pill primary"
-                  onClick={() => setActiveTab("matching")}
-                >
-                  <span className="quick-action-pill-icon" aria-hidden="true">
-                    <MenteeDashIcon name="users" size={16} />
-                  </span>
-                  <span>View mentees</span>
-                </button>
-                <button
-                  type="button"
-                  className="quick-action-pill"
-                  onClick={() => setActiveTab("sessions")}
-                >
-                  <span className="quick-action-pill-icon" aria-hidden="true">
-                    <MenteeDashIcon name="plus" size={16} />
-                  </span>
-                  <span>Book session</span>
-                </button>
-                <button
-                  type="button"
-                  className="quick-action-pill"
-                  onClick={() => setActiveTab("matching")}
-                >
-                  <span className="quick-action-pill-icon" aria-hidden="true">
-                    <MenteeDashIcon name="barChart" size={16} />
-                  </span>
-                  <span>View matches</span>
-                </button>
-                <button
-                  type="button"
-                  className="quick-action-pill"
-                  onClick={() => setActiveTab("sessions")}
-                >
-                  <span className="quick-action-pill-icon" aria-hidden="true">
-                    <MenteeDashIcon name="message" size={16} />
-                  </span>
-                  <span>Message mentee</span>
-                </button>
-              </div>
-            </div>
-
-            <div className="mentor-home-bottom-grid">
-              <section className="mentor-home-panel mentor-home-panel--summary" aria-labelledby="mentor-mentee-summary-heading">
-                <div className="mentor-home-panel-head">
-                  <h2 id="mentor-mentee-summary-heading" className="mentor-home-panel-title">
-                    Mentee activity
-                  </h2>
-                  <p className="mentor-home-panel-sub">From your live account data</p>
-                </div>
-                <div className="mentor-summary-metrics">
-                  <div className="mentor-summary-metric">
-                    <div className="mentor-summary-metric-label">Active mentees</div>
-                    <div className="mentor-summary-metric-value">{mentorMenteesCount}</div>
-                    <span className="mentor-summary-metric-hint">Accepted pairings</span>
-                  </div>
-                  <div className="mentor-summary-metric">
-                    <div className="mentor-summary-metric-label">Pending requests</div>
-                    <div className="mentor-summary-metric-value">{pendingMentorRequests}</div>
-                    <span className="mentor-summary-metric-hint">Auto-accepted when slots are available</span>
-                  </div>
-                  <div className="mentor-summary-metric">
-                    <div className="mentor-summary-metric-label">Upcoming sessions</div>
-                    <div className="mentor-summary-metric-value">{upcomingSessionsList.length}</div>
-                    <span className="mentor-summary-metric-hint">Scheduled with mentees</span>
-                  </div>
-                  <div className="mentor-summary-metric">
-                    <div className="mentor-summary-metric-label">Your streak</div>
-                    <div className="mentor-summary-metric-value">
-                      {stats?.user_progress?.current_streak_weeks ?? 0} wk
-                    </div>
-                    <span className="mentor-summary-metric-hint">Weeks with completed sessions</span>
-                  </div>
-                </div>
-              </section>
-
-              <section className="mentor-home-panel mentor-home-panel--progress" aria-labelledby="mentor-progress-heading">
-                <div className="mentor-home-panel-head">
-                  <h2 id="mentor-progress-heading" className="mentor-home-panel-title">
-                    Mentee progress ({targetHours}h goal)
-                  </h2>
-                  <p className="mentor-home-panel-sub">Completion toward program hours per mentee</p>
-                </div>
-                {sessionsLoading ? (
-                  <p className="mentor-home-muted">Loading session data…</p>
-                ) : progressByMentee.length === 0 ? (
-                  <p className="mentor-home-muted">
-                    No mentee progress yet. Once mentees are auto-matched to you, progress will appear here.
-                  </p>
-                ) : (
-                  <ul className="mentor-mentee-progress-list">
-                    {progressByMentee.slice(0, 6).map((row) => (
-                      <li key={row.mentee_id} className="mentor-mentee-progress-item">
-                        <div className="mentor-mentee-progress-top">
-                          <span className="mentor-mentee-name">{row.mentee_display_name || row.mentee_username}</span>
-                          <span className="mentor-mentee-pct">{row.progress_percent}%</span>
-                        </div>
-                        <div className="mentor-mentee-progress-bar" role="presentation">
-                          <div
-                            className="mentor-mentee-progress-fill"
-                            style={{ width: `${Math.min(100, Number(row.progress_percent) || 0)}%` }}
-                          />
-                        </div>
-                        <div className="mentor-mentee-progress-meta">
-                          {formatMinutesAsHours(row.total_completed_minutes || 0)} logged
-                          {row.difficulty_level != null ? ` · Level ${row.difficulty_level}` : ""}
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </section>
-            </div>
-
-            <section className="mentor-home-panel mentor-home-panel--full" aria-labelledby="mentor-upcoming-heading">
-              <div className="mentor-home-panel-head">
-                <h2 id="mentor-upcoming-heading" className="mentor-home-panel-title">
-                  Upcoming sessions with mentees
-                </h2>
-                <p className="mentor-home-panel-sub">From your schedule</p>
-              </div>
-              {sessionsLoading ? (
-                <p className="mentor-home-muted">Loading…</p>
-              ) : upcomingSessionsList.length === 0 ? (
-                <p className="mentor-home-muted">No upcoming sessions. Schedule one from the Sessions tab.</p>
-              ) : (
-                <ul className="mentor-upcoming-list">
-                  {upcomingSessionsList.slice(0, 5).map((s) => (
-                    <li key={s.id} className="mentor-upcoming-row">
-                      <div>
-                        <div className="mentor-upcoming-name">{s.mentee_display_name || s.mentee_username}</div>
-                        <div className="mentor-upcoming-meta">
-                          {s.subject || "Subject TBD"}
-                          {s.topic ? ` · ${s.topic}` : ""}
-                        </div>
-                      </div>
-                      <div className="mentor-upcoming-when">{formatDate(s.scheduled_at)}</div>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </section>
-          </>
-        )}
       </div>
     );
   }

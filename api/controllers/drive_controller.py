@@ -1,6 +1,6 @@
 """
 Google Drive integration: upload/list files using the user's Google OAuth token.
-Uses the same token as Google Calendar (sessions_controller); requires Drive scope in settings.
+Uses Google OAuth tokens from allauth; requires Drive scope in settings.
 """
 import requests
 from django.conf import settings
@@ -8,7 +8,7 @@ from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
 
-from .sessions_controller import _get_google_access_token
+from ..views.google_oauth import get_google_access_token
 from ..views import _get_payload, logger
 
 DRIVE_API_BASE = "https://www.googleapis.com/drive/v3"
@@ -24,7 +24,7 @@ def _drive_disabled_response():
 
 def _drive_request(user, method, url, **kwargs):
     """Perform an authenticated request to Google Drive API. Returns (response, error_dict or None)."""
-    token = _get_google_access_token(user)
+    token = get_google_access_token(user)
     if not token:
         return None, {"error": "Google account not linked. Sign in with Google to use Drive."}
     headers = kwargs.pop("headers", {})

@@ -4201,6 +4201,259 @@ button:focus-visible {
   background: var(--slate-100);
 }
 
+/* Mentor type badge (Instructor vs Senior IT Student) */
+.mentor-role-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+  padding: 5px 11px 5px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  line-height: 1.2;
+  border: 1.5px solid transparent;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+.mentor-role-badge--spaced {
+  margin-top: 8px;
+}
+
+.mentor-role-badge__icon {
+  flex-shrink: 0;
+  opacity: 0.95;
+}
+
+.mentor-role-badge__label {
+  line-height: 1;
+}
+
+.mentor-role-badge--instructor {
+  background: linear-gradient(
+    135deg,
+    rgba(251, 191, 36, 0.28) 0%,
+    rgba(245, 158, 11, 0.38) 100%
+  );
+  color: #fde68a;
+  border-color: rgba(251, 191, 36, 0.72);
+  box-shadow:
+    0 0 0 1px rgba(251, 191, 36, 0.12),
+    0 4px 14px rgba(245, 158, 11, 0.22);
+}
+
+.mentor-role-badge--student {
+  background: linear-gradient(
+    135deg,
+    rgba(56, 189, 248, 0.24) 0%,
+    rgba(14, 165, 233, 0.36) 100%
+  );
+  color: #bae6fd;
+  border-color: rgba(56, 189, 248, 0.68);
+  box-shadow:
+    0 0 0 1px rgba(56, 189, 248, 0.1),
+    0 4px 14px rgba(14, 165, 233, 0.2);
+}
+
+.mentor-role-badge--other {
+  background: rgba(148, 163, 184, 0.2);
+  color: #e2e8f0;
+  border-color: rgba(148, 163, 184, 0.45);
+}
+
+.match-card-title-block {
+  min-width: 0;
+}
+
+.match-card-title-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 10px;
+}
+
+.match-card-title-line .match-card-title {
+  margin: 0;
+}
+
+.match-card-title-row .mentor-role-badge {
+  margin-top: 0;
+}
+
+.prof-role-line .mentor-role-badge {
+  margin-top: 0;
+}
+
+.sp-sidebar-identity .sp-mentor-type-badge {
+  margin: 2px auto 0;
+}
+
+.sp-sidebar-identity .sp-mentor-type-badge.mentor-role-badge--student {
+  color: #fff;
+  background: linear-gradient(135deg, #38bdf8 0%, #0284c7 100%);
+  border-color: rgba(224, 242, 254, 0.9);
+  box-shadow:
+    0 0 0 1px rgba(56, 189, 248, 0.35),
+    0 8px 20px rgba(3, 105, 161, 0.36);
+}
+
+.sp-sidebar-identity .sp-mentor-type-badge.mentor-role-badge--instructor {
+  color: #fff;
+  background: linear-gradient(135deg, #fbbf24 0%, #d97706 100%);
+  border-color: rgba(254, 243, 199, 0.9);
+  box-shadow:
+    0 0 0 1px rgba(251, 191, 36, 0.35),
+    0 8px 20px rgba(180, 83, 9, 0.4);
+}
+
+/* High-visibility mentor type badges on match cards */
+.mentor-role-badge--prominent {
+  font-size: 12px;
+  padding: 6px 12px 6px 9px;
+  letter-spacing: 0.06em;
+  box-shadow: 0 4px 14px rgba(2, 6, 23, 0.35);
+}
+
+.mentor-role-badge--prominent.mentor-role-badge--instructor {
+  color: #fff;
+  background: linear-gradient(135deg, #f59e0b 0%, #b45309 100%);
+  border-color: rgba(253, 230, 138, 0.85);
+  box-shadow:
+    0 0 0 1px rgba(251, 191, 36, 0.35),
+    0 6px 18px rgba(180, 83, 9, 0.45);
+}
+
+.mentor-role-badge--prominent.mentor-role-badge--student {
+  color: #fff;
+  background: linear-gradient(135deg, #38bdf8 0%, #0369a1 100%);
+  border-color: rgba(186, 230, 253, 0.85);
+  box-shadow:
+    0 0 0 1px rgba(56, 189, 248, 0.35),
+    0 6px 18px rgba(3, 105, 161, 0.42);
+}
+
+.mentor-role-badge--prominent.mentor-role-badge--other {
+  color: #f8fafc;
+  background: linear-gradient(135deg, #64748b 0%, #334155 100%);
+  border-color: rgba(226, 232, 240, 0.5);
+}
+
+.home-dashboard-space .match-card .mentor-role-badge--prominent.mentor-role-badge--instructor,
+.matching-page--mentee .match-card .mentor-role-badge--prominent.mentor-role-badge--instructor {
+  color: #fff;
+  background: linear-gradient(135deg, #fbbf24 0%, #d97706 100%);
+  border-color: rgba(254, 243, 199, 0.9);
+}
+
+.home-dashboard-space .match-card .mentor-role-badge--prominent.mentor-role-badge--student,
+.matching-page--mentee .match-card .mentor-role-badge--prominent.mentor-role-badge--student {
+  color: #fff;
+  background: linear-gradient(135deg, #38bdf8 0%, #0284c7 100%);
+  border-color: rgba(224, 242, 254, 0.9);
+}
+
+/* Sign-up: mentor type (student vs instructor) */
+.auth-mentor-type-picker {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+@media (max-width: 520px) {
+  .auth-mentor-type-picker {
+    grid-template-columns: 1fr;
+  }
+}
+
+.auth-mentor-type-option {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 2px solid rgba(255, 255, 255, 0.14);
+  background: rgba(2, 6, 23, 0.35);
+  color: rgba(255, 255, 255, 0.92);
+  cursor: pointer;
+  text-align: left;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.auth-mentor-type-option:hover {
+  border-color: rgba(99, 102, 241, 0.55);
+}
+
+.auth-mentor-type-option.is-active {
+  border-color: rgba(129, 140, 248, 0.95);
+  background: rgba(99, 102, 241, 0.22);
+  box-shadow: 0 0 0 1px rgba(129, 140, 248, 0.35);
+}
+
+.auth-mentor-type-option-title {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.auth-mentor-type-option-desc {
+  font-size: 12px;
+  color: rgba(203, 213, 245, 0.78);
+  line-height: 1.35;
+}
+
+.auth-mentor-type-option.is-active.auth-mentor-type-option:first-child {
+  border-color: rgba(56, 189, 248, 0.85);
+  background: rgba(14, 165, 233, 0.18);
+}
+
+.auth-mentor-type-option.is-active.auth-mentor-type-option:last-child {
+  border-color: rgba(251, 191, 36, 0.85);
+  background: rgba(245, 158, 11, 0.18);
+}
+
+.approval-row-name-block .approval-mentor-type-badge,
+.approval-row-name-block .approval-mentor-type-missing {
+  margin-top: 8px;
+}
+
+.approval-mentor-type-missing {
+  display: inline-flex;
+}
+
+[data-theme="light"] .match-card .mentor-role-badge--instructor {
+  color: #92400e;
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  border-color: #f59e0b;
+  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.25);
+}
+
+[data-theme="light"] .match-card .mentor-role-badge--student {
+  color: #0c4a6e;
+  background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);
+  border-color: #38bdf8;
+  box-shadow: 0 2px 8px rgba(14, 165, 233, 0.2);
+}
+
+.prof-hero-text .mentor-role-badge--instructor {
+  color: #fff;
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  border-color: rgba(255, 255, 255, 0.35);
+  box-shadow: 0 4px 12px rgba(217, 119, 6, 0.45);
+}
+
+.prof-hero-text .mentor-role-badge--student {
+  color: #fff;
+  background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
+  border-color: rgba(255, 255, 255, 0.35);
+  box-shadow: 0 4px 12px rgba(2, 132, 199, 0.4);
+}
+
 @media (max-width: 640px) {
   .match-card-mentee-list {
     padding: 10px 14px;
@@ -12358,6 +12611,455 @@ textarea {
 [data-theme="light"] .mentor-mentee-name,
 [data-theme="light"] .mentor-upcoming-name {
   color: #0f172a;
+}
+
+/* Mentor dashboard v2 */
+.mentor-dashboard-v2 {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.mentor-v2-hero,
+.mentor-v2-panel,
+.mentor-v2-metric-card,
+.mentor-v2-quick-actions {
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  background:
+    radial-gradient(
+      circle at 18% 0%,
+      rgba(96, 94, 161, 0.22) 0%,
+      transparent 46%
+    ),
+    linear-gradient(
+      160deg,
+      rgba(2, 6, 23, 0.62) 0%,
+      rgba(34, 23, 122, 0.26) 100%
+    );
+  box-shadow: 0 14px 36px rgba(2, 6, 23, 0.36);
+}
+
+.mentor-v2-hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  min-height: 210px;
+  padding: 28px 30px;
+  border-radius: 26px;
+  position: relative;
+  overflow: hidden;
+}
+
+.mentor-v2-hero::after {
+  content: "";
+  position: absolute;
+  right: -80px;
+  top: -95px;
+  width: 300px;
+  height: 300px;
+  border-radius: 999px;
+  background: radial-gradient(circle, rgba(123, 97, 255, 0.55), transparent 68%);
+  pointer-events: none;
+}
+
+.mentor-v2-hero-copy,
+.mentor-v2-hero-actions {
+  position: relative;
+  z-index: 1;
+}
+
+.mentor-v2-eyebrow {
+  width: fit-content;
+  margin-bottom: 12px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: rgba(129, 140, 248, 0.16);
+  border: 1px solid rgba(129, 140, 248, 0.28);
+  color: rgba(203, 213, 245, 0.88);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.mentor-v2-title {
+  margin: 0;
+  color: #ffffff;
+  font-size: clamp(28px, 4vw, 46px);
+  line-height: 1.05;
+  font-weight: 900;
+  letter-spacing: -0.04em;
+}
+
+.mentor-v2-subtitle {
+  margin: 12px 0 0;
+  max-width: 640px;
+  color: rgba(226, 232, 240, 0.74);
+  line-height: 1.55;
+}
+
+.mentor-v2-status-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.mentor-v2-status-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 11px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 800;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  color: rgba(226, 232, 240, 0.85);
+  background: rgba(15, 23, 42, 0.42);
+}
+
+.mentor-v2-status-pill.is-approved {
+  color: #bbf7d0;
+  background: rgba(34, 197, 94, 0.14);
+  border-color: rgba(34, 197, 94, 0.35);
+}
+
+.mentor-v2-status-pill.is-pending {
+  color: #fde68a;
+  background: rgba(245, 158, 11, 0.14);
+  border-color: rgba(245, 158, 11, 0.36);
+}
+
+.mentor-v2-hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.mentor-v2-metric-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.mentor-v2-metric-card {
+  min-height: 142px;
+  padding: 18px;
+  border-radius: 20px;
+  position: relative;
+  overflow: hidden;
+}
+
+.mentor-v2-metric-card.is-primary {
+  background:
+    radial-gradient(circle at 85% 20%, rgba(52, 211, 153, 0.2), transparent 42%),
+    linear-gradient(160deg, rgba(34, 23, 122, 0.52), rgba(2, 6, 23, 0.64));
+}
+
+.mentor-v2-metric-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  margin-bottom: 12px;
+  border-radius: 12px;
+  color: #c4b5fd;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.mentor-v2-metric-label {
+  margin: 0;
+  color: rgba(203, 213, 245, 0.68);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.mentor-v2-metric-value {
+  margin: 6px 0 0;
+  color: #ffffff;
+  font-size: 30px;
+  line-height: 1;
+  font-weight: 900;
+}
+
+.mentor-v2-metric-help {
+  margin: 8px 0 0;
+  color: rgba(203, 213, 245, 0.62);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.mentor-v2-progress {
+  height: 8px;
+  margin-top: 14px;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.18);
+  overflow: hidden;
+}
+
+.mentor-v2-progress span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #34d399, #a78bfa);
+}
+
+.mentor-v2-main-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(320px, 0.65fr);
+  gap: 18px;
+  align-items: stretch;
+}
+
+.mentor-v2-panel {
+  min-width: 0;
+  padding: 20px;
+  border-radius: 22px;
+}
+
+.mentor-v2-panel-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.mentor-v2-panel-head h2 {
+  margin: 0;
+  color: #ffffff;
+  font-size: 17px;
+  font-weight: 900;
+}
+
+.mentor-v2-panel-head p {
+  margin: 4px 0 0;
+  color: rgba(203, 213, 245, 0.65);
+  font-size: 12px;
+}
+
+.mentor-v2-mentee-list {
+  display: grid;
+  gap: 12px;
+}
+
+.mentor-v2-mentee-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 13px;
+  border-radius: 16px;
+  border: 1px solid rgba(148, 163, 184, 0.12);
+  background: rgba(2, 6, 23, 0.28);
+}
+
+.mentor-v2-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  flex: 0 0 auto;
+  border-radius: 15px;
+  background: linear-gradient(135deg, #605ea1, #34d399);
+  color: #ffffff;
+  font-weight: 900;
+}
+
+.mentor-v2-mentee-body {
+  min-width: 0;
+  flex: 1;
+}
+
+.mentor-v2-mentee-top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.mentor-v2-mentee-top h3 {
+  margin: 0;
+  color: rgba(248, 250, 252, 0.96);
+  font-size: 14px;
+  font-weight: 850;
+}
+
+.mentor-v2-mentee-top span,
+.mentor-v2-mentee-body p {
+  color: rgba(203, 213, 245, 0.62);
+  font-size: 12px;
+}
+
+.mentor-v2-mentee-body p {
+  margin: 4px 0 0;
+}
+
+.mentor-v2-empty {
+  display: grid;
+  justify-items: start;
+  gap: 10px;
+  padding: 18px;
+  border-radius: 16px;
+  border: 1px dashed rgba(148, 163, 184, 0.24);
+  color: rgba(203, 213, 245, 0.7);
+}
+
+.mentor-v2-empty p {
+  margin: 0;
+  line-height: 1.45;
+}
+
+.mentor-v2-profile-list {
+  display: grid;
+  gap: 10px;
+}
+
+.mentor-v2-profile-list > div {
+  padding: 12px;
+  border-radius: 14px;
+  background: rgba(2, 6, 23, 0.25);
+  border: 1px solid rgba(148, 163, 184, 0.11);
+}
+
+.mentor-v2-profile-list span {
+  display: block;
+  margin-bottom: 4px;
+  color: rgba(203, 213, 245, 0.6);
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.mentor-v2-profile-list strong {
+  color: rgba(248, 250, 252, 0.94);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.mentor-v2-warning {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  color: #fde68a;
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.28);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.mentor-v2-full-btn {
+  width: 100%;
+  margin-top: 14px;
+}
+
+.mentor-v2-quick-actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  padding: 12px;
+  border-radius: 18px;
+}
+
+.mentor-v2-quick-actions button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  border-radius: 14px;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  background: rgba(2, 6, 23, 0.28);
+  color: rgba(248, 250, 252, 0.9);
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.mentor-v2-quick-actions button:hover {
+  border-color: rgba(129, 140, 248, 0.5);
+  background: rgba(99, 102, 241, 0.18);
+}
+
+@media (max-width: 980px) {
+  .mentor-v2-metric-grid,
+  .mentor-v2-main-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .mentor-v2-panel--wide {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 720px) {
+  .mentor-v2-hero,
+  .mentor-v2-panel-head {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .mentor-v2-hero-actions {
+    justify-content: flex-start;
+  }
+
+  .mentor-v2-metric-grid,
+  .mentor-v2-main-grid,
+  .mentor-v2-quick-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .mentor-v2-mentee-top {
+    flex-direction: column;
+    gap: 2px;
+  }
+}
+
+[data-theme="light"] .mentor-v2-hero,
+[data-theme="light"] .mentor-v2-panel,
+[data-theme="light"] .mentor-v2-metric-card,
+[data-theme="light"] .mentor-v2-quick-actions {
+  border-color: rgba(96, 94, 161, 0.2);
+  background:
+    radial-gradient(
+      circle at 20% 0%,
+      rgba(96, 94, 161, 0.1) 0%,
+      transparent 42%
+    ),
+    rgba(255, 255, 255, 0.78);
+  box-shadow: 0 14px 30px rgba(2, 6, 23, 0.12);
+}
+
+[data-theme="light"] .mentor-v2-title,
+[data-theme="light"] .mentor-v2-metric-value,
+[data-theme="light"] .mentor-v2-panel-head h2,
+[data-theme="light"] .mentor-v2-mentee-top h3,
+[data-theme="light"] .mentor-v2-profile-list strong {
+  color: #0f172a;
+}
+
+[data-theme="light"] .mentor-v2-subtitle,
+[data-theme="light"] .mentor-v2-panel-head p,
+[data-theme="light"] .mentor-v2-metric-help,
+[data-theme="light"] .mentor-v2-mentee-body p,
+[data-theme="light"] .mentor-v2-mentee-top span,
+[data-theme="light"] .mentor-v2-empty,
+[data-theme="light"] .mentor-v2-profile-list span {
+  color: #64748b;
+}
+
+[data-theme="light"] .mentor-v2-mentee-card,
+[data-theme="light"] .mentor-v2-profile-list > div,
+[data-theme="light"] .mentor-v2-quick-actions button {
+  background: rgba(248, 250, 252, 0.82);
+  border-color: rgba(148, 163, 184, 0.24);
+  color: #1e293b;
 }
 
 /* Mentor Matching: same shell rhythm as mentee */

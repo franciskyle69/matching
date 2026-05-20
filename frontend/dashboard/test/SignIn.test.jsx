@@ -26,7 +26,7 @@ describe("SignInPage", () => {
   it("renders login form and title", () => {
     render(withContext(React.createElement(SignInPage), mockContext));
     expect(screen.getByRole("heading", { name: /login/i })).toBeInTheDocument();
-    expect(screen.getByPlaceholderText(/your@email\.com or username/i)).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/you@example\.com or username/i)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /sign in/i })).toBeInTheDocument();
   });
 

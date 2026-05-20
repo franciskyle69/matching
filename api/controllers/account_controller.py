@@ -18,7 +18,7 @@ import time
 
 from django.utils import timezone
 
-from matching.models import MentoringSession, MenteeMentorRequest
+from matching.models import MenteeMentorRequest
 from profiles.models import MentorProfile, MenteeProfile, InterestTag
 
 from accounts.forms import (
@@ -57,15 +57,14 @@ from ..views import (
     _get_int,
     _get_str,
     _get_role_flags,
+    _resolve_account_role,
     _rate_limit,
     audit_log,
     _require_role,
-    _serialize_session,
     _serialize_notification,
     _serialize_subject,
     _serialize_topic,
     _serialize_mentee,
-    _maybe_send_due_session_reminders,
     get_mentor_approved,
     get_mentee_approved,
     logger,
@@ -77,7 +76,6 @@ from profiles.questionnaire_utils import filter_topics_for_subjects
 
 
 ME_CACHE_TTL_SECONDS = 30
-REMINDER_SWEEP_COOLDOWN_SECONDS = 300
 ME_CACHE_METRICS_LOG_EVERY = 100
 
 
@@ -229,6 +227,32 @@ def auth_login(request):
     if not user.is_active:
         return JsonResponse(
             {"error": "Please verify your email before logging in."}, status=401
+        )
+
+    expected_role = (_get_str(payload, "expected_role") or "").lower()
+    if expected_role not in ("mentor", "mentee", "staff"):
+        return JsonResponse(
+            {
+                "error": (
+                    "Please choose Staff, Mentor, or Mentee from the role portal "
+                    "before signing in."
+                ),
+            },
+            status=400,
+        )
+
+    actual_role = _resolve_account_role(user)
+    if actual_role != expected_role:
+        actual_label = (actual_role or "another role").replace("_", " ").title()
+        expected_label = expected_role.replace("_", " ").title()
+        return JsonResponse(
+            {
+                "error": (
+                    f"This account is a {actual_label} account, not {expected_label}. "
+                    f"Return to the portal and choose {actual_label}, or use a different account."
+                ),
+            },
+            status=403,
         )
 
     if must_change_password(user):
@@ -393,6 +417,18 @@ def auth_register(request):
         if not _validate_role(role):
             return JsonResponse({"error": "Role is required."}, status=400)
 
+        expected_role = (_get_str(payload, "expected_role") or "").lower()
+        if expected_role in ("mentor", "mentee") and role != expected_role:
+            return JsonResponse(
+                {
+                    "error": (
+                        f"Sign up must create a {expected_role} account. "
+                        "Return to the portal and choose the correct role."
+                    ),
+                },
+                status=400,
+            )
+
         form = RegisterForm(payload, request.FILES)
         if not form.is_valid():
             return JsonResponse({"errors": form.errors}, status=400)
@@ -436,10 +472,27 @@ def auth_register(request):
 
         try:
             if role == "mentor":
+                mentor_role = (
+                    _get_str(payload, "mentor_role")
+                    or _get_str(payload, "mentor_type")
+                    or cleaned.get("mentor_role", "")
+                )
+                if mentor_role not in ("Senior IT Student", "Instructor"):
+                    user.delete()
+                    return JsonResponse(
+                        {
+                            "error": (
+                                "Select whether you are signing up as a "
+                                "student mentor or an instructor."
+                            ),
+                        },
+                        status=400,
+                    )
                 MentorProfile.objects.create(
                     user=user,
                     program="BSIT",
                     year_level=4,
+                    role=mentor_role,
                     verification_document=verification_document,
                     approved=False,
                 )
@@ -461,7 +514,7 @@ def auth_register(request):
             user.delete()
             return JsonResponse(
                 {
-                    "error": "Unable to save your verification document. Please upload a valid PDF, JPG, or PNG and try again.",
+                    "error": "Unable to save your academic mentoring application form. Please upload a valid PDF, JPG, or PNG and try again.",
                     "detail": str(exc),
                 },
                 status=400,
@@ -546,48 +599,12 @@ def me(request):
 
     _record_me_cache_metric(hit=False)
 
-    # Avoid running heavy reminder sweeps on every /api/me/ request.
-    if cache.add("api:me:due-reminders:sweep", "1", REMINDER_SWEEP_COOLDOWN_SECONDS):
-        _maybe_send_due_session_reminders()
     mentor = getattr(request.user, "mentor_profile", None)
     mentee = getattr(request.user, "mentee_profile", None)
 
-    # Staff gets global stats; mentors/mentees get their own session stats.
     total_mentors = MentorProfile.objects.count()
     total_mentees = MenteeProfile.objects.count()
-    if mentor:
-        scoped_sessions_qs = MentoringSession.objects.filter(mentor=mentor)
-    elif mentee:
-        scoped_sessions_qs = MentoringSession.objects.filter(mentee=mentee)
-    else:
-        scoped_sessions_qs = MentoringSession.objects.all()
-
-    total_sessions = scoped_sessions_qs.count()
-    completed_sessions = scoped_sessions_qs.filter(status="completed").count()
-    completion_rate = 0
-    if total_sessions > 0:
-        completion_rate = round((completed_sessions / total_sessions) * 100)
-
-    now = timezone.now()
-    # Define "this week" as Monday 00:00 -> now
-    start_of_week = now - timezone.timedelta(days=now.weekday())
-    start_of_week = start_of_week.replace(hour=0, minute=0, second=0, microsecond=0)
-    week_sessions_qs = scoped_sessions_qs.filter(scheduled_at__gte=start_of_week)
-    week_sessions = week_sessions_qs.count()
-    week_completed_sessions = week_sessions_qs.filter(status="completed").count()
-
-    # Simple academic term heuristic: Aug 1 for Aug–Dec, Jan 1 for Jan–Jul
-    if now.month >= 8:
-        term_start = timezone.datetime(
-            now.year, 8, 1, tzinfo=timezone.get_current_timezone()
-        )
-    else:
-        term_start = timezone.datetime(
-            now.year, 1, 1, tzinfo=timezone.get_current_timezone()
-        )
-    term_qs = scoped_sessions_qs.filter(scheduled_at__gte=term_start)
-    term_sessions = term_qs.count()
-    term_completed_sessions = term_qs.filter(status="completed").count()
+    accepted_pairings = MenteeMentorRequest.objects.filter(accepted=True).count()
 
     avatar_url = ""
     if mentor and getattr(mentor, "avatar_url", ""):
@@ -695,46 +712,6 @@ def me(request):
             ),
         }
 
-    # Per-user progress stats (for mentors/mentees)
-    user_sessions = MentoringSession.objects.none()
-    if mentor:
-        user_sessions = MentoringSession.objects.filter(mentor=mentor)
-    elif mentee:
-        user_sessions = MentoringSession.objects.filter(mentee=mentee)
-
-    user_completed_sessions = user_sessions.filter(status="completed").count()
-    user_upcoming_sessions = user_sessions.filter(
-        status="scheduled", scheduled_at__gte=now
-    ).count()
-
-    first_session = user_sessions.order_by("scheduled_at").first()
-    days_to_first_session = None
-    if first_session:
-        delta = first_session.scheduled_at - request.user.date_joined
-        # Guard against negative values if old data has sessions before signup
-        days_to_first_session = max(delta.days, 0)
-
-    # Streak: how many consecutive calendar weeks (including current)
-    # have at least one completed session for this user.
-    completed_dates = [
-        s.scheduled_at for s in user_sessions.filter(status="completed").only("scheduled_at")
-    ]
-    week_keys = {
-        (d.isocalendar()[0], d.isocalendar()[1]) for d in completed_dates
-    }
-    current_streak_weeks = 0
-    if week_keys:
-        year, week, _ = now.isocalendar()
-        tz = timezone.get_current_timezone()
-        while (year, week) in week_keys:
-            current_streak_weeks += 1
-            # Go to previous week
-            monday_this_week = timezone.datetime.fromisocalendar(year, week, 1).replace(
-                tzinfo=tz
-            )
-            prev_monday = monday_this_week - timezone.timedelta(days=7)
-            year, week, _ = prev_monday.isocalendar()
-
     mentee_matching = {}
     if mentee:
         mentee_subs = (
@@ -794,29 +771,13 @@ def me(request):
         "stats": {
             "total_mentors": total_mentors,
             "total_mentees": total_mentees,
-            "total_sessions": total_sessions,
-            "completed_sessions": completed_sessions,
-            "completion_rate": completion_rate,
-            "week": {
-                "start": start_of_week.isoformat(),
-                "sessions": week_sessions,
-                "completed_sessions": week_completed_sessions,
-            },
-            "term": {
-                "start": term_start.isoformat(),
-                "sessions": term_sessions,
-                "completed_sessions": term_completed_sessions,
-            },
+            "accepted_pairings": accepted_pairings,
             "user_progress": {
                 "role": "mentor"
                 if role_flags["is_mentor"]
                 else "mentee"
                 if role_flags["is_mentee"]
                 else None,
-                "sessions_completed": user_completed_sessions,
-                "sessions_upcoming": user_upcoming_sessions,
-                "days_to_first_session": days_to_first_session,
-                "current_streak_weeks": current_streak_weeks,
                 "mentees_count": MenteeMentorRequest.objects.filter(
                     mentor=mentor, accepted=True
                 )

@@ -166,7 +166,7 @@
               </div>
             )}
             {announcementTargetType === "specific" && announcementMenteeOptions.length === 0 && (
-              <p className="muted announcement-no-mentees">You have no mentees with sessions yet. Schedule a session first to send to specific mentees.</p>
+              <p className="muted announcement-no-mentees">You have no accepted mentees yet. Pair with mentees in Matching first to send to specific mentees.</p>
             )}
             <div className="btn-row" style={{ marginTop: "12px" }}>
               <button

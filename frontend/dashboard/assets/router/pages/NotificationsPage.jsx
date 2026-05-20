@@ -20,7 +20,7 @@
     return (
       <div className="card">
         <h1 className="page-title">Notifications</h1>
-        <p className="page-subtitle">Session updates and activity.</p>
+        <p className="page-subtitle">Matching updates and activity.</p>
         <div className="notifications-header"><button className="btn secondary" onClick={handleMarkAllRead}>Mark all as read</button></div>
         {notificationsLoading && <Spinner title="Loading notifications…" subtitle="Fetching your updates" />}
         {!notificationsLoading && notifications.length === 0 && (
@@ -33,9 +33,9 @@
               <button
                 type="button"
                 className="btn secondary small"
-                onClick={() => setActiveTab(user.role === "mentee" ? "matching" : "sessions")}
+                onClick={() => setActiveTab("matching")}
               >
-                {user.role === "mentee" ? "Go to Matching" : "Go to Sessions"}
+                Go to Matching
               </button>
             </div>
           </div>

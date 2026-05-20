@@ -5,7 +5,14 @@
   const AppContext = window.DashboardApp.AppContext;
   const Utils = window.DashboardApp.Utils || {};
   const PLACEHOLDER_AVATAR = window.DashboardApp.PLACEHOLDER_AVATAR || "";
-  const { formatMatchScore, formatDate, LoadingSpinner, MatchingLoadingAnimation } = Utils;
+  const {
+    formatMatchScore,
+    formatDate,
+    LoadingSpinner,
+    MatchingLoadingAnimation,
+    MentorRoleBadge,
+    MentorMatchTitle,
+  } = Utils;
 
   function MatchingPage() {
     const ctx = useContext(AppContext);
@@ -35,7 +42,6 @@
       menteeMatching,
       menteeRecUpdating,
       setActiveTab,
-      setSessionsPairMenteeId,
       setViewedMentorProfile,
       setMentorProfileHashId,
     } = ctx;
@@ -117,7 +123,7 @@
         </h1>
         <p className="page-subtitle">
           {isMentee
-            ? "Personalized mentor recommendations based on your questionnaire. Choose a mentor to start your session—we match you by subjects and topics you care about."
+            ? "Personalized mentor recommendations based on your mentoring preferences. Choose a mentor to request a pairing—we match you by subjects and topics you care about."
             : user.role === "mentor"
             ? "View your official mentees. New mentee requests are auto-accepted when you have available slots."
             : "Run the model to get mentor–mentee pairs."}
@@ -159,12 +165,12 @@
         {isMentee && !menteeQuestionnaireCompleted && (
           <div className="matching-empty">
             <p>
-              Complete your matching questionnaire so we can recommend mentors
-              based on the subjects you find difficult.
+              Set your mentoring preferences so we can recommend mentors based on
+              the subjects you want help with.
             </p>
             <div className="btn-row" style={{ marginTop: "12px" }}>
-              <button type="button" className="btn secondary" onClick={() => setActiveTab("settings")}>
-                Open mentee questionnaire
+              <button type="button" className="btn secondary" onClick={() => setActiveTab("mentoring-preferences")}>
+                Open mentoring preferences
               </button>
             </div>
           </div>
@@ -194,7 +200,7 @@
                   <div className="match-mentee-list" style={{ marginBottom: "24px" }}>
                     <div className="section-title">My mentees</div>
                     <p className="page-subtitle" style={{ marginTop: "-8px", marginBottom: "12px" }}>
-                      Official mentees matched to you. Each has a dedicated Sessions page where you can schedule sessions.
+                      Official mentees matched to you. Post announcements or view their matching details below.
                     </p>
                     {accepted.map((r) => (
                       <div key={r.mentee_id} className="match-card match-card-mentee-list match-card-accepted">
@@ -212,9 +218,6 @@
                             {r.mentee_difficulty_level != null && <p><strong>Difficulty level:</strong> {r.mentee_difficulty_level}/5</p>}
                           </div>
                         )}
-                        <div className="btn-row" style={{ marginTop: "12px" }}>
-                          <button type="button" className="btn small" onClick={() => { setSessionsPairMenteeId(r.mentee_id); setActiveTab("sessions"); }}>View sessions with {r.mentee_display_name || r.mentee_username}</button>
-                        </div>
                       </div>
                     ))}
                   </div>
@@ -256,18 +259,18 @@
           <div className="match-mentee-list" style={{ marginBottom: "24px" }}>
             <div className="section-title">Your mentor</div>
             <p className="page-subtitle" style={{ marginTop: "-8px", marginBottom: "12px" }}>
-              Your official mentor. Schedule sessions together in Sessions.
+              Your official mentor. View announcements and stay in touch through the dashboard.
             </p>
             <div className="match-card match-card-mentee-list match-card-accepted">
               <div className="match-card-header">
                 <div className="match-card-main">
-                  <p className="match-card-title">Mentor: {myMentor.display_name || myMentor.username}</p>
+                  <MentorMatchTitle
+                    name={myMentor.display_name || myMentor.username}
+                    role={myMentor.role}
+                  />
                   {myMentor.accepted_at && <div className="notification-time">Accepted {formatDate(myMentor.accepted_at)}</div>}
                 </div>
                 <span className="match-request-badge match-request-badge-accepted">Official mentor</span>
-              </div>
-              <div className="btn-row" style={{ marginTop: "12px" }}>
-                <button type="button" className="btn small" onClick={() => setActiveTab("sessions")}>Go to Sessions</button>
               </div>
             </div>
           </div>
@@ -297,7 +300,7 @@
                   </div>
                 )}
                 <p className="muted" style={{ marginTop: "8px" }}>
-                  Try adjusting your availability or selecting more subjects in your matching questionnaire.
+                  Try adjusting your availability or selecting more subjects in your mentoring preferences.
                 </p>
                 <div className="btn-row" style={{ marginTop: "12px", flexWrap: "wrap", gap: "8px" }}>
                   <button
@@ -379,7 +382,7 @@
                   whyReasons.push(`Compatible schedule: ${mentorAvailability}`);
                 }
                 if (whyReasons.length === 0) {
-                  whyReasons.push(`Good overall fit based on your questionnaire answers.`);
+                  whyReasons.push(`Good overall fit based on your mentoring preferences.`);
                 }
 
                 return (
@@ -410,10 +413,10 @@
                       <div className="match-card-main">
                         <div className="match-card-title-row">
                           <img src={mentor.avatar_url || PLACEHOLDER_AVATAR} alt={match.mentor_display_name || match.mentor_username} className="match-column-avatar" />
-                          <div>
-                            <p className="match-card-title">Mentor: {match.mentor_display_name || match.mentor_username}</p>
-                            {mentor.role && <p className="match-card-subtitle">{mentor.role}</p>}
-                          </div>
+                          <MentorMatchTitle
+                            name={match.mentor_display_name || match.mentor_username}
+                            role={mentor.role}
+                          />
                         </div>
                       </div>
                       <div className="match-card-header-right">
@@ -558,10 +561,10 @@
                         <div className="match-card-main">
                           <div className="match-card-title-row">
                             <img src={mentor.avatar_url || PLACEHOLDER_AVATAR} alt={match.mentor_display_name || match.mentor_username} className="match-column-avatar" />
-                            <div>
-                              <p className="match-card-title">Mentor: {match.mentor_display_name || match.mentor_username}</p>
-                              {mentor.role && <p className="match-card-subtitle">{mentor.role}</p>}
-                            </div>
+                            <MentorMatchTitle
+                              name={match.mentor_display_name || match.mentor_username}
+                              role={mentor.role}
+                            />
                           </div>
                         </div>
                         <span className={"match-card-score match-score-badge match-score-tier-" + tier}>
@@ -662,7 +665,9 @@
                           <div>
                             <h2 className="page-title" style={{ marginBottom: 2 }}>Mentor profile</h2>
                             <p className="page-subtitle" style={{ marginBottom: 2 }}>{match.mentor_display_name || match.mentor_username}</p>
-                            {mentor.role && <p className="page-subtitle" style={{ marginBottom: 0 }}>{mentor.role}</p>}
+                            {mentor.role && (
+                              <MentorRoleBadge role={mentor.role} prominent className="mentor-role-badge--spaced" />
+                            )}
                           </div>
                         </div>
                       </div>
@@ -760,7 +765,11 @@
                         <img src={mentor.avatar_url || PLACEHOLDER_AVATAR} alt={row.mentor_display_name || row.mentor_username} className="match-column-avatar" />
                         <h4>Mentor: {row.mentor_display_name || row.mentor_username}</h4>
                       </div>
-                      {mentor.role && <p>Role: {mentor.role}</p>}
+                      {mentor.role && (
+                        <p style={{ margin: "6px 0 8px" }}>
+                          <MentorRoleBadge role={mentor.role} prominent />
+                        </p>
+                      )}
                       {(mentor.subjects || d.mentor_subjects || []).length > 0 && <p><strong>Subjects:</strong> {(mentor.subjects && mentor.subjects.length) ? mentor.subjects.join(", ") : (d.mentor_subjects || []).join(", ") || "—"}</p>}
                       {(mentor.topics || d.mentor_topics || []).length > 0 && <p><strong>Topics:</strong> {(mentor.topics && mentor.topics.length) ? mentor.topics.join(", ") : (d.mentor_topics || []).join(", ") || "—"}</p>}
                     </div>

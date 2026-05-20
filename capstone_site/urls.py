@@ -15,18 +15,19 @@ from django.contrib import admin
 from django.urls import path, include, re_path
 from django.conf import settings
 from django.conf.urls.static import static
-from .views import react_app, landing_page, public_landing_page, _matching_redirect
+from .views import react_app, landing_page, portal_page, public_landing_page, _matching_redirect
 
 urlpatterns = [
     path('', landing_page, name='home'),
+    path('portal/', portal_page, name='portal'),
     path('landing/', public_landing_page, name='public_landing'),
     path('admin/', admin.site.urls),
     path('accounts/', include('accounts.urls')),
     path('accounts/', include('django.contrib.auth.urls')),
     path('accounts/', include('allauth.urls')),
     path('profiles/', include('profiles.urls')),
-    path('matching/', _matching_redirect, {'default_tab': 'sessions'}, name='matching_redirect_root'),
-    re_path(r'^matching/.*$', _matching_redirect, {'default_tab': 'sessions'}, name='matching_redirect'),
+    path('matching/', _matching_redirect, {'default_tab': 'matching'}, name='matching_redirect_root'),
+    re_path(r'^matching/.*$', _matching_redirect, {'default_tab': 'matching'}, name='matching_redirect'),
     path('api/', include('api.urls')),
     path('app/', react_app, name='react_app'),
     re_path(r'^app/.*$', react_app),

@@ -60,15 +60,29 @@ class RoleAwareSocialAccountAdapter(DefaultSocialAccountAdapter):
         user = sociallogin.user
         is_mentor = hasattr(user, "mentor_profile")
         is_mentee = hasattr(user, "mentee_profile")
+        actual_role = "mentor" if is_mentor else "mentee" if is_mentee else None
+
+        # Existing users must match the role selected for this OAuth attempt.
+        if user.pk and selected_google_role in ("mentor", "mentee"):
+            if actual_role and actual_role != selected_google_role:
+                messages.error(
+                    request,
+                    (
+                        f"This Google account is linked to a {actual_role.title()} "
+                        f"account, not {selected_google_role.title()}."
+                    ),
+                )
+                raise ImmediateHttpResponse(
+                    redirect(f"/app/?role={selected_google_role}#signin")
+                )
+            request.session[ROLE_SESSION_KEY] = selected_google_role
+            selected_role = selected_google_role
 
         # If role is not selected, infer from existing profile.
         if not selected_role:
-            if is_mentor:
-                request.session[ROLE_SESSION_KEY] = "mentor"
-                selected_role = "mentor"
-            elif is_mentee:
-                request.session[ROLE_SESSION_KEY] = "mentee"
-                selected_role = "mentee"
+            if actual_role:
+                request.session[ROLE_SESSION_KEY] = actual_role
+                selected_role = actual_role
 
         if (
             not selected_role

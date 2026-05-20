@@ -93,9 +93,9 @@
         {% endif %}
       </div>
       <div class="form-group">
-        <label for="id_student_verification_document">Student verification document</label>
+        <label for="id_student_verification_document">Academic mentoring application form</label>
         <input type="file" name="student_verification_document" id="id_student_verification_document" accept=".pdf,.png,.jpg,.jpeg" required>
-        <p class="helptext" style="margin-top: .5rem; margin-bottom: 0;">Upload your registration form, current school ID, or COR (PDF/JPG/PNG, max 5 MB).</p>
+        <p class="helptext" style="margin-top: .5rem; margin-bottom: 0;">Upload your completed academic mentoring application form for account review (PDF/JPG/PNG, max 5 MB).</p>
         {% if form.student_verification_document.errors %}
         <p class="errornote" style="margin-top: .5rem; margin-bottom: 0;">{{ form.student_verification_document.errors.0 }}</p>
         {% endif %}
@@ -139,6 +139,36 @@
         <p class="errornote" style="margin-top: .5rem; margin-bottom: 0;">{{ form.role.errors.0 }}</p>
         {% endif %}
       </div>
+      <div class="form-group" id="mentor-type-group" style="display: none;">
+        <label>Mentor type *</label>
+        <p class="helptext" style="margin-top: .5rem; margin-bottom: .5rem;">Select whether you are signing up as a student mentor or an instructor.</p>
+        <div class="role-picker">
+          {% for value, label in form.fields.mentor_role.choices %}
+            <label class="role-option" for="id_mentor_role_{{ forloop.counter0 }}">
+              <input type="radio" name="mentor_role" value="{{ value }}" id="id_mentor_role_{{ forloop.counter0 }}"
+                     {% if form.mentor_role.value == value %}checked{% endif %}>
+              <span>{{ label }}</span>
+            </label>
+          {% endfor %}
+        </div>
+        {% if form.mentor_role.errors %}
+        <p class="errornote" style="margin-top: .5rem; margin-bottom: 0;">{{ form.mentor_role.errors.0 }}</p>
+        {% endif %}
+      </div>
+      <script>
+        (function () {
+          var group = document.getElementById("mentor-type-group");
+          if (!group) return;
+          function sync() {
+            var mentor = document.querySelector('input[name="role"][value="mentor"]');
+            group.style.display = mentor && mentor.checked ? "block" : "none";
+          }
+          document.querySelectorAll('input[name="role"]').forEach(function (el) {
+            el.addEventListener("change", sync);
+          });
+          sync();
+        })();
+      </script>
       <button type="submit" class="btn-primary">Create account</button>
     </form>
     <p class="footer-links">

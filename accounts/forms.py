@@ -8,6 +8,11 @@ ROLE_CHOICES = (
     ("mentee", "Mentee"),
 )
 
+MENTOR_ROLE_CHOICES = (
+    ("Senior IT Student", "Senior IT Student (peer mentor)"),
+    ("Instructor", "Instructor"),
+)
+
 
 CREATE_USER_ROLE_CHOICES = ROLE_CHOICES + (("staff", "Staff"),)
 
@@ -49,6 +54,12 @@ class RegisterForm(forms.Form):
     last_name = forms.CharField(required=True)
     email = forms.EmailField(required=True)
     role = forms.ChoiceField(choices=ROLE_CHOICES, widget=forms.RadioSelect)
+    mentor_role = forms.ChoiceField(
+        choices=MENTOR_ROLE_CHOICES,
+        required=False,
+        widget=forms.RadioSelect,
+        label="Mentor type",
+    )
     student_verification_document = forms.FileField(required=True)
     password1 = forms.CharField(widget=forms.PasswordInput)
     password2 = forms.CharField(widget=forms.PasswordInput)
@@ -88,7 +99,9 @@ class RegisterForm(forms.Form):
     def clean_student_verification_document(self):
         uploaded = self.cleaned_data.get("student_verification_document")
         if not uploaded:
-            raise forms.ValidationError("Please upload proof that you are currently enrolled.")
+            raise forms.ValidationError(
+                "Please upload your academic mentoring application form."
+            )
 
         name = (uploaded.name or "").lower()
         dot = name.rfind(".")
@@ -105,6 +118,9 @@ class RegisterForm(forms.Form):
 
         return uploaded
 
+    def clean_mentor_role(self):
+        return (self.cleaned_data.get("mentor_role") or "").strip()
+
     def clean(self):
         cleaned_data = super().clean()
         password1 = cleaned_data.get("password1")
@@ -116,6 +132,15 @@ class RegisterForm(forms.Form):
                 validate_password(password2)
             except forms.ValidationError as exc:
                 self.add_error("password2", exc)
+        role = cleaned_data.get("role")
+        mentor_role = cleaned_data.get("mentor_role")
+        if role == "mentor" and not mentor_role:
+            self.add_error(
+                "mentor_role",
+                "Select whether you are signing up as a student mentor or an instructor.",
+            )
+        if role == "mentee" and mentor_role:
+            cleaned_data["mentor_role"] = ""
         return cleaned_data
 
     def save(self, commit: bool = True):

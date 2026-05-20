@@ -31,16 +31,14 @@ describe("HomePage", () => {
     const ctx = {
       user: { username: "staff1", role: "staff" },
       authCheckDone: true,
-      stats: { total_mentors: 5, total_mentees: 10, total_sessions: 3, completion_rate: 80 },
+      stats: { total_mentors: 5, total_mentees: 10, accepted_pairings: 3 },
       setActiveTab: () => {},
-      sessionsData: null,
-      sessionsLoading: false,
       menteeRecommendations: [],
       mentorRequests: [],
     };
     render(withContext(React.createElement(HomePage), ctx));
     expect(screen.getByText(/welcome.*staff1/i)).toBeInTheDocument();
-    expect(screen.getByText(/^Staff$/)).toBeInTheDocument();
+    expect(screen.getByText(/signed in as staff/i)).toBeInTheDocument();
     expect(screen.getByText("5")).toBeInTheDocument();
     expect(screen.getByText("10")).toBeInTheDocument();
   });

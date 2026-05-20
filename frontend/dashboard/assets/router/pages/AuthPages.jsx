@@ -6,8 +6,47 @@ import { Alert as MuiAlert } from "@mui/material";
   const { useContext, useState } = React;
   const AppContext = window.DashboardApp.AppContext;
   const Utils = window.DashboardApp.Utils || {};
-  const ROLE_OPTIONS = window.DashboardApp.ROLE_OPTIONS || [];
   const { LoadingSpinner } = Utils;
+
+  function getPortalAuthRole() {
+    const fromUrl = new URLSearchParams(window.location.search || "").get("role");
+    const fromStore =
+      typeof sessionStorage !== "undefined"
+        ? sessionStorage.getItem("portalRole")
+        : null;
+    const role = fromUrl || fromStore;
+    return role === "mentor" || role === "mentee" || role === "staff" ? role : null;
+  }
+
+  function getPortalRoleLabel() {
+    const stored =
+      typeof sessionStorage !== "undefined"
+        ? sessionStorage.getItem("portalRoleLabel")
+        : null;
+    if (stored) return stored;
+    const role = getPortalAuthRole();
+    if (role === "mentor") return "Mentor";
+    if (role === "mentee") return "Mentee";
+    if (role === "staff") return "Staff";
+    return null;
+  }
+
+  function navigateAuthTab(setActiveTab, tab) {
+    setActiveTab(tab);
+    const params = new URLSearchParams();
+    const portalRole = getPortalAuthRole();
+    if (portalRole) params.set("role", portalRole);
+    const qs = params.toString() ? `?${params.toString()}` : "";
+    window.history.replaceState(null, "", `/app/${qs}#${tab}`);
+  }
+
+  function getGoogleLoginUrl() {
+    const portalRole = getPortalAuthRole();
+    if (portalRole === "mentor" || portalRole === "mentee") {
+      return `/accounts/google/role/${portalRole}/`;
+    }
+    return "/accounts/google/login/?process=login&next=/app/signin%3Foauth%3Dgoogle";
+  }
 
   function SignInPage() {
     const ctx = useContext(AppContext);
@@ -31,16 +70,12 @@ import { Alert as MuiAlert } from "@mui/material";
       user &&
       ((user.role === "mentor" && user.mentor_approved === false) ||
         (user.role === "mentee" && user.mentee_approved === false));
+    const portalRoleLabel = getPortalRoleLabel();
+    const portalAuthRole = getPortalAuthRole();
     const isAuthLoading = signInLoading;
 
-    function goBackToLandingOrPrevious() {
-      // Prefer "previous page" when possible, but always fall back to landing.
-      try {
-        if (window.history.length > 1) window.history.back();
-        else window.location.href = "/";
-      } catch {
-        window.location.href = "/";
-      }
+    function goBackToPortal() {
+      window.location.href = "/portal/";
     }
 
     return (
@@ -81,7 +116,7 @@ import { Alert as MuiAlert } from "@mui/material";
             <button
               type="button"
               className="auth-back-btn"
-              onClick={goBackToLandingOrPrevious}
+              onClick={goBackToPortal}
               aria-label="Go back"
               title="Go back"
             >
@@ -100,7 +135,9 @@ import { Alert as MuiAlert } from "@mui/material";
             </button>
             <h2 className="auth-title">Login</h2>
             <p className="auth-subtitle">
-              Welcome back! Please sign in to your account
+              {portalRoleLabel
+                ? `Sign in as ${portalRoleLabel}`
+                : "Welcome back! Please sign in to your account"}
             </p>
             <form
               className="auth-form"
@@ -265,6 +302,10 @@ import { Alert as MuiAlert } from "@mui/material";
                       </a>
                     </div>
                   </div>
+                ) : portalAuthRole === "staff" ? (
+                  <p className="auth-subtitle" style={{ margin: 0 }}>
+                    Staff accounts use administrator credentials.
+                  </p>
                 ) : pendingApproval ? (
                   <div className="auth-social" style={{ width: "100%" }}>
                     <p className="auth-subtitle" style={{ marginBottom: "0.75rem" }}>
@@ -283,8 +324,7 @@ import { Alert as MuiAlert } from "@mui/material";
                     className="auth-social-btn"
                     type="button"
                     onClick={() => {
-                      window.location.href =
-                        "/accounts/google/login/?process=login&next=/app/signin%3Foauth%3Dgoogle";
+                      window.location.href = getGoogleLoginUrl();
                     }}
                   >
                     <svg className="auth-social-icon" viewBox="0 0 24 24">
@@ -309,16 +349,18 @@ import { Alert as MuiAlert } from "@mui/material";
                   </button>
                 )}
               </div>
-              <div className="auth-footer">
-                Don't have an account?{" "}
-                <button
-                  type="button"
-                  className="link-button"
-                  onClick={() => setActiveTab("signup")}
-                >
-                  Sign up
-                </button>
-              </div>
+              {portalAuthRole !== "staff" && (
+                <div className="auth-footer">
+                  Don't have an account?{" "}
+                  <button
+                    type="button"
+                    className="link-button"
+                    onClick={() => navigateAuthTab(setActiveTab, "signup")}
+                  >
+                    Sign up
+                  </button>
+                </div>
+              )}
             </form>
           </div>
         </div>
@@ -338,16 +380,26 @@ import { Alert as MuiAlert } from "@mui/material";
       setActiveTab,
       signUpLoading,
     } = ctx;
+    const portalRoleLabel = getPortalRoleLabel();
+    const portalAuthRole = getPortalAuthRole();
     const isAuthLoading = signUpLoading;
+    const isMentorSignup =
+      portalAuthRole === "mentor" || signUpForm.role === "mentor";
+    const MENTOR_TYPE_OPTIONS = [
+      {
+        value: "Senior IT Student",
+        title: "Student mentor",
+        description: "Senior IT student mentoring peers",
+      },
+      {
+        value: "Instructor",
+        title: "Instructor",
+        description: "Faculty member mentoring students",
+      },
+    ];
 
-    function goBackToLandingOrPrevious() {
-      // Prefer "previous page" when possible, but always fall back to landing.
-      try {
-        if (window.history.length > 1) window.history.back();
-        else window.location.href = "/";
-      } catch {
-        window.location.href = "/";
-      }
+    function goBackToPortal() {
+      window.location.href = "/portal/";
     }
 
     return (
@@ -388,7 +440,7 @@ import { Alert as MuiAlert } from "@mui/material";
             <button
               type="button"
               className="auth-back-btn"
-              onClick={goBackToLandingOrPrevious}
+              onClick={goBackToPortal}
               aria-label="Go back"
               title="Go back"
             >
@@ -406,7 +458,11 @@ import { Alert as MuiAlert } from "@mui/material";
               </svg>
             </button>
             <h2 className="auth-title">Sign Up</h2>
-            <p className="auth-subtitle">Create your account to get started</p>
+            <p className="auth-subtitle">
+              {portalRoleLabel
+                ? `Create your ${portalRoleLabel} account`
+                : "Create your account to get started"}
+            </p>
             <form
               className="auth-form"
               onSubmit={(e) => {
@@ -416,19 +472,68 @@ import { Alert as MuiAlert } from "@mui/material";
             >
               <div className="auth-field">
                 <label>Role</label>
-                <select
-                  value={signUpForm.role}
-                  onChange={(e) =>
-                    setSignUpForm({ ...signUpForm, role: e.target.value })
-                  }
+                <p
+                  className="auth-role-locked"
+                  style={{
+                    margin: 0,
+                    padding: "0.65rem 0.85rem",
+                    borderRadius: "8px",
+                    background: "rgba(99, 102, 241, 0.12)",
+                    color: "rgba(255, 255, 255, 0.95)",
+                    border: "1px solid rgba(255, 255, 255, 0.12)",
+                    fontWeight: 600,
+                  }}
                 >
-                  {ROLE_OPTIONS.map((r) => (
-                    <option key={r.value} value={r.value}>
-                      {r.label}
-                    </option>
-                  ))}
-                </select>
+                  {portalRoleLabel ||
+                    (signUpForm.role === "mentee" ? "Mentee" : "Mentor")}
+                </p>
+                <small className="muted">
+                  This role is selected from the role portal.
+                </small>
               </div>
+              {isMentorSignup && (
+                <div className="auth-field">
+                  <label>Mentor type *</label>
+                  <p className="muted" style={{ margin: "0 0 10px" }}>
+                    Coordinators use this to verify whether you are a student
+                    mentor or an instructor.
+                  </p>
+                  <div
+                    className="auth-mentor-type-picker"
+                    role="radiogroup"
+                    aria-label="Mentor type"
+                  >
+                    {MENTOR_TYPE_OPTIONS.map((option) => {
+                      const active = signUpForm.mentor_role === option.value;
+                      return (
+                        <button
+                          key={option.value}
+                          type="button"
+                          role="radio"
+                          aria-checked={active}
+                          className={
+                            "auth-mentor-type-option" +
+                            (active ? " is-active" : "")
+                          }
+                          onClick={() =>
+                            setSignUpForm({
+                              ...signUpForm,
+                              mentor_role: option.value,
+                            })
+                          }
+                        >
+                          <span className="auth-mentor-type-option-title">
+                            {option.title}
+                          </span>
+                          <span className="auth-mentor-type-option-desc">
+                            {option.description}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
               <div className="auth-field">
                 <label>First name</label>
                 <input
@@ -471,7 +576,7 @@ import { Alert as MuiAlert } from "@mui/material";
                 />
               </div>
               <div className="auth-field">
-                <label>Student verification document</label>
+                <label>Academic mentoring application form</label>
                 <input
                   type="file"
                   accept=".pdf,.png,.jpg,.jpeg"
@@ -485,7 +590,7 @@ import { Alert as MuiAlert } from "@mui/material";
                   }}
                 />
                 <small className="muted">
-                  Upload your registration form, current school ID, or COR (PDF/JPG/PNG, max 5 MB).
+                  Upload your completed academic mentoring application form for account review (PDF/JPG/PNG, max 5 MB).
                 </small>
                 {signUpForm.student_verification_document && (
                   <small className="muted">
@@ -605,7 +710,7 @@ import { Alert as MuiAlert } from "@mui/material";
                 <button
                   type="button"
                   className="link-button"
-                  onClick={() => setActiveTab("signin")}
+                  onClick={() => navigateAuthTab(setActiveTab, "signin")}
                 >
                   Sign in
                 </button>

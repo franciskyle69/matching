@@ -3,7 +3,7 @@ from django.http import JsonResponse
 from django.views.decorators.http import require_GET, require_http_methods
 
 from accounts.models import get_user_display_name
-from matching.models import UserPost, PostComment, MentoringSession, MenteeMentorRequest
+from matching.models import UserPost, PostComment, MenteeMentorRequest
 
 from ..views import (
     audit_log,
@@ -243,14 +243,11 @@ def profile_stats(request):
     mentee_profile = getattr(request.user, "mentee_profile", None) if user_id == request.user.id else None
 
     connections = 0
-    sessions_completed = 0
 
     if mentor_profile:
         connections = MenteeMentorRequest.objects.filter(mentor=mentor_profile, accepted=True).count()
-        sessions_completed = MentoringSession.objects.filter(mentor=mentor_profile, status="completed").count()
     elif mentee_profile:
         connections = MenteeMentorRequest.objects.filter(mentee=mentee_profile, accepted=True).count()
-        sessions_completed = MentoringSession.objects.filter(mentee=mentee_profile, status="completed").count()
 
     images_count = (
         UserPost.objects.filter(author_id=user_id)
@@ -262,7 +259,6 @@ def profile_stats(request):
     return JsonResponse({
         "posts_count": posts_count,
         "connections": connections,
-        "sessions_completed": sessions_completed,
         "images_count": images_count,
     })
 

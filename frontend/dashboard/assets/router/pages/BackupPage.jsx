@@ -65,7 +65,7 @@
       <div className="card backup-page">
         <h1 className="page-title">Backup & Restore</h1>
         <p className="page-subtitle">
-          Save or restore a full snapshot of the site data (users, sessions,
+          Save or restore a full snapshot of the site data (users, matching data,
           announcements, and more).
         </p>
 
@@ -102,7 +102,7 @@
           </h2>
           <p className="backup-card-desc">
             Creates a complete backup of all collections as a database backup file: users,
-            mentors, mentees, subjects, sessions, announcements, and more.
+            mentors, mentees, subjects, announcements, and more.
             Stored in <code>{backupDir || "backups/"}</code>.
           </p>
           <div className="backup-card-actions">

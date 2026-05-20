@@ -5,7 +5,6 @@ from django.http import JsonResponse
 from django.views.decorators.http import require_GET
 
 from accounts.models import get_user_display_name
-from matching.models import MentoringSession
 
 
 User = get_user_model()
@@ -33,8 +32,7 @@ def search(request):
     """
     Lightweight global search used by the dashboard topbar.
 
-    Returns a small mixed list of users (mentors/mentees) and sessions so the
-    frontend can show autocomplete suggestions.
+    Returns a small list of users (mentors/mentees) for autocomplete suggestions.
     """
     q = (request.GET.get("q") or "").strip()
     if not q:
@@ -56,19 +54,6 @@ def search(request):
         .distinct()[:10]
     )
 
-    session_filter = (
-        Q(subject__name__icontains=q)
-        | Q(topic__name__icontains=q)
-        | Q(mentor__user__username__icontains=q)
-        | Q(mentee__user__username__icontains=q)
-    )
-    sessions = (
-        MentoringSession.objects.select_related(
-            "mentor__user", "mentee__user", "subject", "topic"
-        )
-        .filter(session_filter)[:5]
-    )
-
     results = []
 
     for u in users:
@@ -80,27 +65,6 @@ def search(request):
                 "label": get_user_display_name(u) or u.username,
                 "role": role,
                 "avatar_url": _user_avatar(u),
-            }
-        )
-
-    for s in sessions:
-        mentor_user = getattr(s.mentor, "user", None)
-        mentee_user = getattr(s.mentee, "user", None)
-        mentor_name = get_user_display_name(mentor_user) if mentor_user else ""
-        mentee_name = get_user_display_name(mentee_user) if mentee_user else ""
-        mentor_name = mentor_name or "Mentor"
-        mentee_name = mentee_name or "Mentee"
-        subject_name = s.subject.name if s.subject else "Session"
-        topic_name = s.topic.name if s.topic else ""
-        label = subject_name
-        if topic_name:
-            label += f" · {topic_name}"
-        label += f" with {mentor_name} / {mentee_name}"
-        results.append(
-            {
-                "type": "session",
-                "id": s.id,
-                "label": label,
             }
         )
 

@@ -4,6 +4,9 @@
   const { useContext } = React;
   const AppContext = window.DashboardApp.AppContext;
   const PLACEHOLDER_AVATAR = window.DashboardApp.PLACEHOLDER_AVATAR || "";
+  const MentorRoleBadge =
+    (window.DashboardApp.Utils && window.DashboardApp.Utils.MentorRoleBadge) ||
+    null;
 
   function InfoRow({ icon, label, value }) {
     if (!value && value !== 0) return null;
@@ -85,7 +88,11 @@
               <h1 className="prof-name">{match.mentor_username}</h1>
               <p className="prof-role-line">
                 <span className="prof-role-badge prof-role-badge--mentor">Mentor</span>
-                {mentor.role && <span className="prof-role-tag">{mentor.role}</span>}
+                {mentor.role && MentorRoleBadge ? (
+                  <MentorRoleBadge role={mentor.role} prominent />
+                ) : mentor.role ? (
+                  <span className="prof-role-tag">{mentor.role}</span>
+                ) : null}
               </p>
             </div>
             <div className="prof-hero-actions">

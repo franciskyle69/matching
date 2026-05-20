@@ -27,7 +27,6 @@ if (typeof globalThis.window !== "undefined") {
     },
     MAIN_TABS: [
       { id: "home", label: "Home" },
-      { id: "sessions", label: "Sessions" },
       { id: "matching", label: "Matching" },
       { id: "settings", label: "Settings" },
     ],

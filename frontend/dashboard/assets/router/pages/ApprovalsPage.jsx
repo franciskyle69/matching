@@ -4,7 +4,7 @@
   const { useContext, useEffect, useMemo, useRef, useState } = React;
   const AppContext = window.DashboardApp.AppContext;
   const Utils = window.DashboardApp.Utils || {};
-  const { LoadingSpinner } = Utils;
+  const { LoadingSpinner, MentorRoleBadge } = Utils;
 
   function getInitials(name, fallback) {
     const source = (name || fallback || "").trim();
@@ -136,6 +136,13 @@
             <div className="approval-row-name-block">
               <h3 className="approval-row-name">{displayName}</h3>
               <p className="approval-row-email">{m.email || "No email"}</p>
+              {type === "mentor" && m.role && MentorRoleBadge ? (
+                <MentorRoleBadge role={m.role} prominent className="approval-mentor-type-badge" />
+              ) : type === "mentor" ? (
+                <span className="approval-badge approval-badge-incomplete approval-mentor-type-missing">
+                  Mentor type not set
+                </span>
+              ) : null}
             </div>
           </div>
 

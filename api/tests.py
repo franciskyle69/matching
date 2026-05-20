@@ -1,114 +1,108 @@
 import json
-from datetime import timedelta
 
 from django.contrib.auth.models import User
 from django.test import TestCase
-from django.utils import timezone
 
 from profiles.models import MentorProfile, MenteeProfile
-from matching.models import MentoringSession, Notification, Subject
+from matching.models import Notification
 
 
 class ApiAuthTests(TestCase):
     def setUp(self):
         self.password = "TestPass123!"
-        self.user = User.objects.create_user(username="mentor1", email="m1@test.com", password=self.password)
+        self.user = User.objects.create_user(
+            username="mentor1",
+            email="mentor1@student.buksu.edu.ph",
+            password=self.password,
+        )
         MentorProfile.objects.create(user=self.user, program="BSIT", year_level=4, approved=True)
 
     def test_login_success(self):
         res = self.client.post(
             "/api/auth/login/",
-            data=json.dumps({"email": "m1@test.com", "password": self.password}),
+            data=json.dumps(
+                {
+                    "email": "mentor1@student.buksu.edu.ph",
+                    "password": self.password,
+                    "expected_role": "mentor",
+                }
+            ),
             content_type="application/json",
         )
         self.assertEqual(res.status_code, 200)
+
+    def test_login_rejects_wrong_portal_role(self):
+        mentee_user = User.objects.create_user(
+            username="mentee1",
+            email="mentee1@student.buksu.edu.ph",
+            password=self.password,
+        )
+        MenteeProfile.objects.create(user=mentee_user, program="BSIT", year_level=1)
+
+        res = self.client.post(
+            "/api/auth/login/",
+            data=json.dumps(
+                {
+                    "email": "mentee1@student.buksu.edu.ph",
+                    "password": self.password,
+                    "expected_role": "mentor",
+                }
+            ),
+            content_type="application/json",
+        )
+
+        self.assertEqual(res.status_code, 403)
+        self.assertIn("not Mentor", res.json()["error"])
+
+    def test_login_requires_portal_role(self):
+        res = self.client.post(
+            "/api/auth/login/",
+            data=json.dumps(
+                {
+                    "email": "mentor1@student.buksu.edu.ph",
+                    "password": self.password,
+                }
+            ),
+            content_type="application/json",
+        )
+
+        self.assertEqual(res.status_code, 400)
 
     def test_login_rate_limit(self):
         for _ in range(8):
             self.client.post(
                 "/api/auth/login/",
-                data=json.dumps({"email": "m1@test.com", "password": "wrong"}),
+                data=json.dumps(
+                    {
+                        "email": "mentor1@student.buksu.edu.ph",
+                        "password": "wrong",
+                        "expected_role": "mentor",
+                    }
+                ),
                 content_type="application/json",
             )
         res = self.client.post(
             "/api/auth/login/",
-            data=json.dumps({"email": "m1@test.com", "password": "wrong"}),
+            data=json.dumps(
+                {
+                    "email": "mentor1@student.buksu.edu.ph",
+                    "password": "wrong",
+                    "expected_role": "mentor",
+                }
+            ),
             content_type="application/json",
         )
         self.assertEqual(res.status_code, 429)
 
 
-class ApiSessionTests(TestCase):
+class ApiNotificationsTests(TestCase):
     def setUp(self):
-        self.mentor_user = User.objects.create_user(username="mentor2", email="m2@test.com", password="Pass123!")
-        self.mentee_user = User.objects.create_user(username="mentee2", email="e2@test.com", password="Pass123!")
-        self.subject = Subject.objects.create(name="Intro to IT")
-        self.mentor = MentorProfile.objects.create(
-            user=self.mentor_user,
-            program="BSIT",
-            year_level=4,
-            approved=True,
-            subjects=[self.subject.name],
-        )
-        self.mentee = MenteeProfile.objects.create(
-            user=self.mentee_user,
-            program="BSIT",
-            year_level=1,
-            subjects=[self.subject.name],
-        )
-
-        self.client.force_login(self.mentor_user)
-
-    def test_create_session_and_conflict(self):
-        scheduled_at = (timezone.now() + timedelta(days=1)).isoformat()
-        res = self.client.post(
-            "/api/sessions/create/",
-            data=json.dumps(
-                {
-                    "mentee_id": self.mentee.id,
-                    "subject_id": self.subject.id,
-                    "scheduled_at": scheduled_at,
-                    "duration_minutes": 60,
-                }
-            ),
-            content_type="application/json",
-        )
-        self.assertEqual(res.status_code, 200)
-        res_conflict = self.client.post(
-            "/api/sessions/create/",
-            data=json.dumps(
-                {
-                    "mentee_id": self.mentee.id,
-                    "subject_id": self.subject.id,
-                    "scheduled_at": scheduled_at,
-                    "duration_minutes": 60,
-                }
-            ),
-            content_type="application/json",
-        )
-        self.assertEqual(res_conflict.status_code, 400)
-
-    def test_create_session_rejects_subject_tampering(self):
-        other_subject, _ = Subject.objects.get_or_create(name="Computer Programming")
-        scheduled_at = (timezone.now() + timedelta(days=2)).isoformat()
-        res = self.client.post(
-            "/api/sessions/create/",
-            data=json.dumps(
-                {
-                    "mentee_id": self.mentee.id,
-                    "subject_id": other_subject.id,
-                    "scheduled_at": scheduled_at,
-                    "duration_minutes": 60,
-                }
-            ),
-            content_type="application/json",
-        )
-        self.assertEqual(res.status_code, 400)
-        self.assertIn("matched", (res.json().get("error") or "").lower())
+        self.user = User.objects.create_user(username="mentor2", email="m2@test.com", password="Pass123!")
+        self.client.force_login(self.user)
 
     def test_notifications_mark_all(self):
-        Notification.objects.create(user=self.mentor_user, message="Test 1")
-        Notification.objects.create(user=self.mentor_user, message="Test 2")
+        Notification.objects.create(user=self.user, message="Test 1")
+        Notification.objects.create(user=self.user, message="Test 2")
         res = self.client.post("/api/notifications/mark-all-read/")
         self.assertEqual(res.status_code, 200)
 
@@ -126,6 +120,3 @@ class ApiMatchingTests(TestCase):
     def test_run_matching_admin(self):
         res = self.client.get("/api/matching/run/")
         self.assertEqual(res.status_code, 200)
-from django.test import TestCase
-
-# Create your tests here.

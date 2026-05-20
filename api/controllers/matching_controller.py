@@ -321,9 +321,6 @@ def mentee_choose_mentor(request):
             req.accepted_at = timezone.now()
             req.save(update_fields=["accepted", "accepted_at"])
 
-    cache.delete(f"sessions_list:{request.user.id}")
-    cache.delete(f"sessions_list:{mentor.user_id}")
-
     mentee_name = get_user_display_name(mentee_profile.user) or mentee_profile.user.username
     mentor_name = get_user_display_name(mentor.user) or mentor.user.username
 
@@ -334,8 +331,8 @@ def mentee_choose_mentor(request):
     )
     Notification.objects.create(
         user=mentee_profile.user,
-        message=f"You are now paired with {mentor_name}. You can schedule sessions in Sessions.",
-        action_tab="sessions",
+        message=f"You are now paired with {mentor_name}. Open Matching to view your mentor.",
+        action_tab="matching",
     )
 
     _send_pairing_email(
@@ -344,7 +341,7 @@ def mentee_choose_mentor(request):
         (
             f"Hi {mentor_name},\n\n"
             f"{mentee_name} has been paired with you as a mentee.\n\n"
-            "Open Matching or Sessions in the dashboard to continue."
+            "Open Matching in the dashboard to continue."
         ),
     )
     _send_pairing_email(
@@ -353,7 +350,7 @@ def mentee_choose_mentor(request):
         (
             f"Hi {mentee_name},\n\n"
             f"You are now paired with {mentor_name}.\n\n"
-            "You can schedule sessions from the Sessions tab."
+            "Open Matching in the dashboard to view your mentor and stay in touch."
         ),
     )
 

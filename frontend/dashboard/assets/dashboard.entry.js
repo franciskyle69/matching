@@ -17,7 +17,6 @@ async function loadDashboardModules() {
 	await import("./router/pages/HomePage.jsx");
 	await import("./router/pages/MatchingPage.jsx");
 	await import("./router/pages/AnnouncementsPage.jsx");
-	await import("./router/pages/SessionsPage.jsx");
 	await import("./router/pages/NotificationsPage.jsx");
 	await import("./router/pages/ApprovalsPage.jsx");
 	await import("./router/pages/SubjectsPage.jsx");
@@ -28,6 +27,7 @@ async function loadDashboardModules() {
 	await import("./router/pages/ProfilePage.jsx");
 	await import("./router/pages/MentorProfilePage.jsx");
 	await import("./router/pages/CompleteProfilePage.jsx");
+	await import("./router/pages/MentoringPreferencesPage.jsx");
 	await import("./router/routes.jsx");
 	await import("./ErrorBoundary.jsx");
 	await import("./MainContent.jsx");

@@ -1,5 +1,5 @@
 """
-Announcements (mentor posts) and comments on announcements or sessions (Classroom-style).
+Announcements (mentor posts) and comments on announcements (Classroom-style).
 Supports targeting: all mentees (default) or specific user(s) via recipient_ids.
 Soft delete: announcements with deleted_at set are excluded from lists.
 """
@@ -14,7 +14,6 @@ from matching.models import (
     Announcement,
     AnnouncementRecipient,
     Comment,
-    MentoringSession,
     MenteeMentorRequest,
 )
 from profiles.models import MenteeProfile
@@ -42,17 +41,13 @@ def _announcements_queryset_for_user(request):
             .order_by("-created_at")
         )
     if mentee and get_mentee_approved(mentee):
-        session_mentor_ids = MentoringSession.objects.filter(mentee=mentee).values_list(
-            "mentor_id", flat=True
-        )
         request_mentor_ids = MenteeMentorRequest.objects.filter(
-            mentee=mentee
+            mentee=mentee, accepted=True
         ).values_list("mentor_id", flat=True)
-        mentor_ids = list(set(list(session_mentor_ids) + list(request_mentor_ids)))
+        mentor_ids = list(request_mentor_ids)
         base = Announcement.objects.filter(
             mentor_id__in=mentor_ids, deleted_at__isnull=True
         ).select_related("mentor__user")
-        # Show if announcement has no recipients (goes to all) OR current user is in recipients
         no_recip = ~Exists(AnnouncementRecipient.objects.filter(announcement_id=OuterRef("pk")))
         user_recip = Exists(
             AnnouncementRecipient.objects.filter(announcement_id=OuterRef("pk"), user=user)
@@ -105,8 +100,8 @@ def announcements_list(request):
     mentor = getattr(request.user, "mentor_profile", None)
     if mentor and get_mentor_approved(mentor):
         mentee_profiles = MenteeProfile.objects.filter(
-            Q(mentoringsession__mentor=mentor)
-            | Q(menteementorrequest__mentor=mentor)
+            menteementorrequest__mentor=mentor,
+            menteementorrequest__accepted=True,
         ).select_related("user").distinct()
         data["mentee_options"] = [
             {
@@ -122,14 +117,12 @@ def announcements_list(request):
 
 
 def _mentee_user_ids_for_mentor(mentor_profile):
-    """User IDs of mentees associated with this mentor (sessions or any requests)."""
-    session_ids = MentoringSession.objects.filter(mentor=mentor_profile).values_list(
-        "mentee__user_id", flat=True
+    """User IDs of mentees with an accepted pairing to this mentor."""
+    return set(
+        MenteeMentorRequest.objects.filter(
+            mentor=mentor_profile, accepted=True
+        ).values_list("mentee__user_id", flat=True)
     )
-    request_ids = MenteeMentorRequest.objects.filter(
-        mentor=mentor_profile
-    ).values_list("mentee__user_id", flat=True)
-    return set(list(session_ids) + list(request_ids))
 
 
 @login_required
@@ -190,42 +183,26 @@ def announcement_soft_delete(request, announcement_id):
 @login_required
 @require_GET
 def comments_list(request, target_type, target_id):
-    """List comments for an announcement or session. target_type: 'announcement' | 'session'."""
+    """List comments for an announcement."""
     target_id = int(target_id)
-    if target_type == "announcement":
-        qs = Comment.objects.filter(announcement_id=target_id).select_related("author").order_by("created_at")
-        if not qs.exists():
-            ann = Announcement.objects.filter(id=target_id).first()
-            if not ann:
-                return JsonResponse({"error": "Announcement not found."}, status=404)
-            visible = _announcements_queryset_for_user(request).filter(id=target_id).exists()
-            if not visible:
-                return JsonResponse({"error": "Not allowed to view this announcement."}, status=403)
-    elif target_type == "session":
-        qs = Comment.objects.filter(session_id=target_id).select_related("author").order_by("created_at")
-        if not qs.exists():
-            session = MentoringSession.objects.filter(id=target_id).first()
-            if not session:
-                return JsonResponse({"error": "Session not found."}, status=404)
-            user = request.user
-            mentor = getattr(user, "mentor_profile", None)
-            mentee = getattr(user, "mentee_profile", None)
-            allowed = (
-                (mentor and session.mentor_id == mentor.id)
-                or (mentee and session.mentee_id == mentee.id)
-                or user.is_staff
-            )
-            if not allowed:
-                return JsonResponse({"error": "Not allowed to view this session."}, status=403)
-    else:
+    if target_type != "announcement":
         return JsonResponse({"error": "Invalid target_type."}, status=400)
+
+    qs = Comment.objects.filter(announcement_id=target_id).select_related("author").order_by("created_at")
+    if not qs.exists():
+        ann = Announcement.objects.filter(id=target_id).first()
+        if not ann:
+            return JsonResponse({"error": "Announcement not found."}, status=404)
+        visible = _announcements_queryset_for_user(request).filter(id=target_id).exists()
+        if not visible:
+            return JsonResponse({"error": "Not allowed to view this announcement."}, status=403)
     return JsonResponse({"comments": [_serialize_comment(c) for c in qs]})
 
 
 @login_required
 @require_http_methods(["POST"])
 def comment_create(request):
-    """Create a comment on an announcement or session. Body: target_type, target_id, content."""
+    """Create a comment on an announcement. Body: target_type, target_id, content."""
     payload = _get_payload(request)
     target_type = (_get_str(payload, "target_type") or "").strip().lower()
     target_id = payload.get("target_id")
@@ -237,31 +214,16 @@ def comment_create(request):
     if not content:
         return JsonResponse({"error": "Content is required."}, status=400)
 
-    if target_type == "announcement":
-        ann = Announcement.objects.filter(id=target_id).first()
-        if not ann:
-            return JsonResponse({"error": "Announcement not found."}, status=404)
-        visible = _announcements_queryset_for_user(request).filter(id=target_id).exists()
-        if not visible:
-            return JsonResponse({"error": "Not allowed to comment on this announcement."}, status=403)
-        comment = Comment.objects.create(author=request.user, announcement=ann, content=content)
-    elif target_type == "session":
-        session = MentoringSession.objects.filter(id=target_id).first()
-        if not session:
-            return JsonResponse({"error": "Session not found."}, status=404)
-        user = request.user
-        mentor = getattr(user, "mentor_profile", None)
-        mentee = getattr(user, "mentee_profile", None)
-        allowed = (
-            (mentor and session.mentor_id == mentor.id)
-            or (mentee and session.mentee_id == mentee.id)
-            or user.is_staff
-        )
-        if not allowed:
-            return JsonResponse({"error": "Not allowed to comment on this session."}, status=403)
-        comment = Comment.objects.create(author=request.user, session=session, content=content)
-    else:
-        return JsonResponse({"error": "target_type must be 'announcement' or 'session'."}, status=400)
+    if target_type != "announcement":
+        return JsonResponse({"error": "target_type must be 'announcement'."}, status=400)
+
+    ann = Announcement.objects.filter(id=target_id).first()
+    if not ann:
+        return JsonResponse({"error": "Announcement not found."}, status=404)
+    visible = _announcements_queryset_for_user(request).filter(id=target_id).exists()
+    if not visible:
+        return JsonResponse({"error": "Not allowed to comment on this announcement."}, status=403)
+    comment = Comment.objects.create(author=request.user, announcement=ann, content=content)
 
     audit_log(request.user, "create", "comment", comment.id)
     return JsonResponse({"comment": _serialize_comment(comment)})

@@ -427,6 +427,7 @@
     if (!ctx || !ctx.user) return null;
     const {
       user,
+      setActiveTab,
       setError,
       addToast,
       settingsForm,
@@ -495,7 +496,7 @@
       menteeQuestionnaireSavedRef.current ===
       serializeMenteeQuestionnaire(menteeMatching);
 
-    const questionnaireSaving = mentorProfileSaving || menteeMatchingSaving;
+    const questionnaireSaving = mentorProfileSaving;
         // Sync the saved ref whenever menteeMatching changes and we're not actively saving
         useEffect(() => {
           if (!menteeMatchingSaving) {
@@ -511,8 +512,8 @@
             }
           }, [mentorProfile, mentorProfileSaving]);
     const questionnaireSavingText = mentorProfileSaving
-      ? "Saving mentor questionnaire..."
-      : "Saving mentee questionnaire...";
+      ? "Saving mentor matching profile..."
+      : "";
 
     const mentorProfileJustSaved =
       mentorProfileSavedAt > 0 && Date.now() - mentorProfileSavedAt < 2000;
@@ -1355,11 +1356,36 @@
               </div>
             </SettingsAccordionCard>
           )}
-          {(user.role === "mentor" || user.role === "mentee") && (
+          {user.role === "mentee" && user.mentee_general_info_completed && (
+            <SettingsAccordionCard
+              id="settings-mentoring-preferences"
+              title="Mentoring preferences"
+              subtitle="Choose the subjects you want mentoring in, topics you find challenging, and when you are available."
+              icon={<DashboardIcon name="sparkles" size={20} />}
+              isOpen={openSections.matching}
+              onToggle={() => toggleSection("matching")}
+              className="settings-card--matching"
+            >
+              <p className="field-helper" style={{ marginBottom: "12px" }}>
+                Subject selection and scheduling live on a dedicated page under
+                Account Management.
+              </p>
+              <div className="btn-row">
+                <button
+                  type="button"
+                  className="btn"
+                  onClick={() => setActiveTab("mentoring-preferences")}
+                >
+                  Open mentoring preferences
+                </button>
+              </div>
+            </SettingsAccordionCard>
+          )}
+          {user.role === "mentor" && (
             <SettingsAccordionCard
               id="settings-matching"
-              title="Matching questionnaire"
-              subtitle="Keep your mentoring preferences up to date so we can recommend the best mentors and mentees for you."
+              title="Mentor matching profile"
+              subtitle="Keep the subjects and topics you mentor up to date so we can recommend the right mentees for you."
               icon={<DashboardIcon name="sparkles" size={20} />}
               isOpen={openSections.matching}
               onToggle={() => toggleSection("matching")}
@@ -1785,364 +1811,6 @@
                         ? "Mentor questionnaire saved successfully."
                         : ""}
                   </p>
-                </div>
-              )}
-
-              {user.role === "mentee" && (
-                <div className="matching-questionnaire-flow">
-                  {user.mentee_general_info_completed ? (
-                    <>
-                      <section className="matching-section-card">
-                        <div className="settings-section-label">
-                          Subjects you find challenging
-                        </div>
-                        <div className="checkbox-group matching-questionnaire-pill-group">
-                          {SUBJECT_CHOICES.map((label) => {
-                            const checked =
-                              Array.isArray(menteeMatching.subjects) &&
-                              menteeMatching.subjects.includes(label);
-                            return (
-                              <label key={label} className="checkbox-row">
-                                <input
-                                  type="checkbox"
-                                  checked={!!checked}
-                                  onChange={(e) => {
-                                    const current = Array.isArray(
-                                      menteeMatching.subjects,
-                                    )
-                                      ? [...menteeMatching.subjects]
-                                      : [];
-                                    if (e.target.checked) {
-                                      if (!current.includes(label))
-                                        current.push(label);
-                                    } else {
-                                      const idx = current.indexOf(label);
-                                      if (idx >= 0) current.splice(idx, 1);
-                                    }
-                                    setMenteeMatching({
-                                      ...menteeMatching,
-                                      subjects: current,
-                                      topics: filterTopicsForSubjects(
-                                        current,
-                                        menteeMatching.topics || [],
-                                      ),
-                                    });
-                                  }}
-                                />
-                                {label}
-                              </label>
-                            );
-                          })}
-                        </div>
-                      </section>
-
-                      <section className="matching-section-card">
-                        <div className="settings-section-label">
-                          Topics you have difficulty with
-                        </div>
-                        <div className="checkbox-group matching-questionnaire-pill-group">
-                          {(() => {
-                            const allowedTopics = getAllowedTopicsForSubjects(
-                              menteeMatching.subjects || [],
-                            );
-                            const topicEnabled = allowedTopics.length > 0;
-                            return TOPIC_CHOICES.map((label) => {
-                              const checked =
-                                Array.isArray(menteeMatching.topics) &&
-                                menteeMatching.topics.includes(label);
-                              const disabled =
-                                !topicEnabled || !allowedTopics.includes(label);
-                              return (
-                                <label
-                                  key={label}
-                                  className={
-                                    "checkbox-row" +
-                                    (disabled ? " checkbox-row--disabled" : "")
-                                  }
-                                >
-                                  <input
-                                    type="checkbox"
-                                    disabled={disabled}
-                                    checked={!!checked}
-                                    onChange={(e) => {
-                                      if (disabled) return;
-                                      const current = Array.isArray(
-                                        menteeMatching.topics,
-                                      )
-                                        ? [...menteeMatching.topics]
-                                        : [];
-                                      if (e.target.checked) {
-                                        if (!current.includes(label))
-                                          current.push(label);
-                                      } else {
-                                        const idx = current.indexOf(label);
-                                        if (idx >= 0) current.splice(idx, 1);
-                                      }
-                                      setMenteeMatching({
-                                        ...menteeMatching,
-                                        topics: filterTopicsForSubjects(
-                                          menteeMatching.subjects || [],
-                                          current,
-                                        ),
-                                      });
-                                    }}
-                                  />
-                                  {label}
-                                </label>
-                              );
-                            });
-                          })()}
-                        </div>
-                        <p className="field-helper">
-                          Select one or more subjects first to unlock matching
-                          topics.
-                        </p>
-                      </section>
-
-                      <section className="matching-section-card">
-                        <div className="settings-section-label">
-                          Difficulty level (1–5)
-                        </div>
-                        <p className="field-helper">
-                          1 = course feels very easy right now, 5 = you&apos;re
-                          finding it very difficult and need a lot of help.
-                        </p>
-                        <div className="checkbox-group matching-questionnaire-levels">
-                          {[1, 2, 3, 4, 5].map((n) => (
-                            <label key={n} className="checkbox-row">
-                              <input
-                                type="radio"
-                                name="mentee-difficulty"
-                                checked={menteeMatching.difficulty_level === n}
-                                onChange={() =>
-                                  setMenteeMatching({
-                                    ...menteeMatching,
-                                    difficulty_level: n,
-                                  })
-                                }
-                              />
-                              {n}
-                            </label>
-                          ))}
-                        </div>
-                      </section>
-
-                      <section className="matching-section-card">
-                        <div className="settings-section-label">
-                          Available time
-                        </div>
-                        <p className="field-helper">
-                          Add one or more time ranges between 07:00 and 22:00.
-                        </p>
-                        <div className="time-range-row">
-                          <TimePickerField
-                            id="mentee-start-time"
-                            label="Start time"
-                            min={MIN_AVAILABLE_TIME}
-                            max={MAX_AVAILABLE_TIME}
-                            value={menteeAvailabilityDraft.start}
-                            onChange={(e) => {
-                              setMenteeAvailabilityError("");
-                              setMenteeAvailabilityDraft({
-                                ...menteeAvailabilityDraft,
-                                start: e.target.value,
-                              });
-                            }}
-                          />
-                          <TimePickerField
-                            id="mentee-end-time"
-                            label="End time"
-                            min={MIN_AVAILABLE_TIME}
-                            max={MAX_AVAILABLE_TIME}
-                            value={menteeAvailabilityDraft.end}
-                            onChange={(e) => {
-                              setMenteeAvailabilityError("");
-                              setMenteeAvailabilityDraft({
-                                ...menteeAvailabilityDraft,
-                                end: e.target.value,
-                              });
-                            }}
-                          />
-                        </div>
-                        <div
-                          className="btn-row"
-                          style={{ marginTop: "8px", marginBottom: "4px" }}
-                        >
-                          <button
-                            type="button"
-                            className="btn secondary small"
-                            disabled={
-                              !menteeAvailabilityDraft.start ||
-                              !menteeAvailabilityDraft.end
-                            }
-                            onClick={() => {
-                              const { error, next } = buildAvailabilityUpdate(
-                                menteeMatching.availability,
-                                menteeAvailabilityDraft,
-                                menteeAvailabilityEditingIndex,
-                              );
-                              if (!next) {
-                                setMenteeAvailabilityError(error);
-                                return;
-                              }
-                              setMenteeAvailabilityError("");
-                              const updated = {
-                                ...menteeMatching,
-                                availability: next,
-                              };
-                              setMenteeMatching(updated);
-                              setMenteeAvailabilityDraft({ start: "", end: "" });
-                              setMenteeAvailabilityEditingIndex(null);
-                            }}
-                          >
-                            {menteeAvailabilityEditingIndex != null
-                              ? "Update timeframe"
-                              : "Add timeframe"}
-                          </button>
-                          {menteeAvailabilityEditingIndex != null && (
-                            <button
-                              type="button"
-                              className="btn ghost small"
-                              onClick={() => {
-                                setMenteeAvailabilityEditingIndex(null);
-                                setMenteeAvailabilityDraft({ start: "", end: "" });
-                                setMenteeAvailabilityError("");
-                              }}
-                            >
-                              Cancel edit
-                            </button>
-                          )}
-                        </div>
-                        {menteeAvailabilityError && (
-                          <p
-                            className="matching-inline-feedback matching-inline-feedback--error"
-                            role="alert"
-                          >
-                            {menteeAvailabilityError}
-                          </p>
-                        )}
-                        <p className="field-helper">
-                          You can add multiple availability ranges between 07:00
-                          and 22:00. We&apos;ll match you with people whose
-                          times overlap these ranges.
-                        </p>
-                        {Array.isArray(menteeMatching.availability) &&
-                          menteeMatching.availability.length > 0 && (
-                            <div className="availability-list" aria-live="polite">
-                              {menteeMatching.availability.map((slot, idx) => (
-                                <div
-                                  key={`${slot}-${idx}`}
-                                  className={
-                                    "availability-item" +
-                                    (menteeAvailabilityEditingIndex === idx
-                                      ? " is-editing"
-                                      : "")
-                                  }
-                                >
-                                  <span className="availability-item-label">
-                                    {formatAvailabilityLabel(slot)}
-                                  </span>
-                                  <div className="availability-item-actions">
-                                    <button
-                                      type="button"
-                                      className="availability-action-btn"
-                                      onClick={() => {
-                                        const parsed = parseAvailabilityRange(slot);
-                                        if (!parsed) return;
-                                        setMenteeAvailabilityDraft({
-                                          start: parsed.start,
-                                          end: parsed.end,
-                                        });
-                                        setMenteeAvailabilityEditingIndex(idx);
-                                        setMenteeAvailabilityError("");
-                                      }}
-                                    >
-                                      Edit
-                                    </button>
-                                    <button
-                                      type="button"
-                                      className="availability-action-btn availability-action-btn--danger"
-                                      onClick={() => {
-                                        const next =
-                                          menteeMatching.availability.filter(
-                                            (_, i) => i !== idx,
-                                          );
-                                        setMenteeMatching({
-                                          ...menteeMatching,
-                                          availability: next,
-                                        });
-                                        if (menteeAvailabilityEditingIndex === idx) {
-                                          setMenteeAvailabilityEditingIndex(null);
-                                          setMenteeAvailabilityDraft({
-                                            start: "",
-                                            end: "",
-                                          });
-                                        } else if (
-                                          menteeAvailabilityEditingIndex != null &&
-                                          menteeAvailabilityEditingIndex > idx
-                                        ) {
-                                          setMenteeAvailabilityEditingIndex(
-                                            menteeAvailabilityEditingIndex - 1,
-                                          );
-                                        }
-                                      }}
-                                    >
-                                      Remove
-                                    </button>
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                      </section>
-
-                      <div
-                        className="btn-row matching-questionnaire-actions"
-                        style={{
-                          marginTop: "16px",
-                          alignItems: "center",
-                          gap: "8px",
-                          flexWrap: "wrap",
-                        }}
-                      >
-                        <button
-                          className="btn"
-                          type="button"
-                          onClick={async () => {
-                            const saved = await handleMenteeMatchingSave();
-                            if (saved) {
-                              setMenteeMatchingSavedAt(Date.now());
-                            }
-                          }}
-                          disabled={
-                            menteeMatchingSaving || menteeMatchingPristine
-                          }
-                        >
-                          {menteeMatchingSaving
-                            ? "Saving..."
-                            : menteeMatchingPristine
-                              ? "No changes yet"
-                              : "Save mentee questionnaire"}
-                        </button>
-                      </div>
-                      <p
-                        className="matching-inline-feedback matching-inline-feedback--success"
-                        role="status"
-                        aria-live="polite"
-                      >
-                        {menteeMatchingSaving
-                          ? "Saving mentee questionnaire..."
-                          : menteeMatchingJustSaved
-                            ? "Mentee questionnaire saved successfully."
-                            : ""}
-                      </p>
-                    </>
-                  ) : (
-                    <p className="page-subtitle" style={{ marginBottom: 0 }}>
-                      Complete your general information above to unlock the
-                      questionnaire.
-                    </p>
-                  )}
                 </div>
               )}
             </SettingsAccordionCard>

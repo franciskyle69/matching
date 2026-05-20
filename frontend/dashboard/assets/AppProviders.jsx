@@ -33,7 +33,16 @@
     if (!userData) return "settings";
     if (userData.must_change_password) return "settings";
     if (userData.role === "mentee") {
-      return userData.mentee_general_info_completed ? "settings" : "complete-profile";
+      if (!userData.mentee_general_info_completed) return "complete-profile";
+      if (
+        !(
+          userData.mentee_questionnaire_completed ??
+          userData.questionnaire_completed
+        )
+      ) {
+        return "mentoring-preferences";
+      }
+      return "settings";
     }
     if (userData.role === "mentor") {
       return userData.mentor_questionnaire_completed ? "settings" : "complete-profile";
@@ -45,9 +54,23 @@
     return /pending approval by coordinator/i.test(String(message || ""));
   }
 
+  function getPortalAuthRole() {
+    const fromUrl = new URLSearchParams(window.location.search || "").get("role");
+    const fromStore =
+      typeof sessionStorage !== "undefined"
+        ? sessionStorage.getItem("portalRole")
+        : null;
+    const role = fromUrl || fromStore;
+    return role === "mentor" || role === "mentee" || role === "staff" ? role : null;
+  }
+
   function replaceAppUrl(tab) {
     const safeTab = tab || "signin";
-    window.history.replaceState(null, "", `/app/#${safeTab}`);
+    const params = new URLSearchParams();
+    const portalRole = getPortalAuthRole();
+    if (portalRole) params.set("role", portalRole);
+    const qs = params.toString() ? `?${params.toString()}` : "";
+    window.history.replaceState(null, "", `/app/${qs}#${safeTab}`);
   }
 
   function AppProviders() {
@@ -78,8 +101,6 @@
       message: "",
       suggested_time_slots: [],
     });
-    const [sessionsLoading, setSessionsLoading] = useState(false);
-    const [sessionsData, setSessionsData] = useState(null);
     const [notificationsLoading, setNotificationsLoading] = useState(false);
     const [notifications, setNotifications] = useState([]);
     const [settingsSaving, setSettingsSaving] = useState(false);
@@ -109,6 +130,7 @@
     });
     const [signUpForm, setSignUpForm] = useState({
       role: "mentor",
+      mentor_role: "",
       first_name: "",
       middle_name: "",
       last_name: "",
@@ -116,24 +138,6 @@
       password1: "",
       password2: "",
       student_verification_document: null,
-    });
-    const [createSessionLoading, setCreateSessionLoading] = useState(false);
-    const [createForm, setCreateForm] = useState({
-      mentee_id: "",
-      subject_id: "",
-      topic_id: "",
-      scheduled_at: "",
-      duration_minutes: 60,
-      notes: "",
-    });
-    const [sessionsPairMenteeId, setSessionsPairMenteeId] = useState(null);
-    const [rescheduleId, setRescheduleId] = useState(null);
-    const [rescheduleForm, setRescheduleForm] = useState({
-      subject_id: "",
-      topic_id: "",
-      scheduled_at: "",
-      duration_minutes: 60,
-      notes: "",
     });
     const [subjectsLoading, setSubjectsLoading] = useState(false);
     const [subjectsData, setSubjectsData] = useState([]);
@@ -287,11 +291,7 @@
     useEffect(() => {
       signInPathRef.current = isSignInPathFlow();
       const raw = window.location.hash.replace("#", "");
-      if (raw.startsWith("sessions")) {
-        setActiveTab("sessions");
-        const m = raw.match(/sessions\/mentee\/(\d+)/);
-        setSessionsPairMenteeId(m ? parseInt(m[1], 10) : null);
-      } else if (raw.startsWith("profile/mentor")) {
+      if (raw.startsWith("profile/mentor")) {
         setActiveTab("profile");
         const m = raw.match(/profile\/mentor\/(\d+)/);
         setMentorProfileHashId(m ? parseInt(m[1], 10) : null);
@@ -322,10 +322,6 @@
           "",
           `${window.location.pathname}#home`,
         );
-      } else if (hash.startsWith("sessions")) {
-        setActiveTab("sessions");
-        const m = hash.match(/sessions\/mentee\/(\d+)/);
-        setSessionsPairMenteeId(m ? parseInt(m[1], 10) : null);
       } else if (hash.startsWith("profile/mentor")) {
         setActiveTab("profile");
         const m = hash.match(/profile\/mentor\/(\d+)/);
@@ -334,6 +330,35 @@
         setActiveTab(hash);
       }
     }, [authCheckDone, user]);
+
+    useEffect(() => {
+      if (!authCheckDone) return;
+      const params = new URLSearchParams(window.location.search || "");
+      const role = params.get("role");
+      if (role === "mentor" || role === "mentee" || role === "staff") {
+        try {
+          sessionStorage.setItem("portalRole", role);
+        } catch {
+          /* ignore */
+        }
+      }
+      if (role === "staff" && activeTab === "signup") {
+        setActiveTab("signin");
+        replaceAppUrl("signin");
+      } else if (role === "mentor" || role === "mentee") {
+        if (activeTab === "signup") {
+          setSignUpForm((prev) => ({ ...prev, role }));
+        }
+      }
+    }, [authCheckDone, activeTab]);
+
+    useEffect(() => {
+      if (!authCheckDone || !authRequired) return;
+      if (activeTab !== "signin" && activeTab !== "signup") return;
+      if (!getPortalAuthRole()) {
+        window.location.replace("/portal/");
+      }
+    }, [authCheckDone, authRequired, activeTab]);
 
     useEffect(() => {
       if (!authCheckDone) return;
@@ -438,10 +463,6 @@
           setActiveTab("profile");
           const m = hash.match(/profile\/mentor\/(\d+)/);
           setMentorProfileHashId(m ? parseInt(m[1], 10) : null);
-        } else if (hash.startsWith("sessions")) {
-          setActiveTab("sessions");
-          const m = hash.match(/sessions\/mentee\/(\d+)/);
-          setSessionsPairMenteeId(m ? parseInt(m[1], 10) : null);
         }
       };
       window.addEventListener("hashchange", onHashChange);
@@ -450,22 +471,21 @@
 
     useEffect(() => {
       if (!authCheckDone) return;
-      if (activeTab === "sessions") {
-        window.location.hash = sessionsPairMenteeId
-          ? `sessions/mentee/${sessionsPairMenteeId}`
-          : "sessions";
-      } else if (activeTab === "profile" && mentorProfileHashId) {
+      if (activeTab === "profile" && mentorProfileHashId) {
         window.location.hash = `profile/mentor/${mentorProfileHashId}`;
+      } else if (activeTab === "signin" || activeTab === "signup") {
+        replaceAppUrl(activeTab);
       } else {
         window.location.hash = activeTab;
       }
-    }, [activeTab, authCheckDone, sessionsPairMenteeId, mentorProfileHashId]);
+    }, [activeTab, authCheckDone, mentorProfileHashId]);
 
     useEffect(() => {
       if (!authCheckDone || !user) return;
       if (!getIsPendingApproval(user)) return;
       const allowedPendingTabs = new Set([
         "complete-profile",
+        "mentoring-preferences",
         "settings",
       ]);
       if (!allowedPendingTabs.has(activeTab)) {
@@ -490,22 +510,9 @@
     }, [showMenteeInfoModal, showMentorInfoModal]);
 
     useEffect(() => {
-      if (activeTab === "sessions" && sessionsData === null) loadSessions();
-      if (
-        activeTab === "home" &&
-        user?.role === "mentee" &&
-        sessionsData === null
-      )
-        loadSessions();
-      if (
-        activeTab === "home" &&
-        user?.role === "mentor" &&
-        sessionsData === null
-      )
-        loadSessions();
       if (activeTab === "home" && user?.role === "mentor") loadMentorRequests();
       if (
-        (activeTab === "home" || activeTab === "sessions") &&
+        activeTab === "home" &&
         user?.role === "mentee" &&
         !myMentor
       ) {
@@ -545,7 +552,6 @@
       user?.role,
       user?.is_staff,
       subjectsLoaded,
-      sessionsData,
       myMentor,
       mentorProfileHashId,
       viewedMentorProfile,
@@ -595,9 +601,8 @@
           clearAuthTokens();
         }
         setAuthRequired(true);
-        setSessionsData(null);
         setActiveTab((prev) => (prev === "signup" ? "signup" : "signin"));
-        return;
+        return null;
       }
       meLastFetchTsRef.current = Date.now();
       const unapproved = getIsPendingApproval(result.data);
@@ -678,13 +683,14 @@
           message: "Review or complete your information below, then wait for coordinator approval.",
         });
         setActiveTab(getPendingApprovalLandingTab(result.data));
-        return;
+        return result.data;
       }
       setActiveTab((prev) =>
         ["signin", "signup"].includes(prev)
           ? "home"
           : prev,
       );
+      return result.data;
     }
 
     async function runMatching() {
@@ -763,11 +769,9 @@
         setError(result.data?.error || "Failed to accept mentee.");
         return;
       }
-      addToast("Mentee accepted. Opening their sessions page.");
+      addToast("Mentee accepted.");
       loadMentorRequests();
-      loadSessions();
-      setSessionsPairMenteeId(menteeId);
-      setActiveTab("sessions");
+      setActiveTab("matching");
     }
 
     async function loadMenteeRecommendations(limit) {
@@ -834,13 +838,12 @@
           window.Swal.fire("Unable to connect mentor", message, "error");
         return { ok: false, code: result.data?.code || null, error: message };
       }
-      const successMessage = "Mentor matched successfully. You can now schedule sessions.";
+      const successMessage = "Mentor matched successfully.";
       setAuthMessage(successMessage);
       if (window.Swal && typeof window.Swal.fire === "function")
         window.Swal.fire("Mentor matched", successMessage, "success");
       setChosenMentorId(mentorId);
       await loadMyMentor();
-      await loadSessions();
       await loadMenteeRecommendations();
       loadMentorRequests();
       return { ok: true };
@@ -853,10 +856,14 @@
       setAuthAlert(null);
       setSignInLoading(true);
       try {
+        const portalRole = getPortalAuthRole();
+        const loginBody = { ...signInForm };
+        if (portalRole) loginBody.expected_role = portalRole;
+
         const result = await fetchJSON("/api/auth/login/", {
           method: "POST",
           headers: { "X-CSRFToken": getCookie("csrftoken") },
-          body: JSON.stringify(signInForm),
+          body: JSON.stringify(loginBody),
         });
 
         // Handle login attempt limit (429 Too Many Requests)
@@ -966,6 +973,16 @@
           return;
         }
 
+        if (result.status === 403 && result.data?.error) {
+          setError(result.data.error);
+          setAuthAlert({
+            severity: "error",
+            title: "Cannot sign in with this role",
+            message: result.data.error,
+          });
+          return;
+        }
+
         if (!result.ok) {
           const errorMsg = result.data?.error || "Unable to sign in.";
           setError(errorMsg);
@@ -1021,7 +1038,35 @@
         if (result.data?.refresh_token) {
           setRefreshToken(result.data.refresh_token);
         }
-        await loadMe({ force: true });
+        const profile = await loadMe({ force: true });
+        if (portalRole && profile?.role && profile.role !== portalRole) {
+          try {
+            await fetch("/api/auth/logout/", {
+              method: "POST",
+              headers: { "X-CSRFToken": getCookie("csrftoken") },
+            });
+          } catch {
+            /* ignore */
+          }
+          clearAuthTokens();
+          setUser(null);
+          setStats(null);
+          setAuthRequired(true);
+          setActiveTab("signin");
+          replaceAppUrl("signin");
+          const actual =
+            profile.role.charAt(0).toUpperCase() + profile.role.slice(1);
+          const expected =
+            portalRole.charAt(0).toUpperCase() + portalRole.slice(1);
+          setAuthAlert({
+            severity: "error",
+            title: "Wrong account type",
+            message: `You chose ${expected} on the portal, but this account is ${actual}.`,
+            detail: `Use the portal to sign in as ${actual}, or use a different account.`,
+          });
+          return;
+        }
+        if (!profile) return;
         setActiveTab("home");
       } finally {
         setSignInLoading(false);
@@ -1034,8 +1079,33 @@
       setAuthAlert(null);
       setSignUpLoading(true);
       try {
+        const portalRole = getPortalAuthRole();
+        if (portalRole === "staff") {
+          setAuthAlert({
+            severity: "error",
+            title: "Staff accounts",
+            message: "Staff accounts are created by an administrator.",
+            detail: "Use Sign In on the portal as Staff, or contact your coordinator.",
+          });
+          return;
+        }
+        const registerRole =
+          portalRole === "mentor" || portalRole === "mentee"
+            ? portalRole
+            : signUpForm.role;
+        if (
+          portalRole &&
+          (portalRole === "mentor" || portalRole === "mentee") &&
+          signUpForm.role !== portalRole
+        ) {
+          setSignUpForm((prev) => ({ ...prev, role: portalRole }));
+        }
+
         const formData = new FormData();
-        formData.append("role", signUpForm.role || "");
+        formData.append("role", registerRole || "");
+        if (portalRole === "mentor" || portalRole === "mentee") {
+          formData.append("expected_role", portalRole);
+        }
         formData.append("first_name", signUpForm.first_name || "");
         formData.append("middle_name", signUpForm.middle_name || "");
         formData.append("last_name", signUpForm.last_name || "");
@@ -1047,6 +1117,18 @@
             "student_verification_document",
             signUpForm.student_verification_document,
           );
+        }
+        if (registerRole === "mentor") {
+          if (!signUpForm.mentor_role) {
+            setAuthAlert({
+              severity: "error",
+              title: "Mentor type required",
+              message:
+                "Select whether you are signing up as a student mentor or an instructor.",
+            });
+            return;
+          }
+          formData.append("mentor_role", signUpForm.mentor_role);
         }
 
         const result = await fetchJSON("/api/auth/register/", {
@@ -1076,8 +1158,12 @@
         }
         const message = result.data?.message || "Account created.";
         setAuthMessage(message);
+        const keepRole =
+          portalRole === "mentor" || portalRole === "mentee"
+            ? portalRole
+            : "mentor";
         setSignUpForm({
-          role: "mentor",
+          role: keepRole,
           first_name: "",
           middle_name: "",
           last_name: "",
@@ -1087,6 +1173,7 @@
           student_verification_document: null,
         });
         setActiveTab("signin");
+        replaceAppUrl("signin");
       } finally {
         setSignUpLoading(false);
       }
@@ -1109,22 +1196,6 @@
         replaceAppUrl("signin");
         window.location.replace("/");
       }
-    }
-
-    async function loadSessions() {
-      setSessionsLoading(true);
-      const result = await fetchJSON("/api/sessions/");
-      if (result.ok) setSessionsData(result.data);
-      else {
-        setError(result.data?.error || "Unable to load sessions.");
-        setSessionsData({
-          upcoming: [],
-          history: [],
-          options: { mentees: [], subjects: [], topics: [] },
-          is_mentor: false,
-        });
-      }
-      setSessionsLoading(false);
     }
 
     async function loadPostsFeed(offset = 0) {
@@ -1411,96 +1482,6 @@
       loadSubjects();
     }
 
-    async function handleCreateSession(menteeIdOverride) {
-      setError("");
-      setCreateSessionLoading(true);
-      try {
-        const payload = {
-          ...createForm,
-          mentee_id:
-            menteeIdOverride != null ? menteeIdOverride : createForm.mentee_id,
-          duration_minutes: Number(createForm.duration_minutes || 60),
-        };
-        const result = await fetchJSON("/api/sessions/create/", {
-          method: "POST",
-          headers: { "X-CSRFToken": getCookie("csrftoken") },
-          body: JSON.stringify(payload),
-        });
-        if (!result.ok) {
-          setError(result.data?.error || "Unable to schedule session.");
-          return;
-        }
-        setCreateForm({
-          mentee_id: "",
-          subject_id: "",
-          topic_id: "",
-          scheduled_at: "",
-          duration_minutes: 60,
-          notes: "",
-        });
-        addToast("Session scheduled.");
-        await loadSessions();
-      } finally {
-        setCreateSessionLoading(false);
-      }
-    }
-
-    async function handleReschedule(sessionId) {
-      setError("");
-      const payload = {
-        ...rescheduleForm,
-        duration_minutes: Number(rescheduleForm.duration_minutes || 60),
-      };
-      const result = await fetchJSON(`/api/sessions/${sessionId}/reschedule/`, {
-        method: "POST",
-        headers: { "X-CSRFToken": getCookie("csrftoken") },
-        body: JSON.stringify(payload),
-      });
-      if (!result.ok) {
-        setError(result.data?.error || "Unable to reschedule.");
-        return;
-      }
-      setRescheduleId(null);
-      addToast("Session rescheduled.");
-      loadSessions();
-    }
-
-    async function handleStatusUpdate(sessionId, status) {
-      setError("");
-      const result = await fetchJSON(`/api/sessions/${sessionId}/status/`, {
-        method: "POST",
-        headers: { "X-CSRFToken": getCookie("csrftoken") },
-        body: JSON.stringify({ status }),
-      });
-      if (!result.ok) {
-        setError(result.data?.error || "Unable to update status.");
-        return;
-      }
-      addToast("Session updated.");
-      loadSessions();
-    }
-
-    async function handleUpdateMeetingNotes(sessionId, meetingNotes) {
-      setError("");
-      const result = await fetchJSON(
-        `/api/sessions/${sessionId}/meeting-notes/`,
-        {
-          method: "POST",
-          headers: {
-            "X-CSRFToken": getCookie("csrftoken"),
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ meeting_notes: meetingNotes || "" }),
-        },
-      );
-      if (!result.ok) {
-        setError(result.data?.error || "Unable to save meeting notes.");
-        return;
-      }
-      addToast("Meeting notes saved.");
-      loadSessions();
-    }
-
     async function handleMarkAllRead() {
       await fetchJSON("/api/notifications/mark-all-read/", {
         method: "POST",
@@ -1736,7 +1717,7 @@
         });
         if (!result.ok) {
           setError(
-            result.data?.error || "Unable to update mentee questionnaire.",
+            result.data?.error || "Unable to update mentoring preferences.",
           );
           return false;
         }
@@ -1754,8 +1735,8 @@
           // Refresh recommendations right away if mentee is on Matching tab
           loadMenteeRecommendations();
         }
-        setAuthMessage("Your mentee questionnaire was updated.");
-        addToast("Questionnaire saved.");
+        setAuthMessage("Your mentoring preferences were updated.");
+        addToast("Mentoring preferences saved.");
         return true;
       } finally {
         setMenteeMatchingSaving(false);
@@ -1995,20 +1976,6 @@
       }
     }
 
-    const options = sessionsData?.options || {
-      mentees: [],
-      subjects: [],
-      topics: [],
-    };
-    const topicsBySubject = useMemo(() => {
-      const map = {};
-      (options.topics || []).forEach((topic) => {
-        if (!map[topic.subject_id]) map[topic.subject_id] = [];
-        map[topic.subject_id].push(topic);
-      });
-      return map;
-    }, [options.topics]);
-
     const isAuthenticated = !authRequired && user;
     const isPendingApproval = getIsPendingApproval(user);
     const showSignInPrompt = !authCheckDone
@@ -2093,24 +2060,6 @@
       acceptMenteeLoading,
       myMentor,
       loadMyMentor,
-      sessionsLoading,
-      sessionsData,
-      loadSessions,
-      createForm,
-      setCreateForm,
-      createSessionLoading,
-      rescheduleId,
-      setRescheduleId,
-      rescheduleForm,
-      setRescheduleForm,
-      handleCreateSession,
-      handleReschedule,
-      handleStatusUpdate,
-      handleUpdateMeetingNotes,
-      options,
-      topicsBySubject,
-      sessionsPairMenteeId,
-      setSessionsPairMenteeId,
       notificationsLoading,
       notifications,
       loadNotifications,

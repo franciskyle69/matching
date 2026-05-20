@@ -7,8 +7,12 @@
     { id: "home", label: "Dashboard", role: "any" },
     { id: "profile", label: "Profile", role: "any" },
     { id: "complete-profile", label: "Complete profile", role: "any" },
+    {
+      id: "mentoring-preferences",
+      label: "Mentoring preferences",
+      role: "mentee",
+    },
     { id: "matching", label: "Matching", role: "non-staff" },
-    { id: "sessions", label: "Sessions", role: "any" },
     { id: "announcements", label: "Announcements", role: "any" },
     { id: "approvals", label: "User approvals", role: "staff" },
     { id: "subjects", label: "Subjects", role: "staff" },

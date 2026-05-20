@@ -515,7 +515,6 @@
         <div class="sidebar-title">Dashboard</div>
         <div class="sidebar-links">
           <a href="{% url 'home' %}" class="sidebar-link {% if request.path == '/' %}active{% endif %}">Dashboard</a>
-          <a href="/app/#sessions" class="sidebar-link">Sessions</a>
           <a href="/app/#matching" class="sidebar-link">Matching</a>
           <a href="/app/#notifications" class="sidebar-link">Notifications{% if unread_notifications_count > 0 %} <span class="nav-badge">{{ unread_notifications_count }}</span>{% endif %}</a>
           {% if user.is_staff %}<a href="/app/#subjects" class="sidebar-link">Subjects</a>{% endif %}

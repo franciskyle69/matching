@@ -3,7 +3,15 @@
   const React = window.React;
   const { useContext, useState, useEffect, useRef } = React;
   const AppContext = window.DashboardApp.AppContext;
-  const { getCookie, fetchJSON, formatDate, LoadingSpinner, DashboardIcon, categoryIconName } = window.DashboardApp.Utils || {};
+  const {
+    getCookie,
+    fetchJSON,
+    formatDate,
+    LoadingSpinner,
+    DashboardIcon,
+    categoryIconName,
+    MentorRoleBadge,
+  } = window.DashboardApp.Utils || {};
   const PLACEHOLDER_AVATAR = window.DashboardApp.PLACEHOLDER_AVATAR || "";
   const Spinner = LoadingSpinner;
 
@@ -454,6 +462,13 @@
           <div className="sp-avatar-wrap sp-avatar-wrap--lg">
             {avatarUrl ? <img src={avatarUrl} alt={user.display_name || user.full_name || user.username} className="sp-avatar-img" /> : <span className="sp-avatar-fallback">{(user.display_name || user.full_name || user.username || "?")[0].toUpperCase()}</span>}
           </div>
+          {isMentor && mentorProfile.role && MentorRoleBadge ? (
+            <MentorRoleBadge
+              role={mentorProfile.role}
+              prominent
+              className="sp-mentor-type-badge"
+            />
+          ) : null}
           <h1 className="sp-profile-name">{user.display_name || user.full_name || user.username}</h1>
           <p className="sp-profile-subtitle">
             <span className={"prof-role-badge prof-role-badge--" + (isMentor ? "mentor" : isMentee ? "mentee" : "user")}>{isMentor ? "Mentor" : isMentee ? "Mentee" : "User"}</span>
@@ -476,7 +491,6 @@
         <div className="sp-stats-row">
           <StatBlock value={profileStats.posts_count} label="Posts" />
           <StatBlock value={profileStats.connections} label="Connections" />
-          <StatBlock value={profileStats.sessions_completed} label="Sessions" />
           <StatBlock value={profileStats.images_count} label="Gallery" />
         </div>
 
@@ -547,6 +561,13 @@
               <div className="sp-avatar-wrap sp-avatar-wrap--lg">
                 <img src={mentor.avatar_url || PLACEHOLDER_AVATAR} alt={match.mentor_display_name || match.mentor_username} className="sp-avatar-img" />
               </div>
+              {mentor.role && MentorRoleBadge ? (
+                <MentorRoleBadge
+                  role={mentor.role}
+                  prominent
+                  className="sp-mentor-type-badge"
+                />
+              ) : null}
               <h1 className="sp-profile-name">{match.mentor_display_name || match.mentor_username}</h1>
               <p className="sp-profile-subtitle"><span className="prof-role-badge prof-role-badge--mentor">Mentor</span></p>
               <span className="sp-profile-email">{mentorEmail || "Email not available"}</span>

@@ -14,8 +14,6 @@ describe("AppProviders context", () => {
     expect(keys).toContain("signInForm");
     expect(keys).toContain("handleSignIn");
     expect(keys).toContain("handleLogout");
-    expect(keys).toContain("sessionsData");
-    expect(keys).toContain("loadSessions");
     expect(keys).toContain("theme");
     expect(keys).toContain("toggleTheme");
     expect(keys).toContain("isAuthenticated");

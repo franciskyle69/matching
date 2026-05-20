@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PeerLink — Choose your role</title>
+    <link rel="icon" href="/static/assets/logoreal.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/static/portal.css?v=4" />
+  </head>
+  <body class="portal-page">
+    <main class="portal-card" aria-labelledby="portal-heading">
+      <aside class="portal-panel portal-panel--brand">
+        <div class="portal-brand-inner">
+          <img
+            class="portal-brand-logo"
+            src="/static/assets/logoreal.svg"
+            width="108"
+            height="108"
+            alt="PeerLink"
+          />
+          <h1 id="portal-heading" class="portal-brand-title">Welcome to PeerLink</h1>
+          <p class="portal-brand-text">
+            Bukidnon State University mentor–mentee matching. Choose how you use
+            the platform, then sign in or create an account.
+          </p>
+          <ul class="portal-brand-points">
+            <li>Role-based access</li>
+            <li>Secure institutional sign-in</li>
+            <li>Smart mentor matching</li>
+          </ul>
+        </div>
+        <p class="portal-brand-footer">www.peerlink.com</p>
+      </aside>
+
+      <div class="portal-divider" aria-hidden="true"></div>
+
+      <section class="portal-panel portal-panel--actions">
+        <div id="portal-step-roles" class="portal-step portal-step--visible">
+          <p class="portal-kicker">Get started</p>
+          <h2 class="portal-step-title">Choose your role</h2>
+          <p class="portal-step-sub">
+            Select the option that matches how you use PeerLink.
+          </p>
+
+          <nav class="portal-role-grid" aria-label="Select your role">
+            <button
+              type="button"
+              class="portal-role-card portal-role-card--staff"
+              data-portal-role="staff"
+            >
+              <span class="portal-role-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75">
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z"
+                  />
+                </svg>
+              </span>
+              <span class="portal-role-text">
+                <span class="portal-role-name">Staff</span>
+                <span class="portal-role-desc">Coordinators &amp; administrators</span>
+              </span>
+            </button>
+
+            <button
+              type="button"
+              class="portal-role-card portal-role-card--mentor"
+              data-portal-role="mentor"
+            >
+              <span class="portal-role-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75">
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    d="M4.26 10.147a60.438 60.438 0 0 0-.491 6.347A48.62 48.62 0 0 1 12 20.904a48.62 48.62 0 0 1 8.232-4.41 60.46 60.46 0 0 0-.491-6.347m-15.482 0a50.636 50.636 0 0 0-2.658-.813A59.906 59.906 0 0 1 12 3.493a59.903 59.903 0 0 1 10.399 5.84c-.896.248-1.783.52-2.658.814m-15.482 0A50.717 50.717 0 0 1 12 13.489a50.702 50.702 0 0 1 7.74-3.342"
+                  />
+                </svg>
+              </span>
+              <span class="portal-role-text">
+                <span class="portal-role-name">Mentor</span>
+                <span class="portal-role-desc">Guide and support mentees</span>
+              </span>
+            </button>
+
+            <button
+              type="button"
+              class="portal-role-card portal-role-card--mentee"
+              data-portal-role="mentee"
+            >
+              <span class="portal-role-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75">
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25"
+                  />
+                </svg>
+              </span>
+              <span class="portal-role-text">
+                <span class="portal-role-name">Mentee</span>
+                <span class="portal-role-desc">Find a mentor and grow</span>
+              </span>
+            </button>
+          </nav>
+
+          <p class="portal-footnote">
+            <a href="/">Learn more about PeerLink</a>
+          </p>
+        </div>
+
+        <div id="portal-step-auth" class="portal-step" hidden>
+          <button type="button" id="portal-back-btn" class="portal-back-btn" aria-label="Back">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M15 18l-6-6 6-6" />
+            </svg>
+          </button>
+
+          <p class="portal-kicker">Continue</p>
+          <h2 class="portal-step-title">Almost there</h2>
+          <p class="portal-step-sub">
+            You selected
+            <strong id="portal-selected-role" class="portal-selected-role"></strong>
+          </p>
+
+          <nav class="portal-auth-actions" aria-label="Sign in or sign up">
+            <a id="portal-signin-btn" class="portal-btn portal-btn--primary" href="/app/#signin"
+              >Sign in</a
+            >
+            <a
+              id="portal-signup-btn"
+              class="portal-btn portal-btn--secondary"
+              href="/app/#signup"
+              >Create account</a
+            >
+          </nav>
+        </div>
+      </section>
+    </main>
+    <script src="/static/portal.js?v=4"></script>
+  </body>
+</html>

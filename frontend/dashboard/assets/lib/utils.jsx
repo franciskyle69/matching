@@ -412,6 +412,89 @@
     }
   }
 
+  function getMentorRoleBadgeMeta(role) {
+    const label = String(role || "").trim();
+    if (!label) return null;
+    const lower = label.toLowerCase();
+    if (lower.includes("instructor")) {
+      return { kind: "instructor", label: "Instructor", fullLabel: label };
+    }
+    if (lower.includes("senior") || lower.includes("student")) {
+      return { kind: "student", label: "Student", fullLabel: label || "Senior IT Student" };
+    }
+    return { kind: "other", label, fullLabel: label };
+  }
+
+  function MentorRoleBadgeIcon({ kind }) {
+    const common = {
+      width: 14,
+      height: 14,
+      viewBox: "0 0 24 24",
+      fill: "none",
+      stroke: "currentColor",
+      strokeWidth: 2,
+      strokeLinecap: "round",
+      strokeLinejoin: "round",
+      "aria-hidden": true,
+    };
+    if (kind === "instructor") {
+      return (
+        <svg {...common} className="mentor-role-badge__icon">
+          <path d="M22 10v6M2 10l10-5 10 5-10 5z" />
+          <path d="M6 12v5c0 1.1 2.7 2 6 2s6-.9 6-2v-5" />
+        </svg>
+      );
+    }
+    if (kind === "student") {
+      return (
+        <svg {...common} className="mentor-role-badge__icon">
+          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+          <circle cx="12" cy="7" r="4" />
+        </svg>
+      );
+    }
+    return (
+      <svg {...common} className="mentor-role-badge__icon">
+        <circle cx="12" cy="12" r="10" />
+        <path d="M12 16v-4" />
+        <path d="M12 8h.01" />
+      </svg>
+    );
+  }
+
+  function MentorRoleBadge({ role, className = "", prominent = false }) {
+    const meta = getMentorRoleBadgeMeta(role);
+    if (!meta) return null;
+    const tooltip = meta.fullLabel || meta.label;
+    return (
+      <span
+        className={
+          "mentor-role-badge mentor-role-badge--" +
+          meta.kind +
+          (prominent ? " mentor-role-badge--prominent" : "") +
+          (className ? " " + className : "")
+        }
+        title={tooltip}
+        aria-label={"Mentor type: " + tooltip}
+      >
+        <MentorRoleBadgeIcon kind={meta.kind} />
+        <span className="mentor-role-badge__label">{meta.label}</span>
+      </span>
+    );
+  }
+
+  function MentorMatchTitle({ name, role }) {
+    const displayName = name || "Unknown";
+    return (
+      <div className="match-card-title-block">
+        <div className="match-card-title-line">
+          <p className="match-card-title">Mentor: {displayName}</p>
+          {role ? <MentorRoleBadge role={role} prominent /> : null}
+        </div>
+      </div>
+    );
+  }
+
   function categoryIconName(cat) {
     if (cat === "achievement") return "trophy";
     if (cat === "project") return "laptop";
@@ -438,5 +521,8 @@
     MatchingLoadingAnimation,
     DashboardIcon,
     categoryIconName,
+    getMentorRoleBadgeMeta,
+    MentorRoleBadge,
+    MentorMatchTitle,
   };
 })();
