@@ -49,7 +49,13 @@ from .subjects import (
     subject_update,
     subject_delete,
 )
-from .topics import topics_list
+from .topics import (
+    topics_list,
+    topic_create,
+    topic_update,
+    topic_archive_toggle,
+    topic_delete,
+)
 from .mentees import mentees_list
 
 __all__ = [
@@ -91,5 +97,9 @@ __all__ = [
     "subject_update",
     "subject_delete",
     "topics_list",
+    "topic_create",
+    "topic_update",
+    "topic_archive_toggle",
+    "topic_delete",
     "mentees_list",
 ]

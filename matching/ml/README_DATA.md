@@ -21,6 +21,7 @@ python -m matching.ml.generate_synthetic_data --rows 1000 --seed 123
 
 - **Without `--split`**: writes a single file `matching/ml/synthetic_pairs.csv`.
 - **With `--split`**: overwrites `synthetic_train.csv`, `synthetic_val.csv`, and `synthetic_test.csv` (70% / 15% / 15%).
+- Includes **major IT subjects** and **minor subjects** (GE, NSTP, PE) from `profiles/subject_catalog.py`.
 
 Then train on the train set:
 
@@ -45,7 +46,9 @@ Your CSV must have these **column names** (and a **label** column):
 | `mentor_expertise_level` | 1–5 |
 | `label` | 1 = good match, 0 = poor match |
 
-- Subjects/topics can match the ones in `generate_synthetic_data.py` (see `SUBJECTS` and `TOPICS`) so features stay consistent.
+- Subjects/topics can match the ones in `profiles/subject_catalog.py` (major IT + minor GE/NSTP/PE).
+- Minor-only rows may leave `mentee_topics` / `mentor_topics` empty; matching still uses subject overlap.
+- Example minor subject value: `GE 108: Understanding the Self`
 - Save your file (e.g. `my_data.csv`) and train:
 
 ```bash

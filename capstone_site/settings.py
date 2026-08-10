@@ -144,14 +144,26 @@ WSGI_APPLICATION = 'capstone_site.wsgi.application'
 force_sqlite = os.environ.get("FORCE_SQLITE", "").lower() == "true"
 db_name = os.environ.get("DB_NAME")
 if db_name and not force_sqlite:
+    db_host = os.environ.get("DB_HOST", "localhost")
+    db_port = os.environ.get("DB_PORT")
+    if not db_port:
+        db_port = "6543" if "pooler.supabase.com" in db_host.lower() else "5432"
+    elif "pooler.supabase.com" in db_host.lower() and db_port == "5432":
+        db_port = "6543"
+
+    db_options = {}
+    if "supabase" in db_host.lower() or os.environ.get("DB_SSLMODE"):
+        db_options["sslmode"] = os.environ.get("DB_SSLMODE", "require")
+
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.postgresql',
             'NAME': db_name,
             'USER': os.environ.get("DB_USER", ""),
             'PASSWORD': os.environ.get("DB_PASSWORD", ""),
-            'HOST': os.environ.get("DB_HOST", "localhost"),
-            'PORT': os.environ.get("DB_PORT", "5432"),
+            'HOST': db_host,
+            'PORT': db_port,
+            'OPTIONS': db_options,
         }
     }
 else:

@@ -6,6 +6,8 @@
   const MainContent = window.DashboardApp.MainContent;
   const MAIN_TABS = (window.DashboardApp && window.DashboardApp.MAIN_TABS) || [];
   const PLACEHOLDER_AVATAR = window.DashboardApp.PLACEHOLDER_AVATAR || "";
+  const LOGO_URL = window.DashboardApp.LOGO_URL || "/static/assets/logo.png";
+  const LOGO_ALT = window.DashboardApp.LOGO_ALT || "AMU Mentoring";
 
   const TAB_ICONS = {
     home: (
@@ -24,14 +26,42 @@
         <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" />
       </svg>
     ),
+    "mentoring-preferences": (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <path d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5L12 3z" />
+        <path d="M5 19h14" />
+        <path d="M8 16h8" />
+      </svg>
+    ),
+    "mentor-matching-profile": (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <path d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5L12 3z" />
+        <path d="M5 19h14" />
+        <path d="M8 16h8" />
+      </svg>
+    ),
     matching: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" />
       </svg>
     ),
+    mentees: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+        <circle cx="9" cy="7" r="4" />
+        <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+        <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+      </svg>
+    ),
     announcements: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+      </svg>
+    ),
+    notifications: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+        <path d="M13.73 21a2 2 0 0 1-3.46 0" />
       </svg>
     ),
     approvals: (
@@ -111,6 +141,7 @@
       isAuthenticated,
       loadUserProfile,
       isPendingApproval,
+      pendingApprovalLandingTab,
     } = ctx;
 
     const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
@@ -170,6 +201,7 @@
         const allowedPendingTabs = new Set([
           "complete-profile",
           "mentoring-preferences",
+          "mentor-matching-profile",
           "settings",
         ]);
         if (!allowedPendingTabs.has(tabId)) {
@@ -195,10 +227,13 @@
         return (
           tab.id === "complete-profile" ||
           tab.id === "settings" ||
-          tab.id === "mentoring-preferences"
+          tab.id === "mentoring-preferences" ||
+          tab.id === "mentor-matching-profile"
         );
       }
       if (tab.id === "mentoring-preferences") return user?.role === "mentee";
+      if (tab.id === "mentor-matching-profile") return user?.role === "mentor";
+      if (tab.id === "mentees") return user?.role === "mentor";
       if (tab.id === "subjects") return isStaff;
       if (tab.id === "users") return isStaff;
       if (tab.id === "activity-logs") return isStaff;
@@ -213,12 +248,13 @@
       return true;
     });
     const dashboardTab = filteredTabs.find((tab) => tab.id === "home");
-    const activityTabIds = new Set(["matching", "announcements", "approvals", "subjects", "users", "activity-logs", "backup"]);
+    const activityTabIds = new Set(["matching", "mentees", "announcements", "notifications", "approvals", "subjects", "users", "activity-logs", "backup"]);
     const accountTabIds = new Set([
       "profile",
       "settings",
       "complete-profile",
       "mentoring-preferences",
+      "mentor-matching-profile",
     ]);
     const activityTabs = filteredTabs.filter((tab) => activityTabIds.has(tab.id));
     const accountTabs = filteredTabs.filter((tab) => accountTabIds.has(tab.id));
@@ -242,6 +278,14 @@
             roles: ["mentor", "mentee", "staff"],
             type: "shortcut",
             actionTab: "announcements",
+          },
+          {
+            id: "notifications",
+            label: "Go to Notifications",
+            hint: "See unread updates",
+            roles: ["mentor", "mentee", "staff"],
+            type: "shortcut",
+            actionTab: "notifications",
           },
           {
             id: "settings",
@@ -268,12 +312,20 @@
             actionTab: "mentoring-preferences",
           },
           {
-            id: "mentor-questionnaire",
-            label: "Open mentor questionnaire",
-            hint: "Settings → mentor profile form",
+            id: "mentor-matching-profile",
+            label: "Open matching profile",
+            hint: "Subjects, topics, and availability for matching",
             roles: ["mentor"],
             type: "shortcut",
-            actionTab: "settings",
+            actionTab: "mentor-matching-profile",
+          },
+          {
+            id: "mentees",
+            label: "View all mentees",
+            hint: "Official mentees and pairing requests",
+            roles: ["mentor"],
+            type: "shortcut",
+            actionTab: "mentees",
           },
           {
             id: "approvals",
@@ -298,6 +350,13 @@
     const trimmedQuery = searchQuery.trim().toLowerCase();
     const activeTabMeta = MAIN_TABS.find((tab) => tab.id === activeTab);
     const topbarTitle = activeTabMeta?.label || "Dashboard";
+    const pendingPrimaryTab = pendingApprovalLandingTab || "complete-profile";
+    const pendingPrimaryLabel =
+      pendingPrimaryTab === "mentoring-preferences"
+        ? "Continue mentoring preferences"
+        : pendingPrimaryTab === "mentor-matching-profile"
+          ? "Continue matching profile"
+          : "Complete profile";
 
     let shortcutMatches = [];
     if (trimmedQuery) {
@@ -424,8 +483,8 @@
                 </button>
                 <span className="sidebar-header-title">
                   <img
-                    src={theme === "dark" ? "/static/assets/logoreal.svg" : "/static/assets/logodark.svg"}
-                    alt="Mentoring Dashboard"
+                    src={LOGO_URL}
+                    alt={LOGO_ALT}
                     className="sidebar-logo"
                   />
                 </span>
@@ -675,14 +734,20 @@
               </>
               ) : (
                 <div className="btn-row" style={{ margin: 0 }}>
-                  <button type="button" className="btn" onClick={() => goTo("complete-profile")}>Complete profile</button>
+                  <button type="button" className="btn" onClick={() => goTo(pendingPrimaryTab)}>{pendingPrimaryLabel}</button>
                   <button type="button" className="btn secondary" onClick={() => goTo("settings")}>Account settings</button>
                 </div>
               )}
             </header>
           )}
 
-          <main className={"app-content " + (isAuthenticated ? "with-sidebar" : "") + (sidebarCollapsed && isAuthenticated ? " sidebar-collapsed" : "")}>
+          <main
+            className={
+              "app-content " +
+              (isAuthenticated ? "with-sidebar" : "") +
+              (sidebarCollapsed && isAuthenticated ? " sidebar-collapsed" : "")
+            }
+          >
             <MainContent />
           </main>
         </div>

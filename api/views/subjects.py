@@ -16,7 +16,10 @@ def subjects_list(request):
     role_error = _require_role(request)
     if role_error and not request.user.is_staff:
         return role_error
-    items = get_subjects_list()
+    include_inactive_topics = request.user.is_staff and str(
+        request.GET.get("include_inactive_topics", "1"),
+    ).strip().lower() in {"1", "true", "yes", "on"}
+    items = get_subjects_list(include_inactive_topics=include_inactive_topics)
     return JsonResponse({"items": items})
 
 
@@ -40,7 +43,13 @@ def subject_update(request, subject_id: int):
     if not subject:
         return JsonResponse({"error": "Subject not found."}, status=404)
     payload = _get_payload(request)
-    form = SubjectForm(payload, instance=subject)
+    merged_payload = {
+        "name": payload.get("name", subject.name),
+        "code": payload.get("code", subject.code),
+        "category": payload.get("category", subject.category),
+        "description": payload.get("description", subject.description),
+    }
+    form = SubjectForm(merged_payload, instance=subject)
     if not form.is_valid():
         errors = {k: list(v) for k, v in form.errors.items()}
         return JsonResponse({"errors": errors}, status=400)

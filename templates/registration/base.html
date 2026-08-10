@@ -9,6 +9,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/spinkit/2.0.1/spinkit.min.css" crossorigin />
+  <link rel="stylesheet" href="{% static 'assets/app.css' %}?v=37" />
   <style>
     :root {
       --bg: #f1f5f9;
@@ -532,7 +533,7 @@
   {% block public_header %}
   <header class="app-header-simple">
     <a href="{% url 'home' %}" class="app-brand">
-      <img src="{% static 'assets/logodark.svg' %}" alt="Mentoring Dashboard" />
+      <img src="{% static 'assets/logo.png' %}" alt="AMU Mentoring" />
     </a>
     <nav class="nav-links">
       <a href="{% url 'login' %}">Log in</a>
@@ -556,6 +557,33 @@
   {% if user.is_authenticated %}
   </div>
   {% endif %}
+  <footer class="amu-site-footer amu-site-footer--mini" role="contentinfo">
+    <div class="amu-site-footer-mini-grid">
+      <div class="amu-site-footer-mini-brand">
+        <img src="{% static 'assets/logo.png' %}" alt="AMU Mentoring" class="amu-site-footer-logo" width="72" height="32" />
+        <div>
+          <p class="amu-site-footer-mini-title">Bukidnon State University — AMU</p>
+          <p class="amu-site-footer-mini-tagline">Helping students succeed through mentoring, peer support, and faculty consultations.</p>
+        </div>
+      </div>
+      <div class="amu-site-footer-mini-col">
+        <p class="amu-site-footer-mini-label">Contact</p>
+        <ul class="amu-site-footer-mini-list">
+          <li>Main Campus, Fortich Street, Malaybalay City, Bukidnon</li>
+          <li><a href="mailto:amu@buksu.edu.ph">amu@buksu.edu.ph</a></li>
+          <li>Tel (088) 813-5661 to 5663 <span class="amu-site-footer-mini-sep" aria-hidden="true"> · </span>Fax (088) 813-2717</li>
+        </ul>
+      </div>
+      <div class="amu-site-footer-mini-col">
+        <p class="amu-site-footer-mini-label">Links</p>
+        <ul class="amu-site-footer-mini-list amu-site-footer-mini-list--inline">
+          <li><a href="https://www.buksu.edu.ph" target="_blank" rel="noopener noreferrer">www.buksu.edu.ph</a></li>
+          <li><a href="https://www.facebook.com/buksuAMU" target="_blank" rel="noopener noreferrer">Facebook</a></li>
+        </ul>
+      </div>
+    </div>
+    <p class="amu-site-footer-mini-copy">© {% now "Y" %} Bukidnon State University — Academic Mentoring Unit</p>
+  </footer>
   <div class="loading-overlay" id="loading-overlay" aria-hidden="true">
     <div class="sk-chase" role="status" aria-label="Loading">
       <div class="sk-chase-dot"></div>

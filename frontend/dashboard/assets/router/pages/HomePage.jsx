@@ -112,6 +112,28 @@
     return <span className="mentee-dash-icon-wrap">{node}</span>;
   }
 
+  function WelcomeHeroAvatar({ user }) {
+    if (!user) return null;
+    const displayName = user.full_name || user.display_name || user.username || "You";
+    const initial = displayName.slice(0, 1).toUpperCase();
+    const avatarUrl = user.avatar_url || "";
+    return (
+      <div className="dashboard-welcome-avatar" aria-hidden="true">
+        <div className="sidebar-avatar-wrapper dashboard-welcome-avatar-wrap">
+          {avatarUrl ? (
+            <img
+              src={avatarUrl}
+              alt=""
+              className="sidebar-avatar"
+            />
+          ) : (
+            <div className="sidebar-avatar fallback">{initial}</div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   function HomePage() {
     const ctx = useContext(AppContext);
     if (!ctx) return null;
@@ -129,12 +151,13 @@
     if (!authCheckDone) return null;
     if (!user) {
       return (
-        <div className="card cta-card">
+        <div className="card cta-card page-shell">
           <h1 className="page-title">Mentor–Mentee Matching</h1>
           <p className="page-subtitle" style={{ marginBottom: 0 }}>Connect with mentors or mentees through smart matching in one place.</p>
           <div className="btn-row">
             <button className="btn" onClick={() => { window.location.href = "/portal/"; }}>Get started</button>
             <button className="btn secondary" onClick={() => { window.location.href = "/portal/"; }}>I already have an account</button>
+            <button type="button" className="btn secondary auth-landing-back-btn" onClick={() => { window.location.href = "/landing/"; }}>Back to landing</button>
           </div>
         </div>
       );
@@ -148,15 +171,18 @@
       const userProgress = stats && stats.user_progress;
 
       return (
-        <div className="home-dashboard-space mentee-dashboard mentee-dashboard-v2">
+        <div className="home-dashboard-space mentee-dashboard mentee-dashboard-v2 page-shell">
           <section className="mentee-v2-panel mentee-v2-hero">
-            <div className="mentee-v2-hero-copy">
-              <h1 className="mentee-v2-title">
-                Welcome back{user.full_name || user.display_name ? `, ${user.full_name || user.display_name}` : user.username ? `, ${user.username}` : ""}
-              </h1>
-              <p className="mentee-v2-subtitle">
-                A focused view of your mentoring journey, matching, and next best actions.
-              </p>
+            <div className="mentee-v2-hero-leading">
+              <WelcomeHeroAvatar user={user} />
+              <div className="mentee-v2-hero-copy">
+                <h1 className="mentee-v2-title">
+                  Welcome back{user.full_name || user.display_name ? `, ${user.full_name || user.display_name}` : user.username ? `, ${user.username}` : ""}
+                </h1>
+                <p className="mentee-v2-subtitle">
+                  A focused view of your mentoring journey, matching, and next best actions.
+                </p>
+              </div>
             </div>
             <div className="mentee-v2-hero-actions">
               <button type="button" className="btn" onClick={() => setActiveTab("matching")}>Find mentors</button>
@@ -366,11 +392,13 @@
       );
 
       return (
-        <div className="home-dashboard-space mentor-dashboard-v2">
+        <div className="home-dashboard-space mentor-dashboard-v2 page-shell">
           <div className="home-space-glow" aria-hidden="true" />
 
           <section className="mentor-v2-hero">
-            <div className="mentor-v2-hero-copy">
+            <div className="mentor-v2-hero-leading">
+              <WelcomeHeroAvatar user={user} />
+              <div className="mentor-v2-hero-copy">
               <div className="mentor-v2-eyebrow">Mentor Dashboard</div>
               <h1 className="mentor-v2-title">
                 Welcome back{user.full_name || user.display_name ? `, ${user.full_name || user.display_name}` : user.username ? `, ${user.username}` : ""}
@@ -386,9 +414,10 @@
                   {user.mentor_approved ? "Coordinator approved" : "Pending coordinator approval"}
                 </span>
               </div>
+              </div>
             </div>
             <div className="mentor-v2-hero-actions">
-              <button type="button" className="btn" onClick={() => setActiveTab("matching")}>
+              <button type="button" className="btn" onClick={() => setActiveTab("mentees")}>
                 View mentees
               </button>
               <button type="button" className="btn secondary" onClick={() => setActiveTab("settings")}>
@@ -433,8 +462,8 @@
                   <h2>Your mentees</h2>
                   <p>Official mentees currently connected to you.</p>
                 </div>
-                <button type="button" className="btn secondary small" onClick={() => setActiveTab("matching")}>
-                  Open matching
+                <button type="button" className="btn secondary small" onClick={() => setActiveTab("mentees")}>
+                  View all mentees
                 </button>
               </div>
               {acceptedRequests.length > 0 ? (
@@ -464,8 +493,8 @@
                 <div className="mentor-v2-empty">
                   <MenteeDashIcon name="users" size={22} />
                   <p>No official mentees yet. Once matching assigns mentees to you, they will appear here.</p>
-                  <button type="button" className="btn secondary small" onClick={() => setActiveTab("matching")}>
-                    Check matching
+                  <button type="button" className="btn secondary small" onClick={() => setActiveTab("mentees")}>
+                    View all mentees
                   </button>
                 </div>
               )}
@@ -501,14 +530,14 @@
                   Complete your mentor profile so matching can recommend you accurately.
                 </div>
               )}
-              <button type="button" className="btn mentor-v2-full-btn" onClick={() => setActiveTab("settings")}>
+              <button type="button" className="btn mentor-v2-full-btn" onClick={() => setActiveTab("mentor-matching-profile")}>
                 Update mentoring profile
               </button>
             </aside>
           </div>
 
           <section className="mentor-v2-quick-actions" aria-label="Quick actions">
-            <button type="button" onClick={() => setActiveTab("matching")}>
+            <button type="button" onClick={() => setActiveTab("mentees")}>
               <MenteeDashIcon name="users" size={16} />
               <span>Manage mentees</span>
             </button>
@@ -526,7 +555,7 @@
     }
 
     return (
-      <div className="home-dashboard-space mentor-staff-dashboard">
+      <div className="home-dashboard-space mentor-staff-dashboard page-shell">
         <div className="home-space-glow" aria-hidden="true" />
 
         <div className="home-top-stats">
@@ -554,18 +583,21 @@
 
         <div className="home-dashboard-grid">
           <section className="home-hero-space">
-            <div className="home-hero-text">
-              <h1 className="home-hero-title">
-                Welcome back{user.full_name || user.display_name ? `, ${user.full_name || user.display_name}` : user.username ? `, ${user.username}` : ""}
-              </h1>
-              <p className="home-hero-sub">{roleLine}</p>
+            <div className="home-hero-leading">
+              <WelcomeHeroAvatar user={user} />
+              <div className="home-hero-text">
+                <h1 className="home-hero-title">
+                  Welcome back{user.full_name || user.display_name ? `, ${user.full_name || user.display_name}` : user.username ? `, ${user.username}` : ""}
+                </h1>
+                <p className="home-hero-sub">{roleLine}</p>
+              </div>
             </div>
 
             <div className="home-hero-icon" aria-hidden="true">
               <img
                 className="home-hero-logo"
-                src={theme === "dark" ? "/static/assets/logoreal.svg" : "/static/assets/logodark.svg"}
-                alt="PeerLink logo"
+                src="/static/assets/logo.png"
+                alt="AMU Mentoring"
               />
             </div>
           </section>

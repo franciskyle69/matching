@@ -320,16 +320,29 @@ def _serialize_subject(subject: Subject):
     topic_items = []
     if topics is not None:
         topic_items = [_serialize_topic(topic) for topic in topics.all().order_by("name")]
+    category = getattr(subject, "category", Subject.CATEGORY_MAJOR) or Subject.CATEGORY_MAJOR
     return {
         "id": subject.id,
         "name": subject.name,
+        "code": getattr(subject, "code", "") or "",
+        "category": category,
+        "category_label": dict(Subject.CATEGORY_CHOICES).get(category, category),
+        "is_minor": category != Subject.CATEGORY_MAJOR,
         "description": subject.description,
         "topics": topic_items,
     }
 
 
 def _serialize_topic(topic: Topic):
-    return {"id": topic.id, "name": topic.name, "subject_id": topic.subject_id}
+    return {
+        "id": topic.id,
+        "name": topic.name,
+        "subject_id": topic.subject_id,
+        "status": getattr(topic, "status", Topic.STATUS_ACTIVE),
+        "is_active": getattr(topic, "status", Topic.STATUS_ACTIVE) == Topic.STATUS_ACTIVE,
+        "created_at": topic.created_at.isoformat() if getattr(topic, "created_at", None) else None,
+        "updated_at": topic.updated_at.isoformat() if getattr(topic, "updated_at", None) else None,
+    }
 
 
 def _serialize_mentee(mentee: MenteeProfile):
@@ -341,20 +354,29 @@ def _serialize_mentee(mentee: MenteeProfile):
     }
 
 
-def get_subjects_list():
-    """Return the serialized subjects list, cached for faster access."""
-    cache_key = "subjects:list"
+def get_subjects_list(include_inactive_topics=False):
+    """Return serialized subjects list, cached for faster access."""
+    suffix = "all" if include_inactive_topics else "active"
+    cache_key = f"subjects:list:{suffix}"
     cached = cache.get(cache_key)
     if cached is not None:
         return cached
-    subjects = Subject.objects.order_by("name")
-    items = [_serialize_subject(item) for item in subjects]
+    subjects = Subject.objects.prefetch_related("topics").order_by("name")
+    items = []
+    for item in subjects:
+        data = _serialize_subject(item)
+        if not include_inactive_topics:
+            data["topics"] = [
+                topic for topic in data.get("topics", []) if topic.get("is_active")
+            ]
+        items.append(data)
     cache.set(cache_key, items, timeout=600)
     return items
 
 
 def invalidate_subjects_cache():
-    cache.delete("subjects:list")
+    cache.delete("subjects:list:active")
+    cache.delete("subjects:list:all")
 
 
 def _parse_datetime(value):

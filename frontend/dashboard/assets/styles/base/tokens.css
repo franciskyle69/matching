@@ -1,6 +1,9 @@
 :root {
+  --font-sans: "Plus Jakarta Sans", "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --font-mono: "JetBrains Mono", "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
   --bg: #f8fafc;
   --bg-subtle: #f1f5f9;
+  --bg-elevated: #eef2ff;
   --card: #ffffff;
   --text: #0f172a;
   --text-muted: #64748b;
@@ -8,26 +11,51 @@
   --border-strong: #cbd5e1;
   --primary: #4f46e5;
   --primary-hover: #4338ca;
+  --primary-soft: #e0e7ff;
+  --focus-ring: color-mix(in srgb, var(--primary) 30%, transparent);
   --success: #16a34a;
   --warning: #d97706;
   --danger: #dc2626;
+  --radius-xs: 6px;
   --radius-sm: 8px;
   --radius-md: 12px;
   --radius-lg: 16px;
+  --radius-xl: 20px;
   --space-1: 4px;
   --space-2: 8px;
   --space-3: 12px;
   --space-4: 16px;
   --space-5: 20px;
   --space-6: 24px;
-  --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.06);
+  --space-7: 28px;
+  --space-8: 32px;
+  --space-9: 40px;
+  --space-10: 48px;
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-md: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.25rem;
+  --text-2xl: 1.5rem;
+  --text-3xl: 1.875rem;
+  --line-tight: 1.2;
+  --line-normal: 1.5;
+  --line-relaxed: 1.65;
+  --shadow-xs: 0 1px 2px rgba(15, 23, 42, 0.05);
+  --shadow-sm: 0 2px 8px rgba(15, 23, 42, 0.06);
   --shadow-md: 0 8px 24px rgba(15, 23, 42, 0.08);
+  --shadow-lg: 0 14px 42px rgba(15, 23, 42, 0.12);
+  --motion-fast: 150ms;
+  --motion-base: 200ms;
+  --motion-slow: 250ms;
+  --ease-standard: cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
 .dark,
 [data-theme="dark"] {
   --bg: #0f172a;
   --bg-subtle: #1e293b;
+  --bg-elevated: #1b2440;
   --card: #111827;
   --text: #e2e8f0;
   --text-muted: #94a3b8;
@@ -35,6 +63,9 @@
   --border-strong: rgba(148, 163, 184, 0.45);
   --primary: #6366f1;
   --primary-hover: #4f46e5;
+  --primary-soft: rgba(99, 102, 241, 0.24);
+  --focus-ring: color-mix(in srgb, var(--primary) 40%, transparent);
   --shadow-sm: 0 1px 2px rgba(2, 6, 23, 0.4);
   --shadow-md: 0 12px 30px rgba(2, 6, 23, 0.45);
+  --shadow-lg: 0 18px 48px rgba(2, 6, 23, 0.5);
 }

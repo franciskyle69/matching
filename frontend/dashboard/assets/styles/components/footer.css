@@ -1,0 +1,181 @@
+/* Dashboard footer — compact “mini landing” style (low visual weight) */
+
+.amu-site-footer {
+  flex-shrink: 0;
+  margin-top: 48px;
+  padding: 0;
+  border-top: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  line-height: 1.45;
+}
+
+.amu-site-footer--mini {
+  max-width: 1200px;
+  width: 100%;
+  margin-inline: auto;
+}
+
+.amu-site-footer-mini-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr) minmax(0, 0.75fr);
+  gap: 16px 24px;
+  align-items: start;
+  padding-top: 24px;
+  border-top: 1px solid var(--border);
+}
+
+.amu-site-footer-mini-brand {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  min-width: 0;
+}
+
+.amu-site-footer-logo {
+  width: auto;
+  height: 32px;
+  max-width: 72px;
+  max-height: 32px;
+  object-fit: contain;
+  display: block;
+  flex-shrink: 0;
+  margin: 0;
+  opacity: 0.92;
+}
+
+.amu-site-footer-mini-title {
+  margin: 0;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1.3;
+}
+
+.amu-site-footer-mini-tagline {
+  margin: 4px 0 0;
+  font-size: 0.6875rem;
+  color: var(--text-muted);
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.amu-site-footer-mini-label {
+  margin: 0 0 6px;
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.amu-site-footer-mini-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.amu-site-footer-mini-list li + li {
+  margin-top: 3px;
+}
+
+.amu-site-footer-mini-list--inline {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+}
+
+.amu-site-footer-mini-list--inline li + li {
+  margin-top: 0;
+}
+
+.amu-site-footer-mini-sep {
+  opacity: 0.55;
+}
+
+.amu-site-footer a {
+  color: var(--text-muted);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.amu-site-footer a:hover {
+  color: var(--accent);
+  text-decoration: underline;
+}
+
+.amu-site-footer-mini-copy {
+  margin: 12px 0 4px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+  text-align: center;
+  font-size: 0.6875rem;
+  color: var(--text-muted);
+  opacity: 0.85;
+}
+
+/* Auth card — minimal strip */
+.amu-site-footer--compact {
+  padding: 0;
+  margin-top: 16px;
+  border-top: none;
+  background: transparent;
+  text-align: left;
+}
+
+.amu-site-footer--compact .amu-site-footer-unit {
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.88);
+}
+
+.amu-site-footer--compact .amu-site-footer-links {
+  margin: 4px 0 0;
+  font-size: 0.6875rem;
+  color: rgba(255, 255, 255, 0.62);
+}
+
+.amu-site-footer--compact a {
+  color: rgba(255, 255, 255, 0.82);
+}
+
+.app-page-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 24px;
+  width: 100%;
+  min-height: min-content;
+}
+
+.settings-page-shell .settings-page-footer {
+  margin-top: 56px;
+  max-width: none;
+}
+
+[data-theme="light"] .amu-site-footer--compact .amu-site-footer-unit {
+  color: rgba(255, 255, 255, 0.95);
+}
+
+@media (max-width: 900px) {
+  .amu-site-footer-mini-grid {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  .amu-site-footer-mini-list--inline {
+    flex-direction: column;
+    gap: 3px;
+  }
+}
+
+@media (max-width: 768px) {
+  .amu-site-footer-mini-tagline {
+    -webkit-line-clamp: 3;
+  }
+}

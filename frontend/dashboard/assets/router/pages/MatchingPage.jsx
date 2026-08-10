@@ -111,23 +111,27 @@
       <div
         className={
           isMentee
-            ? "home-dashboard-space matching-page matching-page--mentee"
-            : "home-dashboard-space matching-page matching-page--mentor"
+            ? "home-dashboard-space matching-page matching-page--mentee page-shell"
+            : "home-dashboard-space matching-page matching-page--mentor page-shell"
         }
       >
-        <h1 className="page-title">
-          Matching
-          {isMentee && menteeRecUpdating && (
-            <span className="matching-updating-badge">Updating…</span>
-          )}
-        </h1>
-        <p className="page-subtitle">
-          {isMentee
-            ? "Personalized mentor recommendations based on your mentoring preferences. Choose a mentor to request a pairing—we match you by subjects and topics you care about."
-            : user.role === "mentor"
-            ? "View your official mentees. New mentee requests are auto-accepted when you have available slots."
-            : "Run the model to get mentor–mentee pairs."}
-        </p>
+        <div className="page-shell-head">
+          <div>
+            <h1 className="page-title">
+              Matching
+              {isMentee && menteeRecUpdating && (
+                <span className="matching-updating-badge">Updating…</span>
+              )}
+            </h1>
+            <p className="page-subtitle">
+              {isMentee
+                ? "Personalized mentor recommendations based on your mentoring preferences. Choose a mentor to request a pairing—we match you by subjects and topics you care about."
+                : user.role === "mentor"
+                ? "View your official mentees. New mentee requests are auto-accepted when you have available slots."
+                : "Run the model to get mentor–mentee pairs."}
+            </p>
+          </div>
+        </div>
         {user.role === "staff" && (
           <div className="matching-options">
             <div className="matching-options-row">
@@ -147,7 +151,7 @@
         )}
 
         {user.role === "staff" && (
-          <div className="btn-row" style={{ marginBottom: "20px" }}>
+          <div className="btn-row matching-actions-row">
             <button className="btn" onClick={runMatching} disabled={matchingLoading}>
               {matchingLoading ? (
                 <Spinner inline />
@@ -168,7 +172,7 @@
               Set your mentoring preferences so we can recommend mentors based on
               the subjects you want help with.
             </p>
-            <div className="btn-row" style={{ marginTop: "12px" }}>
+            <div className="btn-row matching-empty-actions">
               <button type="button" className="btn secondary" onClick={() => setActiveTab("mentoring-preferences")}>
                 Open mentoring preferences
               </button>
@@ -179,7 +183,7 @@
         {user.role === "staff" && matchingResults.length === 0 && !matchingLoading && (
           <div className="matching-empty">
             <p>No results yet. Click “Run matching”.</p>
-            <div className="btn-row" style={{ marginTop: "10px" }}>
+            <div className="btn-row matching-empty-actions">
               <button type="button" className="btn secondary small" onClick={runMatching}>
                 Run matching
               </button>
@@ -197,11 +201,18 @@
             return (
               <>
                 {accepted.length > 0 && (
-                  <div className="match-mentee-list" style={{ marginBottom: "24px" }}>
-                    <div className="section-title">My mentees</div>
-                    <p className="page-subtitle" style={{ marginTop: "-8px", marginBottom: "12px" }}>
-                      Official mentees matched to you. Post announcements or view their matching details below.
-                    </p>
+                  <div className="match-mentee-list matching-section-block">
+                    <div className="mentees-section-head">
+                      <div>
+                        <div className="section-title">My mentees</div>
+                        <p className="page-subtitle matching-section-subtitle">
+                          Official mentees matched to you. Post announcements or view their matching details below.
+                        </p>
+                      </div>
+                      <button type="button" className="btn secondary small" onClick={() => setActiveTab("mentees")}>
+                        View all mentees
+                      </button>
+                    </div>
                     {accepted.map((r) => (
                       <div key={r.mentee_id} className="match-card match-card-mentee-list match-card-accepted">
                         <div className="match-card-header">
@@ -223,9 +234,9 @@
                   </div>
                 )}
                 {pending.length > 0 && (
-                  <div className="match-mentee-list" style={{ marginBottom: "24px" }}>
+                  <div className="match-mentee-list matching-section-block">
                     <div className="section-title">Not available</div>
-                    <p className="page-subtitle" style={{ marginTop: "-8px", marginBottom: "12px" }}>
+                    <p className="page-subtitle matching-section-subtitle">
                       These mentees could not be auto-confirmed because your capacity is full.
                     </p>
                     {pending.map((r) => (
@@ -256,9 +267,9 @@
         })()}
 
         {isMentee && myMentor && (
-          <div className="match-mentee-list" style={{ marginBottom: "24px" }}>
+          <div className="match-mentee-list matching-section-block">
             <div className="section-title">Your mentor</div>
-            <p className="page-subtitle" style={{ marginTop: "-8px", marginBottom: "12px" }}>
+            <p className="page-subtitle matching-section-subtitle">
               Your official mentor. View announcements and stay in touch through the dashboard.
             </p>
             <div className="match-card match-card-mentee-list match-card-accepted">
@@ -292,17 +303,17 @@
               <div className="matching-empty">
                 <p>{emptyMessage}</p>
                 {suggestedSlots.length > 0 && (
-                  <div style={{ marginTop: "10px" }}>
-                    <p className="muted" style={{ marginBottom: "6px" }}>Suggested available mentor times:</p>
-                    <ul style={{ margin: 0, paddingLeft: "18px", textAlign: "left", display: "inline-block" }}>
+                  <div className="matching-suggested-times">
+                    <p className="muted matching-suggested-times-label">Suggested available mentor times:</p>
+                    <ul className="matching-suggested-times-list">
                       {suggestedSlots.map((slot) => <li key={slot}>{slot}</li>)}
                     </ul>
                   </div>
                 )}
-                <p className="muted" style={{ marginTop: "8px" }}>
+                <p className="muted matching-suggested-times-note">
                   Try adjusting your availability or selecting more subjects in your mentoring preferences.
                 </p>
-                <div className="btn-row" style={{ marginTop: "12px", flexWrap: "wrap", gap: "8px" }}>
+                <div className="btn-row matching-empty-actions matching-empty-actions-wrap">
                   <button
                     type="button"
                     className="btn secondary small"
@@ -336,7 +347,6 @@
                         setShowMoreMentors(true);
                         loadMenteeRecommendations(30);
                       }}
-                      style={{ fontSize: "13px", padding: "8px 16px", borderRadius: "999px" }}
                     >
                       {menteeRecLoading ? "Loading more mentors…" : "View more mentors"}
                     </button>
@@ -384,6 +394,10 @@
                 if (whyReasons.length === 0) {
                   whyReasons.push(`Good overall fit based on your mentoring preferences.`);
                 }
+                const sharedSubjectsPreview = commonSubjects.slice(0, 2);
+                const sharedTopicsPreview = commonTopics.slice(0, 2);
+                const hasSharedDetails =
+                  sharedSubjectsPreview.length > 0 || sharedTopicsPreview.length > 0;
 
                 return (
                   <div
@@ -413,10 +427,26 @@
                       <div className="match-card-main">
                         <div className="match-card-title-row">
                           <img src={mentor.avatar_url || PLACEHOLDER_AVATAR} alt={match.mentor_display_name || match.mentor_username} className="match-column-avatar" />
-                          <MentorMatchTitle
-                            name={match.mentor_display_name || match.mentor_username}
-                            role={mentor.role}
-                          />
+                          <div>
+                            <MentorMatchTitle
+                              name={match.mentor_display_name || match.mentor_username}
+                              role={mentor.role}
+                            />
+                            {hasSharedDetails && (
+                              <p className="match-card-subtitle">
+                                {sharedSubjectsPreview.length > 0
+                                  ? `Shared subjects: ${sharedSubjectsPreview.join(", ")}`
+                                  : ""}
+                                {sharedSubjectsPreview.length > 0 &&
+                                sharedTopicsPreview.length > 0
+                                  ? " • "
+                                  : ""}
+                                {sharedTopicsPreview.length > 0
+                                  ? `Shared topics: ${sharedTopicsPreview.join(", ")}`
+                                  : ""}
+                              </p>
+                            )}
+                          </div>
                         </div>
                       </div>
                       <div className="match-card-header-right">
@@ -430,6 +460,11 @@
                               style={{ width: Math.min(100, percentage) + "%" }}
                             />
                           </div>
+                          {statusText && (
+                            <span className="match-request-badge match-request-badge-inline">
+                              {statusText}
+                            </span>
+                          )}
                         </div>
                         <span className={"match-card-expand-indicator" + (isExpanded ? " is-open" : "")} aria-hidden="true">
                           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -477,11 +512,10 @@
                         {statusText && (
                           <p className="match-card-subtitle"><strong>Status:</strong> {statusText}</p>
                         )}
-                        <div className="btn-row" style={{ marginTop: "8px", justifyContent: "flex-start" }}>
+                        <div className="btn-row matching-card-inline-actions">
                           <button
                             type="button"
                             className="btn secondary small"
-                            style={{ borderRadius: "999px", paddingInline: "14px" }}
                             onClick={() => {
                               openMentorProfileInNewTab(match);
                             }}
@@ -489,7 +523,7 @@
                             View profile
                           </button>
                         </div>
-                        <div className="btn-row" style={{ marginTop: "12px" }}>
+                        <div className="btn-row matching-empty-actions">
                           <button
                             type="button"
                             className="btn small"
@@ -525,7 +559,7 @@
               <p className="page-subtitle">
                 Scroll to explore additional mentors that fit your subjects and topics.
               </p>
-              <div style={{ maxHeight: "360px", overflowY: "auto", marginTop: "12px" }}>
+              <div className="matching-modal-list">
                 {sortedMenteeRecs.length === 0 && !menteeRecLoading && (
                   <p className="muted">No additional mentors to show right now.</p>
                 )}
@@ -555,7 +589,6 @@
                     <div
                       key={"modal-" + match.mentor_id + "-" + idx}
                       className={"match-card match-card-mentee-list" + (isOfficialPair ? " match-card-requested" : "")}
-                      style={{ marginBottom: "12px" }}
                     >
                       <div className="match-card-header">
                         <div className="match-card-main">
@@ -598,7 +631,7 @@
                         <p className="match-reason">
                           <strong>Why this match:</strong> {whySentence}
                         </p>
-                        <div className="btn-row" style={{ marginTop: "8px" }}>
+                        <div className="btn-row matching-card-inline-actions">
                           <button
                             type="button"
                             className="btn small"
@@ -620,12 +653,12 @@
                   );
                 })}
                 {menteeRecLoading && (
-                  <div style={{ marginTop: "8px" }}>
+                  <div className="matching-loading-inline">
                     <MatchingLoading />
                   </div>
                 )}
               </div>
-              <div className="btn-row" style={{ marginTop: "16px", justifyContent: "flex-end" }}>
+              <div className="btn-row matching-modal-footer">
                 <button
                   type="button"
                   className="btn secondary small"
@@ -658,13 +691,13 @@
                 const mentorTopics = (mentor.topics && mentor.topics.length ? mentor.topics : d.mentor_topics || []);
                 return (
                   <>
-                    <div className="match-card-header" style={{ marginBottom: "8px" }}>
+                    <div className="match-card-header matching-modal-header">
                       <div className="match-card-main">
                         <div className="match-card-title-row">
                           <img src={mentor.avatar_url || PLACEHOLDER_AVATAR} alt={match.mentor_display_name || match.mentor_username} className="match-column-avatar" />
                           <div>
-                            <h2 className="page-title" style={{ marginBottom: 2 }}>Mentor profile</h2>
-                            <p className="page-subtitle" style={{ marginBottom: 2 }}>{match.mentor_display_name || match.mentor_username}</p>
+                            <h2 className="page-title matching-modal-title">Mentor profile</h2>
+                            <p className="page-subtitle matching-modal-subtitle">{match.mentor_display_name || match.mentor_username}</p>
                             {mentor.role && (
                               <MentorRoleBadge role={mentor.role} prominent className="mentor-role-badge--spaced" />
                             )}
@@ -678,7 +711,7 @@
                     <p className="page-subtitle">
                       A quick snapshot of this mentor&apos;s profile, availability, and capacity.
                     </p>
-                    <div className="form-grid" style={{ marginTop: "8px" }}>
+                    <div className="form-grid matching-modal-grid">
                       <div>
                         <p><strong>Biological sex:</strong> {mentor.gender || "—"}</p>
                         {mentor.expertise_level != null && (
@@ -709,7 +742,7 @@
                         )}
                       </div>
                     </div>
-                    <div className="btn-row" style={{ marginTop: "16px", justifyContent: "space-between" }}>
+                    <div className="btn-row matching-modal-actions">
                       <button
                         type="button"
                         className="btn secondary small"
@@ -766,7 +799,7 @@
                         <h4>Mentor: {row.mentor_display_name || row.mentor_username}</h4>
                       </div>
                       {mentor.role && (
-                        <p style={{ margin: "6px 0 8px" }}>
+                        <p className="matching-role-wrap">
                           <MentorRoleBadge role={mentor.role} prominent />
                         </p>
                       )}

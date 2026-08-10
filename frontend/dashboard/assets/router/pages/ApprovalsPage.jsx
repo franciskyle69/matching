@@ -552,10 +552,12 @@
       : false;
 
     return (
-      <div className="card approvals-page-shell">
-        <div className="approvals-page-header">
-          <h1 className="page-title">User approvals</h1>
-          <p className="page-subtitle">Compact review queue for pending mentors and mentees.</p>
+      <div className="card approvals-page-shell page-shell">
+        <div className="approvals-page-header page-shell-head">
+          <div>
+            <h1 className="page-title">User approvals</h1>
+            <p className="page-subtitle">Compact review queue for pending mentors and mentees.</p>
+          </div>
         </div>
 
         {approvalsLoading && <Spinner title="Loading approvals…" subtitle="Fetching pending users" />}

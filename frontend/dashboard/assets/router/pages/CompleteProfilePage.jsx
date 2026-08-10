@@ -110,11 +110,12 @@
     const isMentee = user.role === "mentee";
     const isMentor = user.role === "mentor";
 
-    const SUBJECT_OPTIONS =
-      (window.DashboardApp && window.DashboardApp.MENTOR_SUBJECT_OPTIONS) || [];
-    const TOPIC_OPTIONS =
-      (window.DashboardApp && window.DashboardApp.MENTOR_TOPIC_OPTIONS) || [];
-
+    const SubjectCategoryPicker =
+      window.DashboardApp && window.DashboardApp.SubjectCategoryPicker;
+    const selectionRequiresTopics =
+      window.DashboardApp.selectionRequiresTopics || (() => true);
+    const getMajorSubjectsFromSelection =
+      window.DashboardApp.getMajorSubjectsFromSelection || ((s) => s || []);
     const getAllowedTopicsForSubjects =
       window.DashboardApp.getAllowedTopicsForSubjects || (() => []);
     const filterTopicsForSubjects =
@@ -126,6 +127,8 @@
     const selectedSubjects = Array.isArray(mentorProfile.subjects)
       ? [...mentorProfile.subjects]
       : [];
+    const subjectOptions =
+      (window.DashboardApp && window.DashboardApp.MENTOR_SUBJECT_OPTIONS) || [];
 
     const allowedTopics = useMemo(
       () => getAllowedTopicsForSubjects(selectedSubjects),
@@ -136,8 +139,18 @@
       selectedSubjects,
       mentorProfile.topics || [],
     );
+    const visibleTopicOptions = useMemo(
+      () => (topicsEnabled ? [...allowedTopics] : []),
+      [allowedTopics, topicsEnabled],
+    );
+    const topicsSignature = useMemo(
+      () => visibleTopicOptions.join("|"),
+      [visibleTopicOptions],
+    );
 
-    const topicsEnabled = selectedSubjects.length > 0;
+    const majorSubjects = getMajorSubjectsFromSelection(selectedSubjects);
+    const topicsEnabled = majorSubjects.length > 0;
+    const needsTopics = selectionRequiresTopics(selectedSubjects);
     const hasExpertise =
       mentorProfile.expertise_level != null &&
       mentorProfile.expertise_level >= 1 &&
@@ -157,7 +170,7 @@
       {
         id: "topics",
         label: "Topics selected",
-        done: selectedTopics.length > 0,
+        done: !needsTopics || selectedTopics.length > 0,
       },
       {
         id: "expertise",
@@ -168,14 +181,16 @@
 
     const profileCompletion = completionPercent(mentorProgressSteps);
     const canSubmitMentor =
-      selectedSubjects.length > 0 && selectedTopics.length > 0 && hasExpertise;
+      selectedSubjects.length > 0 &&
+      (!needsTopics || selectedTopics.length > 0) &&
+      hasExpertise;
 
     const expertiseLevel = EXPERTISE_LEVELS.find(
       (level) => level.value === mentorProfile.expertise_level,
     );
 
     const showSubjectError = submitAttempted && selectedSubjects.length === 0;
-    const showTopicError = submitAttempted && selectedTopics.length === 0;
+    const showTopicError = submitAttempted && needsTopics && selectedTopics.length === 0;
     const showExpertiseError = submitAttempted && !hasExpertise;
 
     function toggleSubject(subject) {
@@ -209,7 +224,7 @@
     }
 
     return (
-      <div className="card complete-profile-page">
+      <div className="card complete-profile-page page-shell">
         <header className="complete-profile-header">
           <h1 className="page-title">Complete your profile</h1>
           <p className="page-subtitle complete-profile-subtitle">
@@ -419,38 +434,46 @@
 
             <SectionCard
               title="Subjects Selection"
-              description="Choose all subjects you can confidently mentor."
+              description="Choose major IT subjects and minor subjects (GE, NSTP, PE) you can confidently mentor."
             >
               <div className="complete-profile-inline-meta" aria-live="polite">
                 <span>{selectedSubjects.length} selected</span>
               </div>
 
-              <div
-                className="complete-profile-subject-grid"
-                role="list"
-                aria-label="Subject options"
-              >
-                {SUBJECT_OPTIONS.map((subject) => {
-                  const active = selectedSubjects.includes(subject);
-                  return (
-                    <button
-                      key={subject}
-                      type="button"
-                      role="listitem"
-                      className={
-                        "complete-profile-subject-card" +
-                        (active ? " is-active" : "")
-                      }
-                      aria-pressed={active}
-                      onClick={() => toggleSubject(subject)}
-                    >
-                      <span className="complete-profile-subject-title">{subject}</span>
-                    </button>
-                  );
-                })}
-              </div>
+              {SubjectCategoryPicker ? (
+                <SubjectCategoryPicker
+                  selectedSubjects={selectedSubjects}
+                  onToggle={toggleSubject}
+                  showError={showSubjectError}
+                />
+              ) : (
+                <div
+                  className="complete-profile-subject-grid"
+                  role="list"
+                  aria-label="Subject options"
+                >
+                  {subjectOptions.map((subject) => {
+                    const active = selectedSubjects.includes(subject);
+                    return (
+                      <button
+                        key={subject}
+                        type="button"
+                        role="listitem"
+                        className={
+                          "complete-profile-subject-card" +
+                          (active ? " is-active" : "")
+                        }
+                        aria-pressed={active}
+                        onClick={() => toggleSubject(subject)}
+                      >
+                        <span className="complete-profile-subject-title">{subject}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
 
-              {showSubjectError && (
+              {!SubjectCategoryPicker && showSubjectError && (
                 <p className="complete-profile-error" role="alert">
                   Select at least one subject before submitting.
                 </p>
@@ -459,7 +482,11 @@
 
             <SectionCard
               title="Topics Selection"
-              description="Pick topic areas that match your selected subjects."
+              description={
+                needsTopics
+                  ? "Pick topic areas that match your selected major subjects."
+                  : "Topics apply to major IT subjects. You selected only minor subjects, so topics are optional."
+              }
             >
               <div className="complete-profile-inline-meta" aria-live="polite">
                 <span>{selectedTopics.length} selected</span>
@@ -467,50 +494,57 @@
 
               <div
                 className={
-                  "complete-profile-topic-wrap" +
-                  (topicsEnabled ? "" : " is-disabled")
+                  "complete-profile-topic-state" +
+                  (topicsEnabled ? " is-ready" : " is-waiting")
                 }
-                aria-disabled={!topicsEnabled}
+                aria-live="polite"
               >
-                <div
-                  className="complete-profile-topic-chips"
-                  role="list"
-                  aria-label="Topic options"
-                >
-                  {TOPIC_OPTIONS.map((topic) => {
-                    const disabled = !topicsEnabled || !allowedTopics.includes(topic);
-                    const active = selectedTopics.includes(topic);
-                    return (
-                      <button
-                        key={topic}
-                        type="button"
-                        role="listitem"
-                        className={
-                          "complete-profile-topic-chip" +
-                          (active ? " is-active" : "") +
-                          (disabled ? " is-disabled" : "")
-                        }
-                        disabled={disabled}
-                        aria-pressed={active}
-                        title={
-                          disabled
-                            ? "Select at least one matching subject to enable this topic"
-                            : `Toggle ${topic}`
-                        }
-                        onClick={() => toggleTopic(topic)}
+                {!topicsEnabled ? (
+                  <div className="complete-profile-topic-placeholder" role="status">
+                    <p className="complete-profile-topic-placeholder-title">
+                      Select a subject first
+                    </p>
+                    <p className="complete-profile-topic-placeholder-copy">
+                      Choose at least one major IT subject to see its relevant topics.
+                    </p>
+                  </div>
+                ) : (
+                  <div key={topicsSignature} className="complete-profile-topic-enter">
+                    <div className="complete-profile-topic-wrap">
+                      <div
+                        className="complete-profile-topic-chips"
+                        role="list"
+                        aria-label="Topic options"
                       >
-                        {topic}
-                      </button>
-                    );
-                  })}
-                </div>
+                        {visibleTopicOptions.map((topic) => {
+                          const active = selectedTopics.includes(topic);
+                          return (
+                            <button
+                              key={topic}
+                              type="button"
+                              role="listitem"
+                              className={
+                                "complete-profile-topic-chip" +
+                                (active ? " is-active" : "")
+                              }
+                              aria-pressed={active}
+                              title={`Toggle ${topic}`}
+                              onClick={() => toggleTopic(topic)}
+                            >
+                              {topic}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                    {visibleTopicOptions.length === 0 && (
+                      <p className="field-helper complete-profile-helper" role="status">
+                        No topic presets found for the selected subject.
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>
-
-              {!topicsEnabled && (
-                <p className="field-helper complete-profile-helper" role="status">
-                  Select one or more subjects first to unlock matching topics.
-                </p>
-              )}
 
               {showTopicError && (
                 <p className="complete-profile-error" role="alert">

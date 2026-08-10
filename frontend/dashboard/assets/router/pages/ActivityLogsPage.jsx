@@ -72,9 +72,13 @@
     }
 
     return (
-      <div className="card activity-logs-page">
-        <h1 className="page-title">Activity Logs</h1>
-        <p className="page-subtitle">View audit trail of actions by users and admins.</p>
+      <div className="card activity-logs-page page-shell">
+        <div className="activity-logs-page-head page-shell-head">
+          <div>
+            <h1 className="page-title">Activity Logs</h1>
+            <p className="page-subtitle">View audit trail of actions by users and admins.</p>
+          </div>
+        </div>
 
         <div className="activity-logs-filters">
           <input
@@ -101,6 +105,19 @@
           />
           <button type="button" className="btn" onClick={handleSearch} disabled={activityLogsLoading}>
             {activityLogsLoading ? <Spinner inline /> : "Search"}
+          </button>
+          <button
+            type="button"
+            className="btn secondary"
+            onClick={() => {
+              setSearch("");
+              setDateFrom("");
+              setDateTo("");
+              loadActivityLogs({ page: 1, page_size: activityLogsPageSize });
+            }}
+            disabled={activityLogsLoading}
+          >
+            Reset
           </button>
         </div>
 
@@ -166,7 +183,7 @@
           <div className="pagination-controls">
             <button
               type="button"
-              className="btn btn-secondary"
+              className="btn secondary"
               disabled={activityLogsLoading || activityLogsPage <= 1}
               onClick={() => loadPage(activityLogsPage - 1)}
             >
@@ -174,7 +191,7 @@
             </button>
             <button
               type="button"
-              className="btn btn-secondary"
+              className="btn secondary"
               disabled={activityLogsLoading || activityLogsPage >= activityLogsTotalPages}
               onClick={() => loadPage(activityLogsPage + 1)}
             >

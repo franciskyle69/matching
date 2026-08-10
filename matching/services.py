@@ -9,7 +9,7 @@ from django.core.cache import cache
 from django.db.models import Count
 
 from profiles.models import MentorProfile, MenteeProfile
-from matching.models import MenteeMentorRequest
+from matching.models import MenteeMentorRequest, UserTopicPreference, Topic
 from matching.ml.features import build_features
 from matching.ml.model_io import load_model
 
@@ -45,6 +45,42 @@ def _difficulty_alignment(mentor_level: Any, mentee_level: Any) -> float:
 def _mentor_is_instructor(role: str) -> float:
     r = (role or "").strip().lower()
     return 1.0 if "instructor" in r else 0.0
+
+
+def _get_topic_support_map() -> Dict[str, int]:
+    cache_key = "matching:topic_support_map:v1"
+    cached = cache.get(cache_key)
+    if isinstance(cached, dict):
+        return cached
+    rows = (
+        UserTopicPreference.objects.filter(
+            is_active_selection=True,
+            topic__status=Topic.STATUS_ACTIVE,
+        )
+        .values("topic__name")
+        .annotate(total=Count("id"))
+    )
+    support = {
+        str(row.get("topic__name") or "").strip().lower(): int(row.get("total") or 0)
+        for row in rows
+        if str(row.get("topic__name") or "").strip()
+    }
+    cache.set(cache_key, support, timeout=300)
+    return support
+
+
+def _topic_overlap_confidence(mentor_topics: Set[str], mentee_topics: Set[str]) -> float:
+    overlap = mentor_topics & mentee_topics
+    if not overlap:
+        return 1.0
+    support_map = _get_topic_support_map()
+    # New/rare topics should not dominate ranking until enough signal exists.
+    minimum_support = 5
+    confidences: List[float] = []
+    for topic in overlap:
+        count = int(support_map.get(topic, 0))
+        confidences.append(min(1.0, count / minimum_support))
+    return sum(confidences) / len(confidences) if confidences else 1.0
 
 
 def _normalise_gender(value: Any, default: str = "") -> str:
@@ -253,7 +289,11 @@ def _score_with_model(mentor: MentorProfile, mentee: MenteeProfile) -> Optional[
     task = meta.get("task", "classification")
     if task == "classification":
         proba = model.predict_proba(X.values)[0, 1]
-        return float(proba)
+        mentor_topics = _to_set(mentor.topics) or _to_set(mentor.skills)
+        mentee_topics = _to_set(mentee.topics) or _to_set(mentee.skills)
+        confidence = _topic_overlap_confidence(mentor_topics, mentee_topics)
+        adjusted = float(proba) * (0.85 + 0.15 * confidence)
+        return max(0.0, min(1.0, adjusted))
     pred = model.predict(X.values)[0]
     return float(pred)
 
@@ -267,13 +307,15 @@ def compute_score(mentor: MentorProfile, mentee: MenteeProfile) -> float:
     mentee_subjects = _to_set(mentee.subjects) or _to_set(mentee.skills)
     mentor_topics = _to_set(mentor.topics) or _to_set(mentor.skills)
     mentee_topics = _to_set(mentee.topics) or _to_set(mentee.skills)
+    topic_confidence = _topic_overlap_confidence(mentor_topics, mentee_topics)
 
     subjects = _jaccard(mentor_subjects, mentee_subjects)
     topics = _jaccard(mentor_topics, mentee_topics)
     difficulty = _difficulty_alignment(mentor.expertise_level, mentee.difficulty_level)
     instructor = _mentor_is_instructor(mentor.role)
 
-    return 0.45 * subjects + 0.4 * topics + 0.1 * difficulty + 0.05 * instructor
+    weighted_topics = topics * topic_confidence
+    return 0.5 * subjects + 0.35 * weighted_topics + 0.1 * difficulty + 0.05 * instructor
 
 
 GROUP_MATCHING_DEFAULT_MIN_SCORE = 0.3

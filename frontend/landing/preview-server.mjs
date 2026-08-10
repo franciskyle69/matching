@@ -66,7 +66,7 @@ const server = http.createServer((req, res) => {
     const base = path.basename(raw);
     let filePath = path.join(root, "assets", base);
     if (base === "logoreal.svg" && !fs.existsSync(filePath)) {
-      filePath = path.join(root, "assets", "logodark.svg");
+      filePath = path.join(root, "assets", "logo.png");
     }
     sendFile(res, filePath);
     return;

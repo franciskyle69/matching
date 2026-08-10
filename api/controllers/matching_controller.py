@@ -414,10 +414,17 @@ def mentor_requests(request):
         topics = e.topics if isinstance(e.topics, list) else ([e.topics] if e.topics else [])
         slots_left = max(capacity - accepted_count, 0)
         status = "official" if r.accepted else "not_available"
+        mentee_avatar = ""
+        if getattr(e, "avatar_url", None):
+            from api.views.helpers import _avatar_url
+
+            mentee_avatar = _avatar_url(request, e.avatar_url)
         data.append({
             "mentee_id": e.id,
+            "mentee_user_id": e.user_id,
             "mentee_username": e.user.username,
             "mentee_display_name": get_user_display_name(e.user) or e.user.username,
+            "mentee_avatar_url": mentee_avatar,
             "created_at": r.created_at.isoformat(),
             "accepted": r.accepted,
             "accepted_at": r.accepted_at.isoformat() if r.accepted_at else None,

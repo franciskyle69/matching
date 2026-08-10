@@ -8,6 +8,7 @@ from django.contrib.auth.decorators import login_required
 from django.core.mail import EmailMultiAlternatives
 from django.http import JsonResponse
 from django.core.cache import cache
+from django.db import transaction
 from django.views.decorators.http import require_GET, require_http_methods
 from django.template.loader import render_to_string
 from django.utils.crypto import constant_time_compare
@@ -18,7 +19,7 @@ import time
 
 from django.utils import timezone
 
-from matching.models import MenteeMentorRequest
+from matching.models import MenteeMentorRequest, UserTopicPreference
 from profiles.models import MentorProfile, MenteeProfile, InterestTag
 
 from accounts.forms import (
@@ -65,18 +66,71 @@ from ..views import (
     _serialize_subject,
     _serialize_topic,
     _serialize_mentee,
+    get_subjects_list,
     get_mentor_approved,
     get_mentee_approved,
+    invalidate_approval_cache_mentor,
     logger,
 )
 from matching.models import Notification, Subject, Topic
 from django.middleware.csrf import get_token
 from django.views.decorators.csrf import ensure_csrf_cookie
 from profiles.questionnaire_utils import filter_topics_for_subjects
-
-
 ME_CACHE_TTL_SECONDS = 30
 ME_CACHE_METRICS_LOG_EVERY = 100
+
+
+def _sync_user_topic_preferences(user, target, subjects, topics):
+    selected_subjects = [str(s or "").strip() for s in (subjects or []) if str(s or "").strip()]
+    selected_topics = [str(t or "").strip() for t in (topics or []) if str(t or "").strip()]
+    now = timezone.now()
+    with transaction.atomic():
+        UserTopicPreference.objects.filter(
+            user=user,
+            target=target,
+            is_active_selection=True,
+        ).update(is_active_selection=False, cleared_at=now)
+
+        if not selected_subjects or not selected_topics:
+            return
+
+        active_topics = (
+            Topic.objects.select_related("subject")
+            .filter(
+                subject__name__in=selected_subjects,
+                name__in=selected_topics,
+                status=Topic.STATUS_ACTIVE,
+            )
+            .order_by("subject__name", "name", "id")
+        )
+
+        by_name = {}
+        for item in active_topics:
+            by_name.setdefault(item.name, []).append(item)
+
+        created_rows = []
+        for topic_name in selected_topics:
+            topic_options = by_name.get(topic_name) or []
+            if not topic_options:
+                continue
+            chosen = topic_options[0]
+            for candidate in topic_options:
+                if candidate.subject and candidate.subject.name in selected_subjects:
+                    chosen = candidate
+                    break
+            created_rows.append(
+                UserTopicPreference(
+                    user=user,
+                    subject=chosen.subject,
+                    topic=chosen,
+                    target=target,
+                    is_active_selection=True,
+                ),
+            )
+
+        if created_rows:
+            UserTopicPreference.objects.bulk_create(created_rows)
+    cache.delete("matching:topic_support_map:v1")
 
 
 def _me_cache_key(user_id):
@@ -1203,6 +1257,12 @@ def update_mentee_matching_profile(request):
           payload.get("availability")
       )
   mentee_profile.save()
+  _sync_user_topic_preferences(
+      request.user,
+      UserTopicPreference.TARGET_MENTEE,
+      mentee_profile.subjects if isinstance(mentee_profile.subjects, list) else [],
+      mentee_profile.topics if isinstance(mentee_profile.topics, list) else [],
+  )
   _clear_me_cache(request.user.id)
   audit_log(request.user, "update", "mentee_matching", mentee_profile.id)
 
@@ -1254,6 +1314,19 @@ def update_mentor_profile(request):
     capacity = _get_int(payload, "capacity", default=None, min_value=1)
     if capacity is not None:
         mentor_profile.capacity = capacity
+    role_change_requires_approval = False
+    requested_role = _get_str(payload, "role", mentor_profile.role or "")
+    current_role = str(getattr(mentor_profile, "role", "") or "").strip()
+    if "role" in payload:
+        mentor_profile.role = requested_role
+        if (
+            not request.user.is_staff
+            and requested_role
+            and requested_role != current_role
+        ):
+            mentor_profile.approved = False
+            role_change_requires_approval = True
+
     if "gender" in payload:
         mentor_profile.gender = _normalise_mentor_gender(
             payload.get("gender"),
@@ -1264,6 +1337,34 @@ def update_mentor_profile(request):
             payload.get("availability")
         )
     mentor_profile.save()
+    if role_change_requires_approval:
+        invalidate_approval_cache_mentor(mentor_profile.id)
+        staff_users = User.objects.filter(is_staff=True).exclude(id=request.user.id)
+        notifications = [
+            Notification(
+                user=staff_user,
+                message=(
+                    f"{get_user_display_name(request.user) or request.user.username} "
+                    "updated mentor role and requires re-approval."
+                ),
+                action_tab="approvals",
+            )
+            for staff_user in staff_users
+        ]
+        if notifications:
+            Notification.objects.bulk_create(notifications)
+        audit_log(
+            request.user,
+            "mentor_role_change_pending_approval",
+            "mentor_profile",
+            mentor_profile.id,
+        )
+    _sync_user_topic_preferences(
+        request.user,
+        UserTopicPreference.TARGET_MENTOR,
+        mentor_profile.subjects if isinstance(mentor_profile.subjects, list) else [],
+        mentor_profile.topics if isinstance(mentor_profile.topics, list) else [],
+    )
     _clear_me_cache(request.user.id)
     audit_log(request.user, "update", "mentor_profile", mentor_profile.id)
 
@@ -1289,6 +1390,13 @@ def update_mentor_profile(request):
             "gender": getattr(mentor_profile, "gender", "") or "",
             "availability": _normalise_availability_slots(
                 getattr(mentor_profile, "availability", [])
+            ),
+            "mentor_approved": bool(getattr(mentor_profile, "approved", False)),
+            "role_change_requires_approval": role_change_requires_approval,
+            "message": (
+                "Role updated. Your mentor account is now pending coordinator approval."
+                if role_change_requires_approval
+                else ""
             ),
         }
     )
@@ -1385,4 +1493,41 @@ def tag_suggestions(request):
     else:
         suggestions = list(POPULAR_TAGS)
     return JsonResponse({"suggestions": suggestions[:20]})
+
+
+@login_required
+@require_GET
+def questionnaire_options(request):
+    """Dynamic questionnaire options from Subject/Topic tables."""
+    _ = request
+    subjects = get_subjects_list(include_inactive_topics=False)
+    topic_map = {}
+    for item in subjects:
+        if item.get("is_minor"):
+            continue
+        topic_map[item.get("name", "")] = [
+            topic.get("name")
+            for topic in (item.get("topics") or [])
+            if topic.get("is_active")
+        ]
+    return JsonResponse(
+        {
+            "subjects": [
+                {
+                    "name": item.get("name"),
+                    "code": item.get("code", ""),
+                    "category": item.get("category", Subject.CATEGORY_MAJOR),
+                }
+                for item in subjects
+            ],
+            "category_labels": dict(Subject.CATEGORY_CHOICES),
+            "category_order": [
+                Subject.CATEGORY_MAJOR,
+                Subject.CATEGORY_GE,
+                Subject.CATEGORY_NSTP,
+                Subject.CATEGORY_PE,
+            ],
+            "topic_map": topic_map,
+        }
+    )
 

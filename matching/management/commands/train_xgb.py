@@ -7,6 +7,8 @@ from typing import List, Dict, Any
 import numpy as np
 import pandas as pd
 from django.core.management.base import BaseCommand, CommandError
+from django.db import transaction
+from django.utils import timezone
 from sklearn.metrics import accuracy_score, f1_score, roc_auc_score, mean_squared_error, r2_score
 from sklearn.model_selection import train_test_split
 
@@ -18,6 +20,7 @@ except Exception as e:  # pragma: no cover
 
 from matching.ml.features import build_features
 from matching.ml.model_io import save_model
+from matching.models import ModelMetadata, Topic
 
 
 class Command(BaseCommand):
@@ -116,13 +119,44 @@ class Command(BaseCommand):
 
         # Save model and metadata
         feature_names = list(X.columns)
+        model_path = (
+            Path(options["model_path"]).expanduser().resolve()
+            if options.get("model_path")
+            else (Path(__file__).resolve().parents[2] / "ml" / "model.bin")
+        )
+        meta_path = (
+            Path(options["meta_path"]).expanduser().resolve()
+            if options.get("meta_path")
+            else (Path(__file__).resolve().parents[2] / "ml" / "model_meta.json")
+        )
+        trained_at = timezone.now()
+        version = trained_at.strftime("xgb-%Y%m%d-%H%M%S")
         meta: Dict[str, Any] = {
+            "version": version,
             "task": task,
             "target": target_col,
             "feature_names": feature_names,
             "metrics": metrics,
             "csv_path": str(csv_path),
             "params": params,
+            "trained_at": trained_at.isoformat(),
         }
-        save_model(model, meta, model_path=options["model_path"], meta_path=options["meta_path"])
+        save_model(model, meta, model_path=model_path, meta_path=meta_path)
+
+        topic_count_active = Topic.objects.filter(status=Topic.STATUS_ACTIVE).count()
+        with transaction.atomic():
+            ModelMetadata.objects.filter(status=ModelMetadata.STATUS_ACTIVE).update(
+                status=ModelMetadata.STATUS_RETIRED,
+            )
+            ModelMetadata.objects.create(
+                version=version,
+                status=ModelMetadata.STATUS_ACTIVE,
+                artifact_path=str(model_path),
+                metrics=metrics,
+                feature_names=feature_names,
+                training_rows=int(X.shape[0]),
+                topic_count_active_at_train=topic_count_active,
+                trained_at=trained_at,
+                created_by=None,
+            )
         self.stdout.write(self.style.SUCCESS("Model saved successfully."))

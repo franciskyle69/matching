@@ -1,0 +1,103 @@
+.auth-page {
+  font-family: var(--font-sans);
+}
+
+.auth-card {
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-lg);
+}
+
+.auth-left-logo {
+  width: auto;
+  max-height: 68px;
+  max-width: 140px;
+  object-fit: contain;
+}
+
+.auth-title {
+  font-size: var(--text-2xl);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.auth-subtitle {
+  color: var(--text-muted);
+}
+
+.auth-field {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.auth-field label {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--text);
+}
+
+.auth-field-label {
+  margin: 0;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--text);
+}
+
+.auth-field input,
+.auth-field select {
+  min-height: 44px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--card);
+  transition: border-color var(--motion-base) var(--ease-standard),
+    box-shadow var(--motion-base) var(--ease-standard);
+}
+
+.auth-field input:focus,
+.auth-field select:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--focus-ring);
+}
+
+.auth-field-helper {
+  margin: 0;
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  line-height: var(--line-normal);
+}
+
+.auth-primary {
+  min-height: 44px;
+  border-radius: var(--radius-md);
+  background: var(--primary);
+  border: 1px solid var(--primary);
+  color: #fff;
+  font-weight: 600;
+  transition: transform var(--motion-fast) var(--ease-standard),
+    background-color var(--motion-base) var(--ease-standard);
+}
+
+.auth-primary:hover:not(:disabled) {
+  background: var(--primary-hover);
+  border-color: var(--primary-hover);
+  transform: translateY(-1px);
+}
+
+.auth-primary:focus-visible,
+.auth-social-btn:focus-visible,
+.auth-back-btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--focus-ring);
+}
+
+.auth-social-btn {
+  min-height: 44px;
+}
+
+@media (max-width: 768px) {
+  .auth-card-right,
+  .auth-card-left {
+    padding: var(--space-6);
+  }
+}

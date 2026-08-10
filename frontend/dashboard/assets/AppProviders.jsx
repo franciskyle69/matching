@@ -147,12 +147,18 @@
       description: "",
     });
     const [subjectEditId, setSubjectEditId] = useState(null);
+    const [topicForm, setTopicForm] = useState({
+      subject_id: "",
+      name: "",
+      status: "active",
+    });
+    const [topicEditId, setTopicEditId] = useState(null);
+    const [topicActionKey, setTopicActionKey] = useState(null);
     const [avatarUploading, setAvatarUploading] = useState(false);
     const [approvalsLoading, setApprovalsLoading] = useState(false);
     const [approvalActionKey, setApprovalActionKey] = useState(null);
     const [pendingMentors, setPendingMentors] = useState([]);
     const [pendingMentees, setPendingMentees] = useState([]);
-    const [notificationsVisited, setNotificationsVisited] = useState(false);
     const [showMenteeInfoModal, setShowMenteeInfoModal] = useState(false);
     const [showMentorInfoModal, setShowMentorInfoModal] = useState(false);
     const [mentorProfile, setMentorProfile] = useState({
@@ -249,6 +255,20 @@
       );
     }
 
+    useEffect(() => {
+      window.DashboardApp = window.DashboardApp || {};
+      const notifyBridge = (message, type = "success") => {
+        if (!message) return;
+        addToast(String(message), type);
+      };
+      window.DashboardApp.notify = notifyBridge;
+      return () => {
+        if (window.DashboardApp && window.DashboardApp.notify === notifyBridge) {
+          delete window.DashboardApp.notify;
+        }
+      };
+    }, []);
+
     function clearLockoutCountdown() {
       if (lockoutCountdownRef.current) {
         clearInterval(lockoutCountdownRef.current);
@@ -257,10 +277,11 @@
     }
 
     useEffect(() => {
-      const effectiveTheme = user && theme === "dark" ? "dark" : "light";
+      // Keep theme behavior consistent on auth and app pages.
+      const effectiveTheme = theme === "dark" ? "dark" : "light";
       document.documentElement.setAttribute("data-theme", effectiveTheme);
-      if (user) window.localStorage.setItem("theme", theme);
-    }, [theme, user]);
+      window.localStorage.setItem("theme", effectiveTheme);
+    }, [theme]);
 
     useEffect(() => {
       fetchJSON("/api/csrf/");
@@ -486,6 +507,7 @@
       const allowedPendingTabs = new Set([
         "complete-profile",
         "mentoring-preferences",
+        "mentor-matching-profile",
         "settings",
       ]);
       if (!allowedPendingTabs.has(activeTab)) {
@@ -510,7 +532,12 @@
     }, [showMenteeInfoModal, showMentorInfoModal]);
 
     useEffect(() => {
-      if (activeTab === "home" && user?.role === "mentor") loadMentorRequests();
+      if (
+        (activeTab === "home" || activeTab === "mentees") &&
+        user?.role === "mentor"
+      ) {
+        loadMentorRequests();
+      }
       if (
         activeTab === "home" &&
         user?.role === "mentee" &&
@@ -520,18 +547,18 @@
       }
       if (activeTab === "announcements" && !announcementsLoaded)
         loadAnnouncements();
-      if (activeTab === "matching") {
-        if (prevActiveTabRef.current !== "matching") {
+      if (activeTab === "matching" || activeTab === "mentees") {
+        if (
+          prevActiveTabRef.current !== "matching" &&
+          prevActiveTabRef.current !== "mentees"
+        ) {
           if (user?.role === "mentor") loadMentorRequests();
           if (user?.role === "mentee") loadMyMentor();
         }
-        prevActiveTabRef.current = "matching";
-      } else {
-        prevActiveTabRef.current = activeTab;
       }
+      prevActiveTabRef.current = activeTab;
       if (activeTab === "notifications") {
         loadNotifications();
-        setNotificationsVisited(true);
       }
       if (
         activeTab === "profile" &&
@@ -556,20 +583,6 @@
       mentorProfileHashId,
       viewedMentorProfile,
     ]);
-
-    useEffect(() => {
-      if (!notificationsVisited) return;
-      if (activeTab === "notifications") return;
-      (async () => {
-        await fetchJSON("/api/notifications/mark-all-read/", {
-          method: "POST",
-          headers: { "X-CSRFToken": getCookie("csrftoken") },
-        });
-        setUnreadCount(0);
-        setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
-        setNotificationsVisited(false);
-      })();
-    }, [activeTab, notificationsVisited]);
 
     useEffect(() => {
       if (!user) return;
@@ -605,6 +618,7 @@
         return null;
       }
       meLastFetchTsRef.current = Date.now();
+      await loadQuestionnaireOptions();
       const unapproved = getIsPendingApproval(result.data);
       setUser(result.data);
       setStats(result.data.stats);
@@ -673,8 +687,8 @@
       const isMentor = result.data.role === "mentor";
       const generalCompleted = !!result.data.mentee_general_info_completed;
       const mentorQCompleted = !!result.data.mentor_questionnaire_completed;
-      setShowMenteeInfoModal(!unapproved && isMentee && !generalCompleted);
-      setShowMentorInfoModal(!unapproved && isMentor && !mentorQCompleted);
+      setShowMenteeInfoModal(false);
+      setShowMentorInfoModal(false);
       setAuthRequired(false);
       if (unapproved) {
         setAuthAlert({
@@ -685,10 +699,16 @@
         setActiveTab(getPendingApprovalLandingTab(result.data));
         return result.data;
       }
+      const requiredOnboardingTab =
+        isMentee && !generalCompleted
+          ? "complete-profile"
+          : isMentor && !mentorQCompleted
+            ? "complete-profile"
+            : null;
       setActiveTab((prev) =>
         ["signin", "signup"].includes(prev)
-          ? "home"
-          : prev,
+          ? requiredOnboardingTab || "home"
+          : requiredOnboardingTab || prev,
       );
       return result.data;
     }
@@ -834,14 +854,12 @@
       if (!result.ok) {
         const message = result.data?.error || "Unable to choose this mentor.";
         setError(message);
-        if (window.Swal && typeof window.Swal.fire === "function")
-          window.Swal.fire("Unable to connect mentor", message, "error");
+        addToast(message, "error");
         return { ok: false, code: result.data?.code || null, error: message };
       }
       const successMessage = "Mentor matched successfully.";
       setAuthMessage(successMessage);
-      if (window.Swal && typeof window.Swal.fire === "function")
-        window.Swal.fire("Mentor matched", successMessage, "success");
+      addToast(successMessage, "success");
       setChosenMentorId(mentorId);
       await loadMyMentor();
       await loadMenteeRecommendations();
@@ -1152,8 +1170,7 @@
             message,
             detail: result.data?.detail || "",
           });
-          if (window.Swal && typeof window.Swal.fire === "function")
-            window.Swal.fire("Action failed", message, "error");
+          addToast(message, "error");
           return;
         }
         const message = result.data?.message || "Account created.";
@@ -1245,6 +1262,39 @@
         setSubjectsLoaded(true);
       }
       setSubjectsLoading(false);
+    }
+
+    async function loadQuestionnaireOptions() {
+      const result = await fetchJSON("/api/questionnaire/options/");
+      if (!result.ok) return false;
+      const data = result.data || {};
+      const subjects = Array.isArray(data.subjects) ? data.subjects : [];
+      const categoryLabels = data.category_labels || {};
+      const categoryOrder = Array.isArray(data.category_order)
+        ? data.category_order
+        : ["major", "ge", "nstp", "pe"];
+      const topicMap = data.topic_map || {};
+      const topicSet = new Set();
+      Object.values(topicMap).forEach((values) => {
+        (Array.isArray(values) ? values : []).forEach((topic) => {
+          const text = String(topic || "").trim();
+          if (text) topicSet.add(text);
+        });
+      });
+      window.DashboardApp = window.DashboardApp || {};
+      window.DashboardApp.SUBJECT_CATALOG = subjects.map((item) => ({
+        name: item.name,
+        code: item.code || "",
+        category: item.category || "major",
+      }));
+      window.DashboardApp.SUBJECT_CATEGORY_LABELS = categoryLabels;
+      window.DashboardApp.SUBJECT_CATEGORY_ORDER = categoryOrder;
+      window.DashboardApp.MENTOR_SUBJECT_OPTIONS = subjects.map((item) => item.name);
+      window.DashboardApp.QUESTIONNAIRE_TOPIC_MAP = topicMap;
+      window.DashboardApp.MENTOR_TOPIC_OPTIONS = Array.from(topicSet).sort((a, b) =>
+        String(a).localeCompare(String(b)),
+      );
+      return true;
     }
 
     async function loadApprovals() {
@@ -1482,22 +1532,141 @@
       loadSubjects();
     }
 
+    async function handleCreateTopic(payload) {
+      setError("");
+      const body = payload || topicForm;
+      const subjectId = Number(body.subject_id || 0);
+      const name = String(body.name || "").trim();
+      if (!subjectId || !name) {
+        setError("Select a subject and enter a topic name.");
+        return false;
+      }
+      setTopicActionKey("create");
+      try {
+        const result = await fetchJSON("/api/topics/create/", {
+          method: "POST",
+          headers: { "X-CSRFToken": getCookie("csrftoken") },
+          body: JSON.stringify({
+            subject: subjectId,
+            name,
+            status: body.status === "inactive" ? "inactive" : "active",
+          }),
+        });
+        if (!result.ok) {
+          const errs = result.data?.errors;
+          setError(
+            errs && typeof errs === "object"
+              ? Object.values(errs).flat().filter(Boolean).join(" ")
+              : result.data?.error || "Unable to create topic.",
+          );
+          return false;
+        }
+        setTopicForm({ subject_id: String(subjectId), name: "", status: "active" });
+        await loadSubjects();
+        await loadQuestionnaireOptions();
+        addToast("Topic created.");
+        return true;
+      } finally {
+        setTopicActionKey(null);
+      }
+    }
+
+    async function handleUpdateTopic(topicId, payload) {
+      const topicIdValue = Number(topicId || topicEditId || 0);
+      if (!topicIdValue) return false;
+      setError("");
+      const body = payload || topicForm;
+      const subjectId = Number(body.subject_id || 0);
+      const name = String(body.name || "").trim();
+      if (!subjectId || !name) {
+        setError("Select a subject and enter a topic name.");
+        return false;
+      }
+      setTopicActionKey("update:" + topicIdValue);
+      try {
+        const result = await fetchJSON(`/api/topics/${topicIdValue}/update/`, {
+          method: "POST",
+          headers: { "X-CSRFToken": getCookie("csrftoken") },
+          body: JSON.stringify({
+            subject: subjectId,
+            name,
+            status: body.status === "inactive" ? "inactive" : "active",
+          }),
+        });
+        if (!result.ok) {
+          const errs = result.data?.errors;
+          setError(
+            errs && typeof errs === "object"
+              ? Object.values(errs).flat().filter(Boolean).join(" ")
+              : result.data?.error || "Unable to update topic.",
+          );
+          return false;
+        }
+        setTopicEditId(null);
+        setTopicForm({ subject_id: String(subjectId), name: "", status: "active" });
+        await loadSubjects();
+        await loadQuestionnaireOptions();
+        addToast("Topic updated.");
+        return true;
+      } finally {
+        setTopicActionKey(null);
+      }
+    }
+
+    async function handleSetTopicStatus(topicId, status) {
+      const topicIdValue = Number(topicId || 0);
+      if (!topicIdValue) return false;
+      const nextStatus = status === "inactive" ? "inactive" : "active";
+      setError("");
+      setTopicActionKey("status:" + topicIdValue);
+      try {
+        const result = await fetchJSON(`/api/topics/${topicIdValue}/status/`, {
+          method: "POST",
+          headers: { "X-CSRFToken": getCookie("csrftoken") },
+          body: JSON.stringify({ status: nextStatus }),
+        });
+        if (!result.ok) {
+          setError(result.data?.error || "Unable to update topic status.");
+          return false;
+        }
+        await loadSubjects();
+        await loadQuestionnaireOptions();
+        addToast(nextStatus === "inactive" ? "Topic archived." : "Topic restored.");
+        return true;
+      } finally {
+        setTopicActionKey(null);
+      }
+    }
+
     async function handleMarkAllRead() {
-      await fetchJSON("/api/notifications/mark-all-read/", {
+      const result = await fetchJSON("/api/notifications/mark-all-read/", {
         method: "POST",
         headers: { "X-CSRFToken": getCookie("csrftoken") },
       });
+      if (!result.ok) {
+        setError(result.data?.error || "Unable to mark notifications as read.");
+        return;
+      }
       loadNotifications();
       setUnreadCount(0);
+      setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
+      addToast("All notifications marked as read.", "success");
     }
 
     async function handleMarkRead(notificationId) {
-      await fetchJSON(`/api/notifications/${notificationId}/read/`, {
+      const result = await fetchJSON(`/api/notifications/${notificationId}/read/`, {
         method: "POST",
         headers: { "X-CSRFToken": getCookie("csrftoken") },
       });
+      if (!result.ok) {
+        setError(result.data?.error || "Unable to mark notification as read.");
+        return;
+      }
       loadNotifications();
       setUnreadCount((prev) => Math.max(0, prev - 1));
+      setNotifications((prev) =>
+        prev.map((n) => (n.id === notificationId ? { ...n, is_read: true } : n)),
+      );
     }
 
     async function handleSettingsSave() {
@@ -1575,8 +1744,7 @@
         const message =
           "Please complete all general information fields before saving.";
         setError(message);
-        if (window.Swal && typeof window.Swal.fire === "function")
-          window.Swal.fire("Fill in required fields", message, "warning");
+        addToast(message, "warning");
         return;
       }
       setMenteeProfileSaving(true);
@@ -1633,8 +1801,7 @@
         const message =
           "Please set at least one matching preference (subjects, topics, expertise, gender, or availability).";
         setError(message);
-        if (window.Swal && typeof window.Swal.fire === "function")
-          window.Swal.fire("Complete required fields", message, "warning");
+        addToast(message, "warning");
         return false;
       }
       setMentorProfileSaving(true);
@@ -1667,8 +1834,16 @@
           prev ? { ...prev, mentor_questionnaire_completed: true } : prev,
         );
         setShowMentorInfoModal(false);
-        setAuthMessage("Your mentor profile was updated.");
-        addToast("Profile saved.");
+        if (result.data?.role_change_requires_approval) {
+          const msg =
+            result.data?.message ||
+            "Role updated. Your mentor account is now pending coordinator approval.";
+          setAuthMessage(msg);
+          addToast(msg, "warning");
+        } else {
+          setAuthMessage("Your mentor profile was updated.");
+          addToast("Profile saved.");
+        }
         return true;
       } finally {
         setMentorProfileSaving(false);
@@ -1698,8 +1873,7 @@
         const message =
           "Please set at least one matching preference (subjects, topics, difficulty, preferred gender, or availability).";
         setError(message);
-        if (window.Swal && typeof window.Swal.fire === "function")
-          window.Swal.fire("Complete required fields", message, "warning");
+        addToast(message, "warning");
         return false;
       }
       setMenteeMatchingSaving(true);
@@ -1938,8 +2112,7 @@
       if (file.size > maxBytes) {
         const msg = "Please choose an image smaller than 2 MB.";
         setError(msg);
-        if (window.Swal && typeof window.Swal.fire === "function")
-          window.Swal.fire("Image too large", msg, "warning");
+        addToast(msg, "warning");
         event.target.value = "";
         return;
       }
@@ -1958,8 +2131,7 @@
         if (!response.ok) {
           const msg = data.error || "Unable to upload profile picture.";
           setError(msg);
-          if (window.Swal && typeof window.Swal.fire === "function")
-            window.Swal.fire("Upload failed", msg, "error");
+          addToast(msg, "error");
           return;
         }
         const newUrl = data.avatar_url || "";
@@ -1968,8 +2140,7 @@
       } catch (err) {
         const msg = "Network error while uploading profile picture.";
         setError(msg);
-        if (window.Swal && typeof window.Swal.fire === "function")
-          window.Swal.fire("Network error", msg, "error");
+        addToast(msg, "error");
       } finally {
         setAvatarUploading(false);
         event.target.value = "";
@@ -2002,16 +2173,14 @@
 
     useEffect(() => {
       if (!authMessage) return;
-      if (!(window.Swal && typeof window.Swal.fire === "function")) return;
-      window.Swal.fire("Success", authMessage, "success");
+      addToast(authMessage, "success");
     }, [authMessage]);
 
     useEffect(() => {
       if (!error) return;
       if (isPendingApprovalMessage(error)) return;
       if (["signin", "signup"].includes(activeTab)) return;
-      if (!(window.Swal && typeof window.Swal.fire === "function")) return;
-      window.Swal.fire("Action failed", error, "error");
+      addToast(error, "error");
     }, [error, activeTab]);
 
     const contextValue = {
@@ -2093,7 +2262,15 @@
       setSubjectForm,
       subjectEditId,
       setSubjectEditId,
+      topicForm,
+      setTopicForm,
+      topicEditId,
+      setTopicEditId,
+      topicActionKey,
       handleUpdateSubject,
+      handleCreateTopic,
+      handleUpdateTopic,
+      handleSetTopicStatus,
       loadSubjects,
       approvalsLoading,
       approvalActionKey,

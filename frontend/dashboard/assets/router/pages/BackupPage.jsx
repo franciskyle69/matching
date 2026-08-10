@@ -62,12 +62,26 @@
     }
 
     return (
-      <div className="card backup-page">
-        <h1 className="page-title">Backup & Restore</h1>
-        <p className="page-subtitle">
-          Save or restore a full snapshot of the site data (users, matching data,
-          announcements, and more).
-        </p>
+      <div className="card backup-page page-shell">
+        <div className="backup-page-head page-shell-head">
+          <div>
+            <h1 className="page-title">Backup & Restore</h1>
+            <p className="page-subtitle">
+              Save or restore a full snapshot of the site data (users, matching data,
+              announcements, and more).
+            </p>
+          </div>
+          <div className="page-shell-actions">
+            <button
+              type="button"
+              className="btn secondary small"
+              onClick={loadBackups}
+              disabled={backupsLoading}
+            >
+              Refresh
+            </button>
+          </div>
+        </div>
 
         <div className="backup-alert" role="alert">
           <span className="backup-alert-icon" aria-hidden="true">
@@ -108,7 +122,7 @@
           <div className="backup-card-actions">
             <button
               type="button"
-              className="btn btn-primary"
+              className="btn"
               onClick={createBackup}
               disabled={backupCreateLoading}
             >
@@ -123,7 +137,7 @@
               ref={fileInputRef}
               accept=".json,.gz,.zip,.bz2,.sql,.psql,.dump,.backup"
               onChange={onFileChange}
-              style={{ display: "none" }}
+              className="sp-hidden-input"
             />
             <button
               type="button"

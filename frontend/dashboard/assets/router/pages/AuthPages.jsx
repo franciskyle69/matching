@@ -74,8 +74,8 @@ import { Alert as MuiAlert } from "@mui/material";
     const portalAuthRole = getPortalAuthRole();
     const isAuthLoading = signInLoading;
 
-    function goBackToPortal() {
-      window.location.href = "/portal/";
+    function goBackToLanding() {
+      window.location.href = "/landing/";
     }
 
     return (
@@ -94,8 +94,8 @@ import { Alert as MuiAlert } from "@mui/material";
           <div className="auth-card-left">
             <div className="auth-left-top">
               <img
-                src="/static/assets/logoreal.svg"
-                alt="PeerLink logo"
+                src="/static/assets/logo.png"
+                alt="AMU Mentoring"
                 className="auth-left-logo"
               />
               <h1 className="auth-info-title">Welcome to PeerLink</h1>
@@ -109,16 +109,28 @@ import { Alert as MuiAlert } from "@mui/material";
                 <li>Connect with mentors</li>
               </ul>
             </div>
-            <div className="auth-info-footer">www.peerlink.com</div>
+            {window.DashboardApp.AmuFooter ? (
+              <window.DashboardApp.AmuFooter compact />
+            ) : (
+              <div className="auth-info-footer">
+                <a
+                  href="https://www.facebook.com/buksuAMU"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Bukidnon State University — AMU
+                </a>
+              </div>
+            )}
           </div>
           <div className="auth-card-divider"></div>
           <div className="auth-card-right">
             <button
               type="button"
               className="auth-back-btn"
-              onClick={goBackToPortal}
-              aria-label="Go back"
-              title="Go back"
+              onClick={goBackToLanding}
+              aria-label="Back to landing page"
+              title="Back to landing page"
             >
               <svg
                 className="auth-back-icon"
@@ -194,21 +206,26 @@ import { Alert as MuiAlert } from "@mui/material";
                   </div>
                 ))}
               <div className="auth-field">
-                <label>Email or Username</label>
+                <label htmlFor="signin-identifier">Email or Username</label>
                 <input
+                  id="signin-identifier"
                   type="text"
+                  autoComplete="username"
                   placeholder="you@example.com or username"
                   value={signInForm.identifier}
                   onChange={(e) =>
                     setSignInForm({ ...signInForm, identifier: e.target.value })
                   }
                 />
+                <p className="auth-field-helper">Use your institutional email or username.</p>
               </div>
               <div className="auth-field auth-password-wrap">
-                <label>Password</label>
+                <label htmlFor="signin-password">Password</label>
                 <div className="auth-password-input-wrap">
                   <input
+                    id="signin-password"
                     type={showPassword ? "text" : "password"}
+                    autoComplete="current-password"
                     value={signInForm.password}
                     onChange={(e) =>
                       setSignInForm({ ...signInForm, password: e.target.value })
@@ -398,8 +415,8 @@ import { Alert as MuiAlert } from "@mui/material";
       },
     ];
 
-    function goBackToPortal() {
-      window.location.href = "/portal/";
+    function goBackToLanding() {
+      window.location.href = "/landing/";
     }
 
     return (
@@ -418,8 +435,8 @@ import { Alert as MuiAlert } from "@mui/material";
           <div className="auth-card-left">
             <div className="auth-left-top">
               <img
-                src="/static/assets/logoreal.svg"
-                alt="PeerLink logo"
+                src="/static/assets/logo.png"
+                alt="AMU Mentoring"
                 className="auth-left-logo"
               />
               <h1 className="auth-info-title">Welcome to PeerLink</h1>
@@ -433,16 +450,28 @@ import { Alert as MuiAlert } from "@mui/material";
                 <li>Connect with mentors</li>
               </ul>
             </div>
-            <div className="auth-info-footer">www.peerlink.com</div>
+            {window.DashboardApp.AmuFooter ? (
+              <window.DashboardApp.AmuFooter compact />
+            ) : (
+              <div className="auth-info-footer">
+                <a
+                  href="https://www.facebook.com/buksuAMU"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Bukidnon State University — AMU
+                </a>
+              </div>
+            )}
           </div>
           <div className="auth-card-divider"></div>
           <div className="auth-card-right">
             <button
               type="button"
               className="auth-back-btn"
-              onClick={goBackToPortal}
-              aria-label="Go back"
-              title="Go back"
+              onClick={goBackToLanding}
+              aria-label="Back to landing page"
+              title="Back to landing page"
             >
               <svg
                 className="auth-back-icon"
@@ -471,7 +500,7 @@ import { Alert as MuiAlert } from "@mui/material";
               }}
             >
               <div className="auth-field">
-                <label>Role</label>
+                <p className="auth-field-label">Role</p>
                 <p
                   className="auth-role-locked"
                   style={{
@@ -487,13 +516,13 @@ import { Alert as MuiAlert } from "@mui/material";
                   {portalRoleLabel ||
                     (signUpForm.role === "mentee" ? "Mentee" : "Mentor")}
                 </p>
-                <small className="muted">
+                <small className="auth-field-helper">
                   This role is selected from the role portal.
                 </small>
               </div>
               {isMentorSignup && (
                 <div className="auth-field">
-                  <label>Mentor type *</label>
+                  <label id="signup-mentor-type-label">Mentor type *</label>
                   <p className="muted" style={{ margin: "0 0 10px" }}>
                     Coordinators use this to verify whether you are a student
                     mentor or an instructor.
@@ -501,7 +530,7 @@ import { Alert as MuiAlert } from "@mui/material";
                   <div
                     className="auth-mentor-type-picker"
                     role="radiogroup"
-                    aria-label="Mentor type"
+                    aria-labelledby="signup-mentor-type-label"
                   >
                     {MENTOR_TYPE_OPTIONS.map((option) => {
                       const active = signUpForm.mentor_role === option.value;
@@ -535,8 +564,10 @@ import { Alert as MuiAlert } from "@mui/material";
                 </div>
               )}
               <div className="auth-field">
-                <label>First name</label>
+                <label htmlFor="signup-first-name">First name</label>
                 <input
+                  id="signup-first-name"
+                  autoComplete="given-name"
                   placeholder="First name"
                   value={signUpForm.first_name}
                   onChange={(e) =>
@@ -545,8 +576,10 @@ import { Alert as MuiAlert } from "@mui/material";
                 />
               </div>
               <div className="auth-field">
-                <label>Middle name</label>
+                <label htmlFor="signup-middle-name">Middle name</label>
                 <input
+                  id="signup-middle-name"
+                  autoComplete="additional-name"
                   placeholder="Middle name (optional)"
                   value={signUpForm.middle_name}
                   onChange={(e) =>
@@ -555,8 +588,10 @@ import { Alert as MuiAlert } from "@mui/material";
                 />
               </div>
               <div className="auth-field">
-                <label>Last name</label>
+                <label htmlFor="signup-last-name">Last name</label>
                 <input
+                  id="signup-last-name"
+                  autoComplete="family-name"
                   placeholder="Last name"
                   value={signUpForm.last_name}
                   onChange={(e) =>
@@ -565,9 +600,11 @@ import { Alert as MuiAlert } from "@mui/material";
                 />
               </div>
               <div className="auth-field">
-                <label>Email</label>
+                <label htmlFor="signup-email">Email</label>
                 <input
+                  id="signup-email"
                   type="email"
+                  autoComplete="email"
                   placeholder="your@email.com"
                   value={signUpForm.email}
                   onChange={(e) =>
@@ -576,8 +613,9 @@ import { Alert as MuiAlert } from "@mui/material";
                 />
               </div>
               <div className="auth-field">
-                <label>Academic mentoring application form</label>
+                <label htmlFor="signup-verification-file">Academic mentoring application form</label>
                 <input
+                  id="signup-verification-file"
                   type="file"
                   accept=".pdf,.png,.jpg,.jpeg"
                   required
@@ -589,20 +627,22 @@ import { Alert as MuiAlert } from "@mui/material";
                     });
                   }}
                 />
-                <small className="muted">
+                <small className="auth-field-helper">
                   Upload your completed academic mentoring application form for account review (PDF/JPG/PNG, max 5 MB).
                 </small>
                 {signUpForm.student_verification_document && (
-                  <small className="muted">
+                  <small className="auth-field-helper">
                     Selected: {signUpForm.student_verification_document.name}
                   </small>
                 )}
               </div>
               <div className="auth-field auth-password-wrap">
-                <label>Password</label>
+                <label htmlFor="signup-password">Password</label>
                 <div className="auth-password-input-wrap">
                   <input
+                    id="signup-password"
                     type={showPassword1 ? "text" : "password"}
+                    autoComplete="new-password"
                     value={signUpForm.password1}
                     onChange={(e) =>
                       setSignUpForm({
@@ -651,10 +691,12 @@ import { Alert as MuiAlert } from "@mui/material";
                 </div>
               </div>
               <div className="auth-field auth-password-wrap">
-                <label>Confirm password</label>
+                <label htmlFor="signup-confirm-password">Confirm password</label>
                 <div className="auth-password-input-wrap">
                   <input
+                    id="signup-confirm-password"
                     type={showPassword2 ? "text" : "password"}
+                    autoComplete="new-password"
                     value={signUpForm.password2}
                     onChange={(e) =>
                       setSignUpForm({

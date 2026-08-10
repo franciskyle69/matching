@@ -54,11 +54,15 @@
   }
 
   function notify(type, title, text) {
-    if (window.Swal && typeof window.Swal.fire === "function") {
-      window.Swal.fire({ icon: type, title, text });
+    const message = text || title;
+    if (
+      window.DashboardApp &&
+      typeof window.DashboardApp.notify === "function"
+    ) {
+      window.DashboardApp.notify(message, type || "success");
       return;
     }
-    alert(text || title);
+    alert(message);
   }
 
   function ensureDataTablesLoaded() {
@@ -422,8 +426,8 @@
           </div>
 
           <div className="users-edit-footer">
-            <button type="button" className="btn btn-secondary" onClick={onClose} disabled={saving}>Cancel</button>
-            <button type="button" className="btn btn-primary" onClick={handleCreate} disabled={saveDisabled}>
+            <button type="button" className="btn secondary" onClick={onClose} disabled={saving}>Cancel</button>
+            <button type="button" className="btn" onClick={handleCreate} disabled={saveDisabled}>
               {saving ? "Creating..." : "Create User"}
             </button>
           </div>
@@ -445,19 +449,19 @@
       <div className="users-edit-footer">
         {editMode ? (
           <>
-            <button type="button" className="btn btn-secondary" onClick={onCancelEdit} disabled={saving}>
+            <button type="button" className="btn secondary" onClick={onCancelEdit} disabled={saving}>
               Cancel
             </button>
-            <button type="button" className="btn btn-primary" onClick={onSave} disabled={saveDisabled}>
+            <button type="button" className="btn" onClick={onSave} disabled={saveDisabled}>
               {saving ? "Saving Changes..." : "Save Changes"}
             </button>
           </>
         ) : (
           <>
-            <button type="button" className="btn btn-secondary" onClick={onClose}>
+            <button type="button" className="btn secondary" onClick={onClose}>
               Close
             </button>
-            <button type="button" className="btn btn-primary" onClick={onStartEdit}>
+            <button type="button" className="btn" onClick={onStartEdit}>
               Edit User
             </button>
           </>
@@ -1243,13 +1247,13 @@
     const showingTo = total === 0 ? 0 : Math.min(page * pageSize, total);
 
     return (
-      <div className="users-management-page">
-        <div className="users-page-header">
+      <div className="card users-management-page page-shell">
+        <div className="users-page-header page-shell-head">
           <div>
             <h1 className="page-title users-page-title">User Management</h1>
             <p className="page-subtitle users-page-subtitle">Manage user access, roles, and approvals from a single admin workspace.</p>
           </div>
-          <button type="button" className="btn btn-primary" onClick={handleAddUser}>+ Add User</button>
+          <button type="button" className="btn" onClick={handleAddUser}>+ Add User</button>
         </div>
 
         <div className="users-toolbar">
@@ -1301,7 +1305,7 @@
 
             <button
               type="button"
-              className="btn btn-secondary"
+              className="btn secondary"
               onClick={resetFilters}
             >
               Reset filters
@@ -1342,7 +1346,7 @@
           <div className="pagination-controls">
             <button
               type="button"
-              className="btn btn-secondary"
+              className="btn secondary"
               disabled={page <= 1 || loading}
               onClick={() => tableInstanceRef.current?.page("previous").draw("page")}
             >
@@ -1350,7 +1354,7 @@
             </button>
             <button
               type="button"
-              className="btn btn-secondary"
+              className="btn secondary"
               disabled={page >= totalPages || loading}
               onClick={() => tableInstanceRef.current?.page("next").draw("page")}
             >

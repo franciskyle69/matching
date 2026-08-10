@@ -11,6 +11,10 @@
 @import "./styles/components/cards.css";
 @import "./styles/components/forms.css";
 @import "./styles/components/tables.css";
+@import "./styles/components/footer.css";
 @import "./styles/pages/dashboard.css";
+@import "./styles/pages/auth.css";
+@import "./styles/pages/phase1.css";
+@import "./styles/pages/phase2.css";
 @import "./styles/pages/users.css";
 @import "./styles/utilities/helpers.css";

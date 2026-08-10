@@ -8,3 +8,47 @@
   background: var(--card);
   border-color: var(--border);
 }
+
+.home-dashboard-space {
+  padding: var(--space-6);
+}
+
+.app-topbar {
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.app-topbar-meta-label {
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+}
+
+.app-topbar-meta-title {
+  font-size: var(--text-lg);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.app-content {
+  padding: var(--space-6);
+}
+
+.sidebar-logo {
+  max-width: 132px;
+  max-height: 52px;
+  object-fit: contain;
+}
+
+@media (max-width: 1024px) {
+  .home-dashboard-space,
+  .app-content {
+    padding: var(--space-5);
+  }
+}
+
+@media (max-width: 768px) {
+  .home-dashboard-space,
+  .app-content {
+    padding: var(--space-4);
+  }
+}

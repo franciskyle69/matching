@@ -128,7 +128,7 @@
           </div>
         )}
         {fileError && <p className="sp-file-error">{fileError}</p>}
-        <input ref={fileRef} type="file" accept="image/*" style={{ display: "none" }} onChange={handleFileInput} />
+        <input ref={fileRef} type="file" accept="image/*" className="sp-hidden-input" onChange={handleFileInput} />
         <div className="sp-composer-bar">
           <div className="sp-composer-actions">
             <div className="sp-category-pills">
@@ -438,7 +438,7 @@
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2" /><circle cx="8.5" cy="8.5" r="1.5" /><polyline points="21 15 16 10 5 21" /></svg>
               {uploading ? "Uploading\u2026" : "Edit Cover"}
             </button>
-            <input ref={coverRef} type="file" accept="image/*" style={{ display: "none" }} onChange={(e) => { if (e.target.files?.[0]) onUpload(e.target.files[0]); }} />
+            <input ref={coverRef} type="file" accept="image/*" className="sp-hidden-input" onChange={(e) => { if (e.target.files?.[0]) onUpload(e.target.files[0]); }} />
           </>
         )}
       </div>
@@ -554,7 +554,7 @@
           </div>
           <div className="sp-cover-overlay" />
         </div>
-        <div className="home-dashboard-space profile-content-shell">
+        <div className="home-dashboard-space profile-content-shell page-shell">
         <div className="sp-layout">
           <aside className="sp-sidebar">
             <div className="sp-sidebar-identity">
@@ -601,7 +601,7 @@
             )}
           </aside>
           <main className="sp-main">
-            <p className="muted" style={{ textAlign: "center", padding: "40px 0" }}>Visit this mentor's full profile to see their posts and gallery.</p>
+            <p className="muted sp-empty-note">Visit this mentor's full profile to see their posts and gallery.</p>
           </main>
         </div>
         </div>
@@ -694,7 +694,7 @@
           </div>
           <div className="sp-cover-overlay" />
         </div>
-        <div className="home-dashboard-space profile-content-shell">
+        <div className="home-dashboard-space profile-content-shell page-shell">
         <div className="sp-layout">
           <aside className="sp-sidebar">
             <div className="sp-sidebar-identity">
@@ -723,7 +723,7 @@
 
             <div className="sp-profile-actions">
               <button className="btn secondary small sp-action-full" onClick={onBack}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{marginRight: 4}}><polyline points="15 18 9 12 15 6"/></svg>
+                <svg className="sp-back-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
                 Back
               </button>
             </div>
@@ -779,7 +779,7 @@
                   {postsLoading && (
                     <Spinner title="Loading posts…" subtitle="Fetching your posts" />
                   )}
-                  {!postsLoading && posts.length === 0 && postsLoaded && <p className="muted" style={{ textAlign: "center", padding: "32px 0" }}>No posts yet.</p>}
+                  {!postsLoading && posts.length === 0 && postsLoaded && <p className="muted sp-empty-note">No posts yet.</p>}
                   {!postsLoading && posts.map((p) => <PostCard key={p.id} post={p} onLike={handleLike} onDelete={() => {}} isOwner={false} onOpen={setOpenPost} />)}
                   {!postsLoading && postsHasMore && (
                     <div className="sp-load-more-wrap">
@@ -976,7 +976,7 @@
                     <Spinner title={posting ? "Posting…" : "Loading posts…"} subtitle={posting ? "Publishing your update" : "Fetching posts"} />
                   )}
                   {!postsFeedLoading && <PostComposerTrigger avatarUrl={avatarUrl} username={user.display_name || user.full_name || user.username} onClick={() => setShowComposerModal(true)} />}
-                  {!postsFeedLoading && posts.length === 0 && postsLoaded && !posting && <p className="muted" style={{ textAlign: "center", padding: "32px 0" }}>No posts yet. Share your first achievement or update!</p>}
+                  {!postsFeedLoading && posts.length === 0 && postsLoaded && !posting && <p className="muted sp-empty-note">No posts yet. Share your first achievement or update!</p>}
                   {!postsFeedLoading && posts.map((p) => <PostCard key={p.id} post={p} onLike={handleLike} onDelete={handleDelete} isOwner={p.author_id === user.id} onOpen={setOpenPost} />)}
                   {!postsFeedLoading && postsFeedHasMore && (
                     <div className="sp-load-more-wrap">

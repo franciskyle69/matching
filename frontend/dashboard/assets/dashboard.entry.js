@@ -10,6 +10,8 @@ window.DashboardApp = window.DashboardApp || {};
 
 async function loadDashboardModules() {
 	await import("./lib/constants.jsx");
+	await import("./components/SubjectCategoryPicker.jsx");
+	await import("./components/AmuFooter.jsx");
 	await import("./lib/utils.jsx");
 	await import("./context.jsx");
 	await import("./router/pages/AllPages.jsx");
@@ -28,6 +30,8 @@ async function loadDashboardModules() {
 	await import("./router/pages/MentorProfilePage.jsx");
 	await import("./router/pages/CompleteProfilePage.jsx");
 	await import("./router/pages/MentoringPreferencesPage.jsx");
+	await import("./router/pages/MentorMatchingProfilePage.jsx");
+	await import("./router/pages/MenteesPage.jsx");
 	await import("./router/routes.jsx");
 	await import("./ErrorBoundary.jsx");
 	await import("./MainContent.jsx");

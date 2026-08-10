@@ -5,22 +5,220 @@ from profiles.models import MentorProfile, MenteeProfile
 
 
 class Subject(models.Model):
+    CATEGORY_MAJOR = "major"
+    CATEGORY_GE = "ge"
+    CATEGORY_NSTP = "nstp"
+    CATEGORY_PE = "pe"
+    CATEGORY_CHOICES = (
+        (CATEGORY_MAJOR, "Major"),
+        (CATEGORY_GE, "General Education (GE)"),
+        (CATEGORY_NSTP, "NSTP"),
+        (CATEGORY_PE, "Physical Education (PE)"),
+    )
+
     name = models.CharField(max_length=150, unique=True)
+    code = models.CharField(max_length=30, blank=True, default="")
+    category = models.CharField(
+        max_length=20,
+        choices=CATEGORY_CHOICES,
+        default=CATEGORY_MAJOR,
+    )
     description = models.TextField(blank=True)
+
+    class Meta:
+        ordering = ["category", "name"]
 
     def __str__(self) -> str:
         return self.name
 
+    @property
+    def is_minor(self) -> bool:
+        return self.category != self.CATEGORY_MAJOR
+
 
 class Topic(models.Model):
+    STATUS_ACTIVE = "active"
+    STATUS_INACTIVE = "inactive"
+    STATUS_CHOICES = (
+        (STATUS_ACTIVE, "Active"),
+        (STATUS_INACTIVE, "Inactive"),
+    )
+
     subject = models.ForeignKey(Subject, on_delete=models.CASCADE, related_name="topics")
     name = models.CharField(max_length=150)
+    status = models.CharField(
+        max_length=10,
+        choices=STATUS_CHOICES,
+        default=STATUS_ACTIVE,
+    )
+    created_by = models.ForeignKey(
+        User,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="created_topics",
+    )
+    updated_by = models.ForeignKey(
+        User,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="updated_topics",
+    )
+    created_at = models.DateTimeField(auto_now_add=True, null=True, blank=True)
+    updated_at = models.DateTimeField(auto_now=True, null=True, blank=True)
 
     class Meta:
         unique_together = ("subject", "name")
+        ordering = ["subject__name", "name"]
 
     def __str__(self) -> str:
         return f"{self.subject.name} - {self.name}"
+
+    @property
+    def is_active(self) -> bool:
+        return self.status == self.STATUS_ACTIVE
+
+
+class UserTopicPreference(models.Model):
+    TARGET_MENTOR = "mentor"
+    TARGET_MENTEE = "mentee"
+    TARGET_CHOICES = (
+        (TARGET_MENTOR, "Mentor"),
+        (TARGET_MENTEE, "Mentee"),
+    )
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="topic_preferences")
+    subject = models.ForeignKey(Subject, on_delete=models.PROTECT, related_name="topic_preferences")
+    topic = models.ForeignKey(Topic, on_delete=models.PROTECT, related_name="user_preferences")
+    target = models.CharField(max_length=10, choices=TARGET_CHOICES)
+    is_active_selection = models.BooleanField(default=True)
+    selected_at = models.DateTimeField(auto_now_add=True)
+    cleared_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=["user", "target", "is_active_selection"], name="mt_utp_user_target_act"),
+            models.Index(fields=["topic"], name="mt_utp_topic"),
+        ]
+
+    def __str__(self) -> str:
+        return f"UserTopicPreference<{self.user_id}:{self.target}:{self.topic_id}>"
+
+
+class MatchingDatasetRecord(models.Model):
+    SOURCE_REAL = "real"
+    SOURCE_SYNTHETIC = "synthetic"
+    SOURCE_CHOICES = (
+        (SOURCE_REAL, "Real"),
+        (SOURCE_SYNTHETIC, "Synthetic"),
+    )
+
+    mentee = models.ForeignKey(
+        MenteeProfile,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="dataset_records",
+    )
+    mentor = models.ForeignKey(
+        MentorProfile,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="dataset_records",
+    )
+    label = models.BooleanField(default=False)
+    source = models.CharField(max_length=16, choices=SOURCE_CHOICES, default=SOURCE_REAL)
+    features = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["source", "-created_at"], name="mt_ds_source_created"),
+        ]
+
+    def __str__(self) -> str:
+        return f"MatchingDatasetRecord<{self.id}:{self.source}>"
+
+
+class MatchingDatasetTopic(models.Model):
+    ROLE_MENTEE = "mentee"
+    ROLE_MENTOR = "mentor"
+    ROLE_CHOICES = (
+        (ROLE_MENTEE, "Mentee"),
+        (ROLE_MENTOR, "Mentor"),
+    )
+
+    dataset_record = models.ForeignKey(
+        MatchingDatasetRecord,
+        on_delete=models.CASCADE,
+        related_name="topics",
+    )
+    topic = models.ForeignKey(
+        Topic,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="dataset_links",
+    )
+    subject = models.ForeignKey(
+        Subject,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="dataset_topic_links",
+    )
+    role = models.CharField(max_length=10, choices=ROLE_CHOICES)
+    topic_name_snapshot = models.CharField(max_length=150, blank=True, default="")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=["dataset_record", "role"], name="mt_dst_record_role"),
+            models.Index(fields=["topic"], name="mt_dst_topic"),
+        ]
+
+    def __str__(self) -> str:
+        return f"MatchingDatasetTopic<{self.dataset_record_id}:{self.role}:{self.topic_id}>"
+
+
+class ModelMetadata(models.Model):
+    STATUS_STAGED = "staged"
+    STATUS_ACTIVE = "active"
+    STATUS_RETIRED = "retired"
+    STATUS_CHOICES = (
+        (STATUS_STAGED, "Staged"),
+        (STATUS_ACTIVE, "Active"),
+        (STATUS_RETIRED, "Retired"),
+    )
+
+    version = models.CharField(max_length=64, unique=True)
+    status = models.CharField(max_length=16, choices=STATUS_CHOICES, default=STATUS_STAGED)
+    artifact_path = models.CharField(max_length=255, blank=True, default="")
+    metrics = models.JSONField(default=dict, blank=True)
+    feature_names = models.JSONField(default=list, blank=True)
+    training_rows = models.PositiveIntegerField(default=0)
+    topic_count_active_at_train = models.PositiveIntegerField(default=0)
+    trained_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    created_by = models.ForeignKey(
+        User,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="created_model_metadata",
+    )
+
+    class Meta:
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["status", "-created_at"], name="mt_model_status_created"),
+        ]
+
+    def __str__(self) -> str:
+        return f"ModelMetadata<{self.version}:{self.status}>"
 
 
 class MenteeMentorRequest(models.Model):

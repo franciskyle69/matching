@@ -2,14 +2,10 @@ from django import forms
 
 from .models import MentorProfile, MenteeProfile
 from .questionnaire_utils import filter_topics_for_subjects
+from .subject_catalog import get_subject_choices
 
 
-SUBJECT_CHOICES = [
-    ("Computer Programming", "Computer Programming"),
-    ("Introduction to Computing", "Introduction to Computing"),
-    ("Intro to Human Computer Interaction", "Intro to Human Computer Interaction"),
-    ("IT Fundamentals", "IT Fundamentals"),
-]
+SUBJECT_CHOICES = get_subject_choices()
 
 TOPIC_CHOICES = [
     ("Arrays", "Arrays"),

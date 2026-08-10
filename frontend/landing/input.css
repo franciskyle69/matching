@@ -86,6 +86,31 @@ body {
     }
 }
 
+/* logo.png is 3375×3375 — cap display size everywhere it appears */
+.site-nav img[src*="logo.png"],
+#site-footer img[src*="logo.png"],
+#footer-contact img[src*="logo.png"] {
+    width: auto !important;
+    height: auto !important;
+    max-width: 100%;
+    object-fit: contain;
+}
+
+.site-nav img[src*="logo.png"] {
+    max-height: 72px;
+    max-width: 160px;
+}
+
+#footer-contact img[src*="logo.png"] {
+    max-height: 56px;
+    max-width: 120px;
+}
+
+#site-footer img[src*="logo.png"] {
+    max-height: 52px;
+    max-width: 110px;
+}
+
 /*
  * Sticky header: fully clear while hero is visible (hero is pulled under the bar with -mt).
  * Solid black only after user scrolls past #hero (see script.js).

@@ -4,16 +4,22 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>PeerLink — Choose your role</title>
-    <link rel="icon" href="/static/assets/logoreal.svg" type="image/svg+xml" />
-    <link rel="stylesheet" href="/static/portal.css?v=4" />
+    <link rel="icon" href="/static/assets/logo.png" type="image/png" />
+    <link rel="stylesheet" href="/static/portal.css?v=9" />
   </head>
   <body class="portal-page">
+    <a href="/landing/" class="portal-landing-back" aria-label="Back to landing page">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M15 18l-6-6 6-6" />
+      </svg>
+      <span>Back to landing</span>
+    </a>
     <main class="portal-card" aria-labelledby="portal-heading">
       <aside class="portal-panel portal-panel--brand">
         <div class="portal-brand-inner">
           <img
             class="portal-brand-logo"
-            src="/static/assets/logoreal.svg"
+            src="/static/assets/logo.png"
             width="108"
             height="108"
             alt="PeerLink"
@@ -29,7 +35,21 @@
             <li>Smart mentor matching</li>
           </ul>
         </div>
-        <p class="portal-brand-footer">www.peerlink.com</p>
+        <div class="portal-brand-footer">
+          <p class="portal-brand-footer-unit">
+            Bukidnon State University — Academic Mentoring Unit
+          </p>
+          <p class="portal-brand-footer-links">
+            <a href="mailto:amu@buksu.edu.ph">amu@buksu.edu.ph</a>
+            <span aria-hidden="true"> · </span>
+            <a
+              href="https://www.facebook.com/buksuAMU"
+              target="_blank"
+              rel="noopener noreferrer"
+              >Facebook</a
+            >
+          </p>
+        </div>
       </aside>
 
       <div class="portal-divider" aria-hidden="true"></div>
@@ -105,7 +125,7 @@
           </nav>
 
           <p class="portal-footnote">
-            <a href="/">Learn more about PeerLink</a>
+            <a href="/landing/">Learn more about PeerLink</a>
           </p>
         </div>
 
@@ -137,6 +157,14 @@
         </div>
       </section>
     </main>
+    <footer class="portal-page-footer" role="contentinfo">
+      <p>
+        <strong>Bukidnon State University — Academic Mentoring Unit</strong><br />
+        Malaybalay City, Bukidnon ·
+        <a href="mailto:amu@buksu.edu.ph">amu@buksu.edu.ph</a> ·
+        <a href="https://www.facebook.com/buksuAMU" target="_blank" rel="noopener noreferrer">Facebook</a>
+      </p>
+    </footer>
     <script src="/static/portal.js?v=4"></script>
   </body>
 </html>

@@ -9,9 +9,9 @@ from .models import MentorProfile, MenteeProfile
 def mentor_questionnaire(request):
     """
     Legacy URL kept for backwards compatibility.
-    Redirect mentors into the React dashboard settings tab.
+    Redirect mentors into the React dashboard matching profile tab.
     """
-    return redirect("/app/#settings")
+    return redirect("/app/#mentor-matching-profile")
 
 
 @login_required

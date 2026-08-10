@@ -27,8 +27,10 @@
   background: #000;
   -webkit-font-smoothing: antialiased;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: 20px;
   padding: 24px;
   position: relative;
   overflow-x: hidden;
@@ -57,6 +59,8 @@
   z-index: 1;
   width: 100%;
   max-width: 920px;
+  margin-inline: auto;
+  flex-shrink: 0;
   display: grid;
   grid-template-columns: 1fr 1px 1fr;
   background: var(--portal-card-bg);
@@ -108,8 +112,10 @@
 }
 
 .portal-brand-logo {
-  width: 96px;
-  height: 96px;
+  width: auto;
+  height: 72px;
+  max-width: 120px;
+  max-height: 72px;
   object-fit: contain;
   filter: brightness(1.08);
 }
@@ -159,8 +165,52 @@
 
 .portal-brand-footer {
   margin: 0;
+  font-size: 0.78rem;
+  color: rgba(255, 255, 255, 0.55);
+  line-height: 1.5;
+}
+
+.portal-brand-footer-unit {
+  margin: 0 0 6px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.82);
+}
+
+.portal-brand-footer-links {
+  margin: 0;
+}
+
+.portal-brand-footer-links a {
+  color: rgba(255, 255, 255, 0.72);
+  text-decoration: none;
+}
+
+.portal-brand-footer-links a:hover {
+  color: #fff;
+  text-decoration: underline;
+}
+
+.portal-page-footer {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 920px;
+  margin: 0;
+  padding: 0 12px 8px;
+  text-align: center;
   font-size: 0.8rem;
-  color: rgba(255, 255, 255, 0.45);
+  color: rgba(255, 255, 255, 0.55);
+  line-height: 1.6;
+  flex-shrink: 0;
+}
+
+.portal-page-footer a {
+  color: rgba(255, 255, 255, 0.85);
+  text-decoration: none;
+}
+
+.portal-page-footer a:hover {
+  text-decoration: underline;
 }
 
 .portal-panel--actions {
@@ -331,6 +381,42 @@
   color: #c4b5fd;
 }
 
+.portal-landing-back {
+  position: fixed;
+  top: 20px;
+  left: 20px;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px 8px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(15, 23, 42, 0.55);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.portal-landing-back svg {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+.portal-landing-back:hover {
+  color: #fff;
+  background: rgba(15, 23, 42, 0.72);
+  border-color: rgba(255, 255, 255, 0.28);
+}
+
 .portal-back-btn {
   align-self: flex-start;
   width: 36px;
@@ -430,8 +516,16 @@
 @media (max-width: 768px) {
   .portal-page {
     padding: 16px;
-    align-items: flex-start;
-    padding-top: 24px;
+    align-items: center;
+    justify-content: center;
+    padding-top: 56px;
+  }
+
+  .portal-landing-back {
+    top: 12px;
+    left: 12px;
+    padding: 8px 12px 8px 8px;
+    font-size: 0.8125rem;
   }
 
   .portal-card {
@@ -467,5 +561,216 @@
 
   .portal-brand-footer {
     display: none;
+  }
+}
+
+/* Phase 1 SaaS overrides */
+:root {
+  --portal-font: "Plus Jakarta Sans", "Inter", "Segoe UI", system-ui, sans-serif;
+  --portal-bg: #f8fafc;
+  --portal-card-bg: #ffffff;
+  --portal-card-border: #e2e8f0;
+  --portal-text-main: #0f172a;
+  --portal-text-sub: #64748b;
+  --portal-primary: #4f46e5;
+  --portal-primary-hover: #4338ca;
+  --portal-surface: #eef2ff;
+}
+
+.portal-page {
+  color: var(--portal-text-main);
+  background: linear-gradient(180deg, #f8fafc 0%, #eef2ff 100%);
+}
+
+.portal-page::after {
+  background: rgba(255, 255, 255, 0.4);
+}
+
+.portal-card {
+  background: color-mix(in srgb, var(--portal-card-bg) 94%, transparent);
+  border: 1px solid var(--portal-card-border);
+  box-shadow: 0 18px 48px rgba(15, 23, 42, 0.12);
+  backdrop-filter: blur(10px);
+}
+
+.portal-divider {
+  background: var(--portal-card-border);
+}
+
+.portal-brand-title,
+.portal-step-title,
+.portal-role-name {
+  color: var(--portal-text-main);
+}
+
+.portal-brand-text,
+.portal-role-desc,
+.portal-step-sub,
+.portal-page-footer {
+  color: var(--portal-text-sub);
+}
+
+.portal-brand-footer {
+  color: var(--portal-text-sub);
+}
+
+.portal-brand-footer-unit {
+  color: var(--portal-text-main);
+}
+
+.portal-brand-footer-links a,
+.portal-page-footer a,
+.portal-footnote a {
+  color: color-mix(in srgb, var(--portal-text-main) 82%, var(--portal-primary));
+}
+
+.portal-brand-footer-links a:hover,
+.portal-page-footer a:hover,
+.portal-footnote a:hover {
+  color: var(--portal-primary);
+}
+
+.portal-brand-points li::before {
+  background: var(--portal-primary);
+}
+
+.portal-role-card {
+  border-color: var(--portal-card-border);
+  background: #fff;
+}
+
+.portal-role-card:hover {
+  border-color: color-mix(in srgb, var(--portal-primary) 46%, #cbd5e1);
+  background: var(--portal-surface);
+  box-shadow: 0 8px 24px rgba(79, 70, 229, 0.14);
+}
+
+.portal-btn--primary {
+  background: var(--portal-primary);
+  box-shadow: 0 10px 24px rgba(79, 70, 229, 0.25);
+}
+
+.portal-btn--primary:hover {
+  background: var(--portal-primary-hover);
+}
+
+.portal-btn--secondary {
+  border-color: var(--portal-card-border);
+  color: var(--portal-text-main);
+  background: #fff;
+}
+
+.portal-btn--secondary:hover {
+  background: var(--portal-surface);
+  border-color: color-mix(in srgb, var(--portal-primary) 45%, #cbd5e1);
+}
+
+.portal-landing-back {
+  border-color: var(--portal-card-border);
+  background: #fff;
+  color: var(--portal-text-main);
+}
+
+.portal-landing-back:hover {
+  background: var(--portal-surface);
+  border-color: color-mix(in srgb, var(--portal-primary) 45%, #cbd5e1);
+  color: var(--portal-primary);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --portal-bg: #0b1120;
+    --portal-card-bg: #111827;
+    --portal-card-border: rgba(148, 163, 184, 0.25);
+    --portal-text-main: #e2e8f0;
+    --portal-text-sub: #94a3b8;
+    --portal-primary: #818cf8;
+    --portal-primary-hover: #6366f1;
+    --portal-surface: #1e293b;
+  }
+
+  .portal-page {
+    color: var(--portal-text-main);
+    background: linear-gradient(180deg, #0b1120 0%, #111827 100%);
+  }
+
+  .portal-page::after {
+    background: rgba(2, 6, 23, 0.55);
+  }
+
+  .portal-card {
+    background: color-mix(in srgb, var(--portal-card-bg) 82%, transparent);
+    border-color: var(--portal-card-border);
+    box-shadow: 0 18px 48px rgba(2, 6, 23, 0.55);
+  }
+
+  .portal-divider {
+    background: rgba(148, 163, 184, 0.2);
+  }
+
+  .portal-brand-title,
+  .portal-step-title,
+  .portal-role-name {
+    color: var(--portal-text-main);
+  }
+
+  .portal-brand-text,
+  .portal-role-desc,
+  .portal-step-sub,
+  .portal-page-footer,
+  .portal-brand-footer {
+    color: var(--portal-text-sub);
+  }
+
+  .portal-brand-footer-unit {
+    color: color-mix(in srgb, var(--portal-text-main) 90%, #ffffff);
+  }
+
+  .portal-role-card {
+    background: color-mix(in srgb, var(--portal-card-bg) 85%, #1f2937);
+    border-color: rgba(148, 163, 184, 0.28);
+  }
+
+  .portal-role-card:hover {
+    background: color-mix(in srgb, var(--portal-surface) 85%, #111827);
+    border-color: color-mix(in srgb, var(--portal-primary) 38%, #475569);
+    box-shadow: 0 10px 26px rgba(2, 6, 23, 0.42);
+  }
+
+  .portal-btn--secondary {
+    background: color-mix(in srgb, var(--portal-card-bg) 88%, #1f2937);
+    border-color: rgba(148, 163, 184, 0.3);
+    color: var(--portal-text-main);
+  }
+
+  .portal-btn--secondary:hover {
+    background: color-mix(in srgb, var(--portal-surface) 88%, #111827);
+    border-color: color-mix(in srgb, var(--portal-primary) 40%, #64748b);
+  }
+
+  .portal-landing-back,
+  .portal-back-btn {
+    background: color-mix(in srgb, var(--portal-card-bg) 86%, #0f172a);
+    border-color: rgba(148, 163, 184, 0.3);
+    color: var(--portal-text-main);
+  }
+
+  .portal-landing-back:hover,
+  .portal-back-btn:hover {
+    background: color-mix(in srgb, var(--portal-surface) 90%, #111827);
+    border-color: color-mix(in srgb, var(--portal-primary) 40%, #64748b);
+    color: var(--portal-primary);
+  }
+
+  .portal-brand-footer-links a,
+  .portal-page-footer a,
+  .portal-footnote a {
+    color: color-mix(in srgb, var(--portal-text-main) 84%, var(--portal-primary));
+  }
+
+  .portal-brand-footer-links a:hover,
+  .portal-page-footer a:hover,
+  .portal-footnote a:hover {
+    color: var(--portal-primary);
   }
 }

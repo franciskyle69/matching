@@ -114,11 +114,20 @@
     }
 
     return (
-      <div className="home-dashboard-space announcements-page">
-        <h1 className="page-title">Announcements</h1>
-        <p className="page-subtitle">
-          {isMentor ? "Post announcements to your mentees. They can comment below." : "Announcements from your mentors. You can add comments."}
-        </p>
+      <div className="home-dashboard-space announcements-page page-shell">
+        <div className="page-shell-head">
+          <div>
+            <h1 className="page-title">Announcements</h1>
+            <p className="page-subtitle">
+              {isMentor ? "Post announcements to your mentees. They can comment below." : "Announcements from your mentors. You can add comments."}
+            </p>
+          </div>
+          <div className="page-shell-actions">
+            <button type="button" className="btn secondary small" onClick={loadAnnouncements}>
+              Refresh
+            </button>
+          </div>
+        </div>
 
         {isMentor && (
           <div className="announcement-post-card">

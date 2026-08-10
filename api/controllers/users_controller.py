@@ -210,9 +210,6 @@ def user_create(request):
         last_name = cleaned.get("last_name", "")
         email = cleaned.get("email", "")
         role = cleaned.get("role", "mentor")
-        if role == "staff":
-            user.is_staff = True
-            user.save(update_fields=["is_staff"])
 
         base_username = "".join(part for part in [first_name, last_name] if part)
         base_username = "".join(ch for ch in base_username.lower() if ch.isalnum())
@@ -233,6 +230,10 @@ def user_create(request):
             first_name=first_name,
             last_name=last_name,
         )
+        # If creating a staff account, mark it after the User exists
+        if role == "staff":
+            user.is_staff = True
+            user.save(update_fields=["is_staff"])
         user.is_active = True
         user.save(update_fields=["is_active"])
 

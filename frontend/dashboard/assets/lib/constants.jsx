@@ -2,6 +2,25 @@
   "use strict";
   window.DashboardApp = window.DashboardApp || {};
 
+  window.DashboardApp.LOGO_URL = "/static/assets/logo.png";
+  window.DashboardApp.LOGO_ALT = "AMU Mentoring";
+
+  window.DashboardApp.FOOTER = {
+    unitName: "Bukidnon State University — Academic Mentoring Unit",
+    shortName: "Bukidnon State University — AMU",
+    tagline:
+      "Helping students succeed through mentoring, peer support, and faculty consultations.",
+    address:
+      "Main Campus, Fortich Street, Malaybalay City, Bukidnon, Philippines",
+    email: "amu@buksu.edu.ph",
+    phone: "(088) 813-5661 to 5663",
+    fax: "(088) 813-2717",
+    websiteUrl: "https://www.buksu.edu.ph",
+    websiteLabel: "www.buksu.edu.ph",
+    facebookUrl: "https://www.facebook.com/buksuAMU",
+    facebookLabel: "Facebook — @buksuAMU",
+  };
+
   // Central route / tab configuration
   const ROUTES = [
     { id: "home", label: "Dashboard", role: "any" },
@@ -12,8 +31,15 @@
       label: "Mentoring preferences",
       role: "mentee",
     },
+    {
+      id: "mentor-matching-profile",
+      label: "Mentor matching profile",
+      role: "mentor",
+    },
+    { id: "mentees", label: "Mentees", role: "mentor" },
     { id: "matching", label: "Matching", role: "non-staff" },
     { id: "announcements", label: "Announcements", role: "any" },
+    { id: "notifications", label: "Notifications", role: "any" },
     { id: "approvals", label: "User approvals", role: "staff" },
     { id: "subjects", label: "Subjects", role: "staff" },
     { id: "users", label: "Users", role: "staff" },
@@ -27,12 +53,84 @@
     id,
     label,
   }));
-  window.DashboardApp.MENTOR_SUBJECT_OPTIONS = [
-    "Computer Programming",
-    "Introduction to Computing",
-    "Intro to Human Computer Interaction",
-    "IT Fundamentals",
+  window.DashboardApp.SUBJECT_CATEGORY_LABELS = {
+    major: "Major subjects",
+    ge: "General Education (GE)",
+    nstp: "NSTP",
+    pe: "Physical Education (PE)",
+  };
+  window.DashboardApp.SUBJECT_CATEGORY_ORDER = ["major", "ge", "nstp", "pe"];
+  window.DashboardApp.SUBJECT_CATALOG = [
+    { name: "Computer Programming", code: "IT 112", category: "major" },
+    { name: "Introduction to Computing", code: "IT 111", category: "major" },
+    { name: "IT Fundamentals", code: "IT 113", category: "major" },
+    {
+      name: "Intro to Human Computer Interaction",
+      code: "IT 115",
+      category: "major",
+    },
+    {
+      name: "GE 108: Understanding the Self",
+      code: "GE 108",
+      category: "ge",
+    },
+    {
+      name: "GE 104: Readings in Philippine History",
+      code: "GE 104",
+      category: "ge",
+    },
+    {
+      name: "GE EL 108: Philippine Indigenous Communities",
+      code: "GE EL 108",
+      category: "ge",
+    },
+    {
+      name: "GE 105: Mathematics in the Modern World",
+      code: "GE 105",
+      category: "ge",
+    },
+    {
+      name: "NSTP 1: Civic Welfare Training Service",
+      code: "NSTP 1",
+      category: "nstp",
+    },
+    {
+      name: "NSTP 2: Civic Welfare Training Service",
+      code: "NSTP 2",
+      category: "nstp",
+    },
+    {
+      name: "PE 1: PATH FIT 1 - Movement Enhancement",
+      code: "PE 1",
+      category: "pe",
+    },
+    {
+      name: "PE 2: PATH FIT 2 - Fitness Exercises",
+      code: "PE 2",
+      category: "pe",
+    },
   ];
+  window.DashboardApp.MENTOR_SUBJECT_OPTIONS =
+    window.DashboardApp.SUBJECT_CATALOG.map((item) => item.name);
+  window.DashboardApp.isMinorSubject = function isMinorSubject(subjectName) {
+    const item = (window.DashboardApp.SUBJECT_CATALOG || []).find(
+      (entry) => entry.name === subjectName,
+    );
+    return !!(item && item.category !== "major");
+  };
+  window.DashboardApp.getMajorSubjectsFromSelection = function getMajorSubjectsFromSelection(
+    subjects,
+  ) {
+    const selected = Array.isArray(subjects) ? subjects : [];
+    return selected.filter(
+      (name) => !window.DashboardApp.isMinorSubject(name),
+    );
+  };
+  window.DashboardApp.selectionRequiresTopics = function selectionRequiresTopics(
+    subjects,
+  ) {
+    return window.DashboardApp.getMajorSubjectsFromSelection(subjects).length > 0;
+  };
   window.DashboardApp.MENTOR_TOPIC_OPTIONS = [
     "Arrays",
     "Loops",
@@ -62,7 +160,7 @@
   };
   window.DashboardApp.getAllowedTopicsForSubjects =
     function getAllowedTopicsForSubjects(subjects) {
-      const selected = Array.isArray(subjects) ? subjects : [];
+      const selected = window.DashboardApp.getMajorSubjectsFromSelection(subjects);
       const allowed = [];
       const seen = new Set();
       selected.forEach((subject) => {
