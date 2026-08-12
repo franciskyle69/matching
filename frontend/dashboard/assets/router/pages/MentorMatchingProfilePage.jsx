@@ -1,7 +1,7 @@
 (function () {
   "use strict";
   const React = window.React;
-  const { useContext, useEffect, useRef, useState } = React;
+  const { useContext, useEffect, useMemo, useRef, useState } = React;
   const AppContext = window.DashboardApp.AppContext;
 
   const SubjectCategoryPicker =
@@ -40,7 +40,8 @@
     {
       value: 5,
       label: "Expert",
-      description: "Can mentor complex scenarios and advanced project decisions.",
+      description:
+        "Can mentor complex scenarios and advanced project decisions.",
     },
   ];
 
@@ -51,7 +52,11 @@
     return JSON.stringify({
       subjects: profile.subjects || [],
       topics: profile.topics || [],
+      competency_ids: profile.competency_ids || [],
+      competency_levels: profile.competency_levels || {},
       expertise_level: profile.expertise_level ?? null,
+      years_experience: profile.years_experience ?? null,
+      teaching_experience_years: profile.teaching_experience_years ?? null,
       role: profile.role || "",
       capacity: profile.capacity ?? 3,
       gender: profile.gender || "",
@@ -109,7 +114,11 @@
     const end = parts[1];
     const startMinutes = toMinutes(start);
     const endMinutes = toMinutes(end);
-    if (startMinutes == null || endMinutes == null || startMinutes >= endMinutes) {
+    if (
+      startMinutes == null ||
+      endMinutes == null ||
+      startMinutes >= endMinutes
+    ) {
       return null;
     }
     return { start, end, startMinutes, endMinutes };
@@ -155,7 +164,8 @@
     const newSlots = toSingleAvailabilityRange(draft.start, draft.end);
     if (!Array.isArray(newSlots) || newSlots.length === 0) {
       return {
-        error: "Choose a valid range where start time is earlier than end time.",
+        error:
+          "Choose a valid range where start time is earlier than end time.",
         next: null,
       };
     }
@@ -267,9 +277,12 @@
     const {
       mentorProfile,
       setMentorProfile,
+      subjectsData,
       mentorProfileSaving,
       handleMentorProfileSave,
     } = ctx;
+    const Utils = window.DashboardApp.Utils || {};
+    const fetchJSON = Utils.fetchJSON;
 
     const [savedAt, setSavedAt] = useState(0);
     const [availabilityDraft, setAvailabilityDraft] = useState({
@@ -291,45 +304,242 @@
       savedRef.current === serializeMentorQuestionnaire(mentorProfile);
     const justSaved = savedAt > 0 && Date.now() - savedAt < 2000;
 
-    const selectedSubjects = Array.isArray(mentorProfile.subjects)
-      ? mentorProfile.subjects
-      : [];
-    const subjectOptions =
-      (window.DashboardApp && window.DashboardApp.MENTOR_SUBJECT_OPTIONS) || [];
-    const selectedTopics = Array.isArray(mentorProfile.topics)
-      ? mentorProfile.topics
-      : [];
-    const allowedTopics = getAllowedTopicsForSubjects(selectedSubjects);
-    const majorSubjects = getMajorSubjectsFromSelection(selectedSubjects);
-    const topicsEnabled = majorSubjects.length > 0;
-    const visibleTopicOptions = topicsEnabled ? [...allowedTopics] : [];
-    const topicsSignature = visibleTopicOptions.join("|");
-    const needsTopics = selectionRequiresTopics(selectedSubjects);
+    const selectedSubjectName = Array.isArray(mentorProfile.subjects)
+      ? String(mentorProfile.subjects[0] || "").trim()
+      : "";
+    const selectedSubject =
+      subjectsData.find((subject) => subject.name === selectedSubjectName) ||
+      null;
+    const subjectOptions = useMemo(
+      () =>
+        [...(Array.isArray(subjectsData) ? subjectsData : [])]
+          .filter((subject) => String(subject.category || "major") === "major")
+          .sort((a, b) => String(a.name || "").localeCompare(String(b.name || ""))),
+      [subjectsData],
+    );
+    const [topicOptions, setTopicOptions] = useState([]);
+    const [competencyMap, setCompetencyMap] = useState({});
+    const [selectedTopicIds, setSelectedTopicIds] = useState([]);
+    const [selectedCompetencyIds, setSelectedCompetencyIds] = useState(
+      Array.isArray(mentorProfile.competency_ids)
+        ? [...mentorProfile.competency_ids]
+        : [],
+    );
+    const [selectionLoading, setSelectionLoading] = useState(false);
+    const hydrateSelectionRef = useRef(true);
+
+    const competencyLookup = useMemo(() => {
+      const map = new Map();
+      Object.values(competencyMap).forEach((items) => {
+        (Array.isArray(items) ? items : []).forEach((item) =>
+          map.set(item.id, item),
+        );
+      });
+      return map;
+    }, [competencyMap]);
+    const hasSelectedSubject = !!selectedSubjectName;
+    const needsTopics = topicOptions.length > 0;
+    const needsCompetencies = selectedTopicIds.length > 0;
+    const selectedTopicCount = selectedTopicIds.length;
+    const selectedCompetencyCount = selectedCompetencyIds.length;
     const expertiseLevel = EXPERTISE_LEVELS.find(
       (level) => level.value === mentorProfile.expertise_level,
     );
 
-    function toggleSubject(subject) {
-      const nextSubjects = selectedSubjects.includes(subject)
-        ? selectedSubjects.filter((item) => item !== subject)
-        : [...selectedSubjects, subject];
+    function applyCompetencySelection(nextIds, nextTopicIdsOverride) {
+      const nextCompetencyIds = Array.from(new Set(nextIds));
+      const topicIdsForState = Array.isArray(nextTopicIdsOverride)
+        ? [...nextTopicIdsOverride]
+        : [...selectedTopicIds];
+      const nextTopicNames = topicIdsForState
+        .map((topicId) => topicOptions.find((topic) => topic.id === topicId))
+        .filter(Boolean)
+        .map((topic) => topic.name)
+        .filter(Boolean);
+      const previousLevels =
+        mentorProfile.competency_levels &&
+        typeof mentorProfile.competency_levels === "object"
+          ? mentorProfile.competency_levels
+          : {};
+      const defaultLevel = Number(mentorProfile.expertise_level || 3);
+      const nextLevels = {};
+      nextCompetencyIds.forEach((competencyId) => {
+        const prevLevel = Number(previousLevels[competencyId]);
+        nextLevels[competencyId] =
+          Number.isFinite(prevLevel) && prevLevel >= 1 && prevLevel <= 5
+            ? prevLevel
+            : defaultLevel;
+      });
+      setSelectedCompetencyIds(nextCompetencyIds);
+      setMentorProfile((prev) => ({
+        ...prev,
+        competency_ids: nextCompetencyIds,
+        competency_levels: nextLevels,
+        topics: nextTopicNames,
+      }));
+    }
+
+    async function loadSelectionOptions(subjectId) {
+      if (!subjectId) {
+        setTopicOptions([]);
+        setCompetencyMap({});
+        setSelectedTopicIds([]);
+        setSelectedCompetencyIds([]);
+        setMentorProfile({
+          ...mentorProfile,
+          subjects: [],
+          topics: [],
+          competency_ids: [],
+          competency_levels: {},
+        });
+        return;
+      }
+      setSelectionLoading(true);
+      try {
+        const topicsResult = await fetchJSON(
+          `/api/topics/?subject_id=${subjectId}`,
+        );
+        const topics =
+          topicsResult.ok && Array.isArray(topicsResult.data?.items)
+            ? topicsResult.data.items
+            : [];
+        setTopicOptions(topics);
+        const topicIds = topics.map((topic) => topic.id).filter(Boolean);
+        if (!topicIds.length) {
+          setCompetencyMap({});
+          setSelectedTopicIds([]);
+          setSelectedCompetencyIds([]);
+          setMentorProfile({
+            ...mentorProfile,
+            topics: [],
+            competency_ids: [],
+            competency_levels: {},
+          });
+          return;
+        }
+        const competenciesResult = await fetchJSON(
+          `/api/competencies/?topic_ids=${topicIds.join(",")}`,
+        );
+        const competencies =
+          competenciesResult.ok && Array.isArray(competenciesResult.data?.items)
+            ? competenciesResult.data.items
+            : [];
+        const grouped = {};
+        competencies.forEach((competency) => {
+          const topicId = Number(competency.topic_id || 0);
+          if (!topicId) return;
+          if (!grouped[topicId]) grouped[topicId] = [];
+          grouped[topicId].push(competency);
+        });
+        setCompetencyMap(grouped);
+        if (hydrateSelectionRef.current) {
+          const savedIds = new Set(
+            (Array.isArray(mentorProfile.competency_ids)
+              ? mentorProfile.competency_ids
+              : [])
+              .map((item) => Number(item))
+              .filter((item) => Number.isFinite(item) && item > 0),
+          );
+          const nextCompetencyIds = [];
+          const nextTopicIds = new Set();
+          competencies.forEach((competency) => {
+            if (!savedIds.has(Number(competency.id))) return;
+            nextCompetencyIds.push(competency.id);
+            if (competency.topic_id) nextTopicIds.add(competency.topic_id);
+          });
+          const hydratedTopicIds = Array.from(nextTopicIds);
+          setSelectedTopicIds(hydratedTopicIds);
+          applyCompetencySelection(nextCompetencyIds, hydratedTopicIds);
+          hydrateSelectionRef.current = false;
+        }
+      } finally {
+        setSelectionLoading(false);
+      }
+    }
+
+    useEffect(() => {
+      if (!hasSelectedSubject || !selectedSubject) {
+        setTopicOptions([]);
+        setCompetencyMap({});
+        setSelectedTopicIds([]);
+        setSelectedCompetencyIds([]);
+        return;
+      }
+      loadSelectionOptions(selectedSubject.id);
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [hasSelectedSubject, selectedSubject?.id]);
+
+    const canSave =
+      hasSelectedSubject &&
+      (!needsTopics || selectedTopicCount > 0) &&
+      (!needsCompetencies || selectedCompetencyCount > 0) &&
+      expertiseLevel != null;
+
+    const showSubjectError = false;
+    const showTopicError = false;
+    const showCompetencyError = false;
+    const showExpertiseError = false;
+
+    function handleSubjectChange(nextSubjectName) {
+      hydrateSelectionRef.current = false;
+      setTopicOptions([]);
+      setCompetencyMap({});
+      setSelectedTopicIds([]);
+      setSelectedCompetencyIds([]);
       setMentorProfile({
         ...mentorProfile,
-        subjects: nextSubjects,
-        topics: filterTopicsForSubjects(nextSubjects, selectedTopics),
+        subjects: nextSubjectName ? [nextSubjectName] : [],
+        topics: [],
+        competency_ids: [],
+        competency_levels: {},
       });
       if (ctx.mentorProfilePristine) ctx.mentorProfilePristine = false;
     }
 
     function toggleTopic(topic) {
-      if (!topicsEnabled || !allowedTopics.includes(topic)) return;
-      const nextTopics = selectedTopics.includes(topic)
-        ? selectedTopics.filter((item) => item !== topic)
-        : [...selectedTopics, topic];
-      setMentorProfile({
-        ...mentorProfile,
-        topics: filterTopicsForSubjects(selectedSubjects, nextTopics),
-      });
+      const topicId = Number(topic?.id || 0);
+      if (!topicId) return;
+      const nextTopicIds = selectedTopicIds.includes(topicId)
+        ? selectedTopicIds.filter((item) => item !== topicId)
+        : [...selectedTopicIds, topicId];
+      const allowedCompetencyIds = new Set(
+        nextTopicIds.flatMap((topicItemId) =>
+          (competencyMap[topicItemId] || []).map((competency) => competency.id),
+        ),
+      );
+      setSelectedTopicIds(nextTopicIds);
+      applyCompetencySelection(
+        selectedCompetencyIds.filter((competencyId) =>
+          allowedCompetencyIds.has(competencyId),
+        ),
+        nextTopicIds,
+      );
+      if (ctx.mentorProfilePristine) ctx.mentorProfilePristine = false;
+    }
+
+    function toggleCompetency(competency) {
+      const competencyId = Number(competency?.id || 0);
+      if (!competencyId) return;
+      if (!selectedTopicIds.includes(Number(competency.topic_id || 0))) return;
+      const nextCompetencyIds = selectedCompetencyIds.includes(competencyId)
+        ? selectedCompetencyIds.filter((item) => item !== competencyId)
+        : [...selectedCompetencyIds, competencyId];
+      applyCompetencySelection(nextCompetencyIds);
+      if (ctx.mentorProfilePristine) ctx.mentorProfilePristine = false;
+    }
+
+    function setCompetencyLevel(competencyId, level) {
+      const nextLevel = Number(level);
+      if (!Number.isFinite(nextLevel) || nextLevel < 1 || nextLevel > 5) return;
+      setMentorProfile((prev) => ({
+        ...prev,
+        competency_levels: {
+          ...(prev.competency_levels && typeof prev.competency_levels === "object"
+            ? prev.competency_levels
+            : {}),
+          [competencyId]: nextLevel,
+        },
+      }));
       if (ctx.mentorProfilePristine) ctx.mentorProfilePristine = false;
     }
 
@@ -346,8 +556,9 @@
         <header className="complete-profile-header">
           <h1 className="page-title">Mentor matching profile</h1>
           <p className="page-subtitle complete-profile-subtitle">
-            Keep your subjects, topics, expertise, capacity, and availability up
-            to date so we can recommend the right mentees for you.
+            Keep your subjects, competencies, expertise, capacity, and
+            availability up to date so we can recommend the right mentees for
+            you.
           </p>
         </header>
 
@@ -362,7 +573,8 @@
               value={mentorProfile.role || ""}
               onChange={(e) => {
                 setMentorProfile({ ...mentorProfile, role: e.target.value });
-                if (ctx.mentorProfilePristine) ctx.mentorProfilePristine = false;
+                if (ctx.mentorProfilePristine)
+                  ctx.mentorProfilePristine = false;
               }}
             >
               <option value="">Select role</option>
@@ -373,72 +585,57 @@
         </SectionCard>
 
         <SectionCard
-          title="Subjects you can help with"
-          description="Pick major IT subjects and minor subjects (GE, NSTP, PE) where you feel comfortable guiding mentees."
+          title="Subject"
+          description="Select one subject first. Topics and competencies will load from the database for that subject."
         >
-          <div className="complete-profile-inline-meta" aria-live="polite">
-            <span>{selectedSubjects.length} selected</span>
-          </div>
-          {SubjectCategoryPicker ? (
-            <SubjectCategoryPicker
-              selectedSubjects={selectedSubjects}
-              onToggle={toggleSubject}
-            />
-          ) : (
-            <div
-              className="complete-profile-subject-grid"
-              role="list"
-              aria-label="Subject options"
+          <div className="form-group">
+            <label htmlFor="mentor-subject">Subject</label>
+            <select
+              id="mentor-subject"
+              value={selectedSubjectName}
+              onChange={(event) => handleSubjectChange(event.target.value)}
             >
-              {subjectOptions.map((subject) => {
-                const active = selectedSubjects.includes(subject);
-                return (
-                  <button
-                    key={subject}
-                    type="button"
-                    role="listitem"
-                    className={
-                      "complete-profile-subject-card" + (active ? " is-active" : "")
-                    }
-                    aria-pressed={active}
-                    onClick={() => toggleSubject(subject)}
-                  >
-                    <span className="complete-profile-subject-title">{subject}</span>
-                  </button>
-                );
-              })}
-            </div>
-          )}
+              <option value="">Select a subject</option>
+              {subjectOptions.map((subject) => (
+                <option key={subject.id} value={subject.name}>
+                  {subject.code
+                    ? `${subject.code} · ${subject.name}`
+                    : subject.name}
+                </option>
+              ))}
+            </select>
+          </div>
         </SectionCard>
 
-        <SectionCard
-          title="Topics you can mentor on"
-          description={
-            needsTopics
-              ? "Choose specific concepts you enjoy explaining in your selected major subjects."
-              : "Topics apply to major IT subjects. You selected only minor subjects, so topics are optional."
-          }
-        >
-          <div className="complete-profile-inline-meta" aria-live="polite">
-            <span>{selectedTopics.length} selected</span>
-          </div>
-          {!topicsEnabled ? (
-            <p className="field-helper complete-profile-helper" role="status">
-              Select a subject first. Topic options will appear once you choose at least one major IT subject.
-            </p>
-          ) : (
-            <div key={topicsSignature} className="complete-profile-topic-enter">
+        {hasSelectedSubject && (
+          <SectionCard
+            title="Topics"
+            description="Select the topics connected to the chosen subject."
+          >
+            <div className="complete-profile-inline-meta" aria-live="polite">
+              <span>{selectedTopicCount} selected</span>
+            </div>
+            {selectionLoading && (
+              <p className="field-helper complete-profile-helper" role="status">
+                Loading topics for the selected subject.
+              </p>
+            )}
+            {topicOptions.length === 0 ? (
+              <p className="field-helper complete-profile-helper" role="status">
+                No topics are defined for this subject yet.
+              </p>
+            ) : (
               <div className="complete-profile-topic-wrap">
                 <div
                   className="complete-profile-topic-chips"
                   role="list"
                   aria-label="Topic options"
                 >
-                  {visibleTopicOptions.map((topic) => {
-                    const active = selectedTopics.includes(topic);
+                  {topicOptions.map((topic) => {
+                    const active = selectedTopicIds.includes(topic.id);
                     return (
                       <button
-                        key={topic}
+                        key={topic.id}
                         type="button"
                         role="listitem"
                         className={
@@ -446,23 +643,118 @@
                           (active ? " is-active" : "")
                         }
                         aria-pressed={active}
-                        title={`Toggle ${topic}`}
                         onClick={() => toggleTopic(topic)}
                       >
-                        {topic}
+                        {active ? (
+                          <span className="mp-chip-check">✓</span>
+                        ) : null}
+                        {topic.name}
                       </button>
                     );
                   })}
                 </div>
               </div>
-              {visibleTopicOptions.length === 0 && (
-                <p className="field-helper complete-profile-helper" role="status">
-                  No topic presets found for the selected subject.
-                </p>
-              )}
+            )}
+          </SectionCard>
+        )}
+
+        {selectedTopicCount > 0 && (
+          <SectionCard
+            title="Competencies"
+            description="Select the specific competencies you want help with under each chosen topic."
+          >
+            <div className="complete-profile-inline-meta" aria-live="polite">
+              <span>{selectedCompetencyCount} selected</span>
             </div>
-          )}
-        </SectionCard>
+            <div className="mp-competency-groups">
+              {selectedTopicIds.map((topicId) => {
+                const topic = topicOptions.find((item) => item.id === topicId);
+                const competencies = competencyMap[topicId] || [];
+                if (!topic) return null;
+                return (
+                  <section key={topicId} className="mp-competency-group">
+                    <h3 className="mp-competency-group-title">{topic.name}</h3>
+                    <div
+                      className="mp-competency-grid"
+                      role="list"
+                      aria-label={`${topic.name} competencies`}
+                    >
+                      {competencies.length > 0 ? (
+                        competencies.map((competency) => {
+                          const active = selectedCompetencyIds.includes(
+                            competency.id,
+                          );
+                          return (
+                            <button
+                              key={competency.id}
+                              type="button"
+                              role="listitem"
+                              className={
+                                "mp-competency-chip" +
+                                (active ? " is-active" : "")
+                              }
+                              aria-pressed={active}
+                              title={competency.description || competency.name}
+                              onClick={() => toggleCompetency(competency)}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={active}
+                                readOnly
+                                tabIndex={-1}
+                              />
+                              <span>{competency.name}</span>
+                            </button>
+                          );
+                        })
+                      ) : (
+                        <p
+                          className="field-helper complete-profile-helper"
+                          role="status"
+                        >
+                          No competencies are defined for this topic yet.
+                        </p>
+                      )}
+                    </div>
+                  </section>
+                );
+              })}
+            </div>
+            {selectedCompetencyCount > 0 && (
+              <div className="form-grid">
+                {selectedCompetencyIds.map((competencyId) => {
+                  const competency = competencyLookup.get(competencyId);
+                  if (!competency) return null;
+                  const value =
+                    mentorProfile.competency_levels &&
+                    mentorProfile.competency_levels[competencyId] != null
+                      ? mentorProfile.competency_levels[competencyId]
+                      : mentorProfile.expertise_level || 3;
+                  return (
+                    <div key={competencyId} className="form-group">
+                      <label htmlFor={`mentor-competency-level-${competencyId}`}>
+                        {competency.name} proficiency
+                      </label>
+                      <select
+                        id={`mentor-competency-level-${competencyId}`}
+                        value={value}
+                        onChange={(event) =>
+                          setCompetencyLevel(competencyId, event.target.value)
+                        }
+                      >
+                        <option value={1}>1 - Beginner</option>
+                        <option value={2}>2 - Novice</option>
+                        <option value={3}>3 - Intermediate</option>
+                        <option value={4}>4 - Advanced</option>
+                        <option value={5}>5 - Expert</option>
+                      </select>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </SectionCard>
+        )}
 
         <SectionCard
           title="Expertise level"
@@ -482,14 +774,16 @@
                   role="radio"
                   aria-checked={active}
                   className={
-                    "complete-profile-expertise-option" + (active ? " is-active" : "")
+                    "complete-profile-expertise-option" +
+                    (active ? " is-active" : "")
                   }
                   onClick={() => {
                     setMentorProfile({
                       ...mentorProfile,
                       expertise_level: level.value,
                     });
-                    if (ctx.mentorProfilePristine) ctx.mentorProfilePristine = false;
+                    if (ctx.mentorProfilePristine)
+                      ctx.mentorProfilePristine = false;
                   }}
                 >
                   <span className="complete-profile-expertise-label">
@@ -529,9 +823,58 @@
                 const raw = Number(e.target.value || 1);
                 const clamped = Math.max(1, Math.min(5, raw));
                 setMentorProfile({ ...mentorProfile, capacity: clamped });
-                if (ctx.mentorProfilePristine) ctx.mentorProfilePristine = false;
+                if (ctx.mentorProfilePristine)
+                  ctx.mentorProfilePristine = false;
               }}
             />
+          </div>
+        </SectionCard>
+
+        <SectionCard
+          title="Experience"
+          description="Provide experience details to improve ranking quality."
+        >
+          <div className="form-grid">
+            <div className="form-group">
+              <label htmlFor="mentor-years-experience">Years of experience</label>
+              <input
+                id="mentor-years-experience"
+                type="number"
+                min={0}
+                max={50}
+                value={mentorProfile.years_experience ?? ""}
+                onChange={(e) => {
+                  const raw = e.target.value;
+                  setMentorProfile({
+                    ...mentorProfile,
+                    years_experience:
+                      raw === "" ? null : Math.max(0, Math.min(50, Number(raw))),
+                  });
+                  if (ctx.mentorProfilePristine) ctx.mentorProfilePristine = false;
+                }}
+              />
+            </div>
+            <div className="form-group">
+              <label htmlFor="mentor-teaching-years">
+                Teaching experience (years)
+              </label>
+              <input
+                id="mentor-teaching-years"
+                type="number"
+                min={0}
+                max={50}
+                value={mentorProfile.teaching_experience_years ?? ""}
+                onChange={(e) => {
+                  const raw = e.target.value;
+                  setMentorProfile({
+                    ...mentorProfile,
+                    teaching_experience_years:
+                      raw === "" ? null : Math.max(0, Math.min(50, Number(raw))),
+                  });
+                  if (ctx.mentorProfilePristine) ctx.mentorProfilePristine = false;
+                }}
+              />
+            </div>
           </div>
         </SectionCard>
 
@@ -546,7 +889,8 @@
               value={mentorProfile.gender || ""}
               onChange={(e) => {
                 setMentorProfile({ ...mentorProfile, gender: e.target.value });
-                if (ctx.mentorProfilePristine) ctx.mentorProfilePristine = false;
+                if (ctx.mentorProfilePristine)
+                  ctx.mentorProfilePristine = false;
               }}
             >
               <option value="">Select biological sex</option>
@@ -609,7 +953,8 @@
                 setMentorProfile({ ...mentorProfile, availability: next });
                 setAvailabilityDraft({ start: "", end: "" });
                 setAvailabilityEditingIndex(null);
-                if (ctx.mentorProfilePristine) ctx.mentorProfilePristine = false;
+                if (ctx.mentorProfilePristine)
+                  ctx.mentorProfilePristine = false;
               }}
             >
               {availabilityEditingIndex != null
@@ -692,7 +1037,8 @@
                               availabilityEditingIndex - 1,
                             );
                           }
-                          if (ctx.mentorProfilePristine) ctx.mentorProfilePristine = false;
+                          if (ctx.mentorProfilePristine)
+                            ctx.mentorProfilePristine = false;
                         }}
                       >
                         Remove
@@ -732,5 +1078,6 @@
 
   window.DashboardApp = window.DashboardApp || {};
   window.DashboardApp.Pages = window.DashboardApp.Pages || {};
-  window.DashboardApp.Pages["mentor-matching-profile"] = MentorMatchingProfilePage;
+  window.DashboardApp.Pages["mentor-matching-profile"] =
+    MentorMatchingProfilePage;
 })();

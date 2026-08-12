@@ -1,5 +1,9 @@
 # Adding More Dataset for Mentor–Mentee Matching
 
+> Important: synthetic data is for pipeline bootstrapping only.  
+> Production model quality must be validated with historical, human-reviewed
+> matching outcomes before claiming accuracy.
+
 The XGBoost matching model is trained on a CSV of **mentor–mentee pairs** with a **label** (1 = good match, 0 = poor match). You can add more data in several ways.
 
 ---
@@ -39,10 +43,16 @@ Your CSV must have these **column names** (and a **label** column):
 |--------|-------------|
 | `mentee_subjects` | Comma-separated subjects where mentee has challenges (e.g. `Computer Programming, IT Fundamentals`) |
 | `mentee_topics` | Comma-separated topics (e.g. `Arrays, Loops, HTML`) |
+| `mentee_competencies` | Comma-separated competency names (short labels) |
+| `mentee_availability` | Comma-separated time slots (e.g. `08:00-10:00, 13:00-15:00`) |
 | `mentee_difficulty_level` | 1–5 |
 | `mentor_role` | e.g. `Senior IT Student` or `Instructor` |
 | `mentor_subjects` | Comma-separated subjects mentor can teach |
 | `mentor_topics` | Comma-separated topics mentor has expertise in |
+| `mentor_competencies` | Comma-separated competency names mentor can teach |
+| `mentor_availability` | Comma-separated mentor time slots |
+| `mentor_years_experience` | Numeric years of overall experience |
+| `mentor_teaching_experience_years` | Numeric teaching experience years |
 | `mentor_expertise_level` | 1–5 |
 | `label` | 1 = good match, 0 = poor match |
 

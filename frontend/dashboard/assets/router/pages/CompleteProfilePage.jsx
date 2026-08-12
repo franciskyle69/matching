@@ -28,7 +28,8 @@
     {
       value: 5,
       label: "Expert",
-      description: "Can mentor complex scenarios and advanced project decisions.",
+      description:
+        "Can mentor complex scenarios and advanced project decisions.",
     },
   ];
 
@@ -71,7 +72,9 @@
       { label: "Program", value: textOrFallback(mentorProfile.program) },
       {
         label: "Year level",
-        value: mentorProfile.year_level ? `Year ${mentorProfile.year_level}` : "Not set",
+        value: mentorProfile.year_level
+          ? `Year ${mentorProfile.year_level}`
+          : "Not set",
       },
     ];
 
@@ -160,7 +163,10 @@
       {
         id: "general",
         label: "General information",
-        done: !!(user.email && (user.full_name || user.display_name || user.username)),
+        done: !!(
+          user.email &&
+          (user.full_name || user.display_name || user.username)
+        ),
       },
       {
         id: "subjects",
@@ -169,7 +175,7 @@
       },
       {
         id: "topics",
-        label: "Topics selected",
+        label: "Competencies selected",
         done: !needsTopics || selectedTopics.length > 0,
       },
       {
@@ -190,7 +196,8 @@
     );
 
     const showSubjectError = submitAttempted && selectedSubjects.length === 0;
-    const showTopicError = submitAttempted && needsTopics && selectedTopics.length === 0;
+    const showTopicError =
+      submitAttempted && needsTopics && selectedTopics.length === 0;
     const showExpertiseError = submitAttempted && !hasExpertise;
 
     function toggleSubject(subject) {
@@ -297,7 +304,9 @@
               </div>
 
               <div className="form-group">
-                <label htmlFor="complete-profile-student-id">Student ID No. *</label>
+                <label htmlFor="complete-profile-student-id">
+                  Student ID No. *
+                </label>
                 <input
                   id="complete-profile-student-id"
                   value={menteeProfile.student_id_no}
@@ -317,7 +326,9 @@
               </div>
 
               <div className="form-group">
-                <label htmlFor="complete-profile-program">Course / Program</label>
+                <label htmlFor="complete-profile-program">
+                  Course / Program
+                </label>
                 <input
                   id="complete-profile-program"
                   value="BSIT"
@@ -358,7 +369,9 @@
               </div>
 
               <div className="form-group">
-                <label htmlFor="complete-profile-admission">Admission Type *</label>
+                <label htmlFor="complete-profile-admission">
+                  Admission Type *
+                </label>
                 <select
                   id="complete-profile-admission"
                   value={menteeProfile.admission_type || ""}
@@ -382,7 +395,9 @@
                       "shiftee",
                       "returnee",
                       "irregular",
-                    ].includes(String(menteeProfile.admission_type).toLowerCase()) && (
+                    ].includes(
+                      String(menteeProfile.admission_type).toLowerCase(),
+                    ) && (
                       <option value={menteeProfile.admission_type}>
                         {menteeProfile.admission_type}
                       </option>
@@ -466,7 +481,9 @@
                         aria-pressed={active}
                         onClick={() => toggleSubject(subject)}
                       >
-                        <span className="complete-profile-subject-title">{subject}</span>
+                        <span className="complete-profile-subject-title">
+                          {subject}
+                        </span>
                       </button>
                     );
                   })}
@@ -485,7 +502,7 @@
               description={
                 needsTopics
                   ? "Pick topic areas that match your selected major subjects."
-                  : "Topics apply to major IT subjects. You selected only minor subjects, so topics are optional."
+                  : "Competencies apply to major IT subjects. You selected only minor subjects, so competencies are optional."
               }
             >
               <div className="complete-profile-inline-meta" aria-live="polite">
@@ -500,16 +517,23 @@
                 aria-live="polite"
               >
                 {!topicsEnabled ? (
-                  <div className="complete-profile-topic-placeholder" role="status">
+                  <div
+                    className="complete-profile-topic-placeholder"
+                    role="status"
+                  >
                     <p className="complete-profile-topic-placeholder-title">
                       Select a subject first
                     </p>
                     <p className="complete-profile-topic-placeholder-copy">
-                      Choose at least one major IT subject to see its relevant topics.
+                      Choose at least one major IT subject to see its relevant
+                      topics.
                     </p>
                   </div>
                 ) : (
-                  <div key={topicsSignature} className="complete-profile-topic-enter">
+                  <div
+                    key={topicsSignature}
+                    className="complete-profile-topic-enter"
+                  >
                     <div className="complete-profile-topic-wrap">
                       <div
                         className="complete-profile-topic-chips"
@@ -538,7 +562,10 @@
                       </div>
                     </div>
                     {visibleTopicOptions.length === 0 && (
-                      <p className="field-helper complete-profile-helper" role="status">
+                      <p
+                        className="field-helper complete-profile-helper"
+                        role="status"
+                      >
                         No topic presets found for the selected subject.
                       </p>
                     )}
@@ -593,11 +620,17 @@
               </div>
 
               {expertiseLevel ? (
-                <p className="complete-profile-expertise-note" aria-live="polite">
+                <p
+                  className="complete-profile-expertise-note"
+                  aria-live="polite"
+                >
                   {expertiseLevel.label}: {expertiseLevel.description}
                 </p>
               ) : (
-                <p className="complete-profile-expertise-note" aria-live="polite">
+                <p
+                  className="complete-profile-expertise-note"
+                  aria-live="polite"
+                >
                   Choose one level from Beginner to Expert.
                 </p>
               )}

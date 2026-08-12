@@ -264,14 +264,38 @@ def _get_model():
 
 
 def _build_row(mentor: MentorProfile, mentee: MenteeProfile) -> Dict[str, Any]:
+    mentor_competency_levels = {}
+    if hasattr(mentor, "competency_levels"):
+        mentor_competency_levels = {
+            item.competency_id: int(item.proficiency_level)
+            for item in mentor.competency_levels.all()
+        }
+    mentee_competency_needs = {}
+    if hasattr(mentee, "competency_needs"):
+        mentee_competency_needs = {
+            item.competency_id: int(item.need_level)
+            for item in mentee.competency_needs.all()
+        }
     return {
         "mentee_subjects": mentee.subjects or mentee.skills,
         "mentee_topics": mentee.topics or mentee.skills,
+        "mentee_competencies": list(
+            mentee.competencies.values_list("id", flat=True)
+        ) if hasattr(mentee, "competencies") else [],
         "mentee_difficulty_level": mentee.difficulty_level,
+        "mentee_competency_needs": mentee_competency_needs,
+        "mentee_availability": getattr(mentee, "availability", []),
         "mentor_role": mentor.role,
         "mentor_subjects": mentor.subjects or mentor.skills,
         "mentor_topics": mentor.topics or mentor.skills,
+        "mentor_competencies": list(
+            mentor.competencies.values_list("id", flat=True)
+        ) if hasattr(mentor, "competencies") else [],
         "mentor_expertise_level": mentor.expertise_level,
+        "mentor_competency_levels": mentor_competency_levels,
+        "mentor_years_experience": getattr(mentor, "years_experience", 0) or 0,
+        "mentor_teaching_experience_years": getattr(mentor, "teaching_experience_years", 0) or 0,
+        "mentor_availability": getattr(mentor, "availability", []),
     }
 
 
@@ -307,15 +331,28 @@ def compute_score(mentor: MentorProfile, mentee: MenteeProfile) -> float:
     mentee_subjects = _to_set(mentee.subjects) or _to_set(mentee.skills)
     mentor_topics = _to_set(mentor.topics) or _to_set(mentor.skills)
     mentee_topics = _to_set(mentee.topics) or _to_set(mentee.skills)
+    mentor_competencies = _to_set(
+        mentor.competencies.values_list("id", flat=True)
+    ) if hasattr(mentor, "competencies") else set()
+    mentee_competencies = _to_set(
+        mentee.competencies.values_list("id", flat=True)
+    ) if hasattr(mentee, "competencies") else set()
     topic_confidence = _topic_overlap_confidence(mentor_topics, mentee_topics)
 
     subjects = _jaccard(mentor_subjects, mentee_subjects)
     topics = _jaccard(mentor_topics, mentee_topics)
+    competencies = _jaccard(mentor_competencies, mentee_competencies)
     difficulty = _difficulty_alignment(mentor.expertise_level, mentee.difficulty_level)
     instructor = _mentor_is_instructor(mentor.role)
 
     weighted_topics = topics * topic_confidence
-    return 0.5 * subjects + 0.35 * weighted_topics + 0.1 * difficulty + 0.05 * instructor
+    return (
+        0.4 * subjects
+        + 0.25 * weighted_topics
+        + 0.15 * competencies
+        + 0.1 * difficulty
+        + 0.05 * instructor
+    )
 
 
 GROUP_MATCHING_DEFAULT_MIN_SCORE = 0.3

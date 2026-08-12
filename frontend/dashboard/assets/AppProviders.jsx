@@ -10,18 +10,11 @@
     setAuthToken,
     setRefreshToken,
     clearAuthTokens,
-  } =
-    (window.DashboardApp && window.DashboardApp.Utils) || {};
+  } = (window.DashboardApp && window.DashboardApp.Utils) || {};
   const AppContext =
     (window.DashboardApp && window.DashboardApp.AppContext) ||
     React.createContext(null);
   const Layout = window.DashboardApp.Layout;
-  const getAllowedTopicsForSubjects =
-    window.DashboardApp.getAllowedTopicsForSubjects || (() => []);
-  const filterTopicsForSubjects =
-    window.DashboardApp.filterTopicsForSubjects ||
-    ((subjects, topics) => (Array.isArray(topics) ? [...topics] : []));
-
   function getIsPendingApproval(userData) {
     return !!(
       userData &&
@@ -45,7 +38,9 @@
       return "settings";
     }
     if (userData.role === "mentor") {
-      return userData.mentor_questionnaire_completed ? "settings" : "complete-profile";
+      return userData.mentor_questionnaire_completed
+        ? "settings"
+        : "complete-profile";
     }
     return "settings";
   }
@@ -55,13 +50,17 @@
   }
 
   function getPortalAuthRole() {
-    const fromUrl = new URLSearchParams(window.location.search || "").get("role");
+    const fromUrl = new URLSearchParams(window.location.search || "").get(
+      "role",
+    );
     const fromStore =
       typeof sessionStorage !== "undefined"
         ? sessionStorage.getItem("portalRole")
         : null;
     const role = fromUrl || fromStore;
-    return role === "mentor" || role === "mentee" || role === "staff" ? role : null;
+    return role === "mentor" || role === "mentee" || role === "staff"
+      ? role
+      : null;
   }
 
   function replaceAppUrl(tab) {
@@ -164,7 +163,11 @@
     const [mentorProfile, setMentorProfile] = useState({
       subjects: [],
       topics: [],
+      competency_ids: [],
+      competency_levels: {},
       expertise_level: null,
+      years_experience: null,
+      teaching_experience_years: null,
       role: "",
       capacity: 3,
       gender: "",
@@ -174,7 +177,10 @@
     const [menteeMatching, setMenteeMatching] = useState({
       subjects: [],
       topics: [],
+      competency_ids: [],
+      competency_needs: {},
       difficulty_level: null,
+      preferred_learning_style: "",
       availability: [],
     });
     const [menteeMatchingSaving, setMenteeMatchingSaving] = useState(false);
@@ -263,7 +269,10 @@
       };
       window.DashboardApp.notify = notifyBridge;
       return () => {
-        if (window.DashboardApp && window.DashboardApp.notify === notifyBridge) {
+        if (
+          window.DashboardApp &&
+          window.DashboardApp.notify === notifyBridge
+        ) {
           delete window.DashboardApp.notify;
         }
       };
@@ -290,7 +299,8 @@
 
     useEffect(() => {
       const onPageShow = (event) => {
-        const stale = Date.now() - meLastFetchTsRef.current > ME_MIN_FETCH_INTERVAL_MS;
+        const stale =
+          Date.now() - meLastFetchTsRef.current > ME_MIN_FETCH_INTERVAL_MS;
         if (event.persisted && stale) {
           loadMe({ force: false });
         }
@@ -326,11 +336,7 @@
     useEffect(() => {
       if (!authCheckDone) return;
       const hash = window.location.hash.replace("#", "");
-      const validTabs = [
-        ...MAIN_TABS.map((t) => t.id),
-        "signin",
-        "signup",
-      ];
+      const validTabs = [...MAIN_TABS.map((t) => t.id), "signin", "signup"];
       if (
         user &&
         (hash === "signin" || hash === "signup") &&
@@ -400,7 +406,8 @@
         /(?:^|&)oauth_error=/.test(normalizedSearch) ||
         /(?:^|&)activated=/.test(normalizedSearch) ||
         /(?:^|&)activation_error=/.test(normalizedSearch);
-      const authPathVariant = path.endsWith("/app/signin") || path.endsWith("/app/signup");
+      const authPathVariant =
+        path.endsWith("/app/signin") || path.endsWith("/app/signup");
       if (!hasOauthParams && !authPathVariant) return;
 
       if (authRequired || !user) {
@@ -459,7 +466,9 @@
       if (!authCheckDone) return;
       const params = new URLSearchParams(window.location.search || "");
       const activated = (params.get("activated") || "").toLowerCase();
-      const activationError = (params.get("activation_error") || "").toLowerCase();
+      const activationError = (
+        params.get("activation_error") || ""
+      ).toLowerCase();
 
       const isTruthy = (v) => ["1", "true", "yes", "on"].includes(v);
       if (isTruthy(activated)) {
@@ -538,11 +547,7 @@
       ) {
         loadMentorRequests();
       }
-      if (
-        activeTab === "home" &&
-        user?.role === "mentee" &&
-        !myMentor
-      ) {
+      if (activeTab === "home" && user?.role === "mentee" && !myMentor) {
         loadMyMentor();
       }
       if (activeTab === "announcements" && !announcementsLoaded)
@@ -588,7 +593,8 @@
       if (!user) return;
       const onFocus = () => {
         if (document.visibilityState !== "visible") return;
-        const stale = Date.now() - meLastFetchTsRef.current > ME_MIN_FETCH_INTERVAL_MS;
+        const stale =
+          Date.now() - meLastFetchTsRef.current > ME_MIN_FETCH_INTERVAL_MS;
         if (stale) loadMe({ force: false });
       };
       window.addEventListener("focus", onFocus);
@@ -597,7 +603,11 @@
 
     async function loadMe(options = {}) {
       const force = !!options.force;
-      if (!force && user && Date.now() - meLastFetchTsRef.current < ME_MIN_FETCH_INTERVAL_MS) {
+      if (
+        !force &&
+        user &&
+        Date.now() - meLastFetchTsRef.current < ME_MIN_FETCH_INTERVAL_MS
+      ) {
         return;
       }
       if (meInFlightRef.current) {
@@ -647,15 +657,25 @@
         const mentorSubjects = Array.isArray(info.subjects)
           ? [...info.subjects]
           : [];
-        const mentorTopics = filterTopicsForSubjects(
-          mentorSubjects,
-          info.topics,
-        );
+        const mentorTopics = Array.isArray(info.topics) ? [...info.topics] : [];
         setMentorProfile({
           subjects: mentorSubjects,
           topics: mentorTopics,
+          competency_ids: Array.isArray(info.competency_ids)
+            ? [...info.competency_ids]
+            : [],
+          competency_levels:
+            info.competency_levels && typeof info.competency_levels === "object"
+              ? { ...info.competency_levels }
+              : {},
           expertise_level:
             info.expertise_level != null ? info.expertise_level : null,
+          years_experience:
+            info.years_experience != null ? Number(info.years_experience) : null,
+          teaching_experience_years:
+            info.teaching_experience_years != null
+              ? Number(info.teaching_experience_years)
+              : null,
           role: info.role || "",
           capacity:
             info.capacity != null
@@ -672,12 +692,20 @@
         const menteeSubjects = Array.isArray(mm.subjects)
           ? [...mm.subjects]
           : [];
-        const menteeTopics = filterTopicsForSubjects(menteeSubjects, mm.topics);
+        const menteeTopics = Array.isArray(mm.topics) ? [...mm.topics] : [];
         setMenteeMatching({
           subjects: menteeSubjects,
           topics: menteeTopics,
+          competency_ids: Array.isArray(mm.competency_ids)
+            ? [...mm.competency_ids]
+            : [],
+          competency_needs:
+            mm.competency_needs && typeof mm.competency_needs === "object"
+              ? { ...mm.competency_needs }
+              : {},
           difficulty_level:
             mm.difficulty_level != null ? mm.difficulty_level : null,
+          preferred_learning_style: mm.preferred_learning_style || "",
           availability: Array.isArray(mm.availability)
             ? [...mm.availability]
             : [],
@@ -694,7 +722,8 @@
         setAuthAlert({
           severity: "warning",
           title: "Account pending approval",
-          message: "Review or complete your information below, then wait for coordinator approval.",
+          message:
+            "Review or complete your information below, then wait for coordinator approval.",
         });
         setActiveTab(getPendingApprovalLandingTab(result.data));
         return result.data;
@@ -890,7 +919,8 @@
           const attemptsCount = lockoutData.attempts || 0;
           const failureLimit = lockoutData.failure_limit || 5;
           const remainingMinutes = lockoutData.remaining_minutes || 1;
-          const penaltyMinutes = lockoutData.penalty_minutes || remainingMinutes;
+          const penaltyMinutes =
+            lockoutData.penalty_minutes || remainingMinutes;
 
           // Parse locked_until from response, or calculate from remaining_minutes
           let lockedUntilTime = null;
@@ -1006,10 +1036,12 @@
           setError(errorMsg);
 
           // Show warning for regular failed attempts (before lockout)
-      if (result.data?.must_change_password) {
-        window.location.replace("/accounts/settings/?must_change_password=1");
-        return;
-      }
+          if (result.data?.must_change_password) {
+            window.location.replace(
+              "/accounts/settings/?must_change_password=1",
+            );
+            return;
+          }
           if (result.status === 401 || result.status === 400) {
             const attemptData = result.data || {};
             if (
@@ -1103,7 +1135,8 @@
             severity: "error",
             title: "Staff accounts",
             message: "Staff accounts are created by an administrator.",
-            detail: "Use Sign In on the portal as Staff, or contact your coordinator.",
+            detail:
+              "Use Sign In on the portal as Staff, or contact your coordinator.",
           });
           return;
         }
@@ -1289,10 +1322,12 @@
       }));
       window.DashboardApp.SUBJECT_CATEGORY_LABELS = categoryLabels;
       window.DashboardApp.SUBJECT_CATEGORY_ORDER = categoryOrder;
-      window.DashboardApp.MENTOR_SUBJECT_OPTIONS = subjects.map((item) => item.name);
+      window.DashboardApp.MENTOR_SUBJECT_OPTIONS = subjects.map(
+        (item) => item.name,
+      );
       window.DashboardApp.QUESTIONNAIRE_TOPIC_MAP = topicMap;
-      window.DashboardApp.MENTOR_TOPIC_OPTIONS = Array.from(topicSet).sort((a, b) =>
-        String(a).localeCompare(String(b)),
+      window.DashboardApp.MENTOR_TOPIC_OPTIONS = Array.from(topicSet).sort(
+        (a, b) => String(a).localeCompare(String(b)),
       );
       return true;
     }
@@ -1561,7 +1596,11 @@
           );
           return false;
         }
-        setTopicForm({ subject_id: String(subjectId), name: "", status: "active" });
+        setTopicForm({
+          subject_id: String(subjectId),
+          name: "",
+          status: "active",
+        });
         await loadSubjects();
         await loadQuestionnaireOptions();
         addToast("Topic created.");
@@ -1603,7 +1642,11 @@
           return false;
         }
         setTopicEditId(null);
-        setTopicForm({ subject_id: String(subjectId), name: "", status: "active" });
+        setTopicForm({
+          subject_id: String(subjectId),
+          name: "",
+          status: "active",
+        });
         await loadSubjects();
         await loadQuestionnaireOptions();
         addToast("Topic updated.");
@@ -1631,7 +1674,9 @@
         }
         await loadSubjects();
         await loadQuestionnaireOptions();
-        addToast(nextStatus === "inactive" ? "Topic archived." : "Topic restored.");
+        addToast(
+          nextStatus === "inactive" ? "Topic archived." : "Topic restored.",
+        );
         return true;
       } finally {
         setTopicActionKey(null);
@@ -1654,10 +1699,13 @@
     }
 
     async function handleMarkRead(notificationId) {
-      const result = await fetchJSON(`/api/notifications/${notificationId}/read/`, {
-        method: "POST",
-        headers: { "X-CSRFToken": getCookie("csrftoken") },
-      });
+      const result = await fetchJSON(
+        `/api/notifications/${notificationId}/read/`,
+        {
+          method: "POST",
+          headers: { "X-CSRFToken": getCookie("csrftoken") },
+        },
+      );
       if (!result.ok) {
         setError(result.data?.error || "Unable to mark notification as read.");
         return;
@@ -1665,7 +1713,9 @@
       loadNotifications();
       setUnreadCount((prev) => Math.max(0, prev - 1));
       setNotifications((prev) =>
-        prev.map((n) => (n.id === notificationId ? { ...n, is_read: true } : n)),
+        prev.map((n) =>
+          n.id === notificationId ? { ...n, is_read: true } : n,
+        ),
       );
     }
 
@@ -1783,10 +1833,9 @@
       const sanitizedSubjects = Array.isArray(profile.subjects)
         ? [...profile.subjects]
         : [];
-      const sanitizedTopics = filterTopicsForSubjects(
-        sanitizedSubjects,
-        profile.topics,
-      );
+      const sanitizedTopics = Array.isArray(profile.topics)
+        ? [...profile.topics]
+        : [];
       setError("");
       const hasPrefs =
         sanitizedSubjects.length > 0 ||
@@ -1809,7 +1858,26 @@
         const payload = {
           subjects: sanitizedSubjects,
           topics: sanitizedTopics,
+          competency_ids: Array.isArray(profile.competency_ids)
+            ? [...profile.competency_ids]
+            : [],
+          competency_levels: Object.entries(
+            profile.competency_levels && typeof profile.competency_levels === "object"
+              ? profile.competency_levels
+              : {},
+          ).map(([competencyId, proficiencyLevel]) => ({
+            competency_id: Number(competencyId),
+            proficiency_level: Number(proficiencyLevel),
+          })),
           expertise_level: profile.expertise_level,
+          years_experience:
+            profile.years_experience != null
+              ? Number(profile.years_experience)
+              : null,
+          teaching_experience_years:
+            profile.teaching_experience_years != null
+              ? Number(profile.teaching_experience_years)
+              : null,
           role: profile.role || "",
           capacity: Math.max(1, Math.min(5, Number(profile.capacity || 1))),
           gender: profile.gender || "",
@@ -1856,10 +1924,9 @@
       const sanitizedSubjects = Array.isArray(matching.subjects)
         ? [...matching.subjects]
         : [];
-      const sanitizedTopics = filterTopicsForSubjects(
-        sanitizedSubjects,
-        matching.topics,
-      );
+      const sanitizedTopics = Array.isArray(matching.topics)
+        ? [...matching.topics]
+        : [];
       setError("");
       const hasPrefs =
         sanitizedSubjects.length > 0 ||
@@ -1881,7 +1948,19 @@
         const payload = {
           subjects: sanitizedSubjects,
           topics: sanitizedTopics,
+          competency_ids: Array.isArray(matching.competency_ids)
+            ? [...matching.competency_ids]
+            : [],
+          competency_needs: Object.entries(
+            matching.competency_needs && typeof matching.competency_needs === "object"
+              ? matching.competency_needs
+              : {},
+          ).map(([competencyId, needLevel]) => ({
+            competency_id: Number(competencyId),
+            need_level: Number(needLevel),
+          })),
           difficulty_level: matching.difficulty_level,
+          preferred_learning_style: matching.preferred_learning_style || "",
           availability: matching.availability || [],
         };
         const result = await fetchJSON("/api/me/mentee-matching/", {
@@ -2154,8 +2233,7 @@
       : !isAuthenticated && !["signin", "signup"].includes(activeTab);
 
     useEffect(() => {
-      const unapproved =
-        user && getIsPendingApproval(user);
+      const unapproved = user && getIsPendingApproval(user);
       if (
         isAuthenticated &&
         ["signin", "signup"].includes(activeTab) &&

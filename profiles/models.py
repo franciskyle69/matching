@@ -1,4 +1,5 @@
 from django.db import models
+from django.core.validators import MinValueValidator, MaxValueValidator
 from django.contrib.auth.models import User
 
 
@@ -39,6 +40,13 @@ class MentorProfile(models.Model):
     role = models.CharField(max_length=50, blank=True)
     subjects = models.JSONField(default=list, blank=True)
     topics = models.JSONField(default=list, blank=True)
+    competencies = models.ManyToManyField(
+        "matching.Competency",
+        blank=True,
+        related_name="mentor_profiles",
+    )
+    years_experience = models.PositiveSmallIntegerField(null=True, blank=True)
+    teaching_experience_years = models.PositiveSmallIntegerField(null=True, blank=True)
     expertise_level = models.PositiveSmallIntegerField(null=True, blank=True)
     gender = models.CharField(max_length=10, choices=GENDER_CHOICES, blank=True, default="")
     verification_document = models.FileField(
@@ -76,6 +84,12 @@ class MenteeProfile(models.Model):
     sex = models.CharField(max_length=10, blank=True)
     subjects = models.JSONField(default=list, blank=True)
     topics = models.JSONField(default=list, blank=True)
+    competencies = models.ManyToManyField(
+        "matching.Competency",
+        blank=True,
+        related_name="mentee_profiles",
+    )
+    preferred_learning_style = models.CharField(max_length=100, blank=True, default="")
     difficulty_level = models.PositiveSmallIntegerField(null=True, blank=True)
     preferred_gender = models.CharField(
         max_length=20,
@@ -90,3 +104,59 @@ class MenteeProfile(models.Model):
 
     def __str__(self):
         return f"MenteeProfile<{self.user.username}>"
+
+
+class MentorCompetency(models.Model):
+    mentor = models.ForeignKey(
+        MentorProfile,
+        on_delete=models.CASCADE,
+        related_name="competency_levels",
+    )
+    competency = models.ForeignKey(
+        "matching.Competency",
+        on_delete=models.CASCADE,
+        related_name="mentor_competency_levels",
+    )
+    proficiency_level = models.PositiveSmallIntegerField(
+        validators=[MinValueValidator(1), MaxValueValidator(5)]
+    )
+
+    class Meta:
+        unique_together = ("mentor", "competency")
+        indexes = [
+            models.Index(fields=["mentor", "competency"], name="prof_mcomp_mentor_comp"),
+        ]
+
+    def __str__(self):
+        return (
+            f"MentorCompetency<mentor={self.mentor_id}, "
+            f"competency={self.competency_id}, level={self.proficiency_level}>"
+        )
+
+
+class MenteeCompetencyNeed(models.Model):
+    mentee = models.ForeignKey(
+        MenteeProfile,
+        on_delete=models.CASCADE,
+        related_name="competency_needs",
+    )
+    competency = models.ForeignKey(
+        "matching.Competency",
+        on_delete=models.CASCADE,
+        related_name="mentee_competency_needs",
+    )
+    need_level = models.PositiveSmallIntegerField(
+        validators=[MinValueValidator(1), MaxValueValidator(5)]
+    )
+
+    class Meta:
+        unique_together = ("mentee", "competency")
+        indexes = [
+            models.Index(fields=["mentee", "competency"], name="prof_mcneed_mentee_comp"),
+        ]
+
+    def __str__(self):
+        return (
+            f"MenteeCompetencyNeed<mentee={self.mentee_id}, "
+            f"competency={self.competency_id}, level={self.need_level}>"
+        )

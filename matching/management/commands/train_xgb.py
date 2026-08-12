@@ -4,21 +4,11 @@ import json
 from pathlib import Path
 from typing import List, Dict, Any
 
-import numpy as np
-import pandas as pd
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 from django.utils import timezone
-from sklearn.metrics import accuracy_score, f1_score, roc_auc_score, mean_squared_error, r2_score
-from sklearn.model_selection import train_test_split
-
-try:
-    from xgboost import XGBClassifier, XGBRegressor
-except Exception as e:  # pragma: no cover
-    XGBClassifier = None
-    XGBRegressor = None
-
-from matching.ml.features import build_features
+from matching.ml.preprocessing import load_dataset, build_feature_frame, split_dataset
+from matching.ml.train import train_xgboost, evaluate_model
 from matching.ml.model_io import save_model
 from matching.models import ModelMetadata, Topic
 
@@ -42,9 +32,6 @@ class Command(BaseCommand):
         parser.add_argument("--colsample-bytree", type=float, default=0.9)
 
     def handle(self, *args, **options):
-        if XGBClassifier is None or XGBRegressor is None:
-            raise CommandError("xgboost is not installed. Please install it and retry.")
-
         csv_path = Path(options["input"]).expanduser().resolve()
         if not csv_path.exists():
             raise CommandError(f"Input CSV not found: {csv_path}")
@@ -54,24 +41,17 @@ class Command(BaseCommand):
         test_size = float(options["test_size"])
         random_state = int(options["random_state"])
 
-        df = pd.read_csv(csv_path)
+        df = load_dataset(csv_path)
         if target_col not in df.columns:
             raise CommandError(f"Target column '{target_col}' not found in CSV. Columns: {list(df.columns)}")
 
-        # Build features per row
-        feature_rows: List[Dict[str, float]] = []
-        for _, row in df.iterrows():
-            feats = build_features(row)
-            feature_rows.append(feats)
-
-        X = pd.DataFrame(feature_rows)
-        y = df[target_col].values
-
-        # Ensure no NaNs remain in X
-        X = X.replace([np.inf, -np.inf], np.nan).fillna(0.0)
-
-        X_train, X_val, y_train, y_val = train_test_split(
-            X.values, y, test_size=test_size, random_state=random_state, stratify=y if task == "classification" else None
+        X, y = build_feature_frame(df, target_col)
+        X_train, X_val, y_train, y_val = split_dataset(
+            X,
+            y,
+            task=task,
+            test_size=test_size,
+            random_state=random_state,
         )
 
         params = dict(
@@ -84,36 +64,13 @@ class Command(BaseCommand):
             n_jobs=0,
         )
 
-        if task == "classification":
-            model = XGBClassifier(
-                objective="binary:logistic",
-                eval_metric="logloss",
-                **params,
-            )
-        else:
-            model = XGBRegressor(
-                objective="reg:squarederror",
-                **params,
-            )
-
         self.stdout.write(self.style.NOTICE(f"Training XGBoost {task} model on {X.shape[0]} samples, {X.shape[1]} features..."))
-        model.fit(X_train, y_train)
+        try:
+            model = train_xgboost(task=task, X_train=X_train, y_train=y_train, params=params)
+        except RuntimeError as exc:
+            raise CommandError(str(exc)) from exc
 
-        # Evaluation
-        if task == "classification":
-            pred_proba = model.predict_proba(X_val)[:, 1]
-            pred = (pred_proba >= 0.5).astype(int)
-            metrics = {
-                "auc": float(roc_auc_score(y_val, pred_proba)) if len(np.unique(y_val)) > 1 else None,
-                "accuracy": float(accuracy_score(y_val, pred)),
-                "f1": float(f1_score(y_val, pred)) if len(np.unique(y_val)) > 1 else None,
-            }
-        else:
-            pred = model.predict(X_val)
-            metrics = {
-                "rmse": float(mean_squared_error(y_val, pred, squared=False)),
-                "r2": float(r2_score(y_val, pred)),
-            }
+        metrics = evaluate_model(task=task, model=model, X_val=X_val, y_val=y_val)
 
         self.stdout.write(self.style.SUCCESS(f"Validation metrics: {json.dumps(metrics, indent=2)}"))
 

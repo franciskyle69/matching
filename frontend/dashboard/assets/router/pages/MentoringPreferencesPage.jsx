@@ -49,7 +49,10 @@
     return JSON.stringify({
       subjects: profile.subjects || [],
       topics: profile.topics || [],
+      competency_ids: profile.competency_ids || [],
+    competency_needs: profile.competency_needs || {},
       difficulty_level: profile.difficulty_level ?? null,
+    preferred_learning_style: profile.preferred_learning_style || "",
       availability: profile.availability || [],
     });
   }
@@ -248,11 +251,14 @@
     const {
       user,
       setActiveTab,
+      subjectsData,
       menteeMatching,
       setMenteeMatching,
       menteeMatchingSaving,
       handleMenteeMatchingSave,
     } = ctx;
+    const Utils = window.DashboardApp.Utils || {};
+    const fetchJSON = Utils.fetchJSON;
 
     if (user.role !== "mentee") {
       return (
@@ -282,47 +288,201 @@
     const justSaved = savedAt > 0 && Date.now() - savedAt < 2500;
 
     const selectedSubjects = Array.isArray(menteeMatching.subjects)
-      ? [...menteeMatching.subjects]
+      ? menteeMatching.subjects.filter((item) => String(item || "").trim())
       : [];
-    const subjectOptions =
-      (window.DashboardApp && window.DashboardApp.MENTOR_SUBJECT_OPTIONS) || [];
-    const allowedTopics = useMemo(
-      () => getAllowedTopicsForSubjects(selectedSubjects),
+    const selectedMajorSubjects = useMemo(
+      () => getMajorSubjectsFromSelection(selectedSubjects),
       [selectedSubjects],
     );
-    const majorSubjects = getMajorSubjectsFromSelection(selectedSubjects);
-    const selectedTopics = filterTopicsForSubjects(
-      selectedSubjects,
-      menteeMatching.topics || [],
+    const [topicOptions, setTopicOptions] = useState([]);
+    const [competencyMap, setCompetencyMap] = useState({});
+    const [selectedTopicIds, setSelectedTopicIds] = useState([]);
+    const [selectedCompetencyIds, setSelectedCompetencyIds] = useState(
+      Array.isArray(menteeMatching.competency_ids)
+        ? [...menteeMatching.competency_ids]
+        : [],
     );
-    const topicsEnabled = majorSubjects.length > 0;
-    const needsTopics = selectionRequiresTopics(selectedSubjects);
-    const visibleTopicOptions = useMemo(
-      () => (topicsEnabled ? [...allowedTopics] : []),
-      [allowedTopics, topicsEnabled],
+    const [selectionLoading, setSelectionLoading] = useState(false);
+    const hydrateSelectionRef = useRef(true);
+
+    const competencyLookup = useMemo(() => {
+      const map = new Map();
+      Object.values(competencyMap).forEach((items) => {
+        (Array.isArray(items) ? items : []).forEach((item) => {
+          map.set(item.id, item);
+        });
+      });
+      return map;
+    }, [competencyMap]);
+    const hasSelectedSubject = selectedMajorSubjects.length > 0;
+    const needsTopics = topicOptions.length > 0;
+    const needsCompetencies = selectedTopicIds.length > 0;
+    const selectedTopicCount = selectedTopicIds.length;
+    const selectedCompetencyCount = selectedCompetencyIds.length;
+    const selectedTopicLookup = useMemo(
+      () => new Map((Array.isArray(topicOptions) ? topicOptions : []).map((topic) => [topic.id, topic])),
+      [topicOptions],
     );
-    const topicsSignature = useMemo(
-      () => visibleTopicOptions.join("|"),
-      [visibleTopicOptions],
-    );
-    const [topicAnimationKey, setTopicAnimationKey] = useState(0);
     const hasDifficulty =
       menteeMatching.difficulty_level != null &&
       menteeMatching.difficulty_level >= 1 &&
       menteeMatching.difficulty_level <= 5;
 
+    function applyCompetencySelection(nextIds, nextTopicIdsOverride) {
+      const nextCompetencyIds = Array.from(new Set(nextIds));
+      const topicIdsForState = Array.isArray(nextTopicIdsOverride)
+        ? [...nextTopicIdsOverride]
+        : [...selectedTopicIds];
+      const nextTopicNames = topicIdsForState
+        .map((topicId) => selectedTopicLookup.get(topicId))
+        .filter(Boolean)
+        .map((topic) => topic.name)
+        .filter(Boolean);
+      const previousNeeds =
+        menteeMatching.competency_needs &&
+        typeof menteeMatching.competency_needs === "object"
+          ? menteeMatching.competency_needs
+          : {};
+      const defaultNeed = Number(menteeMatching.difficulty_level || 3);
+      const nextNeeds = {};
+      nextCompetencyIds.forEach((competencyId) => {
+        const prevNeed = Number(previousNeeds[competencyId]);
+        nextNeeds[competencyId] =
+          Number.isFinite(prevNeed) && prevNeed >= 1 && prevNeed <= 5
+            ? prevNeed
+            : defaultNeed;
+      });
+      setSelectedCompetencyIds(nextCompetencyIds);
+      setMenteeMatching((prev) => ({
+        ...prev,
+        competency_ids: nextCompetencyIds,
+        competency_needs: nextNeeds,
+        topics: nextTopicNames,
+      }));
+    }
+
+    async function loadSelectionOptions(subjectNames) {
+      if (!Array.isArray(subjectNames) || subjectNames.length === 0) {
+        setTopicOptions([]);
+        setCompetencyMap({});
+        setSelectedTopicIds([]);
+        setSelectedCompetencyIds([]);
+        setMenteeMatching({
+          ...menteeMatching,
+          subjects: [],
+          topics: [],
+          competency_ids: [],
+          competency_needs: {},
+        });
+        return;
+      }
+
+      setSelectionLoading(true);
+      try {
+        const topicsResult = await fetchJSON(
+          `/api/topics/?subject_names=${encodeURIComponent(subjectNames.join(","))}`,
+        );
+        const topics =
+          topicsResult.ok && Array.isArray(topicsResult.data?.items)
+            ? [...topicsResult.data.items]
+            : [];
+        const topicsByName = new Map();
+        topics.forEach((topic) => {
+          const key = String(topic.name || "").trim().toLowerCase();
+          if (!key || topicsByName.has(key)) return;
+          topicsByName.set(key, topic);
+        });
+        const uniqueTopics = Array.from(topicsByName.values()).sort((a, b) =>
+          String(a.name || "").localeCompare(String(b.name || "")),
+        );
+        setTopicOptions(uniqueTopics);
+
+        const topicIds = uniqueTopics.map((topic) => topic.id).filter(Boolean);
+        if (!topicIds.length) {
+          setCompetencyMap({});
+          setSelectedTopicIds([]);
+          setSelectedCompetencyIds([]);
+          setMenteeMatching({
+            ...menteeMatching,
+            topics: [],
+            competency_ids: [],
+            competency_needs: {},
+          });
+          return;
+        }
+
+        const competenciesResult = await fetchJSON(
+          `/api/competencies/?topic_ids=${topicIds.join(",")}`,
+        );
+        const competencies =
+          competenciesResult.ok && Array.isArray(competenciesResult.data?.items)
+            ? competenciesResult.data.items
+            : [];
+        const grouped = {};
+        competencies.forEach((competency) => {
+          const topicId = Number(competency.topic_id || 0);
+          if (!topicId) return;
+          if (!grouped[topicId]) grouped[topicId] = [];
+          grouped[topicId].push(competency);
+        });
+        setCompetencyMap(grouped);
+
+        if (hydrateSelectionRef.current) {
+          const savedIds = new Set(
+            (Array.isArray(menteeMatching.competency_ids)
+              ? menteeMatching.competency_ids
+              : [])
+              .map((item) => Number(item))
+              .filter((item) => Number.isFinite(item) && item > 0),
+          );
+          const nextCompetencyIds = [];
+          const nextTopicIds = new Set();
+          competencies.forEach((competency) => {
+            if (!savedIds.has(Number(competency.id))) return;
+            nextCompetencyIds.push(competency.id);
+            if (competency.topic_id) nextTopicIds.add(competency.topic_id);
+          });
+          const hydratedTopicIds = Array.from(nextTopicIds);
+          setSelectedTopicIds(hydratedTopicIds);
+          applyCompetencySelection(nextCompetencyIds, hydratedTopicIds);
+          hydrateSelectionRef.current = false;
+        }
+      } finally {
+        setSelectionLoading(false);
+      }
+    }
+
+    useEffect(() => {
+      if (!hasSelectedSubject) {
+        setTopicOptions([]);
+        setCompetencyMap({});
+        setSelectedTopicIds([]);
+        setSelectedCompetencyIds([]);
+        return;
+      }
+      loadSelectionOptions(selectedMajorSubjects);
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [hasSelectedSubject, selectedMajorSubjects.join(",")]);
+
     const canSave =
-      selectedSubjects.length > 0 &&
-      (!needsTopics || selectedTopics.length > 0) &&
+      hasSelectedSubject &&
+      (!needsTopics || selectedTopicCount > 0) &&
+      (!needsCompetencies || selectedCompetencyCount > 0) &&
       hasDifficulty;
 
-    const showSubjectError = submitAttempted && selectedSubjects.length === 0;
-    const showTopicError =
-      submitAttempted && needsTopics && selectedTopics.length === 0;
+    const showSubjectError = submitAttempted && !hasSelectedSubject;
+    const showTopicError = submitAttempted && needsTopics && selectedTopicCount === 0;
+    const showCompetencyError =
+      submitAttempted && needsCompetencies && selectedCompetencyCount === 0;
     const showDifficultyError = submitAttempted && !hasDifficulty;
     const progressSteps = [
-      { id: "subjects", label: "Subjects", done: selectedSubjects.length > 0 },
-      { id: "topics", label: "Topics", done: !needsTopics || selectedTopics.length > 0 },
+      { id: "subject", label: "Subject", done: hasSelectedSubject },
+      { id: "topics", label: "Topics", done: !needsTopics || selectedTopicCount > 0 },
+      {
+        id: "competencies",
+        label: "Competencies",
+        done: !needsCompetencies || selectedCompetencyCount > 0,
+      },
       { id: "difficulty", label: "Difficulty", done: hasDifficulty },
       {
         id: "availability",
@@ -334,30 +494,98 @@
       (item) => item.value === menteeMatching.difficulty_level,
     );
 
-    useEffect(() => {
-      setTopicAnimationKey((prev) => prev + 1);
-    }, [topicsEnabled, topicsSignature]);
-
-    function toggleSubject(subject) {
-      const nextSubjects = selectedSubjects.includes(subject)
-        ? selectedSubjects.filter((item) => item !== subject)
-        : [...selectedSubjects, subject];
+    function toggleSubject(subjectName) {
+      hydrateSelectionRef.current = false;
+      setTopicOptions([]);
+      setCompetencyMap({});
+      setSelectedTopicIds([]);
+      setSelectedCompetencyIds([]);
+      // Keep subject flow to a single major subject at a time.
+      const nextSubjects = selectedSubjects.includes(subjectName)
+        ? []
+        : [subjectName];
       setMenteeMatching({
         ...menteeMatching,
         subjects: nextSubjects,
-        topics: filterTopicsForSubjects(nextSubjects, selectedTopics),
+        topics: [],
+        competency_ids: [],
+        competency_needs: {},
       });
     }
 
     function toggleTopic(topic) {
-      if (!topicsEnabled || !allowedTopics.includes(topic)) return;
-      const nextTopics = selectedTopics.includes(topic)
-        ? selectedTopics.filter((item) => item !== topic)
-        : [...selectedTopics, topic];
-      setMenteeMatching({
-        ...menteeMatching,
-        topics: filterTopicsForSubjects(selectedSubjects, nextTopics),
-      });
+      const topicId = Number(topic?.id || 0);
+      if (!topicId) return;
+      const nextTopicIds = selectedTopicIds.includes(topicId)
+        ? selectedTopicIds.filter((item) => item !== topicId)
+        : [...selectedTopicIds, topicId];
+      const allowedCompetencyIds = new Set(
+        nextTopicIds.flatMap((topicItemId) =>
+          (competencyMap[topicItemId] || []).map((competency) => competency.id),
+        ),
+      );
+      setSelectedTopicIds(nextTopicIds);
+      applyCompetencySelection(
+        selectedCompetencyIds.filter((competencyId) => allowedCompetencyIds.has(competencyId)),
+        nextTopicIds,
+      );
+    }
+
+    function toggleCompetency(competency) {
+      const competencyId = Number(competency?.id || 0);
+      if (!competencyId) return;
+      if (!selectedTopicIds.includes(Number(competency.topic_id || 0))) return;
+      const nextCompetencyIds = selectedCompetencyIds.includes(competencyId)
+        ? selectedCompetencyIds.filter((item) => item !== competencyId)
+        : [...selectedCompetencyIds, competencyId];
+      applyCompetencySelection(nextCompetencyIds);
+    }
+
+    function setCompetencyNeed(competencyId, level) {
+      const nextLevel = Number(level);
+      if (!Number.isFinite(nextLevel) || nextLevel < 1 || nextLevel > 5) return;
+      setMenteeMatching((prev) => ({
+        ...prev,
+        competency_needs: {
+          ...(prev.competency_needs && typeof prev.competency_needs === "object"
+            ? prev.competency_needs
+            : {}),
+          [competencyId]: nextLevel,
+        },
+      }));
+    }
+
+    function isQuickAvailabilitySelected(range) {
+      const slot = `${range.start}-${range.end}`;
+      return Array.isArray(menteeMatching.availability)
+        ? menteeMatching.availability.includes(slot)
+        : false;
+    }
+
+    function applyQuickAvailability(range) {
+      const slot = `${range.start}-${range.end}`;
+      const current = Array.isArray(menteeMatching.availability)
+        ? [...menteeMatching.availability]
+        : [];
+      if (current.includes(slot)) {
+        setMenteeMatching({
+          ...menteeMatching,
+          availability: current.filter((item) => item !== slot),
+        });
+        return;
+      }
+
+      const update = buildAvailabilityUpdate(
+        current,
+        { start: range.start, end: range.end },
+        null,
+      );
+      if (!update.next) {
+        setAvailabilityError(update.error || "Unable to add availability range.");
+        return;
+      }
+      setAvailabilityError("");
+      setMenteeMatching({ ...menteeMatching, availability: update.next });
     }
 
     async function handleSave() {
@@ -374,197 +602,240 @@
       if (isPristine) return;
       try {
         const parsed = JSON.parse(savedSnapshotRef.current || "{}");
+        const subjects = Array.isArray(parsed.subjects) ? parsed.subjects : [];
+        const topics = Array.isArray(parsed.topics) ? parsed.topics : [];
+        const competencyIds = Array.isArray(parsed.competency_ids)
+          ? parsed.competency_ids
+          : [];
+        const competencyNeeds =
+          parsed.competency_needs && typeof parsed.competency_needs === "object"
+            ? parsed.competency_needs
+            : {};
+        const nextTopicIds = new Set();
+        competencyIds.forEach((competencyId) => {
+          const competency = competencyLookup.get(competencyId);
+          if (competency?.topic_id) {
+            nextTopicIds.add(competency.topic_id);
+          }
+        });
+
         setMenteeMatching({
           ...menteeMatching,
-          subjects: Array.isArray(parsed.subjects) ? parsed.subjects : [],
-          topics: Array.isArray(parsed.topics) ? parsed.topics : [],
+          subjects,
+          topics,
+          competency_ids: competencyIds,
+          competency_needs: competencyNeeds,
           difficulty_level:
             parsed.difficulty_level == null ? null : Number(parsed.difficulty_level),
+          preferred_learning_style: parsed.preferred_learning_style || "",
           availability: Array.isArray(parsed.availability) ? parsed.availability : [],
         });
+        setSelectedTopicIds(Array.from(nextTopicIds));
+        setSelectedCompetencyIds(competencyIds);
+        hydrateSelectionRef.current = true;
         setAvailabilityDraft({ start: "", end: "" });
         setAvailabilityEditingIndex(null);
         setAvailabilityError("");
         setSubmitAttempted(false);
-      } catch {
-        // Keep current form values if snapshot parsing fails.
+      } catch (error) {
+        console.warn("Unable to restore saved mentoring preferences", error);
       }
-    }
-
-    function applyQuickAvailability(range) {
-      const { error, next } = buildAvailabilityUpdate(
-        menteeMatching.availability,
-        { start: range.start, end: range.end },
-        null,
-      );
-      if (!next) {
-        setAvailabilityError(error);
-        return;
-      }
-      setAvailabilityError("");
-      setMenteeMatching({
-        ...menteeMatching,
-        availability: next,
-      });
-    }
-
-    function isQuickAvailabilitySelected(range) {
-      const slots = Array.isArray(menteeMatching.availability)
-        ? menteeMatching.availability
-        : [];
-      return slots.includes(range.start + "-" + range.end);
-    }
-
-    if (!generalInfoDone) {
-      return (
-        <div className="card mentoring-preferences-page page-shell">
-          <header className="mp-header">
-            <h1 className="mp-page-title">Mentoring Preferences</h1>
-            <p className="mp-page-subtitle">
-              Tell us which subjects you want mentoring in so we can recommend
-              the right mentors for you.
-            </p>
-          </header>
-          <section className="mp-section">
-            <p className="field-helper">
-              Complete your student profile first, then return here to choose
-              your mentoring subjects.
-            </p>
-            <div className="btn-row mp-action-row">
-              <button
-                type="button"
-                className="btn"
-                onClick={() => setActiveTab("complete-profile")}
-              >
-                Complete student profile
-              </button>
-            </div>
-          </section>
-        </div>
-      );
     }
 
     return (
       <div className="card mentoring-preferences-page page-shell">
-        <header className="mp-header">
-          <h1 className="mp-page-title">Mentoring Preferences</h1>
-          <p className="mp-page-subtitle">
-            Build your mentoring profile to receive better mentor recommendations.
+        <header className="complete-profile-header">
+          <h1 className="page-title">Mentoring preferences</h1>
+          <p className="page-subtitle">
+            These preferences help us find mentors that best match your academic needs.
           </p>
-          <ol className="mp-progress-track" aria-label="Mentoring preference setup progress">
-            {progressSteps.map((step) => (
-              <li
-                key={step.id}
-                className={"mp-progress-step" + (step.done ? " is-done" : "")}
-              >
-                <span className="mp-progress-dot" aria-hidden="true" />
-                <span>{step.label}</span>
-              </li>
-            ))}
-          </ol>
         </header>
 
         <div className="mp-layout">
           <div className="mp-main">
-            <SectionCard
-              title="Subjects"
-              description="Choose major IT subjects and minor categories (GE, NSTP, PE) you want mentoring support for."
-            >
-              <div className="mp-inline-meta" aria-live="polite">
-                {selectedSubjects.length} selected
-              </div>
-              {SubjectCategoryPicker ? (
-                <SubjectCategoryPicker
-                  selectedSubjects={selectedSubjects}
-                  onToggle={toggleSubject}
-                  showError={showSubjectError}
-                />
-              ) : (
-                <div className="complete-profile-subject-grid" role="list" aria-label="Subject options">
-                  {subjectOptions.map((subject) => {
-                    const active = selectedSubjects.includes(subject);
+        <SectionCard
+          title="Subject"
+          description="Select one subject first. Topics and competencies will load from the database for that subject."
+        >
+          <div className="mp-inline-meta" aria-live="polite">
+            {selectedMajorSubjects.length} selected
+          </div>
+          {SubjectCategoryPicker ? (
+            <SubjectCategoryPicker
+              selectedSubjects={selectedSubjects}
+              onToggle={toggleSubject}
+              showError={showSubjectError}
+            />
+          ) : (
+            <p className="field-helper">Subject picker is unavailable.</p>
+          )}
+          {showSubjectError && (
+            <p className="complete-profile-error" role="alert">
+              Select a subject before continuing.
+            </p>
+          )}
+        </SectionCard>
+
+            {hasSelectedSubject && (
+              <SectionCard
+                title="Topics"
+                description="Select the topics connected to the chosen subject."
+              >
+                <div className="mp-inline-meta" aria-live="polite">
+                  {selectedTopicCount} selected
+                </div>
+                {selectionLoading && (
+                  <p className="field-helper complete-profile-helper" role="status">
+                    Loading topics for the selected subject.
+                  </p>
+                )}
+                {topicOptions.length === 0 ? (
+                  <p className="field-helper complete-profile-helper" role="status">
+                    No topics are defined for this subject yet.
+                  </p>
+                ) : (
+                  <div className="complete-profile-topic-wrap">
+                    <div className="complete-profile-topic-chips" role="list" aria-label="Topic options">
+                      {topicOptions.map((topic) => {
+                        const active = selectedTopicIds.includes(topic.id);
+                        return (
+                          <button
+                            key={topic.id}
+                            type="button"
+                            role="listitem"
+                            className={
+                              "complete-profile-topic-chip" + (active ? " is-active" : "")
+                            }
+                            aria-pressed={active}
+                            onClick={() => toggleTopic(topic)}
+                          >
+                            {active ? <span className="mp-chip-check">✓</span> : null}
+                            {topic.name}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+                {showTopicError && (
+                  <p className="complete-profile-error" role="alert">
+                    Select at least one topic.
+                  </p>
+                )}
+              </SectionCard>
+            )}
+
+            {selectedTopicCount > 0 && (
+              <SectionCard
+                title="Competencies"
+                description="Select the specific competencies you want help with under each chosen topic."
+              >
+                <div className="mp-inline-meta" aria-live="polite">
+                  {selectedCompetencyCount} selected
+                </div>
+                <div className="mp-competency-groups">
+                  {selectedTopicIds.map((topicId) => {
+                    const topic = selectedTopicLookup.get(topicId);
+                    const competencies = competencyMap[topicId] || [];
+                    if (!topic) return null;
                     return (
-                      <button
-                        key={subject}
-                        type="button"
-                        role="listitem"
-                        className={"complete-profile-subject-card" + (active ? " is-active" : "")}
-                        aria-pressed={active}
-                        onClick={() => toggleSubject(subject)}
-                      >
-                        <span className="complete-profile-subject-title">{subject}</span>
-                      </button>
+                      <section key={topicId} className="mp-competency-group">
+                        <h3 className="mp-competency-group-title">{topic.name}</h3>
+                        <div
+                          className="complete-profile-topic-chips"
+                          role="list"
+                          aria-label={`${topic.name} competencies`}
+                        >
+                          {competencies.length > 0 ? (
+                            competencies.map((competency) => {
+                              const active = selectedCompetencyIds.includes(competency.id);
+                              return (
+                                <button
+                                  key={competency.id}
+                                  type="button"
+                                  role="listitem"
+                                  className={
+                                    "complete-profile-topic-chip" +
+                                    (active ? " is-active" : "")
+                                  }
+                                  aria-pressed={active}
+                                  title={competency.description || competency.name}
+                                  onClick={() => toggleCompetency(competency)}
+                                >
+                                  {active ? <span className="mp-chip-check">✓</span> : null}
+                                  <span>{competency.name}</span>
+                                </button>
+                              );
+                            })
+                          ) : (
+                            <p className="field-helper complete-profile-helper" role="status">
+                              No competencies are defined for this topic yet.
+                            </p>
+                          )}
+                        </div>
+                      </section>
                     );
                   })}
                 </div>
-              )}
-              {!SubjectCategoryPicker && showSubjectError && (
-                <p className="complete-profile-error" role="alert">
-                  Select at least one subject.
-                </p>
-              )}
-            </SectionCard>
-
-            <SectionCard
-              title="Topics"
-              description="Select topics where you would like additional guidance."
-            >
-              <div className="mp-inline-meta" aria-live="polite">
-                {selectedTopics.length} selected
-              </div>
-              <div
-                className={
-                  "mp-topic-field-shell" + (topicsEnabled ? " is-ready" : " is-waiting")
-                }
-                aria-live="polite"
-              >
-                {!topicsEnabled ? (
-                  <div className="mp-topic-placeholder" role="status">
-                    <p className="mp-topic-placeholder-title">Select a subject first</p>
-                    <p className="mp-topic-placeholder-copy">
-                      Choose at least one major IT subject, then matching topic options
-                      will appear here.
-                    </p>
-                  </div>
-                ) : (
-                  <div key={topicAnimationKey} className="mp-topic-field-enter">
-                    <div className="complete-profile-topic-wrap">
-                      <div className="complete-profile-topic-chips" role="list" aria-label="Topic options">
-                        {visibleTopicOptions.map((topic) => {
-                          const active = selectedTopics.includes(topic);
-                          return (
-                            <button
-                              key={topic}
-                              type="button"
-                              role="listitem"
-                              className={
-                                "complete-profile-topic-chip" + (active ? " is-active" : "")
-                              }
-                              aria-pressed={active}
-                              title={"Toggle " + topic}
-                              onClick={() => toggleTopic(topic)}
-                            >
-                              {active ? <span className="mp-chip-check">✓</span> : null}
-                              {topic}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                    {visibleTopicOptions.length === 0 && (
-                      <p className="field-helper complete-profile-helper" role="status">
-                        No topic presets found for the selected subject. You can continue
-                        with subject and difficulty selection.
-                      </p>
-                    )}
+                {selectedCompetencyCount > 0 && (
+                  <div className="form-grid">
+                    {selectedCompetencyIds.map((competencyId) => {
+                      const competency = competencyLookup.get(competencyId);
+                      if (!competency) return null;
+                      const value =
+                        menteeMatching.competency_needs &&
+                        menteeMatching.competency_needs[competencyId] != null
+                          ? menteeMatching.competency_needs[competencyId]
+                          : menteeMatching.difficulty_level || 3;
+                      return (
+                        <div key={competencyId} className="form-group">
+                          <label htmlFor={`mentee-competency-need-${competencyId}`}>
+                            {competency.name} need level
+                          </label>
+                          <select
+                            id={`mentee-competency-need-${competencyId}`}
+                            value={value}
+                            onChange={(event) =>
+                              setCompetencyNeed(competencyId, event.target.value)
+                            }
+                          >
+                            <option value={1}>1 - Comfortable</option>
+                            <option value={2}>2 - Minor Help</option>
+                            <option value={3}>3 - Moderate</option>
+                            <option value={4}>4 - Significant</option>
+                            <option value={5}>5 - Urgent</option>
+                          </select>
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
+                {showCompetencyError && (
+                  <p className="complete-profile-error" role="alert">
+                    Select at least one competency.
+                  </p>
+                )}
+              </SectionCard>
+            )}
+
+            <SectionCard
+              title="Learning Style"
+              description="Optional: share your preferred learning style to improve mentor compatibility."
+            >
+              <div className="form-group">
+                <label htmlFor="mentee-learning-style">Preferred learning style</label>
+                <input
+                  id="mentee-learning-style"
+                  value={menteeMatching.preferred_learning_style || ""}
+                  onChange={(e) =>
+                    setMenteeMatching({
+                      ...menteeMatching,
+                      preferred_learning_style: e.target.value,
+                    })
+                  }
+                  placeholder="e.g., visual, hands-on, guided practice"
+                />
               </div>
-              {showTopicError && (
-                <p className="complete-profile-error" role="alert">
-                  Select at least one topic.
-                </p>
-              )}
             </SectionCard>
 
             <SectionCard
@@ -768,11 +1039,15 @@
             <dl className="mp-preview-list">
               <div className="mp-preview-row">
                 <dt>Subjects Selected</dt>
-                <dd>{selectedSubjects.length}</dd>
+                <dd>{hasSelectedSubject ? 1 : 0}</dd>
               </div>
               <div className="mp-preview-row">
                 <dt>Topics Selected</dt>
-                <dd>{selectedTopics.length}</dd>
+                <dd>{selectedTopicCount}</dd>
+              </div>
+              <div className="mp-preview-row">
+                <dt>Competencies Selected</dt>
+                <dd>{selectedCompetencyCount}</dd>
               </div>
               <div className="mp-preview-row">
                 <dt>Difficulty Level</dt>
@@ -804,7 +1079,9 @@
             {submitAttempted && !canSave && (
               <p className="complete-profile-error complete-profile-error-summary" role="alert">
                 {needsTopics
-                  ? "Select at least one subject, one topic, and a difficulty level before saving."
+                  ? needsCompetencies
+                    ? "Select a subject, a topic, a competency, and a difficulty level before saving."
+                    : "Select a subject, a topic, and a difficulty level before saving."
                   : "Select at least one subject and a difficulty level before saving."}
               </p>
             )}

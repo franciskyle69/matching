@@ -71,7 +71,10 @@
       ),
       star: (
         <svg {...p}>
-          <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" fill="none" />
+          <polygon
+            points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"
+            fill="none"
+          />
         </svg>
       ),
       megaphone: (
@@ -114,18 +117,15 @@
 
   function WelcomeHeroAvatar({ user }) {
     if (!user) return null;
-    const displayName = user.full_name || user.display_name || user.username || "You";
+    const displayName =
+      user.full_name || user.display_name || user.username || "You";
     const initial = displayName.slice(0, 1).toUpperCase();
     const avatarUrl = user.avatar_url || "";
     return (
       <div className="dashboard-welcome-avatar" aria-hidden="true">
         <div className="sidebar-avatar-wrapper dashboard-welcome-avatar-wrap">
           {avatarUrl ? (
-            <img
-              src={avatarUrl}
-              alt=""
-              className="sidebar-avatar"
-            />
+            <img src={avatarUrl} alt="" className="sidebar-avatar" />
           ) : (
             <div className="sidebar-avatar fallback">{initial}</div>
           )}
@@ -153,11 +153,35 @@
       return (
         <div className="card cta-card page-shell">
           <h1 className="page-title">Mentor–Mentee Matching</h1>
-          <p className="page-subtitle" style={{ marginBottom: 0 }}>Connect with mentors or mentees through smart matching in one place.</p>
+          <p className="page-subtitle" style={{ marginBottom: 0 }}>
+            Connect with mentors or mentees through smart matching in one place.
+          </p>
           <div className="btn-row">
-            <button className="btn" onClick={() => { window.location.href = "/portal/"; }}>Get started</button>
-            <button className="btn secondary" onClick={() => { window.location.href = "/portal/"; }}>I already have an account</button>
-            <button type="button" className="btn secondary auth-landing-back-btn" onClick={() => { window.location.href = "/landing/"; }}>Back to landing</button>
+            <button
+              className="btn"
+              onClick={() => {
+                window.location.href = "/portal/";
+              }}
+            >
+              Get started
+            </button>
+            <button
+              className="btn secondary"
+              onClick={() => {
+                window.location.href = "/portal/";
+              }}
+            >
+              I already have an account
+            </button>
+            <button
+              type="button"
+              className="btn secondary auth-landing-back-btn"
+              onClick={() => {
+                window.location.href = "/landing/";
+              }}
+            >
+              Back to landing
+            </button>
           </div>
         </div>
       );
@@ -166,7 +190,9 @@
     const staffOverviewChartRef = useRef(null);
 
     if (user.role === "mentee") {
-      const hasQuestionnaire = !!(user.mentee_questionnaire_completed ?? user.questionnaire_completed);
+      const hasQuestionnaire = !!(
+        user.mentee_questionnaire_completed ?? user.questionnaire_completed
+      );
       const matchCount = (menteeRecommendations || []).length;
       const userProgress = stats && stats.user_progress;
 
@@ -177,33 +203,67 @@
               <WelcomeHeroAvatar user={user} />
               <div className="mentee-v2-hero-copy">
                 <h1 className="mentee-v2-title">
-                  Welcome back{user.full_name || user.display_name ? `, ${user.full_name || user.display_name}` : user.username ? `, ${user.username}` : ""}
+                  Welcome back
+                  {user.full_name || user.display_name
+                    ? `, ${user.full_name || user.display_name}`
+                    : user.username
+                      ? `, ${user.username}`
+                      : ""}
                 </h1>
                 <p className="mentee-v2-subtitle">
-                  A focused view of your mentoring journey, matching, and next best actions.
+                  A focused view of your mentoring journey, matching, and next
+                  best actions.
                 </p>
               </div>
             </div>
             <div className="mentee-v2-hero-actions">
-              <button type="button" className="btn" onClick={() => setActiveTab("matching")}>Find mentors</button>
-              <button type="button" className="btn secondary" onClick={() => setActiveTab("announcements")}>Announcements</button>
+              <button
+                type="button"
+                className="btn"
+                onClick={() => setActiveTab("matching")}
+              >
+                Find mentors
+              </button>
+              <button
+                type="button"
+                className="btn secondary"
+                onClick={() => setActiveTab("announcements")}
+              >
+                Announcements
+              </button>
             </div>
           </section>
 
           <section className="mentee-v2-quickbar" aria-label="Quick actions">
-            <button type="button" className="mentee-v2-quickbar-btn is-primary" onClick={() => setActiveTab("matching")}>
+            <button
+              type="button"
+              className="mentee-v2-quickbar-btn is-primary"
+              onClick={() => setActiveTab("matching")}
+            >
               <MenteeDashIcon name="users" size={16} />
               <span>Find mentors</span>
             </button>
-            <button type="button" className="mentee-v2-quickbar-btn" onClick={() => setActiveTab("matching")}>
+            <button
+              type="button"
+              className="mentee-v2-quickbar-btn"
+              onClick={() => setActiveTab("matching")}
+            >
               <MenteeDashIcon name="plus" size={16} />
               <span>View matches</span>
             </button>
-            <button type="button" className="mentee-v2-quickbar-btn" onClick={() => setActiveTab("matching")}>
+            <button
+              type="button"
+              className="mentee-v2-quickbar-btn"
+              onClick={() => setActiveTab("matching")}
+            >
               <MenteeDashIcon name="barChart" size={16} />
               <span>View matches</span>
             </button>
-            <button type="button" className="mentee-v2-quickbar-btn" onClick={() => setActiveTab("announcements")}>
+            <button
+              type="button"
+              className="mentee-v2-quickbar-btn"
+              onClick={() => setActiveTab("announcements")}
+            >
               <MenteeDashIcon name="megaphone" size={16} />
               <span>Announcements</span>
             </button>
@@ -216,24 +276,36 @@
             </div>
             <div className="mentee-v2-metric-grid">
               <article className="mentee-v2-metric-card">
-                <span className="mentee-v2-metric-icon"><MenteeDashIcon name="users" /></span>
+                <span className="mentee-v2-metric-icon">
+                  <MenteeDashIcon name="users" />
+                </span>
                 <p className="mentee-v2-metric-label">Mentor recommendations</p>
                 <p className="mentee-v2-metric-value">{matchCount}</p>
               </article>
               <article className="mentee-v2-metric-card">
-                <span className="mentee-v2-metric-icon"><MenteeDashIcon name="calendar" /></span>
+                <span className="mentee-v2-metric-icon">
+                  <MenteeDashIcon name="calendar" />
+                </span>
                 <p className="mentee-v2-metric-label">Has mentor</p>
-                <p className="mentee-v2-metric-value">{userProgress?.has_mentor ? "Yes" : "No"}</p>
+                <p className="mentee-v2-metric-value">
+                  {userProgress?.has_mentor ? "Yes" : "No"}
+                </p>
               </article>
               <article className="mentee-v2-metric-card">
-                <span className="mentee-v2-metric-icon"><MenteeDashIcon name="clock" /></span>
+                <span className="mentee-v2-metric-icon">
+                  <MenteeDashIcon name="clock" />
+                </span>
                 <p className="mentee-v2-metric-label">Recommendations</p>
                 <p className="mentee-v2-metric-value">{matchCount}</p>
               </article>
               <article className="mentee-v2-metric-card">
-                <span className="mentee-v2-metric-icon"><MenteeDashIcon name="pending" /></span>
+                <span className="mentee-v2-metric-icon">
+                  <MenteeDashIcon name="pending" />
+                </span>
                 <p className="mentee-v2-metric-label">Pairings</p>
-                <p className="mentee-v2-metric-value">{stats?.accepted_pairings ?? 0}</p>
+                <p className="mentee-v2-metric-value">
+                  {stats?.accepted_pairings ?? 0}
+                </p>
               </article>
             </div>
           </section>
@@ -249,36 +321,70 @@
                   <div className="mentee-v2-mentor-main">
                     <div className="sidebar-avatar-wrapper">
                       {myMentor.avatar_url ? (
-                        <img src={myMentor.avatar_url} alt={myMentor.display_name || myMentor.username} className="sidebar-avatar" />
+                        <img
+                          src={myMentor.avatar_url}
+                          alt={myMentor.display_name || myMentor.username}
+                          className="sidebar-avatar"
+                        />
                       ) : (
                         <div className="sidebar-avatar fallback">
-                          {(myMentor.display_name || myMentor.username || "?").slice(0, 1).toUpperCase()}
+                          {(myMentor.display_name || myMentor.username || "?")
+                            .slice(0, 1)
+                            .toUpperCase()}
                         </div>
                       )}
                     </div>
                     <div>
-                      <p className="mentee-v2-mentor-name">{myMentor.display_name || myMentor.username}</p>
-                      {myMentor.accepted_at && <p className="mentee-v2-muted">Mentor accepted {formatDate(myMentor.accepted_at)}</p>}
+                      <p className="mentee-v2-mentor-name">
+                        {myMentor.display_name || myMentor.username}
+                      </p>
+                      {myMentor.accepted_at && (
+                        <p className="mentee-v2-muted">
+                          Mentor accepted {formatDate(myMentor.accepted_at)}
+                        </p>
+                      )}
                     </div>
                   </div>
-                  <button type="button" className="btn small" onClick={() => setActiveTab("matching")}>View matching</button>
+                  <button
+                    type="button"
+                    className="btn small"
+                    onClick={() => setActiveTab("matching")}
+                  >
+                    View matching
+                  </button>
                 </div>
               ) : (
                 <div className="mentee-v2-empty-state">
                   <p>You do not have an official mentor yet.</p>
-                  <button type="button" className="btn" onClick={() => setActiveTab("matching")}>Browse recommendations</button>
+                  <button
+                    type="button"
+                    className="btn"
+                    onClick={() => setActiveTab("matching")}
+                  >
+                    Browse recommendations
+                  </button>
                 </div>
               )}
 
               {!hasQuestionnaire && (
                 <div className="mentee-v2-inline-cta">
-                  <span><MenteeDashIcon name="sparkles" size={16} /></span>
-                  <p>Set your mentoring subjects and topics to unlock better mentor matches.</p>
-                  <button type="button" className="btn secondary small" onClick={() => setActiveTab("mentoring-preferences")}>Set preferences</button>
+                  <span>
+                    <MenteeDashIcon name="sparkles" size={16} />
+                  </span>
+                  <p>
+                    Set your mentoring subjects and competencies to unlock
+                    better mentor matches.
+                  </p>
+                  <button
+                    type="button"
+                    className="btn secondary small"
+                    onClick={() => setActiveTab("mentoring-preferences")}
+                  >
+                    Set preferences
+                  </button>
                 </div>
               )}
             </section>
-
           </div>
 
           <div className="mentee-v2-main-grid">
@@ -290,17 +396,30 @@
               <ul className="mentee-v2-timeline">
                 {matchCount > 0 && (
                   <li className="mentee-v2-timeline-item">
-                    <span className="mentee-v2-timeline-icon"><MenteeDashIcon name="users" size={14} /></span>
+                    <span className="mentee-v2-timeline-icon">
+                      <MenteeDashIcon name="users" size={14} />
+                    </span>
                     <div>
-                      <p className="mentee-v2-timeline-title">New mentor recommendations</p>
-                      <p className="mentee-v2-muted">You currently have {matchCount} recommendation{matchCount !== 1 ? "s" : ""}.</p>
+                      <p className="mentee-v2-timeline-title">
+                        New mentor recommendations
+                      </p>
+                      <p className="mentee-v2-muted">
+                        You currently have {matchCount} recommendation
+                        {matchCount !== 1 ? "s" : ""}.
+                      </p>
                     </div>
                   </li>
                 )}
                 {!matchCount && (
                   <li className="mentee-v2-empty-state">
                     <p>No recent activity yet.</p>
-                    <button type="button" className="btn secondary small" onClick={() => setActiveTab("matching")}>Start exploring mentors</button>
+                    <button
+                      type="button"
+                      className="btn secondary small"
+                      onClick={() => setActiveTab("matching")}
+                    >
+                      Start exploring mentors
+                    </button>
                   </li>
                 )}
               </ul>
@@ -354,8 +473,8 @@
       user.role === "mentor"
         ? "You're signed in as a mentor."
         : user.role === "staff"
-        ? "You're signed in as staff."
-        : "You're signed in.";
+          ? "You're signed in as staff."
+          : "You're signed in.";
 
     const totalMentors = stats?.total_mentors ?? 0;
     const totalMentees = stats?.total_mentees ?? 0;
@@ -370,7 +489,8 @@
         : [];
       const mentorCapacity = Math.max(
         1,
-        Number(mentorProfile?.capacity ?? userProgress?.mentor_capacity ?? 3) || 3,
+        Number(mentorProfile?.capacity ?? userProgress?.mentor_capacity ?? 3) ||
+          3,
       );
       const capacityUsed = Math.min(mentorCapacity, acceptedRequests.length);
       const capacityPct = Math.round((capacityUsed / mentorCapacity) * 100);
@@ -399,59 +519,104 @@
             <div className="mentor-v2-hero-leading">
               <WelcomeHeroAvatar user={user} />
               <div className="mentor-v2-hero-copy">
-              <div className="mentor-v2-eyebrow">Mentor Dashboard</div>
-              <h1 className="mentor-v2-title">
-                Welcome back{user.full_name || user.display_name ? `, ${user.full_name || user.display_name}` : user.username ? `, ${user.username}` : ""}
-              </h1>
-              <p className="mentor-v2-subtitle">
-                Track your mentees, keep your mentoring profile ready, and jump into the next action.
-              </p>
-              <div className="mentor-v2-status-row">
-                {mentorType && MentorRoleBadge ? (
-                  <MentorRoleBadge role={mentorType} prominent />
-                ) : null}
-                <span className={"mentor-v2-status-pill " + (user.mentor_approved ? "is-approved" : "is-pending")}>
-                  {user.mentor_approved ? "Coordinator approved" : "Pending coordinator approval"}
-                </span>
-              </div>
+                <div className="mentor-v2-eyebrow">Mentor Dashboard</div>
+                <h1 className="mentor-v2-title">
+                  Welcome back
+                  {user.full_name || user.display_name
+                    ? `, ${user.full_name || user.display_name}`
+                    : user.username
+                      ? `, ${user.username}`
+                      : ""}
+                </h1>
+                <p className="mentor-v2-subtitle">
+                  Track your mentees, keep your mentoring profile ready, and
+                  jump into the next action.
+                </p>
+                <div className="mentor-v2-status-row">
+                  {mentorType && MentorRoleBadge ? (
+                    <MentorRoleBadge role={mentorType} prominent />
+                  ) : null}
+                  <span
+                    className={
+                      "mentor-v2-status-pill " +
+                      (user.mentor_approved ? "is-approved" : "is-pending")
+                    }
+                  >
+                    {user.mentor_approved
+                      ? "Coordinator approved"
+                      : "Pending coordinator approval"}
+                  </span>
+                </div>
               </div>
             </div>
             <div className="mentor-v2-hero-actions">
-              <button type="button" className="btn" onClick={() => setActiveTab("mentees")}>
+              <button
+                type="button"
+                className="btn"
+                onClick={() => setActiveTab("mentees")}
+              >
                 View mentees
               </button>
-              <button type="button" className="btn secondary" onClick={() => setActiveTab("settings")}>
+              <button
+                type="button"
+                className="btn secondary"
+                onClick={() => setActiveTab("settings")}
+              >
                 Update profile
               </button>
             </div>
           </section>
 
-          <section className="mentor-v2-metric-grid" aria-label="Mentor summary">
+          <section
+            className="mentor-v2-metric-grid"
+            aria-label="Mentor summary"
+          >
             <article className="mentor-v2-metric-card is-primary">
-              <span className="mentor-v2-metric-icon"><MenteeDashIcon name="users" /></span>
+              <span className="mentor-v2-metric-icon">
+                <MenteeDashIcon name="users" />
+              </span>
               <p className="mentor-v2-metric-label">Your mentees</p>
-              <p className="mentor-v2-metric-value">{acceptedRequests.length}</p>
-              <p className="mentor-v2-metric-help">Official mentees assigned to you</p>
+              <p className="mentor-v2-metric-value">
+                {acceptedRequests.length}
+              </p>
+              <p className="mentor-v2-metric-help">
+                Official mentees assigned to you
+              </p>
             </article>
             <article className="mentor-v2-metric-card">
-              <span className="mentor-v2-metric-icon"><MenteeDashIcon name="barChart" /></span>
+              <span className="mentor-v2-metric-icon">
+                <MenteeDashIcon name="barChart" />
+              </span>
               <p className="mentor-v2-metric-label">Capacity used</p>
-              <p className="mentor-v2-metric-value">{capacityUsed}/{mentorCapacity}</p>
+              <p className="mentor-v2-metric-value">
+                {capacityUsed}/{mentorCapacity}
+              </p>
               <div className="mentor-v2-progress" aria-hidden="true">
                 <span style={{ width: `${capacityPct}%` }} />
               </div>
             </article>
             <article className="mentor-v2-metric-card">
-              <span className="mentor-v2-metric-icon"><MenteeDashIcon name="pending" /></span>
+              <span className="mentor-v2-metric-icon">
+                <MenteeDashIcon name="pending" />
+              </span>
               <p className="mentor-v2-metric-label">Capacity notices</p>
               <p className="mentor-v2-metric-value">{pendingRequests.length}</p>
-              <p className="mentor-v2-metric-help">Mentees waiting because capacity is full</p>
+              <p className="mentor-v2-metric-help">
+                Mentees waiting because capacity is full
+              </p>
             </article>
             <article className="mentor-v2-metric-card">
-              <span className="mentor-v2-metric-icon"><MenteeDashIcon name="check" /></span>
+              <span className="mentor-v2-metric-icon">
+                <MenteeDashIcon name="check" />
+              </span>
               <p className="mentor-v2-metric-label">Profile readiness</p>
-              <p className="mentor-v2-metric-value">{profileReady ? "Ready" : "Needs setup"}</p>
-              <p className="mentor-v2-metric-help">{subjects.length} subject{subjects.length === 1 ? "" : "s"} selected</p>
+              <p className="mentor-v2-metric-value">
+                {profileReady ? "Ready" : "Needs setup"}
+              </p>
+              <p className="mentor-v2-metric-help">
+                {subjects.length} subject{subjects.length === 1 ? "" : "s"}{" "}
+                selected
+              </p>
             </article>
           </section>
 
@@ -462,25 +627,44 @@
                   <h2>Your mentees</h2>
                   <p>Official mentees currently connected to you.</p>
                 </div>
-                <button type="button" className="btn secondary small" onClick={() => setActiveTab("mentees")}>
+                <button
+                  type="button"
+                  className="btn secondary small"
+                  onClick={() => setActiveTab("mentees")}
+                >
                   View all mentees
                 </button>
               </div>
               {acceptedRequests.length > 0 ? (
                 <div className="mentor-v2-mentee-list">
                   {acceptedRequests.slice(0, 4).map((request) => (
-                    <article key={request.mentee_id} className="mentor-v2-mentee-card">
+                    <article
+                      key={request.mentee_id}
+                      className="mentor-v2-mentee-card"
+                    >
                       <div className="mentor-v2-avatar">
-                        {(request.mentee_display_name || request.mentee_username || "?").slice(0, 1).toUpperCase()}
+                        {(
+                          request.mentee_display_name ||
+                          request.mentee_username ||
+                          "?"
+                        )
+                          .slice(0, 1)
+                          .toUpperCase()}
                       </div>
                       <div className="mentor-v2-mentee-body">
                         <div className="mentor-v2-mentee-top">
-                          <h3>{request.mentee_display_name || request.mentee_username}</h3>
-                          <span>Accepted {formatDate(request.accepted_at)}</span>
+                          <h3>
+                            {request.mentee_display_name ||
+                              request.mentee_username}
+                          </h3>
+                          <span>
+                            Accepted {formatDate(request.accepted_at)}
+                          </span>
                         </div>
                         <p>
-                          {(request.mentee_subjects || []).slice(0, 2).join(", ") ||
-                            "No subjects selected yet"}
+                          {(request.mentee_subjects || [])
+                            .slice(0, 2)
+                            .join(", ") || "No subjects selected yet"}
                           {request.mentee_difficulty_level != null
                             ? ` • Difficulty ${request.mentee_difficulty_level}/5`
                             : ""}
@@ -492,8 +676,15 @@
               ) : (
                 <div className="mentor-v2-empty">
                   <MenteeDashIcon name="users" size={22} />
-                  <p>No official mentees yet. Once matching assigns mentees to you, they will appear here.</p>
-                  <button type="button" className="btn secondary small" onClick={() => setActiveTab("mentees")}>
+                  <p>
+                    No official mentees yet. Once matching assigns mentees to
+                    you, they will appear here.
+                  </p>
+                  <button
+                    type="button"
+                    className="btn secondary small"
+                    onClick={() => setActiveTab("mentees")}
+                  >
                     View all mentees
                   </button>
                 </div>
@@ -510,33 +701,51 @@
               <div className="mentor-v2-profile-list">
                 <div>
                   <span>Subjects</span>
-                  <strong>{subjects.length ? subjects.join(", ") : "Not set"}</strong>
+                  <strong>
+                    {subjects.length ? subjects.join(", ") : "Not set"}
+                  </strong>
                 </div>
                 <div>
                   <span>Topics</span>
-                  <strong>{topics.length ? topics.join(", ") : "Not set"}</strong>
+                  <strong>
+                    {topics.length ? topics.join(", ") : "Not set"}
+                  </strong>
                 </div>
                 <div>
                   <span>Availability</span>
-                  <strong>{availability.length ? availability.join(", ") : "Not set"}</strong>
+                  <strong>
+                    {availability.length ? availability.join(", ") : "Not set"}
+                  </strong>
                 </div>
                 <div>
                   <span>Expertise</span>
-                  <strong>{mentorProfile?.expertise_level ? `${mentorProfile.expertise_level}/5` : "Not set"}</strong>
+                  <strong>
+                    {mentorProfile?.expertise_level
+                      ? `${mentorProfile.expertise_level}/5`
+                      : "Not set"}
+                  </strong>
                 </div>
               </div>
               {!profileReady && (
                 <div className="mentor-v2-warning">
-                  Complete your mentor profile so matching can recommend you accurately.
+                  Complete your mentor profile so matching can recommend you
+                  accurately.
                 </div>
               )}
-              <button type="button" className="btn mentor-v2-full-btn" onClick={() => setActiveTab("mentor-matching-profile")}>
+              <button
+                type="button"
+                className="btn mentor-v2-full-btn"
+                onClick={() => setActiveTab("mentor-matching-profile")}
+              >
                 Update mentoring profile
               </button>
             </aside>
           </div>
 
-          <section className="mentor-v2-quick-actions" aria-label="Quick actions">
+          <section
+            className="mentor-v2-quick-actions"
+            aria-label="Quick actions"
+          >
             <button type="button" onClick={() => setActiveTab("mentees")}>
               <MenteeDashIcon name="users" size={16} />
               <span>Manage mentees</span>
@@ -573,7 +782,9 @@
           </div>
           <div className="home-mini-stat">
             <div className="home-mini-stat-label">Your mentees</div>
-            <div className="home-mini-stat-value">{userProgress?.mentees_count ?? 0}</div>
+            <div className="home-mini-stat-value">
+              {userProgress?.mentees_count ?? 0}
+            </div>
           </div>
           <div className="home-mini-stat">
             <div className="home-mini-stat-label">Mentor pairings (system)</div>
@@ -587,7 +798,12 @@
               <WelcomeHeroAvatar user={user} />
               <div className="home-hero-text">
                 <h1 className="home-hero-title">
-                  Welcome back{user.full_name || user.display_name ? `, ${user.full_name || user.display_name}` : user.username ? `, ${user.username}` : ""}
+                  Welcome back
+                  {user.full_name || user.display_name
+                    ? `, ${user.full_name || user.display_name}`
+                    : user.username
+                      ? `, ${user.username}`
+                      : ""}
                 </h1>
                 <p className="home-hero-sub">{roleLine}</p>
               </div>
@@ -608,7 +824,10 @@
               <div className="home-analytics-sub">System overview</div>
             </div>
 
-            <div className="home-analytics-ring" aria-label="Mentors, mentees, and pairings distribution">
+            <div
+              className="home-analytics-ring"
+              aria-label="Mentors, mentees, and pairings distribution"
+            >
               <canvas id="staff-overview-chart" height="180" />
             </div>
 
@@ -625,7 +844,6 @@
             </div>
           </aside>
         </div>
-
       </div>
     );
   }
@@ -633,5 +851,6 @@
   window.DashboardApp = window.DashboardApp || {};
   window.DashboardApp.Pages = window.DashboardApp.Pages || {};
   window.DashboardApp.Pages.home = HomePage;
-  if (typeof module !== "undefined" && module.exports) module.exports = { HomePage };
+  if (typeof module !== "undefined" && module.exports)
+    module.exports = { HomePage };
 })();

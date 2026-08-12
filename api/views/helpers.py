@@ -9,7 +9,7 @@ from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 from django.core.cache import cache
 from accounts.models import get_user_display_name
-from matching.models import AuditLog, Notification, Subject, Topic
+from matching.models import AuditLog, Competency, Notification, Subject, Topic
 from profiles.models import MenteeProfile
 
 logger = logging.getLogger(__name__)
@@ -58,6 +58,10 @@ def _serialize_mentor_for_matching(m, request=None):
         return {}
     subs = m.subjects if isinstance(m.subjects, list) else ([m.subjects] if m.subjects else [])
     tops = m.topics if isinstance(m.topics, list) else ([m.topics] if m.topics else [])
+    competency_levels = {
+        item.competency_id: int(item.proficiency_level)
+        for item in getattr(m, "competency_levels", []).all()
+    } if hasattr(m, "competency_levels") else {}
     out = {
         "id": m.id,
         "user_id": m.user_id,
@@ -66,8 +70,12 @@ def _serialize_mentor_for_matching(m, request=None):
         "display_name": _user_display_name(m.user),
         "subjects": subs or [],
         "topics": tops or [],
+        "competency_ids": list(m.competencies.values_list("id", flat=True)),
+        "competency_levels": competency_levels,
         "role": m.role or "",
         "expertise_level": m.expertise_level,
+        "years_experience": getattr(m, "years_experience", None),
+        "teaching_experience_years": getattr(m, "teaching_experience_years", None),
         "capacity": getattr(m, "capacity", None) or 0,
         "gender": getattr(m, "gender", "") or "",
         "availability": m.availability if isinstance(getattr(m, "availability", []), list) else [],
@@ -93,6 +101,10 @@ def _serialize_mentee_for_matching(e, request=None):
         return {}
     subs = e.subjects if isinstance(e.subjects, list) else ([e.subjects] if e.subjects else [])
     tops = e.topics if isinstance(e.topics, list) else ([e.topics] if e.topics else [])
+    competency_needs = {
+        item.competency_id: int(item.need_level)
+        for item in getattr(e, "competency_needs", []).all()
+    } if hasattr(e, "competency_needs") else {}
     out = {
         "id": e.id,
         "username": e.user.username,
@@ -100,7 +112,10 @@ def _serialize_mentee_for_matching(e, request=None):
         "display_name": _user_display_name(e.user),
         "subjects": subs or [],
         "topics": tops or [],
+        "competency_ids": list(e.competencies.values_list("id", flat=True)),
+        "competency_needs": competency_needs,
         "difficulty_level": e.difficulty_level,
+        "preferred_learning_style": getattr(e, "preferred_learning_style", "") or "",
         "availability": e.availability if isinstance(getattr(e, "availability", []), list) else [],
     }
     if request and getattr(e, "avatar_url", None):
@@ -342,6 +357,19 @@ def _serialize_topic(topic: Topic):
         "is_active": getattr(topic, "status", Topic.STATUS_ACTIVE) == Topic.STATUS_ACTIVE,
         "created_at": topic.created_at.isoformat() if getattr(topic, "created_at", None) else None,
         "updated_at": topic.updated_at.isoformat() if getattr(topic, "updated_at", None) else None,
+    }
+
+
+def _serialize_competency(competency: Competency):
+    topic = getattr(competency, "topic", None)
+    return {
+        "id": competency.id,
+        "name": competency.name,
+        "description": competency.description,
+        "topic_id": competency.topic_id,
+        "topic_name": getattr(topic, "name", "") or "",
+        "subject_id": getattr(topic, "subject_id", None),
+        "subject_name": getattr(getattr(topic, "subject", None), "name", "") or "",
     }
 
 

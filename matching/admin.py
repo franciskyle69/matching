@@ -3,6 +3,7 @@ from django.contrib import admin
 from .models import (
     Subject,
     Topic,
+    Competency,
     Notification,
     MenteeMentorRequest,
     UserPost,
@@ -26,6 +27,17 @@ class TopicAdmin(admin.ModelAdmin):
     list_filter = ("subject", "status")
     search_fields = ("name", "subject__name")
     readonly_fields = ("created_at", "updated_at")
+
+    def has_delete_permission(self, request, obj=None):
+        _ = (request, obj)
+        return False
+
+
+@admin.register(Competency)
+class CompetencyAdmin(admin.ModelAdmin):
+    list_display = ("name", "topic")
+    list_filter = ("topic__subject",)
+    search_fields = ("name", "topic__name", "topic__subject__name")
 
     def has_delete_permission(self, request, obj=None):
         _ = (request, obj)

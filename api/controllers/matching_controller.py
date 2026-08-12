@@ -8,7 +8,13 @@ from django.http import JsonResponse
 from django.views.decorators.http import require_GET, require_http_methods
 
 from accounts.models import get_user_display_name
-from matching.models import MentorProfile, MenteeProfile, Notification, MenteeMentorRequest
+from matching.models import (
+    MentorProfile,
+    MenteeProfile,
+    Competency,
+    Notification,
+    MenteeMentorRequest,
+)
 from matching.services import (
     run_greedy_matching,
     recommend_mentors_for_mentee_with_meta,
@@ -115,6 +121,16 @@ def run_matching(request):
         overlap_topics = [
             t for t in mentor_topics if t and str(t).strip().lower() in mentee_top_set
         ]
+        mentor_competency_ids = set(m.competencies.values_list("id", flat=True)) if m else set()
+        mentee_competency_ids = set(e.competencies.values_list("id", flat=True)) if e else set()
+        shared_competency_ids = mentor_competency_ids & mentee_competency_ids
+        shared_competencies = []
+        if shared_competency_ids:
+            shared_competencies = list(
+                Competency.objects.filter(id__in=shared_competency_ids)
+                .order_by("name")
+                .values_list("name", flat=True)
+            )
         data.append(
             {
                 "mentor_id": mid,
@@ -129,6 +145,7 @@ def run_matching(request):
                 "match_details": {
                     "common_subjects": overlap_subjects,
                     "common_topics": overlap_topics,
+                    "common_competencies": shared_competencies,
                     "mentor_subjects": mentor_subjects,
                     "mentor_topics": mentor_topics,
                     "mentee_subjects": mentee_subjects,
@@ -218,6 +235,16 @@ def mentee_recommendations(request):
         overlap_topics = [
             t for t in mentor_topics if t and str(t).strip().lower() in mentee_top_set
         ]
+        mentor_competency_ids = set(mentor.competencies.values_list("id", flat=True))
+        mentee_competency_ids = set(mentee_profile.competencies.values_list("id", flat=True))
+        shared_competency_ids = mentor_competency_ids & mentee_competency_ids
+        shared_competencies = []
+        if shared_competency_ids:
+            shared_competencies = list(
+                Competency.objects.filter(id__in=shared_competency_ids)
+                .order_by("name")
+                .values_list("name", flat=True)
+            )
         data.append(
             {
                 "mentor_id": mentor.id,
@@ -234,6 +261,7 @@ def mentee_recommendations(request):
                 "match_details": {
                     "common_subjects": overlap_subjects,
                     "common_topics": overlap_topics,
+                    "common_competencies": shared_competencies,
                     "mentor_subjects": mentor_subjects,
                     "mentor_topics": mentor_topics,
                     "mentee_subjects": mentee_subjects,

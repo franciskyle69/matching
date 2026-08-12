@@ -3,7 +3,8 @@
   const React = window.React;
   const { useContext, useState, useEffect, useRef } = React;
   const AppContext = window.DashboardApp.AppContext;
-  const { getCookie, fetchJSON, DashboardIcon } = window.DashboardApp.Utils || {};
+  const { getCookie, fetchJSON, DashboardIcon } =
+    window.DashboardApp.Utils || {};
 
   const BIO_MAX = 200;
   const MAX_TAGS = 8;
@@ -44,7 +45,9 @@
     const TitleTag = titleAs;
 
     return (
-      <div className={`settings-card settings-accordion-card ${className}`.trim()}>
+      <div
+        className={`settings-card settings-accordion-card ${className}`.trim()}
+      >
         <button
           type="button"
           className="settings-accordion-trigger"
@@ -102,7 +105,14 @@
     );
   }
 
-  function BioAndInterestsCard({ bio, tags, onBioSave, onTagsSave, isOpen, onToggle }) {
+  function BioAndInterestsCard({
+    bio,
+    tags,
+    onBioSave,
+    onTagsSave,
+    isOpen,
+    onToggle,
+  }) {
     const [bioText, setBioText] = useState(bio);
     const [bioSaving, setBioSaving] = useState(false);
     const [localTags, setLocalTags] = useState(tags);
@@ -365,7 +375,8 @@
       matching: false,
     });
     const [passwordEmail, setPasswordEmail] = useState("");
-    const [passwordVerificationCode, setPasswordVerificationCode] = useState("");
+    const [passwordVerificationCode, setPasswordVerificationCode] =
+      useState("");
     const [passwordForm, setPasswordForm] = useState({
       new_password1: "",
       new_password2: "",
@@ -397,7 +408,12 @@
       if (!passwordCodeSent && !passwordCodeVerified) {
         setPasswordEmail(settingsForm.email || user.email || "");
       }
-    }, [settingsForm.email, user.email, passwordCodeSent, passwordCodeVerified]);
+    }, [
+      settingsForm.email,
+      user.email,
+      passwordCodeSent,
+      passwordCodeVerified,
+    ]);
 
     useEffect(() => {
       if (passwordResendSeconds <= 0) return undefined;
@@ -449,7 +465,10 @@
       if (!result.ok) {
         const message =
           result.data?.errors && typeof result.data.errors === "object"
-            ? Object.values(result.data.errors).flat().filter(Boolean).join(" ") ||
+            ? Object.values(result.data.errors)
+                .flat()
+                .filter(Boolean)
+                .join(" ") ||
               result.data?.error ||
               "Unable to send verification code."
             : result.data?.error || "Unable to send verification code.";
@@ -492,7 +511,10 @@
       if (!result.ok) {
         const message =
           result.data?.errors && typeof result.data.errors === "object"
-            ? Object.values(result.data.errors).flat().filter(Boolean).join(" ") ||
+            ? Object.values(result.data.errors)
+                .flat()
+                .filter(Boolean)
+                .join(" ") ||
               result.data?.error ||
               "Invalid verification code."
             : result.data?.error || "Invalid verification code.";
@@ -633,7 +655,14 @@
                         />
                       ) : (
                         <div className="settings-avatar-fallback">
-                          {(settingsForm.display_name || user.display_name || user.full_name || settingsForm.email || user.email || "?")
+                          {(
+                            settingsForm.display_name ||
+                            user.display_name ||
+                            user.full_name ||
+                            settingsForm.email ||
+                            user.email ||
+                            "?"
+                          )
                             .slice(0, 1)
                             .toUpperCase()}
                         </div>
@@ -696,7 +725,9 @@
                 <div className="settings-password-step-header">
                   <span className="settings-password-step-badge">1</span>
                   <div>
-                    <div className="settings-password-step-title">Request verification code</div>
+                    <div className="settings-password-step-title">
+                      Request verification code
+                    </div>
                     <p className="field-helper settings-password-step-copy">
                       We’ll send a 6-digit code to your account email.
                     </p>
@@ -721,18 +752,31 @@
                     type="button"
                     className="btn secondary"
                     onClick={handleSendPasswordCode}
-                    disabled={passwordCodeSending || passwordCodeVerifying || passwordChanging || !passwordEmail.trim() || passwordResendSeconds > 0}
+                    disabled={
+                      passwordCodeSending ||
+                      passwordCodeVerifying ||
+                      passwordChanging ||
+                      !passwordEmail.trim() ||
+                      passwordResendSeconds > 0
+                    }
                   >
                     {passwordCodeSending ? "Sending..." : resendLabel}
                   </button>
                 </div>
               </section>
 
-              <section className={"settings-password-step" + (passwordCodeSent ? "" : " is-muted")}>
+              <section
+                className={
+                  "settings-password-step" +
+                  (passwordCodeSent ? "" : " is-muted")
+                }
+              >
                 <div className="settings-password-step-header">
                   <span className="settings-password-step-badge">2</span>
                   <div>
-                    <div className="settings-password-step-title">Enter verification code</div>
+                    <div className="settings-password-step-title">
+                      Enter verification code
+                    </div>
                     <p className="field-helper settings-password-step-copy">
                       Enter the 6-digit code sent to your email address.
                     </p>
@@ -748,7 +792,9 @@
                     placeholder="123456"
                     value={passwordVerificationCode}
                     onChange={(e) => {
-                      const nextValue = e.target.value.replace(/\D/g, "").slice(0, 6);
+                      const nextValue = e.target.value
+                        .replace(/\D/g, "")
+                        .slice(0, 6);
                       setPasswordVerificationCode(nextValue);
                       setPasswordCodeVerified(false);
                     }}
@@ -765,18 +811,34 @@
                     type="button"
                     className="btn secondary"
                     onClick={handleVerifyPasswordCode}
-                    disabled={!passwordCodeSent || passwordCodeVerifying || passwordVerificationCode.length !== 6 || passwordCodeVerified}
+                    disabled={
+                      !passwordCodeSent ||
+                      passwordCodeVerifying ||
+                      passwordVerificationCode.length !== 6 ||
+                      passwordCodeVerified
+                    }
                   >
-                    {passwordCodeVerifying ? "Verifying..." : passwordCodeVerified ? "Code verified" : "Verify code"}
+                    {passwordCodeVerifying
+                      ? "Verifying..."
+                      : passwordCodeVerified
+                        ? "Code verified"
+                        : "Verify code"}
                   </button>
                 </div>
               </section>
 
-              <section className={"settings-password-step" + (passwordCodeVerified ? "" : " is-muted") }>
+              <section
+                className={
+                  "settings-password-step" +
+                  (passwordCodeVerified ? "" : " is-muted")
+                }
+              >
                 <div className="settings-password-step-header">
                   <span className="settings-password-step-badge">3</span>
                   <div>
-                    <div className="settings-password-step-title">Set your new password</div>
+                    <div className="settings-password-step-title">
+                      Set your new password
+                    </div>
                     <p className="field-helper settings-password-step-copy">
                       These fields remain locked until your code is verified.
                     </p>
@@ -817,20 +879,30 @@
                 </div>
                 <div className="settings-password-validation">
                   {passwordStrengthIssues.length > 0 && (
-                    <ul className="settings-password-rules" aria-label="Password requirements">
+                    <ul
+                      className="settings-password-rules"
+                      aria-label="Password requirements"
+                    >
                       {passwordStrengthIssues.map((issue) => (
-                        <li key={issue} className="settings-password-validation-text is-error">
+                        <li
+                          key={issue}
+                          className="settings-password-validation-text is-error"
+                        >
                           {issue}
                         </li>
                       ))}
                     </ul>
                   )}
-                  {passwordCodeVerified && !passwordsMatch && passwordForm.new_password2 ? (
+                  {passwordCodeVerified &&
+                  !passwordsMatch &&
+                  passwordForm.new_password2 ? (
                     <p className="field-helper settings-password-validation-text is-error">
                       Passwords do not match.
                     </p>
                   ) : null}
-                  {passwordCodeVerified && passwordStrengthIssues.length === 0 && passwordsMatch ? (
+                  {passwordCodeVerified &&
+                  passwordStrengthIssues.length === 0 &&
+                  passwordsMatch ? (
                     <p className="field-helper settings-password-validation-text is-success">
                       Password looks good.
                     </p>
@@ -850,7 +922,10 @@
 
               {passwordStatus.message && (
                 <p
-                  className={"field-helper settings-password-feedback is-" + passwordStatus.tone}
+                  className={
+                    "field-helper settings-password-feedback is-" +
+                    passwordStatus.tone
+                  }
                   role="status"
                   aria-live="polite"
                 >
@@ -918,12 +993,7 @@
               <div className="form-grid">
                 <div className="form-group">
                   <label>Course / Program (read only)</label>
-                  <input
-                    value="BSIT"
-                    readOnly
-                    disabled
-                    placeholder="BSIT"
-                  />
+                  <input value="BSIT" readOnly disabled placeholder="BSIT" />
                   <p className="field-helper">
                     Set by your school. Contact an administrator if this is
                     incorrect.
@@ -989,7 +1059,9 @@
                         "shiftee",
                         "returnee",
                         "irregular",
-                      ].includes(String(menteeProfile.admission_type).toLowerCase()) && (
+                      ].includes(
+                        String(menteeProfile.admission_type).toLowerCase(),
+                      ) && (
                         <option value={menteeProfile.admission_type}>
                           {menteeProfile.admission_type}
                         </option>
@@ -1035,7 +1107,7 @@
             <SettingsAccordionCard
               id="settings-mentoring-preferences"
               title="Mentoring preferences"
-              subtitle="Choose the subjects you want mentoring in, topics you find challenging, and when you are available."
+              subtitle="Choose the subjects you want mentoring in, competencies you find challenging, and when you are available."
               icon={<DashboardIcon name="sparkles" size={20} />}
               isOpen={openSections.matching}
               onToggle={() => toggleSection("matching")}

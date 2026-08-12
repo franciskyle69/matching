@@ -58,9 +58,15 @@
 
   function StatusBadge({ complete }) {
     if (complete) {
-      return <span className="approval-badge approval-badge-complete">Complete</span>;
+      return (
+        <span className="approval-badge approval-badge-complete">Complete</span>
+      );
     }
-    return <span className="approval-badge approval-badge-incomplete">Incomplete</span>;
+    return (
+      <span className="approval-badge approval-badge-incomplete">
+        Incomplete
+      </span>
+    );
   }
 
   function DocumentPreviewCard({ href, text, onView }) {
@@ -69,11 +75,28 @@
     const image = isImageFile(normalizedHref, text);
     return (
       <div className="approval-document">
-        <div className="approval-document-preview" role="img" aria-label="Verification document preview">
+        <div
+          className="approval-document-preview"
+          role="img"
+          aria-label="Verification document preview"
+        >
           {image ? (
-            <img src={normalizedHref} alt={text || "Verification document"} className="approval-document-thumb" />
+            <img
+              src={normalizedHref}
+              alt={text || "Verification document"}
+              className="approval-document-thumb"
+            />
           ) : (
-            <svg className="approval-document-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <svg
+              className="approval-document-icon"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
               <path d="M14 2H7a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7z" />
               <path d="M14 2v5h5" />
               <path d="M9 13h6" />
@@ -82,14 +105,26 @@
           )}
         </div>
         <div className="approval-document-meta">
-          <p className="approval-document-name" title={text || "Verification document"}>
+          <p
+            className="approval-document-name"
+            title={text || "Verification document"}
+          >
             {shortenFileName(text || "Verification document")}
           </p>
           <div className="approval-document-actions">
-            <button type="button" className="btn small secondary" onClick={onView}>
+            <button
+              type="button"
+              className="btn small secondary"
+              onClick={onView}
+            >
               View
             </button>
-            <a href={normalizedHref} target="_blank" rel="noreferrer" className="btn small">
+            <a
+              href={normalizedHref}
+              target="_blank"
+              rel="noreferrer"
+              className="btn small"
+            >
               Download
             </a>
           </div>
@@ -124,7 +159,13 @@
       .map((part) => String(part || "").trim())
       .filter(Boolean)
       .join(" ");
-    const displayName = fullName || m.full_name || m.display_name || m.username || m.email || "Unknown user";
+    const displayName =
+      fullName ||
+      m.full_name ||
+      m.display_name ||
+      m.username ||
+      m.email ||
+      "Unknown user";
     const initials = getInitials(displayName, m.email || m.username);
     const summary = `${getApprovalsProgramLabel()} • ${getApprovalsYearLabel()}`;
 
@@ -132,12 +173,18 @@
       <article className="approval-row" onClick={() => setExpanded((v) => !v)}>
         <div className="approval-row-main">
           <div className="approval-row-left">
-            <div className="approval-avatar" aria-hidden="true">{initials}</div>
+            <div className="approval-avatar" aria-hidden="true">
+              {initials}
+            </div>
             <div className="approval-row-name-block">
               <h3 className="approval-row-name">{displayName}</h3>
               <p className="approval-row-email">{m.email || "No email"}</p>
               {type === "mentor" && m.role && MentorRoleBadge ? (
-                <MentorRoleBadge role={m.role} prominent className="approval-mentor-type-badge" />
+                <MentorRoleBadge
+                  role={m.role}
+                  prominent
+                  className="approval-mentor-type-badge"
+                />
               ) : type === "mentor" ? (
                 <span className="approval-badge approval-badge-incomplete approval-mentor-type-missing">
                   Mentor type not set
@@ -146,7 +193,9 @@
             </div>
           </div>
 
-          <div className="approval-row-summary">{summary || "No profile summary"}</div>
+          <div className="approval-row-summary">
+            {summary || "No profile summary"}
+          </div>
 
           <div className="approval-row-right">
             <StatusBadge complete={!!m.general_info_complete} />
@@ -190,33 +239,62 @@
         </div>
 
         {expanded && (
-          <div className="approval-row-secondary" onClick={(e) => e.stopPropagation()}>
+          <div
+            className="approval-row-secondary"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="approval-secondary-doc">
               <p className="approval-subtle-label">Verification document</p>
               <DocumentPreviewCard
                 href={m.verification_document_url}
                 text={m.verification_document_name || "Verification document"}
-                onView={() => onPreview(
-                  m.verification_document_url,
-                  m.verification_document_name,
-                  m.verification_document_pages || m.verification_page_count || m.total_pages || 1
-                )}
+                onView={() =>
+                  onPreview(
+                    m.verification_document_url,
+                    m.verification_document_name,
+                    m.verification_document_pages ||
+                      m.verification_page_count ||
+                      m.total_pages ||
+                      1,
+                  )
+                }
               />
             </div>
 
             <div className="approval-secondary-details">
               <p className="approval-subtle-label">User details</p>
               <div className="approval-detail-chip-grid">
-                <DetailChip label="Program" value={getApprovalsProgramLabel()} />
+                <DetailChip
+                  label="Program"
+                  value={getApprovalsProgramLabel()}
+                />
                 <DetailChip label="Year" value={getApprovalsYearLabel()} />
-                {type === "mentor" && <DetailChip label="Role" value={m.role} />}
-                {type === "mentor" && <DetailChip label="Expertise" value={m.expertise_level} />}
-                {type === "mentee" && <DetailChip label="Campus" value={m.campus} />}
-                {type === "mentee" && <DetailChip label="Student ID" value={m.student_id_no} />}
-                {type === "mentee" && <DetailChip label="Contact" value={m.contact_no} />}
-                {type === "mentee" && <DetailChip label="Admission" value={m.admission_type} />}
-                <DetailChip label="Subjects" value={m.subjects?.length ? m.subjects : null} />
-                <DetailChip label="Topics" value={m.topics?.length ? m.topics : null} />
+                {type === "mentor" && (
+                  <DetailChip label="Role" value={m.role} />
+                )}
+                {type === "mentor" && (
+                  <DetailChip label="Expertise" value={m.expertise_level} />
+                )}
+                {type === "mentee" && (
+                  <DetailChip label="Campus" value={m.campus} />
+                )}
+                {type === "mentee" && (
+                  <DetailChip label="Student ID" value={m.student_id_no} />
+                )}
+                {type === "mentee" && (
+                  <DetailChip label="Contact" value={m.contact_no} />
+                )}
+                {type === "mentee" && (
+                  <DetailChip label="Admission" value={m.admission_type} />
+                )}
+                <DetailChip
+                  label="Subjects"
+                  value={m.subjects?.length ? m.subjects : null}
+                />
+                <DetailChip
+                  label="Competencies"
+                  value={m.topics?.length ? m.topics : null}
+                />
                 <DetailChip label="Interests" value={m.interests} />
               </div>
             </div>
@@ -245,44 +323,97 @@
   }) {
     const showPageControls = totalPages > 1;
     return (
-      <div className="file-viewer-toolbar" role="toolbar" aria-label="Document controls">
+      <div
+        className="file-viewer-toolbar"
+        role="toolbar"
+        aria-label="Document controls"
+      >
         <div className="file-viewer-toolbar-group">
-          <button type="button" className="file-icon-btn" onClick={onToggleSidebar} aria-label={sidebarOpen ? "Hide page sidebar" : "Show page sidebar"} disabled={!sidebarEnabled}>
+          <button
+            type="button"
+            className="file-icon-btn"
+            onClick={onToggleSidebar}
+            aria-label={sidebarOpen ? "Hide page sidebar" : "Show page sidebar"}
+            disabled={!sidebarEnabled}
+          >
             <span aria-hidden="true">☰</span>
           </button>
-          <button type="button" className="file-icon-btn" onClick={onZoomOut} aria-label="Zoom out">
+          <button
+            type="button"
+            className="file-icon-btn"
+            onClick={onZoomOut}
+            aria-label="Zoom out"
+          >
             <span aria-hidden="true">−</span>
           </button>
-          <div className="file-zoom-indicator" aria-live="polite">{zoom}%</div>
-          <button type="button" className="file-icon-btn" onClick={onZoomIn} aria-label="Zoom in">
+          <div className="file-zoom-indicator" aria-live="polite">
+            {zoom}%
+          </div>
+          <button
+            type="button"
+            className="file-icon-btn"
+            onClick={onZoomIn}
+            aria-label="Zoom in"
+          >
             <span aria-hidden="true">+</span>
           </button>
         </div>
 
         {showPageControls ? (
           <div className="file-viewer-toolbar-group">
-            <button type="button" className="file-icon-btn" onClick={onPrev} disabled={!canPrev} aria-label="Previous page">
+            <button
+              type="button"
+              className="file-icon-btn"
+              onClick={onPrev}
+              disabled={!canPrev}
+              aria-label="Previous page"
+            >
               <span aria-hidden="true">←</span>
             </button>
-            <div className="file-page-indicator" aria-live="polite">Page {page} of {totalPages}</div>
-            <button type="button" className="file-icon-btn" onClick={onNext} disabled={!canNext} aria-label="Next page">
+            <div className="file-page-indicator" aria-live="polite">
+              Page {page} of {totalPages}
+            </div>
+            <button
+              type="button"
+              className="file-icon-btn"
+              onClick={onNext}
+              disabled={!canNext}
+              aria-label="Next page"
+            >
               <span aria-hidden="true">→</span>
             </button>
           </div>
         ) : (
           <div className="file-viewer-toolbar-group">
-            <div className="file-page-indicator file-page-indicator-muted">Single page document</div>
+            <div className="file-page-indicator file-page-indicator-muted">
+              Single page document
+            </div>
           </div>
         )}
 
         <div className="file-viewer-toolbar-group">
-          <button type="button" className="file-icon-btn" onClick={onFullscreen} aria-label="Toggle fullscreen">
+          <button
+            type="button"
+            className="file-icon-btn"
+            onClick={onFullscreen}
+            aria-label="Toggle fullscreen"
+          >
             <span aria-hidden="true">⛶</span>
           </button>
-          <button type="button" className="file-icon-btn" onClick={onDownload} aria-label="Download document">
+          <button
+            type="button"
+            className="file-icon-btn"
+            onClick={onDownload}
+            aria-label="Download document"
+          >
             <span aria-hidden="true">↓</span>
           </button>
-          <button type="button" className="file-icon-btn" onClick={onOpenNewTab} aria-label="Open in new tab">
+          <button
+            type="button"
+            className="file-icon-btn"
+            onClick={onOpenNewTab}
+            aria-label="Open in new tab"
+          >
             <span aria-hidden="true">↗</span>
           </button>
         </div>
@@ -294,7 +425,11 @@
     if (totalPages <= 1) return null;
     const pages = Array.from({ length: totalPages }, (_, idx) => idx + 1);
     return (
-      <aside className={`file-thumb-sidebar ${open ? "" : "collapsed"}`} aria-label="Page thumbnails" aria-hidden={!open}>
+      <aside
+        className={`file-thumb-sidebar ${open ? "" : "collapsed"}`}
+        aria-label="Page thumbnails"
+        aria-hidden={!open}
+      >
         <div className="file-thumb-sidebar-head">Pages</div>
         <div className="file-thumb-list">
           {pages.map((p) => (
@@ -322,17 +457,37 @@
     const [isLoading, setIsLoading] = useState(true);
     const [hasError, setHasError] = useState(false);
 
-    const normalizedHref = useMemo(() => normalizeCloudinaryPdfUrl(data?.href), [data]);
-    const image = useMemo(() => isImageFile(normalizedHref, data?.name), [normalizedHref, data]);
-    const fileType = useMemo(() => getFileTypeLabel(normalizedHref, data?.name), [normalizedHref, data]);
+    const normalizedHref = useMemo(
+      () => normalizeCloudinaryPdfUrl(data?.href),
+      [data],
+    );
+    const image = useMemo(
+      () => isImageFile(normalizedHref, data?.name),
+      [normalizedHref, data],
+    );
+    const fileType = useMemo(
+      () => getFileTypeLabel(normalizedHref, data?.name),
+      [normalizedHref, data],
+    );
     const totalPages = useMemo(() => {
-      const fromData = Number(data?.pageCount || data?.page_count || data?.totalPages || data?.total_pages || 1);
-      const safe = Number.isFinite(fromData) && fromData > 0 ? Math.floor(fromData) : 1;
+      const fromData = Number(
+        data?.pageCount ||
+          data?.page_count ||
+          data?.totalPages ||
+          data?.total_pages ||
+          1,
+      );
+      const safe =
+        Number.isFinite(fromData) && fromData > 0 ? Math.floor(fromData) : 1;
       return image ? 1 : safe;
     }, [data, image]);
     const sidebarEnabled = !image && totalPages > 1;
     const sidebarVisible = sidebarEnabled && sidebarOpen;
-    const viewerSrc = useMemo(() => (image ? normalizedHref : buildViewerSrc(normalizedHref, page, zoom)), [image, normalizedHref, page, zoom]);
+    const viewerSrc = useMemo(
+      () =>
+        image ? normalizedHref : buildViewerSrc(normalizedHref, page, zoom),
+      [image, normalizedHref, page, zoom],
+    );
 
     useEffect(() => {
       if (!open) return;
@@ -390,19 +545,44 @@
     }
 
     return (
-      <div className="file-viewer-overlay" onClick={onClose} role="presentation">
-        <div className="file-viewer-modal" role="dialog" aria-modal="true" aria-label="Document viewer" onClick={(e) => e.stopPropagation()} ref={modalRef}>
+      <div
+        className="file-viewer-overlay"
+        onClick={onClose}
+        role="presentation"
+      >
+        <div
+          className="file-viewer-modal"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Document viewer"
+          onClick={(e) => e.stopPropagation()}
+          ref={modalRef}
+        >
           <header className="file-viewer-header">
             <div className="file-viewer-meta">
-              <h3 className="file-viewer-title" title={data.name || "Document"}>{shortenFileName(data.name || "Document", 90)}</h3>
+              <h3 className="file-viewer-title" title={data.name || "Document"}>
+                {shortenFileName(data.name || "Document", 90)}
+              </h3>
               <span className="file-type-badge">{fileType}</span>
               <span className="file-size-meta">Size unavailable</span>
             </div>
-            <button type="button" className="file-close-btn" onClick={onClose} aria-label="Close viewer">×</button>
+            <button
+              type="button"
+              className="file-close-btn"
+              onClick={onClose}
+              aria-label="Close viewer"
+            >
+              ×
+            </button>
           </header>
 
           <div className="file-viewer-stage">
-            <ThumbnailSidebar open={sidebarVisible} page={page} totalPages={totalPages} onJump={setPage} />
+            <ThumbnailSidebar
+              open={sidebarVisible}
+              page={page}
+              totalPages={totalPages}
+              onJump={setPage}
+            />
 
             <section className="file-viewer-main">
               <ViewerToolbar
@@ -420,12 +600,18 @@
                 sidebarEnabled={sidebarEnabled}
                 onFullscreen={toggleFullscreen}
                 onDownload={handleDownload}
-                onOpenNewTab={() => window.open(normalizedHref, "_blank", "noopener,noreferrer")}
+                onOpenNewTab={() =>
+                  window.open(normalizedHref, "_blank", "noopener,noreferrer")
+                }
               />
 
               <div className="file-viewer-canvas">
                 {isLoading && (
-                  <div className="file-loading-skeleton" role="status" aria-live="polite">
+                  <div
+                    className="file-loading-skeleton"
+                    role="status"
+                    aria-live="polite"
+                  >
                     <div className="file-loading-shimmer" />
                     <span>Loading document...</span>
                   </div>
@@ -434,7 +620,14 @@
                 {hasError && (
                   <div className="file-error-state" role="alert">
                     <p>Could not preview this file in the modal.</p>
-                    <a href={normalizedHref} target="_blank" rel="noreferrer" className="btn small">Open in new tab</a>
+                    <a
+                      href={normalizedHref}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="btn small"
+                    >
+                      Open in new tab
+                    </a>
                   </div>
                 )}
 
@@ -471,8 +664,22 @@
           </div>
 
           <footer className="file-viewer-footer">
-            <a href={normalizedHref} target="_blank" rel="noreferrer" className="btn secondary">Open in New Tab</a>
-            <a href={normalizedHref} target="_blank" rel="noreferrer" className="btn">Download</a>
+            <a
+              href={normalizedHref}
+              target="_blank"
+              rel="noreferrer"
+              className="btn secondary"
+            >
+              Open in New Tab
+            </a>
+            <a
+              href={normalizedHref}
+              target="_blank"
+              rel="noreferrer"
+              className="btn"
+            >
+              Download
+            </a>
           </footer>
         </div>
       </div>
@@ -482,21 +689,43 @@
   function RejectConfirmModal({ open, target, loading, onConfirm, onCancel }) {
     if (!open || !target) return null;
     return (
-      <div className="approval-modal-backdrop" onClick={onCancel} role="presentation">
-        <div className="approval-modal approval-confirm-modal" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
+      <div
+        className="approval-modal-backdrop"
+        onClick={onCancel}
+        role="presentation"
+      >
+        <div
+          className="approval-modal approval-confirm-modal"
+          role="dialog"
+          aria-modal="true"
+          onClick={(e) => e.stopPropagation()}
+        >
           <div className="approval-modal-header">
             <h3 className="approval-modal-title">Confirm rejection</h3>
           </div>
           <p className="approval-confirm-copy">
-            Reject <strong>{target.name}</strong>? This action will remove the account from pending approvals.
+            Reject <strong>{target.name}</strong>? This action will remove the
+            account from pending approvals.
           </p>
           <div className="approval-confirm-actions">
             {loading ? (
               <Spinner inline />
             ) : (
               <>
-                <button type="button" className="btn secondary" onClick={onCancel}>Cancel</button>
-                <button type="button" className="btn approval-reject-btn" onClick={onConfirm}>Reject user</button>
+                <button
+                  type="button"
+                  className="btn secondary"
+                  onClick={onCancel}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className="btn approval-reject-btn"
+                  onClick={onConfirm}
+                >
+                  Reject user
+                </button>
               </>
             )}
           </div>
@@ -525,7 +754,12 @@
 
     const mentorCardLoading = (id) => approvalActionKey === "mentor:" + id;
     const menteeCardLoading = (id) => approvalActionKey === "mentee:" + id;
-    if (!user.is_staff) return <div className="card"><div className="staff-only-msg">This page is for staff only.</div></div>;
+    if (!user.is_staff)
+      return (
+        <div className="card">
+          <div className="staff-only-msg">This page is for staff only.</div>
+        </div>
+      );
 
     function openPreview(href, name, pageCount) {
       if (!href) return;
@@ -556,16 +790,27 @@
         <div className="approvals-page-header page-shell-head">
           <div>
             <h1 className="page-title">User approvals</h1>
-            <p className="page-subtitle">Compact review queue for pending mentors and mentees.</p>
+            <p className="page-subtitle">
+              Compact review queue for pending mentors and mentees.
+            </p>
           </div>
         </div>
 
-        {approvalsLoading && <Spinner title="Loading approvals…" subtitle="Fetching pending users" />}
+        {approvalsLoading && (
+          <Spinner
+            title="Loading approvals…"
+            subtitle="Fetching pending users"
+          />
+        )}
         {!approvalsLoading && (
           <div className="approvals-grid approvals-grid-modern">
             <section className="approvals-section">
-              <h2 className="section-title">Pending mentors ({pendingMentors.length})</h2>
-              {pendingMentors.length === 0 && <p className="muted">No pending mentors.</p>}
+              <h2 className="section-title">
+                Pending mentors ({pendingMentors.length})
+              </h2>
+              {pendingMentors.length === 0 && (
+                <p className="muted">No pending mentors.</p>
+              )}
               {pendingMentors.length > 0 && (
                 <div className="approval-rows-list">
                   {pendingMentors.map((m) => (
@@ -585,8 +830,12 @@
             </section>
 
             <section className="approvals-section">
-              <h2 className="section-title">Pending mentees ({pendingMentees.length})</h2>
-              {pendingMentees.length === 0 && <p className="muted">No pending mentees.</p>}
+              <h2 className="section-title">
+                Pending mentees ({pendingMentees.length})
+              </h2>
+              {pendingMentees.length === 0 && (
+                <p className="muted">No pending mentees.</p>
+              )}
               {pendingMentees.length > 0 && (
                 <div className="approval-rows-list">
                   {pendingMentees.map((m) => (
@@ -607,7 +856,11 @@
           </div>
         )}
 
-        <FileViewerModal open={!!previewData} data={previewData} onClose={() => setPreviewData(null)} />
+        <FileViewerModal
+          open={!!previewData}
+          data={previewData}
+          onClose={() => setPreviewData(null)}
+        />
         <RejectConfirmModal
           open={!!rejectTarget}
           target={rejectTarget}

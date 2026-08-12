@@ -32,6 +32,7 @@ from .helpers import (
     _serialize_notification,
     _serialize_subject,
     _serialize_topic,
+    _serialize_competency,
     _serialize_mentee,
     get_subjects_list,
     invalidate_subjects_cache,
@@ -56,6 +57,7 @@ from .topics import (
     topic_archive_toggle,
     topic_delete,
 )
+from .competencies import competencies_list
 from .mentees import mentees_list
 
 __all__ = [
@@ -84,6 +86,7 @@ __all__ = [
     "_serialize_notification",
     "_serialize_subject",
     "_serialize_topic",
+    "_serialize_competency",
     "_serialize_mentee",
     "get_subjects_list",
     "invalidate_subjects_cache",
@@ -101,5 +104,6 @@ __all__ = [
     "topic_update",
     "topic_archive_toggle",
     "topic_delete",
+    "competencies_list",
     "mentees_list",
 ]

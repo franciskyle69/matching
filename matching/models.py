@@ -80,6 +80,19 @@ class Topic(models.Model):
         return self.status == self.STATUS_ACTIVE
 
 
+class Competency(models.Model):
+    topic = models.ForeignKey(Topic, on_delete=models.CASCADE, related_name="competencies")
+    name = models.CharField(max_length=150)
+    description = models.TextField(blank=True, default="")
+
+    class Meta:
+        unique_together = ("topic", "name")
+        ordering = ["topic__name", "name"]
+
+    def __str__(self) -> str:
+        return f"{self.topic.name} - {self.name}"
+
+
 class UserTopicPreference(models.Model):
     TARGET_MENTOR = "mentor"
     TARGET_MENTEE = "mentee"

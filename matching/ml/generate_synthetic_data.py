@@ -39,6 +39,7 @@ PE_SUBJECTS = [e["name"] for e in SUBJECT_CATALOG if e["category"] == "pe"]
 
 TOPICS = sorted({topic for topics in SUBJECT_TOPIC_MAP.values() for topic in topics})
 MENTOR_ROLES = ["Senior IT Student", "Instructor"]
+SLOT_BLOCKS = ["08:00-10:00", "10:00-12:00", "13:00-15:00", "15:00-17:00", "18:00-20:00"]
 
 
 def sample_subset(options: list[str], min_n: int, max_n: int) -> list[str]:
@@ -87,6 +88,30 @@ def _pick_major_subjects() -> list[str]:
     return sorted(subjects)
 
 
+def sample_competencies_for_topics(topics: list[str], max_per_topic: int = 2) -> list[str]:
+    out = []
+    for topic in topics:
+        labels = [
+            f"{topic} Basics",
+            f"{topic} Practice",
+            f"{topic} Problem Solving",
+        ]
+        picks = sample_subset(labels, 1, min(max_per_topic, len(labels)))
+        out.extend(picks)
+    seen = set()
+    deduped = []
+    for item in out:
+        if item in seen:
+            continue
+        seen.add(item)
+        deduped.append(item)
+    return deduped
+
+
+def sample_availability() -> list[str]:
+    return sample_subset(SLOT_BLOCKS, 1, 3)
+
+
 def sample_mentee_row() -> dict:
     roll = RNG.random()
     subjects: list[str]
@@ -112,10 +137,14 @@ def sample_mentee_row() -> dict:
 
     difficulty_choices = [2, 3, 3, 4, 4, 5]
     difficulty_level = RNG.choice(difficulty_choices)
+    competencies = sample_competencies_for_topics(topics, max_per_topic=2)
+    availability = sample_availability()
 
     return {
         "mentee_subjects": ", ".join(subjects),
         "mentee_topics": ", ".join(topics),
+        "mentee_competencies": ", ".join(competencies),
+        "mentee_availability": ", ".join(availability),
         "mentee_difficulty_level": difficulty_level,
     }
 
@@ -144,11 +173,19 @@ def sample_mentor_row() -> dict:
         expertise_level = RNG.choice([4, 4, 5, 5])
     else:
         expertise_level = RNG.choice([3, 3, 4, 4, 5])
+    competencies = sample_competencies_for_topics(topics, max_per_topic=3)
+    availability = sample_availability()
+    years_experience = RNG.randint(1, 12)
+    teaching_experience_years = RNG.randint(0, years_experience)
 
     return {
         "mentor_role": role,
         "mentor_subjects": ", ".join(subjects),
         "mentor_topics": ", ".join(topics),
+        "mentor_competencies": ", ".join(competencies),
+        "mentor_availability": ", ".join(availability),
+        "mentor_years_experience": years_experience,
+        "mentor_teaching_experience_years": teaching_experience_years,
         "mentor_expertise_level": expertise_level,
     }
 
@@ -192,10 +229,16 @@ def write_csv(output_path: Path, rows: list[dict]) -> None:
     fieldnames = [
         "mentee_subjects",
         "mentee_topics",
+        "mentee_competencies",
+        "mentee_availability",
         "mentee_difficulty_level",
         "mentor_role",
         "mentor_subjects",
         "mentor_topics",
+        "mentor_competencies",
+        "mentor_availability",
+        "mentor_years_experience",
+        "mentor_teaching_experience_years",
         "mentor_expertise_level",
         "label",
     ]

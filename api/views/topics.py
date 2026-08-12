@@ -61,6 +61,8 @@ def topics_list(request):
     if role_error and not request.user.is_staff:
         return role_error
     subject_id = request.GET.get("subject_id")
+    subject_name = str(request.GET.get("subject_name", "")).strip()
+    subject_names_raw = str(request.GET.get("subject_names", "")).strip()
     include_inactive = request.user.is_staff and str(
         request.GET.get("include_inactive", "0"),
     ).strip().lower() in {"1", "true", "yes", "on"}
@@ -68,6 +70,12 @@ def topics_list(request):
     qs = Topic.objects.select_related("subject").order_by("name")
     if subject_id:
         qs = qs.filter(subject_id=subject_id)
+    elif subject_names_raw:
+        names = [item.strip() for item in subject_names_raw.split(",") if item.strip()]
+        if names:
+            qs = qs.filter(subject__name__in=names)
+    elif subject_name:
+        qs = qs.filter(subject__name=subject_name)
     if status in {Topic.STATUS_ACTIVE, Topic.STATUS_INACTIVE}:
         qs = qs.filter(status=status)
     elif not include_inactive:

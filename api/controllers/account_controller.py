@@ -19,8 +19,14 @@ import time
 
 from django.utils import timezone
 
-from matching.models import MenteeMentorRequest, UserTopicPreference
-from profiles.models import MentorProfile, MenteeProfile, InterestTag
+from matching.models import Competency, MenteeMentorRequest, UserTopicPreference
+from profiles.models import (
+    MentorProfile,
+    MenteeProfile,
+    InterestTag,
+    MentorCompetency,
+    MenteeCompetencyNeed,
+)
 
 from accounts.forms import (
     AccountSettingsForm,
@@ -82,7 +88,7 @@ ME_CACHE_METRICS_LOG_EVERY = 100
 
 def _sync_user_topic_preferences(user, target, subjects, topics):
     selected_subjects = [str(s or "").strip() for s in (subjects or []) if str(s or "").strip()]
-    selected_topics = [str(t or "").strip() for t in (topics or []) if str(t or "").strip()]
+    selected_items = [str(t or "").strip() for t in (topics or []) if str(t or "").strip()]
     now = timezone.now()
     with transaction.atomic():
         UserTopicPreference.objects.filter(
@@ -91,33 +97,55 @@ def _sync_user_topic_preferences(user, target, subjects, topics):
             is_active_selection=True,
         ).update(is_active_selection=False, cleared_at=now)
 
-        if not selected_subjects or not selected_topics:
+        if not selected_subjects or not selected_items:
             return
 
         active_topics = (
             Topic.objects.select_related("subject")
             .filter(
                 subject__name__in=selected_subjects,
-                name__in=selected_topics,
                 status=Topic.STATUS_ACTIVE,
             )
             .order_by("subject__name", "name", "id")
+        )
+
+        active_competencies = (
+            Competency.objects.select_related("topic", "topic__subject")
+            .filter(
+                topic__subject__name__in=selected_subjects,
+                name__in=selected_items,
+            )
+            .order_by("topic__subject__name", "topic__name", "name", "id")
         )
 
         by_name = {}
         for item in active_topics:
             by_name.setdefault(item.name, []).append(item)
 
+        competency_by_name = {}
+        for item in active_competencies:
+            competency_by_name.setdefault(item.name, []).append(item)
+
         created_rows = []
-        for topic_name in selected_topics:
+        seen_topic_ids = set()
+        for topic_name in selected_items:
             topic_options = by_name.get(topic_name) or []
-            if not topic_options:
+            chosen = None
+            if topic_options:
+                chosen = topic_options[0]
+                for candidate in topic_options:
+                    if candidate.subject and candidate.subject.name in selected_subjects:
+                        chosen = candidate
+                        break
+            else:
+                competency_options = competency_by_name.get(topic_name) or []
+                for competency in competency_options:
+                    if competency.topic and competency.topic.subject and competency.topic.subject.name in selected_subjects:
+                        chosen = competency.topic
+                        break
+            if not chosen or chosen.id in seen_topic_ids:
                 continue
-            chosen = topic_options[0]
-            for candidate in topic_options:
-                if candidate.subject and candidate.subject.name in selected_subjects:
-                    chosen = candidate
-                    break
+            seen_topic_ids.add(chosen.id)
             created_rows.append(
                 UserTopicPreference(
                     user=user,
@@ -229,6 +257,59 @@ def _normalise_mentor_gender(value, default=""):
     if text in ("male", "female"):
         return text
     return default
+
+
+def _normalise_level(value):
+    try:
+        level = int(value)
+    except (TypeError, ValueError):
+        return None
+    if 1 <= level <= 5:
+        return level
+    return None
+
+
+def _normalise_competency_level_payload(payload, level_key):
+    if not isinstance(payload, list):
+        return {}
+    out = {}
+    for item in payload:
+        if not isinstance(item, dict):
+            continue
+        try:
+            competency_id = int(item.get("competency_id"))
+        except (TypeError, ValueError):
+            continue
+        level = _normalise_level(item.get(level_key))
+        if competency_id > 0 and level is not None:
+            out[competency_id] = level
+    return out
+
+
+def _normalise_topic_names_for_subjects(subject_names, topic_names):
+    selected_subjects = [
+        str(name or "").strip()
+        for name in (subject_names or [])
+        if str(name or "").strip()
+    ]
+    selected_topics = [
+        str(name or "").strip()
+        for name in (topic_names or [])
+        if str(name or "").strip()
+    ]
+    if not selected_subjects or not selected_topics:
+        return []
+    valid_topics = (
+        Topic.objects.filter(
+            status=Topic.STATUS_ACTIVE,
+            subject__name__in=selected_subjects,
+            name__in=selected_topics,
+        )
+        .values_list("name", flat=True)
+        .distinct()
+    )
+    valid_set = set(valid_topics)
+    return [name for name in selected_topics if name in valid_set]
 
 
 @require_http_methods(["GET"])
@@ -752,13 +833,24 @@ def me(request):
             if isinstance(mentor.topics, list)
             else ([mentor.topics] if mentor.topics else [])
         )
+        mentor_competencies = list(
+            mentor.competencies.values_list("id", flat=True)
+        )
+        mentor_competency_levels = {
+            item.competency_id: int(item.proficiency_level)
+            for item in mentor.competency_levels.all()
+        }
         mentor_info = {
             "program": mentor.program or "",
             "year_level": mentor.year_level or 0,
             "role": mentor.role or "",
             "subjects": list(mentor_subs) if mentor_subs else [],
             "topics": list(mentor_tops) if mentor_tops else [],
+            "competency_ids": mentor_competencies,
+            "competency_levels": mentor_competency_levels,
             "expertise_level": mentor.expertise_level,
+            "years_experience": getattr(mentor, "years_experience", None),
+            "teaching_experience_years": getattr(mentor, "teaching_experience_years", None),
             "capacity": getattr(mentor, "capacity", 1),
             "gender": getattr(mentor, "gender", "") or "",
             "availability": _normalise_availability_slots(
@@ -778,10 +870,20 @@ def me(request):
             if isinstance(mentee.topics, list)
             else ([mentee.topics] if mentee.topics else [])
         )
+        mentee_competencies = list(
+            mentee.competencies.values_list("id", flat=True)
+        )
+        mentee_competency_needs = {
+            item.competency_id: int(item.need_level)
+            for item in mentee.competency_needs.all()
+        }
         mentee_matching = {
             "subjects": list(mentee_subs) if mentee_subs else [],
             "topics": list(mentee_tops) if mentee_tops else [],
+            "competency_ids": mentee_competencies,
+            "competency_needs": mentee_competency_needs,
             "difficulty_level": mentee.difficulty_level,
+            "preferred_learning_style": getattr(mentee, "preferred_learning_style", "") or "",
             "availability": _normalise_availability_slots(
                 getattr(mentee, "availability", [])
             ),
@@ -1245,10 +1347,29 @@ def update_mentee_matching_profile(request):
       )
   raw_topics = payload.get("topics")
   if raw_topics is not None:
-      mentee_profile.topics = filter_topics_for_subjects(
-          raw_subjects if isinstance(raw_subjects, list) else mentee_profile.subjects,
-          raw_topics if isinstance(raw_topics, list) else [],
-      )
+      mentee_profile.topics = list(raw_topics) if isinstance(raw_topics, list) else []
+  raw_competency_ids = payload.get("competency_ids")
+  competency_ids = []
+  if raw_competency_ids is not None:
+      if isinstance(raw_competency_ids, list):
+          for item in raw_competency_ids:
+              try:
+                  candidate_id = int(item)
+              except (TypeError, ValueError):
+                  continue
+              if candidate_id > 0:
+                  competency_ids.append(candidate_id)
+  # Topics must stay topic names; do not overwrite them with competency names.
+  selected_subjects = (
+      mentee_profile.subjects if isinstance(mentee_profile.subjects, list) else []
+  )
+  selected_topics = (
+      mentee_profile.topics if isinstance(mentee_profile.topics, list) else []
+  )
+  mentee_profile.topics = _normalise_topic_names_for_subjects(
+      selected_subjects,
+      selected_topics,
+  )
   difficulty = _get_int(payload, "difficulty_level")
   if difficulty is not None and 1 <= difficulty <= 5:
       mentee_profile.difficulty_level = difficulty
@@ -1256,7 +1377,42 @@ def update_mentee_matching_profile(request):
       mentee_profile.availability = _normalise_availability_slots(
           payload.get("availability")
       )
+  if "preferred_learning_style" in payload:
+      mentee_profile.preferred_learning_style = _get_str(
+          payload,
+          "preferred_learning_style",
+          getattr(mentee_profile, "preferred_learning_style", ""),
+      )
   mentee_profile.save()
+  if raw_competency_ids is not None:
+      mentee_profile.competencies.set(
+          Competency.objects.filter(id__in=competency_ids)
+      )
+  raw_competency_needs = payload.get("competency_needs")
+  competency_need_map = _normalise_competency_level_payload(
+      raw_competency_needs,
+      "need_level",
+  )
+  if isinstance(raw_competency_needs, list):
+      MenteeCompetencyNeed.objects.filter(mentee=mentee_profile).exclude(
+          competency_id__in=competency_ids
+      ).delete()
+      for competency_id, need_level in competency_need_map.items():
+          if competency_id not in competency_ids:
+              continue
+          MenteeCompetencyNeed.objects.update_or_create(
+              mentee=mentee_profile,
+              competency_id=competency_id,
+              defaults={"need_level": need_level},
+          )
+  elif raw_competency_ids is not None:
+      fallback_need = _normalise_level(mentee_profile.difficulty_level) or 3
+      for competency_id in competency_ids:
+          MenteeCompetencyNeed.objects.update_or_create(
+              mentee=mentee_profile,
+              competency_id=competency_id,
+              defaults={"need_level": fallback_need},
+          )
   _sync_user_topic_preferences(
       request.user,
       UserTopicPreference.TARGET_MENTEE,
@@ -1280,7 +1436,15 @@ def update_mentee_matching_profile(request):
       {
           "subjects": list(mentee_subs),
           "topics": list(mentee_tops),
+          "competency_ids": list(
+              mentee_profile.competencies.values_list("id", flat=True)
+          ),
           "difficulty_level": mentee_profile.difficulty_level,
+          "competency_needs": {
+              item.competency_id: int(item.need_level)
+              for item in mentee_profile.competency_needs.all()
+          },
+          "preferred_learning_style": getattr(mentee_profile, "preferred_learning_style", "") or "",
           "availability": _normalise_availability_slots(
               getattr(mentee_profile, "availability", [])
           ),
@@ -1304,10 +1468,7 @@ def update_mentor_profile(request):
         )
     raw_topics = payload.get("topics")
     if raw_topics is not None:
-        mentor_profile.topics = filter_topics_for_subjects(
-            raw_subjects if isinstance(raw_subjects, list) else mentor_profile.subjects,
-            raw_topics if isinstance(raw_topics, list) else [],
-        )
+        mentor_profile.topics = list(raw_topics) if isinstance(raw_topics, list) else []
     expertise = _get_int(payload, "expertise_level")
     if expertise is not None and 1 <= expertise <= 5:
         mentor_profile.expertise_level = expertise
@@ -1332,11 +1493,73 @@ def update_mentor_profile(request):
             payload.get("gender"),
             default=getattr(mentor_profile, "gender", ""),
         )
+    years_experience = _get_int(payload, "years_experience", default=None, min_value=0)
+    if years_experience is not None:
+        mentor_profile.years_experience = years_experience
+    teaching_experience_years = _get_int(
+        payload,
+        "teaching_experience_years",
+        default=None,
+        min_value=0,
+    )
+    if teaching_experience_years is not None:
+        mentor_profile.teaching_experience_years = teaching_experience_years
+    raw_competency_ids = payload.get("competency_ids")
+    competency_ids = []
+    if raw_competency_ids is not None:
+        if isinstance(raw_competency_ids, list):
+            for item in raw_competency_ids:
+                try:
+                    candidate_id = int(item)
+                except (TypeError, ValueError):
+                    continue
+                if candidate_id > 0:
+                    competency_ids.append(candidate_id)
+    # Topics must stay topic names; do not overwrite them with competency names.
+    selected_subjects = (
+        mentor_profile.subjects if isinstance(mentor_profile.subjects, list) else []
+    )
+    selected_topics = (
+        mentor_profile.topics if isinstance(mentor_profile.topics, list) else []
+    )
+    mentor_profile.topics = _normalise_topic_names_for_subjects(
+        selected_subjects,
+        selected_topics,
+    )
     if "availability" in payload:
         mentor_profile.availability = _normalise_availability_slots(
             payload.get("availability")
         )
     mentor_profile.save()
+    if raw_competency_ids is not None:
+        mentor_profile.competencies.set(
+            Competency.objects.filter(id__in=competency_ids)
+        )
+    raw_competency_levels = payload.get("competency_levels")
+    competency_level_map = _normalise_competency_level_payload(
+        raw_competency_levels,
+        "proficiency_level",
+    )
+    if isinstance(raw_competency_levels, list):
+        MentorCompetency.objects.filter(mentor=mentor_profile).exclude(
+            competency_id__in=competency_ids
+        ).delete()
+        for competency_id, proficiency_level in competency_level_map.items():
+            if competency_id not in competency_ids:
+                continue
+            MentorCompetency.objects.update_or_create(
+                mentor=mentor_profile,
+                competency_id=competency_id,
+                defaults={"proficiency_level": proficiency_level},
+            )
+    elif raw_competency_ids is not None:
+        fallback_level = _normalise_level(mentor_profile.expertise_level) or 3
+        for competency_id in competency_ids:
+            MentorCompetency.objects.update_or_create(
+                mentor=mentor_profile,
+                competency_id=competency_id,
+                defaults={"proficiency_level": fallback_level},
+            )
     if role_change_requires_approval:
         invalidate_approval_cache_mentor(mentor_profile.id)
         staff_users = User.objects.filter(is_staff=True).exclude(id=request.user.id)
@@ -1385,7 +1608,16 @@ def update_mentor_profile(request):
             "role": mentor_profile.role,
             "subjects": list(mentor_subs),
             "topics": list(mentor_tops),
+            "competency_ids": list(
+                mentor_profile.competencies.values_list("id", flat=True)
+            ),
             "expertise_level": mentor_profile.expertise_level,
+            "competency_levels": {
+                item.competency_id: int(item.proficiency_level)
+                for item in mentor_profile.competency_levels.all()
+            },
+            "years_experience": getattr(mentor_profile, "years_experience", None),
+            "teaching_experience_years": getattr(mentor_profile, "teaching_experience_years", None),
             "capacity": mentor_profile.capacity,
             "gender": getattr(mentor_profile, "gender", "") or "",
             "availability": _normalise_availability_slots(

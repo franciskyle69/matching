@@ -97,6 +97,7 @@ from .views import (
     topic_update,
     topic_archive_toggle,
     topic_delete,
+    competencies_list,
     mentees_list,
 )
 
@@ -147,6 +148,7 @@ urlpatterns = [
     path('topics/<int:topic_id>/update/', topic_update, name='api-topics-update'),
     path('topics/<int:topic_id>/status/', topic_archive_toggle, name='api-topics-status'),
     path('topics/<int:topic_id>/delete/', topic_delete, name='api-topics-delete'),
+    path('competencies/', competencies_list, name='api-competencies-list'),
     path('mentees/', mentees_list, name='api-mentees-list'),
     path('announcements/', announcements_list, name='api-announcements-list'),
     path('announcements/create/', announcement_create, name='api-announcements-create'),

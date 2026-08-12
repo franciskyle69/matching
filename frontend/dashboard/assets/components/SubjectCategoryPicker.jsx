@@ -10,6 +10,7 @@
 
     const normalizedCatalog = useMemo(() => {
       return (catalog || [])
+        .filter((entry) => String(entry.category || "major") === "major")
         .map((entry) => {
           const key = entry.category || "major";
           const orderIdx = Math.max(0, categoryOrder.indexOf(key));
