@@ -957,17 +957,38 @@
               <div className="settings-section-label">Identity</div>
               <div className="form-grid">
                 <div className="form-group">
-                  <label>Campus *</label>
-                  <input
-                    value={menteeProfile.campus}
+                  <label htmlFor="settings-campus">Campus *</label>
+                  <select
+                    id="settings-campus"
+                    value={menteeProfile.campus || ""}
                     onChange={(e) =>
                       setMenteeProfile({
                         ...menteeProfile,
                         campus: e.target.value,
                       })
                     }
-                    placeholder="Campus"
-                  />
+                  >
+                    <option value="">---------</option>
+                    {(
+                      (window.DashboardApp &&
+                        window.DashboardApp.CAMPUS_OPTIONS) ||
+                      []
+                    ).map((campus) => (
+                      <option key={campus} value={campus}>
+                        {campus}
+                      </option>
+                    ))}
+                    {menteeProfile.campus &&
+                      !(
+                        (window.DashboardApp &&
+                          window.DashboardApp.CAMPUS_OPTIONS) ||
+                        []
+                      ).includes(menteeProfile.campus) && (
+                        <option value={menteeProfile.campus}>
+                          {menteeProfile.campus}
+                        </option>
+                      )}
+                  </select>
                 </div>
                 <div className="form-group">
                   <label>Student ID No. *</label>

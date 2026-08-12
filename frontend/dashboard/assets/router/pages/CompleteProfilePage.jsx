@@ -94,24 +94,23 @@
     );
   }
 
-  function CompleteProfilePage() {
+  function CompleteProfilePage(props) {
+    const embedded = !!(props && props.embedded);
     const ctx = useContext(AppContext);
-    if (!ctx || !ctx.user) return null;
+    const [submitAttempted, setSubmitAttempted] = useState(false);
 
-    const {
-      user,
-      menteeProfile,
-      setMenteeProfile,
-      menteeProfileSaving,
-      handleMenteeProfileSave,
-      mentorProfile,
-      setMentorProfile,
-      mentorProfileSaving,
-      handleMentorProfileSave,
-    } = ctx;
+    const user = ctx && ctx.user;
+    const menteeProfile = (ctx && ctx.menteeProfile) || {};
+    const setMenteeProfile = ctx && ctx.setMenteeProfile;
+    const menteeProfileSaving = !!(ctx && ctx.menteeProfileSaving);
+    const handleMenteeProfileSave = ctx && ctx.handleMenteeProfileSave;
+    const mentorProfile = (ctx && ctx.mentorProfile) || {};
+    const setMentorProfile = ctx && ctx.setMentorProfile;
+    const mentorProfileSaving = !!(ctx && ctx.mentorProfileSaving);
+    const handleMentorProfileSave = ctx && ctx.handleMentorProfileSave;
 
-    const isMentee = user.role === "mentee";
-    const isMentor = user.role === "mentor";
+    const isMentee = !!(user && user.role === "mentee");
+    const isMentor = !!(user && user.role === "mentor");
 
     const SubjectCategoryPicker =
       window.DashboardApp && window.DashboardApp.SubjectCategoryPicker;
@@ -124,8 +123,6 @@
     const filterTopicsForSubjects =
       window.DashboardApp.filterTopicsForSubjects ||
       ((subjects, topics) => (Array.isArray(topics) ? [...topics] : []));
-
-    const [submitAttempted, setSubmitAttempted] = useState(false);
 
     const selectedSubjects = Array.isArray(mentorProfile.subjects)
       ? [...mentorProfile.subjects]
@@ -142,6 +139,14 @@
       selectedSubjects,
       mentorProfile.topics || [],
     );
+    const majorSubjects = getMajorSubjectsFromSelection(selectedSubjects);
+    const topicsEnabled = majorSubjects.length > 0;
+    const needsTopics = selectionRequiresTopics(selectedSubjects);
+    const hasExpertise =
+      mentorProfile.expertise_level != null &&
+      mentorProfile.expertise_level >= 1 &&
+      mentorProfile.expertise_level <= 5;
+
     const visibleTopicOptions = useMemo(
       () => (topicsEnabled ? [...allowedTopics] : []),
       [allowedTopics, topicsEnabled],
@@ -151,13 +156,7 @@
       [visibleTopicOptions],
     );
 
-    const majorSubjects = getMajorSubjectsFromSelection(selectedSubjects);
-    const topicsEnabled = majorSubjects.length > 0;
-    const needsTopics = selectionRequiresTopics(selectedSubjects);
-    const hasExpertise =
-      mentorProfile.expertise_level != null &&
-      mentorProfile.expertise_level >= 1 &&
-      mentorProfile.expertise_level <= 5;
+    if (!ctx || !user) return null;
 
     const mentorProgressSteps = [
       {
@@ -231,15 +230,22 @@
     }
 
     return (
-      <div className="card complete-profile-page page-shell">
-        <header className="complete-profile-header">
-          <h1 className="page-title">Complete your profile</h1>
-          <p className="page-subtitle complete-profile-subtitle">
-            {isMentee
-              ? "Coordinator approval requires your general information. Complete each field, then submit."
-              : "Coordinator approval requires a complete mentor profile. Fill all required sections and submit for review."}
-          </p>
-        </header>
+      <div
+        className={
+          "card complete-profile-page page-shell" +
+          (embedded ? " is-embedded" : "")
+        }
+      >
+        {!embedded && (
+          <header className="complete-profile-header">
+            <h1 className="page-title">Complete your profile</h1>
+            <p className="page-subtitle complete-profile-subtitle">
+              {isMentee
+                ? "Coordinator approval requires your general information. Complete each field, then submit."
+                : "Coordinator approval requires a complete mentor profile. Fill all required sections and submit for review."}
+            </p>
+          </header>
+        )}
 
         {isMentor && (
           <section
@@ -290,17 +296,37 @@
             <div className="form-grid complete-profile-mentee-grid">
               <div className="form-group">
                 <label htmlFor="complete-profile-campus">Campus *</label>
-                <input
+                <select
                   id="complete-profile-campus"
-                  value={menteeProfile.campus}
+                  value={menteeProfile.campus || ""}
                   onChange={(e) =>
                     setMenteeProfile({
                       ...menteeProfile,
                       campus: e.target.value,
                     })
                   }
-                  placeholder="Campus"
-                />
+                >
+                  <option value="">---------</option>
+                  {(
+                    (window.DashboardApp &&
+                      window.DashboardApp.CAMPUS_OPTIONS) ||
+                    []
+                  ).map((campus) => (
+                    <option key={campus} value={campus}>
+                      {campus}
+                    </option>
+                  ))}
+                  {menteeProfile.campus &&
+                    !(
+                      (window.DashboardApp &&
+                        window.DashboardApp.CAMPUS_OPTIONS) ||
+                      []
+                    ).includes(menteeProfile.campus) && (
+                      <option value={menteeProfile.campus}>
+                        {menteeProfile.campus}
+                      </option>
+                    )}
+                </select>
               </div>
 
               <div className="form-group">
@@ -432,7 +458,9 @@
               >
                 {menteeProfileSaving
                   ? "Saving..."
-                  : "Save & Submit for Approval"}
+                  : embedded
+                    ? "Save & continue"
+                    : "Save & Submit for Approval"}
               </button>
             </div>
           </SectionCard>

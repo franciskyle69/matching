@@ -187,8 +187,10 @@
         (/^\/api\/csrf\/?$/.test(url) ||
           /^\/api\/auth\/(login|register|check-lockout|refresh|logout)\/?$/.test(url));
       const useToken = !!(token && isApiPath && !isCookieAuthPath);
-      const defaultCredentials = isCookieAuthPath ? "include" : useToken ? "omit" : "include";
-      const fetchOpts = { credentials: defaultCredentials, ...options };
+      // Always send cookies: Google/allauth sign-in only establishes a Django
+      // session, so it must stay usable as a fallback when the stored bearer
+      // token is missing, stale, or belongs to an expired login.
+      const fetchOpts = { credentials: "include", ...options };
       delete fetchOpts.raw;
       if (isRaw) {
         fetchOpts.headers = { ...(options.headers || {}) };
@@ -199,12 +201,17 @@
         fetchOpts.headers.Authorization = `Bearer ${token}`;
       }
       let response = await fetch(url, fetchOpts);
-      if (useToken && response.status === 401) {
+      // A stale token makes Django's login_required redirect to the HTML login
+      // page instead of returning 401, so treat that as an auth failure too.
+      const tokenRejected =
+        useToken &&
+        (response.status === 401 ||
+          (response.redirected && /\/accounts\/login\//.test(response.url || "")));
+      if (tokenRejected) {
         const newAccessToken = await refreshAccessToken();
         if (newAccessToken) {
           const retryOpts = {
             ...fetchOpts,
-            credentials: "omit",
             headers: {
               ...(fetchOpts.headers || {}),
               Authorization: `Bearer ${newAccessToken}`,
@@ -215,7 +222,6 @@
           clearAuthTokens();
           const retryOpts = {
             ...fetchOpts,
-            credentials: "include",
             headers: { ...(fetchOpts.headers || {}) },
           };
           delete retryOpts.headers.Authorization;

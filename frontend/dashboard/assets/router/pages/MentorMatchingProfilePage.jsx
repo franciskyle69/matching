@@ -270,17 +270,26 @@
     );
   }
 
-  function MentorMatchingProfilePage() {
+  function MentorMatchingProfilePage(props) {
+    const embedded = !!(props && props.embedded);
     const ctx = useContext(AppContext);
-    if (!ctx || !ctx.user) return null;
-
-    const {
-      mentorProfile,
-      setMentorProfile,
-      subjectsData,
-      mentorProfileSaving,
-      handleMentorProfileSave,
-    } = ctx;
+    const mentorProfile = (ctx && ctx.mentorProfile) || {
+      subjects: [],
+      topics: [],
+      competency_ids: [],
+      competency_levels: {},
+      expertise_level: null,
+      years_experience: null,
+      teaching_experience_years: null,
+      role: "",
+      capacity: 3,
+      gender: "",
+      availability: [],
+    };
+    const setMentorProfile = ctx && ctx.setMentorProfile;
+    const subjectsData = (ctx && ctx.subjectsData) || [];
+    const mentorProfileSaving = !!(ctx && ctx.mentorProfileSaving);
+    const handleMentorProfileSave = ctx && ctx.handleMentorProfileSave;
     const Utils = window.DashboardApp.Utils || {};
     const fetchJSON = Utils.fetchJSON;
 
@@ -551,16 +560,25 @@
       }
     }
 
+    if (!ctx || !ctx.user) return null;
+
     return (
-      <div className="card complete-profile-page mentor-matching-profile-page page-shell">
-        <header className="complete-profile-header">
-          <h1 className="page-title">Mentor matching profile</h1>
-          <p className="page-subtitle complete-profile-subtitle">
-            Keep your subjects, competencies, expertise, capacity, and
-            availability up to date so we can recommend the right mentees for
-            you.
-          </p>
-        </header>
+      <div
+        className={
+          "card complete-profile-page mentor-matching-profile-page page-shell" +
+          (embedded ? " is-embedded" : "")
+        }
+      >
+        {!embedded && (
+          <header className="complete-profile-header">
+            <h1 className="page-title">Mentor matching profile</h1>
+            <p className="page-subtitle complete-profile-subtitle">
+              Keep your subjects, competencies, expertise, capacity, and
+              availability up to date so we can recommend the right mentees for
+              you.
+            </p>
+          </header>
+        )}
 
         <SectionCard
           title="Mentor role"
@@ -1061,7 +1079,9 @@
               ? "Saving..."
               : isPristine
                 ? "No changes yet"
-                : "Save matching profile"}
+                : embedded
+                  ? "Save & finish"
+                  : "Save matching profile"}
           </button>
           {justSaved && (
             <p

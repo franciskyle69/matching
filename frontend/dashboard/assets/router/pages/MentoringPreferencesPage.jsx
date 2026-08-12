@@ -244,34 +244,28 @@
     );
   }
 
-  function MentoringPreferencesPage() {
+  function MentoringPreferencesPage(props) {
+    const embedded = !!(props && props.embedded);
     const ctx = useContext(AppContext);
-    if (!ctx || !ctx.user) return null;
-
-    const {
-      user,
-      setActiveTab,
-      subjectsData,
-      menteeMatching,
-      setMenteeMatching,
-      menteeMatchingSaving,
-      handleMenteeMatchingSave,
-    } = ctx;
+    const user = ctx && ctx.user;
+    const setActiveTab = ctx && ctx.setActiveTab;
+    const subjectsData = (ctx && ctx.subjectsData) || [];
+    const menteeMatching = (ctx && ctx.menteeMatching) || {
+      subjects: [],
+      topics: [],
+      competency_ids: [],
+      competency_needs: {},
+      difficulty_level: null,
+      preferred_learning_style: "",
+      availability: [],
+    };
+    const setMenteeMatching = ctx && ctx.setMenteeMatching;
+    const menteeMatchingSaving = !!(ctx && ctx.menteeMatchingSaving);
+    const handleMenteeMatchingSave = ctx && ctx.handleMenteeMatchingSave;
     const Utils = window.DashboardApp.Utils || {};
     const fetchJSON = Utils.fetchJSON;
 
-    if (user.role !== "mentee") {
-      return (
-        <div className="card mentoring-preferences-page page-shell">
-          <h1 className="page-title">Mentoring preferences</h1>
-          <p className="page-subtitle">
-            This page is available for student accounts only.
-          </p>
-        </div>
-      );
-    }
-
-    const generalInfoDone = !!user.mentee_general_info_completed;
+    const generalInfoDone = !!(user && user.mentee_general_info_completed);
     const savedSnapshotRef = useRef(serializePreferences(menteeMatching));
     const [savedAt, setSavedAt] = useState(0);
     const [submitAttempted, setSubmitAttempted] = useState(false);
@@ -642,14 +636,34 @@
       }
     }
 
-    return (
-      <div className="card mentoring-preferences-page page-shell">
-        <header className="complete-profile-header">
+    if (!ctx || !user) return null;
+
+    if (user.role !== "mentee") {
+      return (
+        <div className="card mentoring-preferences-page page-shell">
           <h1 className="page-title">Mentoring preferences</h1>
           <p className="page-subtitle">
-            These preferences help us find mentors that best match your academic needs.
+            This page is available for student accounts only.
           </p>
-        </header>
+        </div>
+      );
+    }
+
+    return (
+      <div
+        className={
+          "card mentoring-preferences-page page-shell" +
+          (embedded ? " is-embedded" : "")
+        }
+      >
+        {!embedded && (
+          <header className="complete-profile-header">
+            <h1 className="page-title">Mentoring preferences</h1>
+            <p className="page-subtitle">
+              These preferences help us find mentors that best match your academic needs.
+            </p>
+          </header>
+        )}
 
         <div className="mp-layout">
           <div className="mp-main">
@@ -1106,7 +1120,11 @@
               onClick={handleSave}
               disabled={menteeMatchingSaving || (isPristine && canSave)}
             >
-              {menteeMatchingSaving ? "Saving..." : "Save Preferences"}
+              {menteeMatchingSaving
+                ? "Saving..."
+                : embedded
+                  ? "Save & finish"
+                  : "Save Preferences"}
             </button>
           </div>
         </div>

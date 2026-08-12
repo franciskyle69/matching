@@ -378,9 +378,9 @@
                   <button
                     type="button"
                     className="btn secondary small"
-                    onClick={() => setActiveTab("mentoring-preferences")}
+                    onClick={() => setActiveTab("onboarding")}
                   >
-                    Set preferences
+                    Continue onboarding
                   </button>
                 </div>
               )}
@@ -735,9 +735,15 @@
               <button
                 type="button"
                 className="btn mentor-v2-full-btn"
-                onClick={() => setActiveTab("mentor-matching-profile")}
+                onClick={() =>
+                  setActiveTab(
+                    profileReady ? "mentor-matching-profile" : "onboarding",
+                  )
+                }
               >
-                Update mentoring profile
+                {profileReady
+                  ? "Update mentoring profile"
+                  : "Continue onboarding"}
               </button>
             </aside>
           </div>

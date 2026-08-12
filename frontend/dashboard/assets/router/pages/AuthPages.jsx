@@ -331,9 +331,9 @@ import { Alert as MuiAlert } from "@mui/material";
                     <button
                       type="button"
                       className="auth-primary"
-                      onClick={() => setActiveTab("complete-profile")}
+                      onClick={() => setActiveTab("onboarding")}
                     >
-                      Complete Required Information
+                      Continue onboarding
                     </button>
                   </div>
                 ) : (

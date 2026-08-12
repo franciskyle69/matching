@@ -21,10 +21,31 @@
     facebookLabel: "Facebook — @buksuAMU",
   };
 
+  window.DashboardApp.CAMPUS_OPTIONS = [
+    "QUEZON",
+    "LIBONA",
+    "ALUBIJID",
+    "IMPASUG-ONG",
+    "BAUNGON",
+    "KADINGILAN",
+    "KITAOTAO",
+    "DAMULOG",
+    "CABANGLASAN",
+    "TALISAYAN",
+    "SAN FERNANDO",
+    "MALITBOG",
+    "MAIN CAMPUS",
+    "MEDINA",
+    "TALAKAG",
+    "KALILANGAN",
+    "LANTAPAN",
+  ];
+
   // Central route / tab configuration
   const ROUTES = [
     { id: "home", label: "Dashboard", role: "any" },
     { id: "profile", label: "Profile", role: "any" },
+    { id: "onboarding", label: "Onboarding", role: "non-staff" },
     { id: "complete-profile", label: "Complete profile", role: "any" },
     {
       id: "mentoring-preferences",

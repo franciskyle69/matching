@@ -53,6 +53,22 @@
         <circle cx="12" cy="7" r="4" />
       </svg>
     ),
+    onboarding: (
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        aria-hidden="true"
+      >
+        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+        <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+        <path d="M8 7h8" />
+        <path d="M8 11h6" />
+      </svg>
+    ),
     "mentoring-preferences": (
       <svg
         viewBox="0 0 24 24"
@@ -241,22 +257,8 @@
 
   function getPendingApprovalLandingTab(userData) {
     if (!userData) return "settings";
-    if (userData.role === "mentee") {
-      if (!userData.mentee_general_info_completed) return "complete-profile";
-      if (
-        !(
-          userData.mentee_questionnaire_completed ??
-          userData.questionnaire_completed
-        )
-      ) {
-        return "mentoring-preferences";
-      }
-      return "settings";
-    }
-    if (userData.role === "mentor") {
-      return userData.mentor_questionnaire_completed
-        ? "settings"
-        : "complete-profile";
+    if (userData.role === "mentee" || userData.role === "mentor") {
+      return "onboarding";
     }
     return "settings";
   }
@@ -341,6 +343,7 @@
     const goTo = (tabId) => {
       if (isPendingApproval) {
         const allowedPendingTabs = new Set([
+          "onboarding",
           "complete-profile",
           "mentoring-preferences",
           "mentor-matching-profile",
@@ -367,11 +370,26 @@
     const filteredTabs = MAIN_TABS.filter((tab) => {
       if (isPendingApproval) {
         return (
-          tab.id === "complete-profile" ||
-          tab.id === "settings" ||
-          tab.id === "mentoring-preferences" ||
-          tab.id === "mentor-matching-profile"
+          tab.id === "onboarding" ||
+          tab.id === "settings"
         );
+      }
+      if (tab.id === "onboarding") {
+        if (!(user?.role === "mentor" || user?.role === "mentee")) return false;
+        if (user.role === "mentee") {
+          const prefsDone = !!(
+            user.mentee_questionnaire_completed ??
+            user.questionnaire_completed
+          );
+          const approved = !!user.mentee_approved;
+          return !(user.mentee_general_info_completed && prefsDone && approved);
+        }
+        if (user.role === "mentor") {
+          return !(
+            user.mentor_questionnaire_completed && user.mentor_approved
+          );
+        }
+        return true;
       }
       if (tab.id === "mentoring-preferences") return user?.role === "mentee";
       if (tab.id === "mentor-matching-profile") return user?.role === "mentor";
@@ -406,6 +424,7 @@
     const accountTabIds = new Set([
       "profile",
       "settings",
+      "onboarding",
       "complete-profile",
       "mentoring-preferences",
       "mentor-matching-profile",
@@ -506,13 +525,15 @@
     const trimmedQuery = searchQuery.trim().toLowerCase();
     const activeTabMeta = MAIN_TABS.find((tab) => tab.id === activeTab);
     const topbarTitle = activeTabMeta?.label || "Dashboard";
-    const pendingPrimaryTab = pendingApprovalLandingTab || "complete-profile";
+    const pendingPrimaryTab = pendingApprovalLandingTab || "onboarding";
     const pendingPrimaryLabel =
-      pendingPrimaryTab === "mentoring-preferences"
-        ? "Continue mentoring preferences"
-        : pendingPrimaryTab === "mentor-matching-profile"
-          ? "Continue matching profile"
-          : "Complete profile";
+      pendingPrimaryTab === "onboarding"
+        ? "Continue onboarding"
+        : pendingPrimaryTab === "mentoring-preferences"
+          ? "Continue mentoring preferences"
+          : pendingPrimaryTab === "mentor-matching-profile"
+            ? "Continue matching profile"
+            : "Complete profile";
 
     let shortcutMatches = [];
     if (trimmedQuery) {

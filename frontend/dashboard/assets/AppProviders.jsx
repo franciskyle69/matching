@@ -25,22 +25,8 @@
   function getPendingApprovalLandingTab(userData) {
     if (!userData) return "settings";
     if (userData.must_change_password) return "settings";
-    if (userData.role === "mentee") {
-      if (!userData.mentee_general_info_completed) return "complete-profile";
-      if (
-        !(
-          userData.mentee_questionnaire_completed ??
-          userData.questionnaire_completed
-        )
-      ) {
-        return "mentoring-preferences";
-      }
-      return "settings";
-    }
-    if (userData.role === "mentor") {
-      return userData.mentor_questionnaire_completed
-        ? "settings"
-        : "complete-profile";
+    if (userData.role === "mentee" || userData.role === "mentor") {
+      return "onboarding";
     }
     return "settings";
   }
@@ -514,6 +500,7 @@
       if (!authCheckDone || !user) return;
       if (!getIsPendingApproval(user)) return;
       const allowedPendingTabs = new Set([
+        "onboarding",
         "complete-profile",
         "mentoring-preferences",
         "mentor-matching-profile",
@@ -729,10 +716,14 @@
         return result.data;
       }
       const requiredOnboardingTab =
-        isMentee && !generalCompleted
-          ? "complete-profile"
-          : isMentor && !mentorQCompleted
-            ? "complete-profile"
+        (isMentee && !generalCompleted) || (isMentor && !mentorQCompleted)
+          ? "onboarding"
+          : isMentee &&
+              !(
+                result.data.mentee_questionnaire_completed ??
+                result.data.questionnaire_completed
+              )
+            ? "onboarding"
             : null;
       setActiveTab((prev) =>
         ["signin", "signup"].includes(prev)
@@ -1825,6 +1816,11 @@
       setShowMenteeInfoModal(false);
       setAuthMessage("Your general information was updated.");
       setMenteeProfileSaving(false);
+      setActiveTab((prev) =>
+        prev === "onboarding" || prev === "complete-profile"
+          ? "onboarding"
+          : prev,
+      );
     }
 
     async function handleMentorProfileSave() {
@@ -1912,6 +1908,17 @@
           setAuthMessage("Your mentor profile was updated.");
           addToast("Profile saved.");
         }
+        setActiveTab((prev) => {
+          if (prev === "onboarding") return "onboarding";
+          const pending =
+            result.data?.role_change_requires_approval ||
+            (user && user.mentor_approved === false);
+          const incomplete = !(
+            user && user.mentor_questionnaire_completed
+          );
+          if (pending || incomplete) return "onboarding";
+          return prev;
+        });
         return true;
       } finally {
         setMentorProfileSaving(false);
@@ -1990,6 +1997,20 @@
         }
         setAuthMessage("Your mentoring preferences were updated.");
         addToast("Mentoring preferences saved.");
+        setUser((prev) =>
+          prev
+            ? {
+                ...prev,
+                mentee_questionnaire_completed: true,
+                questionnaire_completed: true,
+              }
+            : prev,
+        );
+        setActiveTab((prev) => {
+          if (prev === "onboarding") return "onboarding";
+          if (user && user.mentee_approved === false) return "onboarding";
+          return prev;
+        });
         return true;
       } finally {
         setMenteeMatchingSaving(false);
