@@ -8,6 +8,39 @@
 
   const BIO_MAX = 200;
   const MAX_TAGS = 8;
+  const OPEN_SECTION_STORAGE_KEY = "settings:open-section";
+  const SECTION_KEYS = ["account", "password", "bio", "general"];
+  const PASSWORD_STRENGTH_LABELS = [
+    "Too weak",
+    "Too weak",
+    "Weak",
+    "Almost there",
+    "Strong",
+  ];
+
+  /** Reads the section from a "settings/<section>" hash so links can open one directly. */
+  function sectionFromHash() {
+    const raw = String(window.location.hash || "").replace(/^#/, "");
+    if (!raw.startsWith("settings")) return null;
+    const section = raw.split("/")[1] || "";
+    return SECTION_KEYS.includes(section) ? section : null;
+  }
+
+  function writeSectionHash(section) {
+    const base = window.location.pathname + window.location.search;
+    const next = section ? `${base}#settings/${section}` : `${base}#settings`;
+    window.history.replaceState(null, "", next);
+  }
+
+  function getPasswordChecks(password) {
+    const value = String(password || "");
+    return [
+      { id: "length", label: "At least 8 characters", ok: value.length >= 8 },
+      { id: "lower", label: "One lowercase letter", ok: /[a-z]/.test(value) },
+      { id: "upper", label: "One uppercase letter", ok: /[A-Z]/.test(value) },
+      { id: "number", label: "One number", ok: /\d/.test(value) },
+    ];
+  }
 
   /** Inline pencil (always visible; avoids cache/missing DashboardIcon on Bio card) */
   function BioInterestsHeaderIcon() {
@@ -39,14 +72,16 @@
     onToggle,
     className = "",
     bodyClassName = "",
-    titleAs = "h2",
+    meta = "",
+    metaTone = "neutral",
     children,
   }) {
-    const TitleTag = titleAs;
-
     return (
       <div
-        className={`settings-card settings-accordion-card ${className}`.trim()}
+        className={
+          `settings-card settings-accordion-card ${className}`.trim() +
+          (isOpen ? " is-open" : "")
+        }
       >
         <button
           type="button"
@@ -58,16 +93,12 @@
           <div className="settings-card-header-main settings-accordion-header-main">
             <div className="settings-card-icon">{icon}</div>
             <div>
-              <TitleTag
-                className={
-                  titleAs === "h1"
-                    ? "page-title settings-accordion-title"
-                    : "section-title settings-accordion-title"
-                }
+              <h2
+                className="section-title settings-accordion-title"
                 style={{ borderBottom: "none", paddingBottom: 0 }}
               >
                 {title}
-              </TitleTag>
+              </h2>
               {subtitle && (
                 <p className="page-subtitle settings-card-subtitle-tight settings-accordion-subtitle">
                   {subtitle}
@@ -75,23 +106,30 @@
               )}
             </div>
           </div>
-          <span
-            className={
-              "settings-accordion-chevron" + (isOpen ? " is-open" : "")
-            }
-            aria-hidden="true"
-          >
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
+          <div className="settings-accordion-header-aside">
+            {meta ? (
+              <span className={"settings-accordion-meta is-" + metaTone}>
+                {meta}
+              </span>
+            ) : null}
+            <span
+              className={
+                "settings-accordion-chevron" + (isOpen ? " is-open" : "")
+              }
+              aria-hidden="true"
             >
-              <polyline points="6 9 12 15 18 9" />
-            </svg>
-          </span>
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <polyline points="6 9 12 15 18 9" />
+              </svg>
+            </span>
+          </div>
         </button>
         {isOpen && (
           <div
@@ -112,6 +150,8 @@
     onTagsSave,
     isOpen,
     onToggle,
+    onDirtyChange,
+    registerActions,
   }) {
     const [bioText, setBioText] = useState(bio);
     const [bioSaving, setBioSaving] = useState(false);
@@ -217,16 +257,56 @@
 
     const bioChanged = bioText !== bio;
     const tagsChanged = JSON.stringify(localTags) !== JSON.stringify(tags);
+    const isDirty = bioChanged || tagsChanged;
+
+    useEffect(() => {
+      if (onDirtyChange) onDirtyChange(isDirty);
+    }, [isDirty]);
+
+    useEffect(() => {
+      return () => {
+        if (onDirtyChange) onDirtyChange(false);
+      };
+    }, []);
+
+    useEffect(() => {
+      if (!registerActions) return;
+      registerActions({
+        save: async () => {
+          let ok = true;
+          if (bioChanged) {
+            setBioSaving(true);
+            ok = (await onBioSave(bioText)) !== false;
+            setBioSaving(false);
+          }
+          if (ok && tagsChanged) {
+            setTagsSaving(true);
+            ok = (await onTagsSave(localTags)) !== false;
+            setTagsSaving(false);
+          }
+          return ok;
+        },
+        discard: () => {
+          setBioText(bio);
+          setLocalTags(tags);
+          setTagInput("");
+          setTagError("");
+          setSuggestions([]);
+          setShowSuggestions(false);
+        },
+      });
+    }, [bio, tags, bioText, localTags, bioChanged, tagsChanged]);
 
     return (
       <SettingsAccordionCard
         id="settings-bio"
-        title="Bio & Interests"
-        subtitle="Tell others about yourself and what you\'re interested in."
+        title="Bio & interests"
+        subtitle="Tell others about yourself and what you’re interested in."
         icon={<BioInterestsHeaderIcon />}
         isOpen={isOpen}
         onToggle={onToggle}
         className="settings-card--bio"
+        meta={`${localTags.length}/${MAX_TAGS} interests`}
       >
         <div className="settings-bio-section">
           <div className="settings-section-label">Bio</div>
@@ -350,7 +430,6 @@
     if (!ctx || !ctx.user) return null;
     const {
       user,
-      setActiveTab,
       setError,
       addToast,
       settingsForm,
@@ -365,15 +444,28 @@
       setMenteeProfile,
       menteeProfileSaving,
       handleMenteeProfileSave,
+      setUnsavedChangesDirty,
     } = ctx;
 
-    const [openSections, setOpenSections] = useState({
-      account: false,
-      password: false,
-      bio: false,
-      general: false,
-      matching: false,
+    const [openSection, setOpenSection] = useState(() => {
+      const fromHash = sectionFromHash();
+      if (fromHash) return fromHash;
+      try {
+        return (
+          window.sessionStorage.getItem(OPEN_SECTION_STORAGE_KEY) ?? "account"
+        );
+      } catch {
+        return "account";
+      }
     });
+    const [bioDirty, setBioDirty] = useState(false);
+    const [savingAll, setSavingAll] = useState(false);
+    const [savedAt, setSavedAt] = useState(0);
+    const [showNewPassword, setShowNewPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+    const bioActionsRef = useRef({ save: null, discard: null });
+    const generalSavedRef = useRef(null);
+    const generalEditedRef = useRef(false);
     const [passwordEmail, setPasswordEmail] = useState("");
     const [passwordVerificationCode, setPasswordVerificationCode] =
       useState("");
@@ -394,16 +486,6 @@
     const passwordCodeInputRef = useRef(null);
     const passwordNewPasswordRef = useRef(null);
 
-    function getPasswordStrengthIssues(password) {
-      const issues = [];
-      const value = String(password || "");
-      if (value.length < 8) issues.push("Use at least 8 characters.");
-      if (!/[a-z]/.test(value)) issues.push("Add a lowercase letter.");
-      if (!/[A-Z]/.test(value)) issues.push("Add an uppercase letter.");
-      if (!/\d/.test(value)) issues.push("Add at least one number.");
-      return issues;
-    }
-
     useEffect(() => {
       if (!passwordCodeSent && !passwordCodeVerified) {
         setPasswordEmail(settingsForm.email || user.email || "");
@@ -416,6 +498,24 @@
     ]);
 
     useEffect(() => {
+      try {
+        window.sessionStorage.setItem(OPEN_SECTION_STORAGE_KEY, openSection);
+      } catch {
+        /* storage unavailable */
+      }
+      writeSectionHash(openSection);
+    }, [openSection]);
+
+    useEffect(() => {
+      function onHashChange() {
+        const section = sectionFromHash();
+        if (section) setOpenSection(section);
+      }
+      window.addEventListener("hashchange", onHashChange);
+      return () => window.removeEventListener("hashchange", onHashChange);
+    }, []);
+
+    useEffect(() => {
       if (passwordResendSeconds <= 0) return undefined;
       const timer = window.setInterval(() => {
         setPasswordResendSeconds((current) => (current > 0 ? current - 1 : 0));
@@ -424,24 +524,7 @@
     }, [passwordResendSeconds]);
 
     function toggleSection(section) {
-      setOpenSections((current) => {
-        // If the clicked section is already open, close it
-        if (current[section]) {
-          return {
-            ...current,
-            [section]: false,
-          };
-        }
-        // Otherwise, close all sections and open only the clicked one
-        return {
-          account: false,
-          password: false,
-          bio: false,
-          general: false,
-          matching: false,
-          [section]: true,
-        };
-      });
+      setOpenSection((current) => (current === section ? "" : section));
     }
 
     async function handleSendPasswordCode() {
@@ -580,16 +663,16 @@
       addToast(result.data?.message || "Password updated successfully.");
     }
 
-    const passwordStrengthIssues = getPasswordStrengthIssues(
-      passwordForm.new_password1,
-    );
+    const passwordChecks = getPasswordChecks(passwordForm.new_password1);
+    const passwordScore = passwordChecks.filter((check) => check.ok).length;
+    const passwordMeetsRules = passwordScore === passwordChecks.length;
     const passwordsMatch =
       !!passwordForm.new_password1 &&
       !!passwordForm.new_password2 &&
       passwordForm.new_password1 === passwordForm.new_password2;
     const canUpdatePassword =
       passwordCodeVerified &&
-      passwordStrengthIssues.length === 0 &&
+      passwordMeetsRules &&
       passwordsMatch &&
       !passwordChanging;
     const resendLabel =
@@ -598,6 +681,128 @@
         : passwordCodeSent
           ? "Resend code"
           : "Send code";
+
+    const accountChanged =
+      String(settingsForm.email || "").trim() !==
+      String(user.email || "").trim();
+
+    const generalRequiredFields = [
+      "campus",
+      "student_id_no",
+      "contact_no",
+      "admission_type",
+      "sex",
+    ];
+    const generalMissingCount = generalRequiredFields.filter(
+      (field) => !String((menteeProfile || {})[field] || "").trim(),
+    ).length;
+
+    const isMentee = user.role === "mentee";
+    const serializedGeneral = JSON.stringify(menteeProfile || {});
+    if (!generalEditedRef.current) {
+      generalSavedRef.current = serializedGeneral;
+    }
+    const generalChanged =
+      isMentee && generalSavedRef.current !== serializedGeneral;
+
+    function updateMenteeProfile(patch) {
+      generalEditedRef.current = true;
+      setMenteeProfile({ ...menteeProfile, ...patch });
+    }
+
+    const dirtyLabels = [
+      accountChanged && "Account",
+      bioDirty && "Bio & interests",
+      generalChanged && "General information",
+    ].filter(Boolean);
+    const isDirty = dirtyLabels.length > 0;
+    const justSaved = savedAt > 0 && !isDirty;
+
+    useEffect(() => {
+      if (typeof setUnsavedChangesDirty === "function") {
+        setUnsavedChangesDirty(isDirty);
+      }
+    }, [isDirty]);
+
+    // Leaving the page always goes through the leave guard, so pending edits are
+    // rolled back the same way the bio/interests draft state is.
+    const revertRef = useRef({});
+    revertRef.current = {
+      accountChanged,
+      generalChanged,
+      email: user.email || "",
+      generalSnapshot: generalSavedRef.current,
+    };
+
+    useEffect(() => {
+      return () => {
+        if (typeof setUnsavedChangesDirty === "function") {
+          setUnsavedChangesDirty(false);
+        }
+        const pending = revertRef.current || {};
+        if (pending.accountChanged) {
+          setSettingsForm((prev) => ({ ...prev, email: pending.email }));
+        }
+        if (pending.generalChanged && pending.generalSnapshot) {
+          try {
+            setMenteeProfile(JSON.parse(pending.generalSnapshot));
+          } catch {
+            /* keep current values when the snapshot is unreadable */
+          }
+        }
+      };
+    }, []);
+
+    useEffect(() => {
+      if (!isDirty) return undefined;
+      function onBeforeUnload(event) {
+        event.preventDefault();
+        event.returnValue = "";
+      }
+      window.addEventListener("beforeunload", onBeforeUnload);
+      return () => window.removeEventListener("beforeunload", onBeforeUnload);
+    }, [isDirty]);
+
+    useEffect(() => {
+      if (!savedAt) return undefined;
+      const timeoutId = window.setTimeout(() => setSavedAt(0), 2600);
+      return () => window.clearTimeout(timeoutId);
+    }, [savedAt]);
+
+    async function handleGeneralSave() {
+      const ok = (await handleMenteeProfileSave()) !== false;
+      if (ok) generalEditedRef.current = false;
+      return ok;
+    }
+
+    async function handleSaveAll() {
+      setSavingAll(true);
+      let ok = true;
+      if (accountChanged) {
+        ok = (await handleSettingsSave()) !== false;
+      }
+      if (ok && bioDirty && bioActionsRef.current.save) {
+        ok = (await bioActionsRef.current.save()) !== false;
+      }
+      if (ok && generalChanged) {
+        ok = await handleGeneralSave();
+      }
+      setSavingAll(false);
+      if (ok) setSavedAt(Date.now());
+    }
+
+    function handleDiscardAll() {
+      setSettingsForm({ ...settingsForm, email: user.email || "" });
+      if (bioActionsRef.current.discard) bioActionsRef.current.discard();
+      if (generalChanged) {
+        generalEditedRef.current = false;
+        try {
+          setMenteeProfile(JSON.parse(generalSavedRef.current));
+        } catch {
+          /* keep current values when the snapshot is unreadable */
+        }
+      }
+    }
 
     return (
       <div
@@ -610,21 +815,48 @@
               : "")
         }
       >
+        <header className="settings-page-head">
+          <h1 className="page-title settings-page-title">Settings</h1>
+          <p className="page-subtitle settings-page-head-subtitle">
+            Manage your account, security, and how your profile appears to
+            others. Open a section to make changes.
+          </p>
+        </header>
+
         <div className="settings-page-grid">
           <SettingsAccordionCard
             id="settings-account"
-            title="Account settings"
-            subtitle="Update your profile details used across the dashboard."
+            title="Account"
+            subtitle="Update the email and photo used across the dashboard."
             icon={<DashboardIcon name="user" size={20} />}
-            isOpen={openSections.account}
+            isOpen={openSection === "account"}
             onToggle={() => toggleSection("account")}
             className="settings-card--account"
-            titleAs="h1"
+            meta={settingsForm.email || user.email || "No email set"}
           >
             <div className="form-grid">
               <div className="form-group">
-                <label>Email</label>
+                <label htmlFor="settings-display-name">
+                  Display name (read only)
+                </label>
                 <input
+                  id="settings-display-name"
+                  type="text"
+                  value={
+                    settingsForm.display_name || user.display_name || "—"
+                  }
+                  readOnly
+                  disabled
+                />
+                <p className="field-helper">
+                  Taken from your enrolment record. Contact an administrator if
+                  it needs to change.
+                </p>
+              </div>
+              <div className="form-group">
+                <label htmlFor="settings-email">Email</label>
+                <input
+                  id="settings-email"
                   type="email"
                   value={settingsForm.email}
                   onChange={(e) =>
@@ -704,21 +936,29 @@
               <button
                 className="btn"
                 onClick={handleSettingsSave}
-                disabled={settingsSaving}
+                disabled={settingsSaving || !accountChanged}
               >
-                {settingsSaving ? "Saving..." : "Save changes"}
+                {settingsSaving
+                  ? "Saving..."
+                  : accountChanged
+                    ? "Save changes"
+                    : "No changes"}
               </button>
+              <p className="field-helper settings-card-footer-note">
+                Your photo is saved as soon as you upload it.
+              </p>
             </div>
           </SettingsAccordionCard>
 
           <SettingsAccordionCard
             id="settings-password"
-            title="Change password"
-            subtitle="Request a code, verify it, then update your password in a secure step-by-step flow."
+            title="Password & security"
+            subtitle="Request a code, verify it, then set a new password."
             icon={<DashboardIcon name="lock" size={20} />}
-            isOpen={openSections.password}
+            isOpen={openSection === "password"}
             onToggle={() => toggleSection("password")}
             className="settings-card--account"
+            meta="Email verification"
           >
             <div className="settings-password-flow">
               <section className="settings-password-step">
@@ -846,49 +1086,111 @@
                 </div>
                 <div className="form-grid settings-password-grid">
                   <div className="form-group">
-                    <label>New password</label>
-                    <input
-                      ref={passwordNewPasswordRef}
-                      type="password"
-                      value={passwordForm.new_password1}
-                      onChange={(e) =>
-                        setPasswordForm((prev) => ({
-                          ...prev,
-                          new_password1: e.target.value,
-                        }))
-                      }
-                      placeholder="Enter new password"
-                      disabled={!passwordCodeVerified}
-                    />
+                    <label htmlFor="settings-new-password">New password</label>
+                    <div className="settings-password-input">
+                      <input
+                        id="settings-new-password"
+                        ref={passwordNewPasswordRef}
+                        type={showNewPassword ? "text" : "password"}
+                        value={passwordForm.new_password1}
+                        onChange={(e) =>
+                          setPasswordForm((prev) => ({
+                            ...prev,
+                            new_password1: e.target.value,
+                          }))
+                        }
+                        placeholder="Enter new password"
+                        disabled={!passwordCodeVerified}
+                        autoComplete="new-password"
+                      />
+                      <button
+                        type="button"
+                        className="settings-password-toggle"
+                        onClick={() => setShowNewPassword((prev) => !prev)}
+                        disabled={!passwordCodeVerified}
+                        aria-pressed={showNewPassword}
+                      >
+                        {showNewPassword ? "Hide" : "Show"}
+                      </button>
+                    </div>
                   </div>
                   <div className="form-group">
-                    <label>Confirm new password</label>
-                    <input
-                      type="password"
-                      value={passwordForm.new_password2}
-                      onChange={(e) =>
-                        setPasswordForm((prev) => ({
-                          ...prev,
-                          new_password2: e.target.value,
-                        }))
-                      }
-                      placeholder="Confirm new password"
-                      disabled={!passwordCodeVerified}
-                    />
+                    <label htmlFor="settings-confirm-password">
+                      Confirm new password
+                    </label>
+                    <div className="settings-password-input">
+                      <input
+                        id="settings-confirm-password"
+                        type={showConfirmPassword ? "text" : "password"}
+                        value={passwordForm.new_password2}
+                        onChange={(e) =>
+                          setPasswordForm((prev) => ({
+                            ...prev,
+                            new_password2: e.target.value,
+                          }))
+                        }
+                        placeholder="Confirm new password"
+                        disabled={!passwordCodeVerified}
+                        autoComplete="new-password"
+                      />
+                      <button
+                        type="button"
+                        className="settings-password-toggle"
+                        onClick={() => setShowConfirmPassword((prev) => !prev)}
+                        disabled={!passwordCodeVerified}
+                        aria-pressed={showConfirmPassword}
+                      >
+                        {showConfirmPassword ? "Hide" : "Show"}
+                      </button>
+                    </div>
                   </div>
                 </div>
+                {passwordForm.new_password1 ? (
+                  <div className="settings-password-meter">
+                    <div
+                      className="settings-password-meter-track"
+                      role="progressbar"
+                      aria-valuemin={0}
+                      aria-valuemax={passwordChecks.length}
+                      aria-valuenow={passwordScore}
+                      aria-label="Password strength"
+                    >
+                      <span
+                        className={
+                          "settings-password-meter-fill is-score-" +
+                          passwordScore
+                        }
+                        style={{
+                          width: `${(passwordScore / passwordChecks.length) * 100}%`,
+                        }}
+                      />
+                    </div>
+                    <span className="settings-password-meter-label">
+                      {PASSWORD_STRENGTH_LABELS[passwordScore]}
+                    </span>
+                  </div>
+                ) : null}
                 <div className="settings-password-validation">
-                  {passwordStrengthIssues.length > 0 && (
+                  {passwordCodeVerified && (
                     <ul
                       className="settings-password-rules"
                       aria-label="Password requirements"
                     >
-                      {passwordStrengthIssues.map((issue) => (
+                      {passwordChecks.map((check) => (
                         <li
-                          key={issue}
-                          className="settings-password-validation-text is-error"
+                          key={check.id}
+                          className={
+                            "settings-password-check" +
+                            (check.ok ? " is-ok" : "")
+                          }
                         >
-                          {issue}
+                          <span
+                            className="settings-password-check-icon"
+                            aria-hidden="true"
+                          >
+                            {check.ok ? "\u2713" : "\u2022"}
+                          </span>
+                          {check.label}
                         </li>
                       ))}
                     </ul>
@@ -900,9 +1202,7 @@
                       Passwords do not match.
                     </p>
                   ) : null}
-                  {passwordCodeVerified &&
-                  passwordStrengthIssues.length === 0 &&
-                  passwordsMatch ? (
+                  {passwordCodeVerified && passwordMeetsRules && passwordsMatch ? (
                     <p className="field-helper settings-password-validation-text is-success">
                       Password looks good.
                     </p>
@@ -940,8 +1240,12 @@
             tags={Array.isArray(settingsForm.tags) ? settingsForm.tags : []}
             onBioSave={handleBioSave}
             onTagsSave={handleTagsSave}
-            isOpen={openSections.bio}
+            isOpen={openSection === "bio"}
             onToggle={() => toggleSection("bio")}
+            onDirtyChange={setBioDirty}
+            registerActions={(actions) => {
+              bioActionsRef.current = actions;
+            }}
           />
 
           {user.role === "mentee" && (
@@ -950,9 +1254,15 @@
               title="General information"
               subtitle="Some fields are managed by the school and shown for reference only."
               icon={<DashboardIcon name="clipboardList" size={20} />}
-              isOpen={openSections.general}
+              isOpen={openSection === "general"}
               onToggle={() => toggleSection("general")}
               className="settings-card--general"
+              meta={
+                generalMissingCount > 0
+                  ? `${generalMissingCount} field${generalMissingCount === 1 ? "" : "s"} missing`
+                  : "Complete"
+              }
+              metaTone={generalMissingCount > 0 ? "warn" : "ok"}
             >
               <div className="settings-section-label">Identity</div>
               <div className="form-grid">
@@ -962,10 +1272,7 @@
                     id="settings-campus"
                     value={menteeProfile.campus || ""}
                     onChange={(e) =>
-                      setMenteeProfile({
-                        ...menteeProfile,
-                        campus: e.target.value,
-                      })
+                      updateMenteeProfile({ campus: e.target.value })
                     }
                   >
                     <option value="">---------</option>
@@ -995,8 +1302,7 @@
                   <input
                     value={menteeProfile.student_id_no}
                     onChange={(e) =>
-                      setMenteeProfile({
-                        ...menteeProfile,
+                      updateMenteeProfile({
                         student_id_no: e.target.value
                           .replace(/\D/g, "")
                           .slice(0, 10),
@@ -1043,8 +1349,7 @@
                   <input
                     value={menteeProfile.contact_no}
                     onChange={(e) =>
-                      setMenteeProfile({
-                        ...menteeProfile,
+                      updateMenteeProfile({
                         contact_no: e.target.value
                           .replace(/\D/g, "")
                           .slice(0, 11),
@@ -1061,10 +1366,7 @@
                   <select
                     value={menteeProfile.admission_type || ""}
                     onChange={(e) =>
-                      setMenteeProfile({
-                        ...menteeProfile,
-                        admission_type: e.target.value,
-                      })
+                      updateMenteeProfile({ admission_type: e.target.value })
                     }
                   >
                     <option value="">Select admission type</option>
@@ -1098,10 +1400,7 @@
                   <select
                     value={menteeProfile.sex || ""}
                     onChange={(e) =>
-                      setMenteeProfile({
-                        ...menteeProfile,
-                        sex: e.target.value,
-                      })
+                      updateMenteeProfile({ sex: e.target.value })
                     }
                   >
                     <option value="">Select biological sex</option>
@@ -1114,45 +1413,59 @@
               <div className="btn-row" style={{ marginTop: "16px" }}>
                 <button
                   className="btn"
-                  onClick={handleMenteeProfileSave}
-                  disabled={menteeProfileSaving}
+                  onClick={handleGeneralSave}
+                  disabled={menteeProfileSaving || !generalChanged}
                 >
                   {menteeProfileSaving
                     ? "Saving..."
-                    : "Save general information"}
-                </button>
-              </div>
-            </SettingsAccordionCard>
-          )}
-          {user.role === "mentee" && user.mentee_general_info_completed && (
-            <SettingsAccordionCard
-              id="settings-mentoring-preferences"
-              title="Mentoring preferences"
-              subtitle="Choose the subjects you want mentoring in, competencies you find challenging, and when you are available."
-              icon={<DashboardIcon name="sparkles" size={20} />}
-              isOpen={openSections.matching}
-              onToggle={() => toggleSection("matching")}
-              className="settings-card--matching"
-            >
-              <p className="field-helper" style={{ marginBottom: "12px" }}>
-                Subject selection and scheduling live on a dedicated page under
-                Account Management.
-              </p>
-              <div className="btn-row">
-                <button
-                  type="button"
-                  className="btn"
-                  onClick={() => setActiveTab("mentoring-preferences")}
-                >
-                  Open mentoring preferences
+                    : generalChanged
+                      ? "Save general information"
+                      : "No changes"}
                 </button>
               </div>
             </SettingsAccordionCard>
           )}
         </div>
-        {window.DashboardApp.AmuFooter ? (
-          <window.DashboardApp.AmuFooter className="settings-page-footer" />
-        ) : null}
+
+        {(isDirty || justSaved) && (
+          <div
+            className={
+              "mp-sticky-bar settings-sticky-bar" +
+              (isDirty ? " is-dirty" : " is-saved")
+            }
+            role="status"
+            aria-live="polite"
+          >
+            <div className="mp-sticky-meta">
+              <p className="mp-sticky-title">
+                {isDirty ? "Unsaved changes" : "Saved"}
+              </p>
+              <p className="mp-sticky-subtitle">
+                {isDirty ? dirtyLabels.join(", ") : "Your settings were updated."}
+              </p>
+            </div>
+            {isDirty && (
+              <div className="mp-sticky-actions">
+                <button
+                  type="button"
+                  className="btn secondary"
+                  onClick={handleDiscardAll}
+                  disabled={savingAll}
+                >
+                  Discard
+                </button>
+                <button
+                  type="button"
+                  className="btn"
+                  onClick={handleSaveAll}
+                  disabled={savingAll}
+                >
+                  {savingAll ? "Saving..." : "Save changes"}
+                </button>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     );
   }

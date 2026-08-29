@@ -334,6 +334,14 @@ class UserPost(models.Model):
     image = models.ImageField(upload_to="posts/%Y/%m/", blank=True, null=True)
     category = models.CharField(max_length=20, choices=CATEGORY_CHOICES, default="update")
     likes = models.ManyToManyField(User, related_name="liked_posts", blank=True)
+    shared_from = models.ForeignKey(
+        "self",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="shares",
+        help_text="When set, this post is a share of another post shown on the sharer's profile.",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -344,6 +352,16 @@ class UserPost(models.Model):
 
     def __str__(self) -> str:
         return f"Post<{self.author_id} {self.category} @ {self.created_at}>"
+
+    def root_post(self):
+        """Resolve nested shares to the original post."""
+        post = self
+        seen = set()
+        while post.shared_from_id and post.shared_from_id not in seen:
+            seen.add(post.id)
+            post = post.shared_from
+        return post
+
 
 
 class PostComment(models.Model):

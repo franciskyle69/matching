@@ -92,14 +92,34 @@
         <p class="errornote" style="margin-top: .5rem; margin-bottom: 0;">{{ form.email.errors.0 }}</p>
         {% endif %}
       </div>
-      <div class="form-group">
+      <div class="form-group" id="application-document-group">
         <label for="id_student_verification_document">Academic mentoring application form</label>
-        <input type="file" name="student_verification_document" id="id_student_verification_document" accept=".pdf,.png,.jpg,.jpeg" required>
-        <p class="helptext" style="margin-top: .5rem; margin-bottom: 0;">Upload your completed academic mentoring application form for account review (PDF/JPG/PNG, max 5 MB).</p>
+        <input type="file" name="student_verification_document" id="id_student_verification_document" accept=".pdf,.png,.jpg,.jpeg" multiple>
+        <p class="helptext" style="margin-top: .5rem; margin-bottom: 0;">You can upload multiple PDF, JPG, or PNG files. Max 5 MB each.</p>
         {% if form.student_verification_document.errors %}
         <p class="errornote" style="margin-top: .5rem; margin-bottom: 0;">{{ form.student_verification_document.errors.0 }}</p>
         {% endif %}
       </div>
+      <div id="student-mentor-documents-group" style="display: none;">
+        <div class="form-group">
+          <label for="id_letter_of_intent">Letter of intent</label>
+          <input type="file" name="letter_of_intent" id="id_letter_of_intent" accept=".pdf,.png,.jpg,.jpeg" multiple>
+          <p class="helptext" style="margin-top: .5rem; margin-bottom: 0;">Required. You can select multiple files at once (PDF/JPG/PNG, max 5 MB each).</p>
+        </div>
+        <div class="form-group">
+          <label for="id_study_load">Study load</label>
+          <input type="file" name="study_load" id="id_study_load" accept=".pdf,.png,.jpg,.jpeg" multiple>
+          <p class="helptext" style="margin-top: .5rem; margin-bottom: 0;">Required. You can select multiple files at once (PDF/JPG/PNG, max 5 MB each).</p>
+        </div>
+        <div class="form-group">
+          <label for="id_grade">Grade</label>
+          <input type="file" name="grade" id="id_grade" accept=".pdf,.png,.jpg,.jpeg" multiple>
+          <p class="helptext" style="margin-top: .5rem; margin-bottom: 0;">Required. You can select multiple files at once (PDF/JPG/PNG, max 5 MB each).</p>
+        </div>
+      </div>
+      {% if form.non_field_errors %}
+      <p class="errornote">{{ form.non_field_errors.0 }}</p>
+      {% endif %}
       <div class="form-group">
         <label for="id_password1">Password</label>
         <input type="password" name="password1" id="id_password1" placeholder="Password" required autocomplete="new-password">
@@ -158,12 +178,39 @@
       <script>
         (function () {
           var group = document.getElementById("mentor-type-group");
-          if (!group) return;
+          var applicationGroup = document.getElementById("application-document-group");
+          var studentDocsGroup = document.getElementById("student-mentor-documents-group");
+          var applicationInput = document.getElementById("id_student_verification_document");
+          var studentDocInputs = [
+            document.getElementById("id_letter_of_intent"),
+            document.getElementById("id_study_load"),
+            document.getElementById("id_grade")
+          ];
+          function isStudentMentor() {
+            var mentor = document.querySelector('input[name="role"][value="mentor"]');
+            var studentType = document.querySelector('input[name="mentor_role"][value="Senior IT Student"]');
+            return !!(mentor && mentor.checked && studentType && studentType.checked);
+          }
           function sync() {
             var mentor = document.querySelector('input[name="role"][value="mentor"]');
-            group.style.display = mentor && mentor.checked ? "block" : "none";
+            if (group) {
+              group.style.display = mentor && mentor.checked ? "block" : "none";
+            }
+            var studentMentor = isStudentMentor();
+            if (studentDocsGroup) {
+              studentDocsGroup.style.display = studentMentor ? "block" : "none";
+            }
+            if (applicationGroup) {
+              applicationGroup.style.display = studentMentor ? "none" : "block";
+            }
+            if (applicationInput) {
+              applicationInput.required = !studentMentor;
+            }
+            studentDocInputs.forEach(function (el) {
+              if (el) el.required = studentMentor;
+            });
           }
-          document.querySelectorAll('input[name="role"]').forEach(function (el) {
+          document.querySelectorAll('input[name="role"], input[name="mentor_role"]').forEach(function (el) {
             el.addEventListener("change", sync);
           });
           sync();

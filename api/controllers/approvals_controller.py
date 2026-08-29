@@ -4,7 +4,7 @@ from django.http import JsonResponse
 from django.views.decorators.http import require_GET, require_http_methods
 
 from accounts.models import get_user_display_name
-from profiles.models import MentorProfile, MenteeProfile
+from profiles.models import MentorProfile, MenteeProfile, serialize_verification_documents
 
 from ..views import (
     _require_staff,
@@ -44,7 +44,7 @@ def _serialize_mentor_detail(mentor, request=None):
     display_name = get_user_display_name(u) or u.username
     subs = mentor.subjects if isinstance(mentor.subjects, list) else (list(mentor.subjects) if mentor.subjects else [])
     tops = mentor.topics if isinstance(mentor.topics, list) else (list(mentor.topics) if mentor.topics else [])
-    return {
+    payload = {
         "id": mentor.id,
         "user_id": u.id,
         "username": u.username,
@@ -56,22 +56,23 @@ def _serialize_mentor_detail(mentor, request=None):
         "gpa": str(mentor.gpa) if mentor.gpa is not None else "",
         "avatar_url": mentor.avatar_url or "",
         "role": mentor.role or "",
+        "gender": getattr(mentor, "gender", "") or "",
         "subjects": subs,
         "topics": tops,
         "expertise_level": mentor.expertise_level,
         "capacity": getattr(mentor, "capacity", 1),
         "interests": mentor.interests or "",
-        "verification_document_url": _verification_document_url(mentor, request),
-        "verification_document_name": mentor.verification_document.name.rsplit("/", 1)[-1] if getattr(mentor, "verification_document", None) else "",
         "approved": mentor.approved,
         "general_info_complete": _mentor_general_info_complete(mentor),
     }
+    payload.update(serialize_verification_documents(mentor, request))
+    return payload
 
 
 def _serialize_mentee_detail(mentee, request=None):
     u = mentee.user
     display_name = get_user_display_name(u) or u.username
-    return {
+    payload = {
         "id": mentee.id,
         "user_id": u.id,
         "username": u.username,
@@ -91,29 +92,11 @@ def _serialize_mentee_detail(mentee, request=None):
         "topics": mentee.topics if isinstance(mentee.topics, list) else (list(mentee.topics) if mentee.topics else []),
         "difficulty_level": mentee.difficulty_level,
         "interests": mentee.interests or "",
-        "verification_document_url": _verification_document_url(mentee, request),
-        "verification_document_name": mentee.verification_document.name.rsplit("/", 1)[-1] if getattr(mentee, "verification_document", None) else "",
         "approved": mentee.approved,
         "general_info_complete": _mentee_general_info_complete(mentee),
     }
-
-
-def _verification_document_url(profile_obj, request):
-    file_obj = getattr(profile_obj, "verification_document", None)
-    if not file_obj:
-        return ""
-    try:
-        url = file_obj.url or ""
-    except Exception:
-        return ""
-    if not url:
-        return ""
-    if url.startswith("http://") or url.startswith("https://"):
-        return url
-    normalized = url if url.startswith("/") else f"/{url}"
-    if request is None:
-        return normalized
-    return request.build_absolute_uri(normalized)
+    payload.update(serialize_verification_documents(mentee, request))
+    return payload
 
 
 @login_required
@@ -130,12 +113,14 @@ def pending_list(request):
 
     pending_mentors = (
         MentorProfile.objects.select_related("user")
+        .prefetch_related("verification_documents")
         .filter(approved=False)
         .exclude(user=request.user)
         .order_by("user__username")
     )
     pending_mentees = (
         MenteeProfile.objects.select_related("user")
+        .prefetch_related("verification_documents")
         .filter(approved=False)
         .exclude(user=request.user)
         .order_by("user__username")

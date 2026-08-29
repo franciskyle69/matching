@@ -93,7 +93,7 @@ def _normalise_gender(value: Any, default: str = "") -> str:
 def _parse_hhmm(value: str) -> Optional[int]:
     text = str(value or "").strip()
     parts = text.split(":")
-    if len(parts) != 2:
+    if len(parts) < 2:
         return None
     try:
         hour = int(parts[0])

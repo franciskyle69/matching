@@ -34,9 +34,11 @@
 }
 
 .sidebar-logo {
-  max-width: 132px;
-  max-height: 52px;
+  max-width: 168px;
+  max-height: 72px;
   object-fit: contain;
+  display: block;
+  margin: 0 auto;
 }
 
 @media (max-width: 1024px) {

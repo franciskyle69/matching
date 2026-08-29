@@ -136,7 +136,7 @@ class Command(BaseCommand):
                     "skills": [],
                     "availability": mentor_slots,
                     "interests": "",
-                    "capacity": 3,
+                    "capacity": 5,
                     "role": role,
                     "subjects": subjects_sample,
                     "topics": topics_sample,

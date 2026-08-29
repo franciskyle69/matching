@@ -11,6 +11,7 @@
     DashboardIcon,
     categoryIconName,
     MentorRoleBadge,
+    formatBiologicalSex,
   } = window.DashboardApp.Utils || {};
   const PLACEHOLDER_AVATAR = window.DashboardApp.PLACEHOLDER_AVATAR || "";
   const Spinner = LoadingSpinner;
@@ -18,15 +19,19 @@
   function relativeTime(iso) {
     if (!iso) return "";
     const d = new Date(iso);
-    const now = new Date();
-    const sec = Math.floor((now - d) / 1000);
-    if (sec < 60) return "just now";
-    const min = Math.floor(sec / 60);
-    if (min < 60) return min + "m ago";
-    const hr = Math.floor(min / 60);
-    if (hr < 24) return hr + "h ago";
-    const day = Math.floor(hr / 24);
-    if (day < 7) return day + "d ago";
+    if (Number.isNaN(d.getTime())) return "";
+    const now = Date.now();
+    const sec = Math.max(0, Math.floor((now - d.getTime()) / 1000));
+    // Under 7 days: relative (1min ago … 6d ago). Older: calendar date.
+    if (sec < 7 * 24 * 60 * 60) {
+      if (sec < 60) return "1min ago";
+      const min = Math.floor(sec / 60);
+      if (min < 60) return min + "min ago";
+      const hr = Math.floor(min / 60);
+      if (hr < 24) return hr + "h ago";
+      const day = Math.floor(hr / 24);
+      return Math.max(1, day) + "d ago";
+    }
     return d.toLocaleDateString();
   }
 
@@ -34,6 +39,12 @@
   const MAX_FILE_SIZE = 10 * 1024 * 1024;
   const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp", "image/svg+xml"];
   const CAPTION_TRUNCATE_LENGTH = 150;
+
+  function displayBiologicalSex(value) {
+    return typeof formatBiologicalSex === "function"
+      ? formatBiologicalSex(value)
+      : value || "—";
+  }
 
   /* ── Caption "See more" (Facebook-style) ── */
   function ExpandableCaption({ text, maxLength }) {
@@ -148,43 +159,202 @@
     );
   }
 
-  function PostCard({ post, onLike, onDelete, isOwner, onOpen }) {
+  function PostCard({ post, onLike, onDelete, onShare, isOwner, onOpen }) {
+    const [confirmDelete, setConfirmDelete] = useState(false);
+    const [sharing, setSharing] = useState(false);
+    const [shareDone, setShareDone] = useState(false);
+    const original = post && post.shared_from ? post.shared_from : null;
+    const isShare = !!(post && (post.is_share || post.shared_from_id));
+
+    async function handleShareClick() {
+      if (!onShare || sharing || shareDone || isOwner) return;
+      setSharing(true);
+      try {
+        const result = await onShare(post.id);
+        if (result !== false) {
+          setShareDone(true);
+          window.setTimeout(() => setShareDone(false), 2200);
+        }
+      } finally {
+        setSharing(false);
+      }
+    }
+
     return (
-      <div className="sp-post-card">
+      <div className={"sp-post-card" + (confirmDelete ? " is-confirming-delete" : "") + (isShare ? " is-share" : "")}>
         <div className="sp-post-header">
           <div className="sp-post-author-avatar">
             {post.author_avatar ? <img src={post.author_avatar} alt="" /> : <span className="sp-post-author-fallback">{(post.author_display_name || post.author_username || "?")[0].toUpperCase()}</span>}
           </div>
           <div className="sp-post-meta">
             <span className="sp-post-author-name">{post.author_display_name || post.author_username}</span>
-            <span className="sp-post-time">{relativeTime(post.created_at)}</span>
+            {isShare ? (
+              <span className="sp-post-share-label">shared a post</span>
+            ) : null}
+            <span className="sp-post-time" title={post.created_at ? new Date(post.created_at).toLocaleString() : undefined}>{relativeTime(post.created_at)}</span>
           </div>
-          <span className={"sp-post-category-badge sp-cat-" + post.category}>
-            <span className="sp-post-cat-icon" aria-hidden="true">
-              <DashboardIcon name={categoryIconName(post.category)} size={14} />
+          {!isShare && (
+            <span className={"sp-post-category-badge sp-cat-" + post.category}>
+              <span className="sp-post-cat-icon" aria-hidden="true">
+                <DashboardIcon name={categoryIconName(post.category)} size={14} />
+              </span>
+              {CATEGORY_LABELS[post.category]}
             </span>
-            {CATEGORY_LABELS[post.category]}
-          </span>
-        </div>
-        <div className="sp-post-clickable" onClick={() => onOpen && onOpen(post)}>
-          {post.text && <ExpandableCaption text={post.text} maxLength={CAPTION_TRUNCATE_LENGTH} />}
-          {post.image_url && <div className="sp-post-image-wrap"><img src={post.image_url} alt="Post" className="sp-post-image" loading="lazy" /></div>}
-        </div>
-        <div className="sp-post-actions">
-          <button type="button" className={"sp-post-action-btn" + (post.liked_by_me ? " liked" : "")} onClick={() => onLike(post.id)}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill={post.liked_by_me ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
-            <span>{post.likes_count || 0}</span>
-          </button>
-          <button type="button" className="sp-post-action-btn" onClick={() => onOpen && onOpen(post)}>
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-            <span>{post.comments_count || 0}</span>
-          </button>
-          {isOwner && (
-            <button type="button" className="sp-post-action-btn sp-post-delete" onClick={() => onDelete(post.id)} title="Delete post">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
-            </button>
           )}
         </div>
+        {post.text ? (
+          <div className="sp-post-clickable" onClick={() => onOpen && onOpen(post)}>
+            <ExpandableCaption text={post.text} maxLength={CAPTION_TRUNCATE_LENGTH} />
+          </div>
+        ) : null}
+        {isShare ? (
+          original ? (
+            <div
+              className="sp-shared-embed"
+              role="button"
+              tabIndex={0}
+              onClick={() => onOpen && onOpen(post)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  onOpen && onOpen(post);
+                }
+              }}
+            >
+              <div className="sp-shared-embed-header">
+                <div className="sp-post-author-avatar sp-shared-embed-avatar">
+                  {original.author_avatar ? (
+                    <img src={original.author_avatar} alt="" />
+                  ) : (
+                    <span className="sp-post-author-fallback">
+                      {(original.author_display_name || original.author_username || "?")[0].toUpperCase()}
+                    </span>
+                  )}
+                </div>
+                <div className="sp-post-meta">
+                  <span className="sp-post-author-name">
+                    {original.author_display_name || original.author_username}
+                  </span>
+                  <span
+                    className="sp-post-time"
+                    title={
+                      original.created_at
+                        ? new Date(original.created_at).toLocaleString()
+                        : undefined
+                    }
+                  >
+                    {relativeTime(original.created_at)}
+                  </span>
+                </div>
+                <span className={"sp-post-category-badge sp-cat-" + original.category}>
+                  <span className="sp-post-cat-icon" aria-hidden="true">
+                    <DashboardIcon name={categoryIconName(original.category)} size={14} />
+                  </span>
+                  {CATEGORY_LABELS[original.category]}
+                </span>
+              </div>
+              {original.text ? (
+                <ExpandableCaption text={original.text} maxLength={CAPTION_TRUNCATE_LENGTH} />
+              ) : null}
+              {original.image_url ? (
+                <div className="sp-post-image-wrap">
+                  <img
+                    src={original.image_url}
+                    alt="Shared post"
+                    className="sp-post-image"
+                    loading="lazy"
+                  />
+                </div>
+              ) : null}
+            </div>
+          ) : (
+            <div className="sp-shared-unavailable">Original post is no longer available.</div>
+          )
+        ) : (
+          <div className="sp-post-clickable" onClick={() => onOpen && onOpen(post)}>
+            {post.image_url && (
+              <div className="sp-post-image-wrap">
+                <img src={post.image_url} alt="Post" className="sp-post-image" loading="lazy" />
+              </div>
+            )}
+          </div>
+        )}
+        {confirmDelete ? (
+          <div className="sp-post-delete-confirm" role="group" aria-label="Confirm delete post">
+            <div className="sp-post-delete-confirm-copy">
+              <span className="sp-post-delete-confirm-icon" aria-hidden="true">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="3 6 5 6 21 6" />
+                  <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+                  <path d="M10 11v6" />
+                  <path d="M14 11v6" />
+                </svg>
+              </span>
+              <div>
+                <p className="sp-post-delete-confirm-title">Delete this post?</p>
+                <p className="sp-post-delete-confirm-hint">This can&apos;t be undone.</p>
+              </div>
+            </div>
+            <div className="sp-post-delete-confirm-actions">
+              <button
+                type="button"
+                className="sp-post-delete-cancel"
+                onClick={() => setConfirmDelete(false)}
+              >
+                Keep
+              </button>
+              <button
+                type="button"
+                className="sp-post-delete-confirm-btn"
+                onClick={() => {
+                  setConfirmDelete(false);
+                  onDelete(post.id);
+                }}
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="sp-post-actions">
+            <button type="button" className={"sp-post-action-btn" + (post.liked_by_me ? " liked" : "")} onClick={() => onLike(post.id)}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill={post.liked_by_me ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+              <span>{post.likes_count || 0}</span>
+            </button>
+            <button type="button" className="sp-post-action-btn" onClick={() => onOpen && onOpen(post)}>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+              <span>{post.comments_count || 0}</span>
+            </button>
+            {!isOwner && onShare && (
+              <button
+                type="button"
+                className={"sp-post-action-btn sp-post-share" + (shareDone ? " is-shared" : "")}
+                onClick={handleShareClick}
+                disabled={sharing || shareDone}
+                title={shareDone ? "Shared to your profile" : "Share to your profile"}
+              >
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="18" cy="5" r="3" />
+                  <circle cx="6" cy="12" r="3" />
+                  <circle cx="18" cy="19" r="3" />
+                  <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" />
+                  <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
+                </svg>
+                <span>{shareDone ? "Shared" : sharing ? "Sharing…" : "Share"}</span>
+              </button>
+            )}
+            {isOwner && (
+              <button
+                type="button"
+                className="sp-post-action-btn sp-post-delete"
+                onClick={() => setConfirmDelete(true)}
+                title="Delete post"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
+              </button>
+            )}
+          </div>
+        )}
       </div>
     );
   }
@@ -293,7 +463,7 @@
           </div>
           <div className="sp-post-meta">
             <span className="sp-post-author-name">{post.author_display_name || post.author_username}</span>
-            <span className="sp-post-time">{relativeTime(post.created_at)}</span>
+            <span className="sp-post-time" title={post.created_at ? new Date(post.created_at).toLocaleString() : undefined}>{relativeTime(post.created_at)}</span>
           </div>
           <span className={"sp-post-category-badge sp-cat-" + post.category}>
             <span className="sp-post-cat-icon" aria-hidden="true">
@@ -505,11 +675,16 @@
               <div className="sp-sidebar-row"><span className="sp-sidebar-icon"><DashboardIcon name="graduationCap" size={16} /></span><span>{menteeProfile.program || "—"}</span></div>
               <div className="sp-sidebar-row"><span className="sp-sidebar-icon"><DashboardIcon name="calendar" size={16} /></span><span>Year {menteeProfile.year_level || "—"}</span></div>
               <div className="sp-sidebar-row"><span className="sp-sidebar-icon"><DashboardIcon name="building" size={16} /></span><span>{menteeProfile.campus || "—"}</span></div>
+              <div className="sp-sidebar-row"><span className="sp-sidebar-icon"><DashboardIcon name="userCircle" size={16} /></span><span>{displayBiologicalSex(menteeProfile.sex)}</span></div>
             </>
           )}
           {isMentor && (
             <>
-              <div className="sp-sidebar-row"><span className="sp-sidebar-icon"><DashboardIcon name="userCircle" size={16} /></span><span>{mentorProfile.gender || "—"}</span></div>
+              {mentorProfile.role === "Senior IT Student" &&
+              mentorProfile.year_level ? (
+                <div className="sp-sidebar-row"><span className="sp-sidebar-icon"><DashboardIcon name="calendar" size={16} /></span><span>{Number(mentorProfile.year_level) === 3 ? "3rd year" : Number(mentorProfile.year_level) === 4 ? "4th year" : `Year ${mentorProfile.year_level}`}</span></div>
+              ) : null}
+              <div className="sp-sidebar-row"><span className="sp-sidebar-icon"><DashboardIcon name="userCircle" size={16} /></span><span>{displayBiologicalSex(mentorProfile.gender)}</span></div>
               {mentorProfile.expertise_level != null && <div className="sp-sidebar-row"><span className="sp-sidebar-icon"><DashboardIcon name="barChart" size={16} /></span><span>Expertise: {mentorProfile.expertise_level}/5</span></div>}
               {mentorProfile.capacity != null && <div className="sp-sidebar-row"><span className="sp-sidebar-icon"><DashboardIcon name="users" size={16} /></span><span>{mentorProfile.capacity} mentee slots</span></div>}
             </>
@@ -582,7 +757,7 @@
             </div>
             <div className="sp-sidebar-card">
               <h4 className="sp-sidebar-card-title">About</h4>
-              <div className="sp-sidebar-row"><span className="sp-sidebar-icon"><DashboardIcon name="userCircle" size={16} /></span><span>{mentor.gender || "—"}</span></div>
+              <div className="sp-sidebar-row"><span className="sp-sidebar-icon"><DashboardIcon name="userCircle" size={16} /></span><span>{displayBiologicalSex(mentor.gender)}</span></div>
               {mentor.expertise_level != null && <div className="sp-sidebar-row"><span className="sp-sidebar-icon"><DashboardIcon name="barChart" size={16} /></span><span>Expertise: {mentor.expertise_level}/5</span></div>}
               {mentor.capacity != null && <div className="sp-sidebar-row"><span className="sp-sidebar-icon"><DashboardIcon name="users" size={16} /></span><span>{mentor.capacity} mentee slots</span></div>}
             </div>
@@ -661,6 +836,27 @@
       }
     }
 
+    async function handleShare(postId) {
+      const res = await fetchJSON(`/api/posts/${postId}/share/`, {
+        method: "POST",
+        headers: {
+          "X-CSRFToken": getCookie("csrftoken"),
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({}),
+      });
+      if (!res.ok) return false;
+      if (res.data?.post && typeof window.DashboardApp?.notify === "function") {
+        window.DashboardApp.notify(
+          res.data.already_shared
+            ? "Already on your profile."
+            : "Shared to your profile.",
+          "success",
+        );
+      }
+      return true;
+    }
+
     function handlePostUpdate(postId, fields) {
       setPosts((prev) => prev.map((p) => p.id === postId ? { ...p, ...fields } : p));
       setOpenPost((prev) => prev && prev.id === postId ? { ...prev, ...fields } : prev);
@@ -736,14 +932,26 @@
                     {details.program && <div className="sp-sidebar-row"><span className="sp-sidebar-icon"><DashboardIcon name="graduationCap" size={16} /></span><span>{details.program}</span></div>}
                     {details.year_level && <div className="sp-sidebar-row"><span className="sp-sidebar-icon"><DashboardIcon name="calendar" size={16} /></span><span>Year {details.year_level}</span></div>}
                     {details.campus && <div className="sp-sidebar-row"><span className="sp-sidebar-icon"><DashboardIcon name="building" size={16} /></span><span>{details.campus}</span></div>}
+                    {details.sex && <div className="sp-sidebar-row"><span className="sp-sidebar-icon"><DashboardIcon name="userCircle" size={16} /></span><span>{displayBiologicalSex(details.sex)}</span></div>}
                   </>
                 )}
                 {isMentor && (
                   <>
-                    {details.gender && <div className="sp-sidebar-row"><span className="sp-sidebar-icon"><DashboardIcon name="userCircle" size={16} /></span><span>{details.gender}</span></div>}
+                    {details.role === "Instructor" ? (
+                      <div className="sp-sidebar-row"><span className="sp-sidebar-icon"><DashboardIcon name="briefcase" size={16} /></span><span>Instructor</span></div>
+                    ) : details.role === "Senior IT Student" ? (
+                      <>
+                        <div className="sp-sidebar-row"><span className="sp-sidebar-icon"><DashboardIcon name="briefcase" size={16} /></span><span>Student mentor</span></div>
+                        {details.year_level ? (
+                          <div className="sp-sidebar-row"><span className="sp-sidebar-icon"><DashboardIcon name="calendar" size={16} /></span><span>{Number(details.year_level) === 3 ? "3rd year" : Number(details.year_level) === 4 ? "4th year" : `Year ${details.year_level}`}</span></div>
+                        ) : null}
+                      </>
+                    ) : details.role ? (
+                      <div className="sp-sidebar-row"><span className="sp-sidebar-icon"><DashboardIcon name="briefcase" size={16} /></span><span>{details.role}</span></div>
+                    ) : null}
+                    {details.gender && <div className="sp-sidebar-row"><span className="sp-sidebar-icon"><DashboardIcon name="userCircle" size={16} /></span><span>{displayBiologicalSex(details.gender)}</span></div>}
                     {details.expertise_level != null && <div className="sp-sidebar-row"><span className="sp-sidebar-icon"><DashboardIcon name="barChart" size={16} /></span><span>Expertise: {details.expertise_level}/5</span></div>}
                     {details.capacity != null && <div className="sp-sidebar-row"><span className="sp-sidebar-icon"><DashboardIcon name="users" size={16} /></span><span>{details.capacity} mentee slots</span></div>}
-                    {details.role && <div className="sp-sidebar-row"><span className="sp-sidebar-icon"><DashboardIcon name="briefcase" size={16} /></span><span>{details.role}</span></div>}
                   </>
                 )}
               </div>
@@ -780,7 +988,7 @@
                     <Spinner title="Loading posts…" subtitle="Fetching your posts" />
                   )}
                   {!postsLoading && posts.length === 0 && postsLoaded && <p className="muted sp-empty-note">No posts yet.</p>}
-                  {!postsLoading && posts.map((p) => <PostCard key={p.id} post={p} onLike={handleLike} onDelete={() => {}} isOwner={false} onOpen={setOpenPost} />)}
+                  {!postsLoading && posts.map((p) => <PostCard key={p.id} post={p} onLike={handleLike} onDelete={() => {}} onShare={handleShare} isOwner={p.author_id === currentUser.id} onOpen={setOpenPost} />)}
                   {!postsLoading && postsHasMore && (
                     <div className="sp-load-more-wrap">
                       <button type="button" className="sp-load-more-btn" onClick={() => loadPosts(posts.length)} disabled={postsLoadingMore}>
@@ -829,18 +1037,21 @@
       viewedMentorProfile, setViewedMentorProfile, mentorProfileHashId, setMentorProfileHashId,
       setActiveTab, chooseMentor, chosenMentorId, loadMe,
       viewedUserProfile, setViewedUserProfile,
-      postsFeed, postsFeedLoaded, postsFeedLoading, loadPostsFeed, setPostsFeed, postsFeedHasMore, postsFeedLoadingMore,
+      setPostsFeed,
     } = ctx;
 
     const isMentor = user.role === "mentor";
     const isMentee = user.role === "mentee";
 
     const [tab, setTab] = useState("posts");
-    const [posts, setPosts] = useState(() => postsFeed || []);
+    const [posts, setPosts] = useState([]);
     const [galleryImages, setGalleryImages] = useState([]);
     const [profileStats, setProfileStats] = useState({});
     const [posting, setPosting] = useState(false);
     const [postsLoaded, setPostsLoaded] = useState(false);
+    const [postsLoading, setPostsLoading] = useState(false);
+    const [postsHasMore, setPostsHasMore] = useState(false);
+    const [postsLoadingMore, setPostsLoadingMore] = useState(false);
     const [galleryLoaded, setGalleryLoaded] = useState(false);
     const [galleryLoading, setGalleryLoading] = useState(false);
     const [lightboxImage, setLightboxImage] = useState(null);
@@ -848,6 +1059,27 @@
     const [openPost, setOpenPost] = useState(null);
     const [showComposerModal, setShowComposerModal] = useState(false);
     const [commentsCache, setCommentsCache] = useState({});
+
+    async function loadOwnPosts(offset = 0) {
+      if (offset === 0) setPostsLoading(true);
+      else setPostsLoadingMore(true);
+      try {
+        const res = await fetchJSON(`/api/posts/?limit=10&offset=${offset}`);
+        if (res.ok) {
+          const list = res.data.posts || [];
+          if (offset === 0) setPosts(list);
+          else setPosts((prev) => [...prev, ...list]);
+          setPostsHasMore(!!res.data.has_more);
+        } else if (offset === 0) {
+          setPosts([]);
+          setPostsHasMore(false);
+        }
+      } finally {
+        setPostsLoaded(true);
+        setPostsLoading(false);
+        setPostsLoadingMore(false);
+      }
+    }
 
     async function loadGallery() {
       setGalleryLoading(true);
@@ -859,17 +1091,10 @@
     async function loadStats() { const res = await fetchJSON("/api/profile-stats/"); if (res.ok) setProfileStats(res.data || {}); }
 
     useEffect(() => {
-      if (viewedMentorProfile) return;
+      if (viewedMentorProfile || viewedUserProfile) return;
       loadStats();
-      if (postsFeedLoaded) {
-        setPosts(postsFeed || []);
-        setPostsLoaded(true);
-      } else {
-        (async () => {
-          await loadPostsFeed();
-        })();
-      }
-    }, [viewedMentorProfile, postsFeedLoaded, postsFeed]);
+      loadOwnPosts();
+    }, [viewedMentorProfile, viewedUserProfile, user.id]);
     useEffect(() => { if (tab === "gallery" && !galleryLoaded) loadGallery(); }, [tab]);
     useEffect(() => {
       if (!showComposerModal) return;
@@ -888,7 +1113,9 @@
         const res = await fetchJSON("/api/posts/create/", { method: "POST", headers: { "X-CSRFToken": getCookie("csrftoken") }, body: fd, raw: true });
         if (res.ok && res.data.post) {
           setPosts((prev) => [res.data.post, ...prev]);
-          setPostsFeed((prev) => [res.data.post, ...(prev || [])]);
+          if (typeof setPostsFeed === "function") {
+            setPostsFeed((prev) => [res.data.post, ...(prev || [])]);
+          }
           loadStats();
           if (res.data.post.image_url) setGalleryLoaded(false);
           return true;
@@ -902,14 +1129,18 @@
       if (res.ok) {
         const update = { liked_by_me: res.data.liked, likes_count: res.data.likes_count };
         setPosts((prev) => prev.map((p) => p.id === postId ? { ...p, ...update } : p));
-        setPostsFeed((prev) => (prev || []).map((p) => p.id === postId ? { ...p, ...update } : p));
+        if (typeof setPostsFeed === "function") {
+          setPostsFeed((prev) => (prev || []).map((p) => p.id === postId ? { ...p, ...update } : p));
+        }
         setOpenPost((prev) => prev && prev.id === postId ? { ...prev, ...update } : prev);
       }
     }
 
     function handlePostUpdate(postId, fields) {
       setPosts((prev) => prev.map((p) => p.id === postId ? { ...p, ...fields } : p));
-      setPostsFeed((prev) => (prev || []).map((p) => p.id === postId ? { ...p, ...fields } : p));
+      if (typeof setPostsFeed === "function") {
+        setPostsFeed((prev) => (prev || []).map((p) => p.id === postId ? { ...p, ...fields } : p));
+      }
       setOpenPost((prev) => prev && prev.id === postId ? { ...prev, ...fields } : prev);
     }
 
@@ -925,10 +1156,38 @@
       const res = await fetchJSON(`/api/posts/${postId}/delete/`, { method: "POST", headers: { "X-CSRFToken": getCookie("csrftoken") } });
       if (res.ok) {
         setPosts((prev) => prev.filter((p) => p.id !== postId));
-        setPostsFeed((prev) => (prev || []).filter((p) => p.id !== postId));
+        if (typeof setPostsFeed === "function") {
+          setPostsFeed((prev) => (prev || []).filter((p) => p.id !== postId));
+        }
         loadStats();
         setGalleryLoaded(false);
       }
+    }
+
+    async function handleShare(postId) {
+      const res = await fetchJSON(`/api/posts/${postId}/share/`, {
+        method: "POST",
+        headers: {
+          "X-CSRFToken": getCookie("csrftoken"),
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({}),
+      });
+      if (!res.ok) return false;
+      if (res.data?.post && !res.data.already_shared) {
+        if (typeof setPostsFeed === "function") {
+          setPostsFeed((prev) => [res.data.post, ...(prev || [])]);
+        }
+      }
+      if (typeof window.DashboardApp?.notify === "function") {
+        window.DashboardApp.notify(
+          res.data?.already_shared
+            ? "Already on your profile."
+            : "Shared to your profile.",
+          "success",
+        );
+      }
+      return true;
     }
 
     async function handleCoverUpload(file) {
@@ -972,16 +1231,16 @@
             <div className="sp-main-body">
               {tab === "posts" && (
                 <>
-                  {(posting || postsFeedLoading) && (
-                    <Spinner title={posting ? "Posting…" : "Loading posts…"} subtitle={posting ? "Publishing your update" : "Fetching posts"} />
+                  {(posting || postsLoading) && (
+                    <Spinner title={posting ? "Posting…" : "Loading posts…"} subtitle={posting ? "Publishing your update" : "Fetching your posts"} />
                   )}
-                  {!postsFeedLoading && <PostComposerTrigger avatarUrl={avatarUrl} username={user.display_name || user.full_name || user.username} onClick={() => setShowComposerModal(true)} />}
-                  {!postsFeedLoading && posts.length === 0 && postsLoaded && !posting && <p className="muted sp-empty-note">No posts yet. Share your first achievement or update!</p>}
-                  {!postsFeedLoading && posts.map((p) => <PostCard key={p.id} post={p} onLike={handleLike} onDelete={handleDelete} isOwner={p.author_id === user.id} onOpen={setOpenPost} />)}
-                  {!postsFeedLoading && postsFeedHasMore && (
+                  {!postsLoading && <PostComposerTrigger avatarUrl={avatarUrl} username={user.display_name || user.full_name || user.username} onClick={() => setShowComposerModal(true)} />}
+                  {!postsLoading && posts.length === 0 && postsLoaded && !posting && <p className="muted sp-empty-note">No posts yet. Share your first achievement or update!</p>}
+                  {!postsLoading && posts.map((p) => <PostCard key={p.id} post={p} onLike={handleLike} onDelete={handleDelete} onShare={handleShare} isOwner={p.author_id === user.id} onOpen={setOpenPost} />)}
+                  {!postsLoading && postsHasMore && (
                     <div className="sp-load-more-wrap">
-                      <button type="button" className="sp-load-more-btn" onClick={() => loadPostsFeed(posts.length)} disabled={postsFeedLoadingMore}>
-                        {postsFeedLoadingMore ? <Spinner inline /> : "See more posts"}
+                      <button type="button" className="sp-load-more-btn" onClick={() => loadOwnPosts(posts.length)} disabled={postsLoadingMore}>
+                        {postsLoadingMore ? <Spinner inline /> : "See more posts"}
                       </button>
                     </div>
                   )}
@@ -1041,4 +1300,11 @@
   window.DashboardApp = window.DashboardApp || {};
   window.DashboardApp.Pages = window.DashboardApp.Pages || {};
   window.DashboardApp.Pages.profile = ProfilePage;
+  window.DashboardApp.PostUI = {
+    PostComposerTrigger,
+    PostComposer,
+    PostCard,
+    PostModal,
+    ImageModal,
+  };
 })();

@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>PeerLink — Choose your role</title>
     <link rel="icon" href="/static/assets/logo.png" type="image/png" />
-    <link rel="stylesheet" href="/static/portal.css?v=9" />
+    <link rel="stylesheet" href="/static/portal.css?v=10" />
   </head>
   <body class="portal-page">
     <a href="/landing/" class="portal-landing-back" aria-label="Back to landing page">
@@ -26,8 +26,8 @@
           />
           <h1 id="portal-heading" class="portal-brand-title">Welcome to PeerLink</h1>
           <p class="portal-brand-text">
-            Bukidnon State University mentor–mentee matching. Choose how you use
-            the platform, then sign in or create an account.
+            Bukidnon State University mentor–mentee matching. Choose how you will
+            use PeerLink when creating your account.
           </p>
           <ul class="portal-brand-points">
             <li>Role-based access</li>
@@ -56,10 +56,11 @@
 
       <section class="portal-panel portal-panel--actions">
         <div id="portal-step-roles" class="portal-step portal-step--visible">
-          <p class="portal-kicker">Get started</p>
+          <p class="portal-kicker">Create an account</p>
           <h2 class="portal-step-title">Choose your role</h2>
           <p class="portal-step-sub">
-            Select the option that matches how you use PeerLink.
+            Select Mentor or Mentee to continue signing up. Staff can sign in
+            with existing credentials.
           </p>
 
           <nav class="portal-role-grid" aria-label="Select your role">
@@ -79,7 +80,7 @@
               </span>
               <span class="portal-role-text">
                 <span class="portal-role-name">Staff</span>
-                <span class="portal-role-desc">Coordinators &amp; administrators</span>
+                <span class="portal-role-desc">Sign in as coordinator or admin</span>
               </span>
             </button>
 
@@ -125,35 +126,11 @@
           </nav>
 
           <p class="portal-footnote">
-            <a href="/landing/">Learn more about PeerLink</a>
+            Already have an account?
+            <a href="/app/#signin">Sign in</a>
+            <span aria-hidden="true"> · </span>
+            <a href="/landing/">Learn more</a>
           </p>
-        </div>
-
-        <div id="portal-step-auth" class="portal-step" hidden>
-          <button type="button" id="portal-back-btn" class="portal-back-btn" aria-label="Back">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M15 18l-6-6 6-6" />
-            </svg>
-          </button>
-
-          <p class="portal-kicker">Continue</p>
-          <h2 class="portal-step-title">Almost there</h2>
-          <p class="portal-step-sub">
-            You selected
-            <strong id="portal-selected-role" class="portal-selected-role"></strong>
-          </p>
-
-          <nav class="portal-auth-actions" aria-label="Sign in or sign up">
-            <a id="portal-signin-btn" class="portal-btn portal-btn--primary" href="/app/#signin"
-              >Sign in</a
-            >
-            <a
-              id="portal-signup-btn"
-              class="portal-btn portal-btn--secondary"
-              href="/app/#signup"
-              >Create account</a
-            >
-          </nav>
         </div>
       </section>
     </main>
@@ -165,6 +142,6 @@
         <a href="https://www.facebook.com/buksuAMU" target="_blank" rel="noopener noreferrer">Facebook</a>
       </p>
     </footer>
-    <script src="/static/portal.js?v=4"></script>
+    <script src="/static/portal.js?v=5"></script>
   </body>
 </html>

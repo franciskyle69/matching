@@ -25,6 +25,21 @@
         <polyline points="9 22 9 12 15 12 15 22" />
       </svg>
     ),
+    newsfeed: (
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        aria-hidden="true"
+      >
+        <path d="M4 4h16v16H4z" />
+        <path d="M4 9h16" />
+        <path d="M9 4v16" />
+      </svg>
+    ),
     profile: (
       <svg
         viewBox="0 0 24 24"
@@ -270,6 +285,7 @@
       user,
       activeTab,
       setActiveTab,
+      requestTabChange,
       unreadCount,
       theme,
       toggleTheme,
@@ -341,6 +357,7 @@
       }
     };
     const goTo = (tabId) => {
+      const changeTab = ctx.requestTabChange || setActiveTab;
       if (isPendingApproval) {
         const allowedPendingTabs = new Set([
           "onboarding",
@@ -350,13 +367,13 @@
           "settings",
         ]);
         if (!allowedPendingTabs.has(tabId)) {
-          setActiveTab(getPendingApprovalLandingTab(user));
+          changeTab(getPendingApprovalLandingTab(user));
           window.scrollTo(0, 0);
           closeMobileMenu();
           return;
         }
       }
-      setActiveTab(tabId);
+      changeTab(tabId);
       window.scrollTo(0, 0);
       closeMobileMenu();
     };
@@ -394,7 +411,10 @@
       if (tab.id === "mentoring-preferences") return user?.role === "mentee";
       if (tab.id === "mentor-matching-profile") return user?.role === "mentor";
       if (tab.id === "mentees") return user?.role === "mentor";
-      if (tab.id === "subjects") return isStaff;
+      if (tab.id === "profile") return !isStaff;
+      if (tab.id === "newsfeed") {
+        return !!(window.DashboardApp.FEATURE_NEWSFEED && !isStaff);
+      }
       if (tab.id === "users") return isStaff;
       if (tab.id === "activity-logs") return isStaff;
       if (tab.id === "backup") return isStaff;
@@ -411,12 +431,12 @@
     });
     const dashboardTab = filteredTabs.find((tab) => tab.id === "home");
     const activityTabIds = new Set([
+      "newsfeed",
       "matching",
       "mentees",
       "announcements",
       "notifications",
       "approvals",
-      "subjects",
       "users",
       "activity-logs",
       "backup",
@@ -438,6 +458,18 @@
     const baseShortcuts = isPendingApproval
       ? []
       : [
+          ...(window.DashboardApp.FEATURE_NEWSFEED
+            ? [
+                {
+                  id: "newsfeed",
+                  label: "Go to Newsfeed",
+                  hint: "See posts from mentors and mentees",
+                  roles: ["mentor", "mentee"],
+                  type: "shortcut",
+                  actionTab: "newsfeed",
+                },
+              ]
+            : []),
           {
             id: "matching",
             label: "Go to Matching",
@@ -509,13 +541,6 @@
             roles: ["staff"],
             action: () => goTo("approvals"),
           },
-          {
-            id: "subjects",
-            label: "Manage subjects",
-            hint: "Edit available subjects and competencies",
-            roles: ["staff"],
-            action: () => goTo("subjects"),
-          },
         ].filter((item) => {
           if (!role && !isStaff) return true;
           if (isStaff) return item.roles.includes("staff");
@@ -577,10 +602,10 @@
       if (isPendingApproval) return;
       if (item.type === "shortcut" || item.actionTab) {
         const tab = item.actionTab || "home";
-        setActiveTab(tab);
+        goTo(tab);
       } else if (item.type === "user") {
         if (item.id === user?.id) {
-          setActiveTab("profile");
+          goTo(isStaff ? "settings" : "profile");
         } else if (typeof loadUserProfile === "function") {
           loadUserProfile(item.id);
         }
@@ -1078,9 +1103,9 @@
                     <button
                       type="button"
                       className="app-topbar-avatar-btn"
-                      onClick={() => goTo("profile")}
-                      aria-label="Open profile"
-                      title="Profile"
+                      onClick={() => goTo(isStaff ? "settings" : "profile")}
+                      aria-label={isStaff ? "Open settings" : "Open profile"}
+                      title={isStaff ? "Settings" : "Profile"}
                     >
                       <div className="sidebar-avatar-wrapper">
                         {user.avatar_url ? (

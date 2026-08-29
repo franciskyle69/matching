@@ -42,8 +42,13 @@
   ];
 
   // Central route / tab configuration
+  // Newsfeed is temporarily hidden (set true to restore nav + deep links).
+  const FEATURE_NEWSFEED = false;
   const ROUTES = [
     { id: "home", label: "Dashboard", role: "any" },
+    ...(FEATURE_NEWSFEED
+      ? [{ id: "newsfeed", label: "Newsfeed", role: "non-staff" }]
+      : []),
     { id: "profile", label: "Profile", role: "any" },
     { id: "onboarding", label: "Onboarding", role: "non-staff" },
     { id: "complete-profile", label: "Complete profile", role: "any" },
@@ -62,13 +67,13 @@
     { id: "announcements", label: "Announcements", role: "any" },
     { id: "notifications", label: "Notifications", role: "any" },
     { id: "approvals", label: "User approvals", role: "staff" },
-    { id: "subjects", label: "Subjects", role: "staff" },
     { id: "users", label: "Users", role: "staff" },
     { id: "activity-logs", label: "Activity Logs", role: "staff" },
     { id: "backup", label: "Backup & Restore", role: "staff" },
     { id: "settings", label: "Settings", role: "any" },
   ];
 
+  window.DashboardApp.FEATURE_NEWSFEED = FEATURE_NEWSFEED;
   window.DashboardApp.ROUTES = ROUTES;
   window.DashboardApp.MAIN_TABS = ROUTES.map(({ id, label }) => ({
     id,

@@ -11,8 +11,10 @@ window.DashboardApp = window.DashboardApp || {};
 async function loadDashboardModules() {
 	await import("./lib/constants.jsx");
 	await import("./components/SubjectCategoryPicker.jsx");
+	await import("./components/TimePickerField.jsx");
 	await import("./components/AmuFooter.jsx");
 	await import("./lib/utils.jsx");
+	await import("./lib/selectionCatalog.jsx");
 	await import("./context.jsx");
 	await import("./router/pages/AllPages.jsx");
 	await import("./router/pages/AuthPages.jsx");
@@ -21,12 +23,12 @@ async function loadDashboardModules() {
 	await import("./router/pages/AnnouncementsPage.jsx");
 	await import("./router/pages/NotificationsPage.jsx");
 	await import("./router/pages/ApprovalsPage.jsx");
-	await import("./router/pages/SubjectsPage.jsx");
 	await import("./router/pages/ActivityLogsPage.jsx");
 	await import("./router/pages/BackupPage.jsx");
 	await import("./router/pages/UsersPage.jsx");
 	await import("./router/pages/SettingsPage.jsx");
 	await import("./router/pages/ProfilePage.jsx");
+	await import("./router/pages/NewsfeedPage.jsx");
 	await import("./router/pages/MentorProfilePage.jsx");
 	await import("./router/pages/CompleteProfilePage.jsx");
 	await import("./router/pages/MentoringPreferencesPage.jsx");

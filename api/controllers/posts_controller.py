@@ -23,12 +23,12 @@ def _get_author_avatar(user):
     return ""
 
 
-def _serialize_post(post, request_user=None):
+def _serialize_post_core(post, request_user=None, *, include_shared=True):
     image_url = ""
     if post.image:
         image_url = post.image.url
     author_display_name = get_user_display_name(post.author) or post.author.username
-    return {
+    payload = {
         "id": post.id,
         "author_id": post.author_id,
         "author_username": post.author.username,
@@ -38,10 +38,27 @@ def _serialize_post(post, request_user=None):
         "image_url": image_url,
         "category": post.category,
         "likes_count": post.likes.count(),
-        "liked_by_me": request_user.id in post.likes.values_list("id", flat=True) if request_user else False,
+        "liked_by_me": (
+            request_user.id in post.likes.values_list("id", flat=True)
+            if request_user
+            else False
+        ),
         "comments_count": post.comments.count(),
         "created_at": post.created_at.isoformat(),
+        "is_share": bool(post.shared_from_id),
+        "shared_from_id": post.shared_from_id,
+        "shared_from": None,
     }
+    if include_shared and post.shared_from_id and post.shared_from:
+        # Nested original only — avoid deep recursion if someone shared a share.
+        payload["shared_from"] = _serialize_post_core(
+            post.shared_from, request_user, include_shared=False
+        )
+    return payload
+
+
+def _serialize_post(post, request_user=None):
+    return _serialize_post_core(post, request_user, include_shared=True)
 
 
 def _serialize_comment(comment):
@@ -55,6 +72,14 @@ def _serialize_comment(comment):
         "content": comment.content,
         "created_at": comment.created_at.isoformat(),
     }
+
+
+def _posts_queryset():
+    return UserPost.objects.select_related(
+        "author",
+        "shared_from",
+        "shared_from__author",
+    )
 
 
 POSTS_PAGE_SIZE = 10
@@ -73,9 +98,9 @@ def posts_list(request):
 
     user_id = request.GET.get("user_id")
     if user_id:
-        qs = UserPost.objects.filter(author_id=int(user_id)).select_related("author").order_by("-created_at")
+        qs = _posts_queryset().filter(author_id=int(user_id)).order_by("-created_at")
     else:
-        qs = UserPost.objects.filter(author=request.user).select_related("author").order_by("-created_at")
+        qs = _posts_queryset().filter(author=request.user).order_by("-created_at")
 
     total = qs.count()
     posts = list(qs[offset : offset + limit + 1])
@@ -92,35 +117,9 @@ def posts_list(request):
 @login_required
 @require_GET
 def posts_feed(request):
-    """Feed: posts from the current user and their mentoring connections."""
+    """Newsfeed: all posts from the community, newest first (Facebook-style)."""
     user = request.user
-    connected_ids = set()
-    connected_ids.add(user.id)
-
-    mentor_profile = getattr(user, "mentor_profile", None)
-    mentee_profile = getattr(user, "mentee_profile", None)
-
-    if mentor_profile:
-        mentee_user_ids = (
-            MenteeMentorRequest.objects.filter(mentor=mentor_profile, accepted=True)
-            .select_related("mentee__user")
-            .values_list("mentee__user_id", flat=True)
-        )
-        connected_ids.update(mentee_user_ids)
-
-    if mentee_profile:
-        mentor_user_ids = (
-            MenteeMentorRequest.objects.filter(mentee=mentee_profile, accepted=True)
-            .select_related("mentor__user")
-            .values_list("mentor__user_id", flat=True)
-        )
-        connected_ids.update(mentor_user_ids)
-
-    qs = (
-        UserPost.objects.filter(author_id__in=connected_ids)
-        .select_related("author")
-        .order_by("-created_at")
-    )
+    qs = _posts_queryset().order_by("-created_at")
     try:
         limit = min(int(request.GET.get("limit", POSTS_PAGE_SIZE)), POSTS_MAX_PAGE_SIZE)
         offset = max(0, int(request.GET.get("offset", 0)))
@@ -163,10 +162,62 @@ def post_create(request):
 
 
 @login_required
+@require_http_methods(["POST"])
+def post_share(request, post_id):
+    """Share another user's post onto the current user's profile (and newsfeed)."""
+    source = (
+        _posts_queryset()
+        .filter(id=post_id)
+        .first()
+    )
+    if not source:
+        return JsonResponse({"error": "Post not found."}, status=404)
+
+    original = source.root_post()
+    if original.author_id == request.user.id:
+        return JsonResponse({"error": "You cannot share your own post."}, status=400)
+
+    existing = (
+        UserPost.objects.filter(author=request.user, shared_from=original)
+        .select_related("author", "shared_from", "shared_from__author")
+        .first()
+    )
+    if existing:
+        return JsonResponse({
+            "post": _serialize_post(existing, request.user),
+            "already_shared": True,
+        })
+
+    payload = _get_payload(request)
+    caption = (_get_str(payload, "text") or "").strip()
+    share = UserPost.objects.create(
+        author=request.user,
+        text=caption,
+        category="update",
+        shared_from=original,
+    )
+    audit_log(request.user, "share", "post", share.id)
+    logger.info(
+        "post_shared",
+        extra={
+            "share_id": share.id,
+            "original_id": original.id,
+            "user_id": request.user.id,
+        },
+    )
+    share = (
+        _posts_queryset()
+        .filter(id=share.id)
+        .first()
+    )
+    return JsonResponse({"post": _serialize_post(share, request.user), "already_shared": False})
+
+
+@login_required
 @require_GET
 def post_detail(request, post_id):
     """Return a single post by id (e.g. for opening from gallery)."""
-    post = UserPost.objects.filter(id=post_id).select_related("author").first()
+    post = _posts_queryset().filter(id=post_id).first()
     if not post:
         return JsonResponse({"error": "Post not found."}, status=404)
     return JsonResponse({"post": _serialize_post(post, request.user)})
@@ -212,7 +263,7 @@ def gallery(request):
     """Return all image posts for a user (gallery view)."""
     user_id = request.GET.get("user_id", request.user.id)
     posts = (
-        UserPost.objects.filter(author_id=int(user_id))
+        UserPost.objects.filter(author_id=int(user_id), shared_from__isnull=True)
         .exclude(image="")
         .exclude(image__isnull=True)
         .select_related("author")
@@ -239,18 +290,21 @@ def profile_stats(request):
     user_id = int(request.GET.get("user_id", request.user.id))
     posts_count = UserPost.objects.filter(author_id=user_id).count()
 
-    mentor_profile = getattr(request.user, "mentor_profile", None) if user_id == request.user.id else None
-    mentee_profile = getattr(request.user, "mentee_profile", None) if user_id == request.user.id else None
-
     connections = 0
-
-    if mentor_profile:
-        connections = MenteeMentorRequest.objects.filter(mentor=mentor_profile, accepted=True).count()
-    elif mentee_profile:
-        connections = MenteeMentorRequest.objects.filter(mentee=mentee_profile, accepted=True).count()
+    if user_id == request.user.id:
+        mentor_profile = getattr(request.user, "mentor_profile", None)
+        mentee_profile = getattr(request.user, "mentee_profile", None)
+        if mentor_profile:
+            connections = MenteeMentorRequest.objects.filter(
+                mentor=mentor_profile, accepted=True
+            ).count()
+        elif mentee_profile:
+            connections = MenteeMentorRequest.objects.filter(
+                mentee=mentee_profile, accepted=True
+            ).count()
 
     images_count = (
-        UserPost.objects.filter(author_id=user_id)
+        UserPost.objects.filter(author_id=user_id, shared_from__isnull=True)
         .exclude(image="")
         .exclude(image__isnull=True)
         .count()

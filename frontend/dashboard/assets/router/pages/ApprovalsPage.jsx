@@ -48,14 +48,6 @@
     return `${base}#page=${page}&zoom=${zoom}`;
   }
 
-  function getApprovalsProgramLabel() {
-    return "BSIT";
-  }
-
-  function getApprovalsYearLabel() {
-    return "1st Year";
-  }
-
   function StatusBadge({ complete }) {
     if (complete) {
       return (
@@ -133,6 +125,59 @@
     );
   }
 
+  const VERIFICATION_DOC_GROUPS = [
+    ["letter_of_intent", "Letter of intent"],
+    ["study_load", "Study load"],
+    ["grade", "Grade"],
+    ["application", "Application form"],
+  ];
+
+  function VerificationDocumentsBlock({ profile, onPreview }) {
+    const grouped = profile?.verification_documents_by_kind || {};
+    const groups = VERIFICATION_DOC_GROUPS.map(([kind, label]) => ({
+      kind,
+      label,
+      docs: grouped[kind] || [],
+    })).filter((group) => group.docs.length);
+    if (groups.length) {
+      return groups.map((group) => (
+        <div key={group.kind} className="approval-secondary-doc">
+          <p className="approval-subtle-label">{group.label}</p>
+          <div className="approval-document-list">
+            {group.docs.map((doc, index) => (
+              <DocumentPreviewCard
+                key={doc.id || `${group.kind}-${index}`}
+                href={doc.url}
+                text={doc.name || group.label}
+                onView={() => onPreview(doc.url, doc.name, 1)}
+              />
+            ))}
+          </div>
+        </div>
+      ));
+    }
+    if (!profile?.verification_document_url) return null;
+    return (
+      <div className="approval-secondary-doc">
+        <p className="approval-subtle-label">Verification document</p>
+        <DocumentPreviewCard
+          href={profile.verification_document_url}
+          text={profile.verification_document_name || "Verification document"}
+          onView={() =>
+            onPreview(
+              profile.verification_document_url,
+              profile.verification_document_name,
+              profile.verification_document_pages ||
+                profile.verification_page_count ||
+                profile.total_pages ||
+                1,
+            )
+          }
+        />
+      </div>
+    );
+  }
+
   function DetailChip({ label, value }) {
     if (value == null || value === "") return null;
     const text = Array.isArray(value) ? value.join(", ") : String(value);
@@ -167,7 +212,24 @@
       m.email ||
       "Unknown user";
     const initials = getInitials(displayName, m.email || m.username);
-    const summary = `${getApprovalsProgramLabel()} • ${getApprovalsYearLabel()}`;
+    const yearLabel =
+      type === "mentor" &&
+      m.role === "Senior IT Student" &&
+      m.year_level
+        ? Number(m.year_level) === 3
+          ? "3rd year"
+          : Number(m.year_level) === 4
+            ? "4th year"
+            : `Year ${m.year_level}`
+        : "";
+    const summary =
+      type === "mentor"
+        ? m.role === "Instructor"
+          ? "Instructor"
+          : [m.role === "Senior IT Student" ? "Student mentor" : m.role, yearLabel]
+              .filter(Boolean)
+              .join(" • ")
+        : [m.campus, m.admission_type].filter(Boolean).join(" • ");
 
     return (
       <article className="approval-row" onClick={() => setExpanded((v) => !v)}>
@@ -194,7 +256,7 @@
           </div>
 
           <div className="approval-row-summary">
-            {summary || "No profile summary"}
+            {summary || "—"}
           </div>
 
           <div className="approval-row-right">
@@ -243,35 +305,28 @@
             className="approval-row-secondary"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="approval-secondary-doc">
-              <p className="approval-subtle-label">Verification document</p>
-              <DocumentPreviewCard
-                href={m.verification_document_url}
-                text={m.verification_document_name || "Verification document"}
-                onView={() =>
-                  onPreview(
-                    m.verification_document_url,
-                    m.verification_document_name,
-                    m.verification_document_pages ||
-                      m.verification_page_count ||
-                      m.total_pages ||
-                      1,
-                  )
-                }
-              />
-            </div>
+            <VerificationDocumentsBlock profile={m} onPreview={onPreview} />
 
             <div className="approval-secondary-details">
               <p className="approval-subtle-label">User details</p>
               <div className="approval-detail-chip-grid">
-                <DetailChip
-                  label="Program"
-                  value={getApprovalsProgramLabel()}
-                />
-                <DetailChip label="Year" value={getApprovalsYearLabel()} />
                 {type === "mentor" && (
                   <DetailChip label="Role" value={m.role} />
                 )}
+                {type === "mentor" &&
+                  m.role === "Senior IT Student" &&
+                  m.year_level ? (
+                  <DetailChip
+                    label="Year"
+                    value={
+                      Number(m.year_level) === 3
+                        ? "3rd year"
+                        : Number(m.year_level) === 4
+                          ? "4th year"
+                          : `Year ${m.year_level}`
+                    }
+                  />
+                ) : null}
                 {type === "mentor" && (
                   <DetailChip label="Expertise" value={m.expertise_level} />
                 )}

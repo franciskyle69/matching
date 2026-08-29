@@ -34,17 +34,84 @@ import { Alert as MuiAlert } from "@mui/material";
   function navigateAuthTab(setActiveTab, tab) {
     setActiveTab(tab);
     const params = new URLSearchParams();
-    const portalRole = getPortalAuthRole();
-    if (portalRole) params.set("role", portalRole);
+    // Role belongs to signup only; sign-in stays role-neutral.
+    if (tab === "signup") {
+      const portalRole = getPortalAuthRole();
+      if (portalRole) params.set("role", portalRole);
+    }
     const qs = params.toString() ? `?${params.toString()}` : "";
     window.history.replaceState(null, "", `/app/${qs}#${tab}`);
   }
 
+  const STUDENT_MENTOR_DOC_FIELDS = [
+    { key: "letter_of_intent", label: "Letter of intent" },
+    { key: "study_load", label: "Study load" },
+    { key: "grade", label: "Grade" },
+  ];
+  const MAX_SIGNUP_FILES_PER_KIND = 10;
+
+  function fileKey(file) {
+    return [file.name, file.size, file.lastModified].join(":");
+  }
+
+  function mergeSelectedFiles(current, incoming) {
+    const next = Array.isArray(current) ? current.slice() : [];
+    const seen = new Set(next.map(fileKey));
+    incoming.forEach((file) => {
+      if (!file || seen.has(fileKey(file))) return;
+      if (next.length >= MAX_SIGNUP_FILES_PER_KIND) return;
+      next.push(file);
+      seen.add(fileKey(file));
+    });
+    return next;
+  }
+
+  function MultiFileField({ id, label, files, onChange, required }) {
+    const selected = Array.isArray(files) ? files : [];
+    return (
+      <div className="auth-field">
+        <label htmlFor={id}>
+          {label}
+          {required ? " *" : ""}
+        </label>
+        <input
+          id={id}
+          type="file"
+          multiple
+          accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg"
+          onChange={(e) => {
+            const added = Array.from(e.target.files || []);
+            onChange(mergeSelectedFiles(selected, added));
+            e.target.value = "";
+          }}
+        />
+        <small className="auth-field-helper">
+          You can select multiple files at once. PDF, JPG, or PNG. Max 5 MB each.
+        </small>
+        {selected.length > 0 && (
+          <ul className="auth-file-list">
+            {selected.map((file, index) => (
+              <li key={fileKey(file)} className="auth-file-list-item">
+                <span title={file.name}>{file.name}</span>
+                <button
+                  type="button"
+                  className="auth-file-remove"
+                  onClick={() =>
+                    onChange(selected.filter((_, itemIndex) => itemIndex !== index))
+                  }
+                >
+                  Remove
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    );
+  }
+
   function getGoogleLoginUrl() {
-    const portalRole = getPortalAuthRole();
-    if (portalRole === "mentor" || portalRole === "mentee") {
-      return `/accounts/google/role/${portalRole}/`;
-    }
+    // Sign-in does not use a portal role; Google login is account-based.
     return "/accounts/google/login/?process=login&next=/app/signin%3Foauth%3Dgoogle";
   }
 
@@ -70,8 +137,6 @@ import { Alert as MuiAlert } from "@mui/material";
       user &&
       ((user.role === "mentor" && user.mentor_approved === false) ||
         (user.role === "mentee" && user.mentee_approved === false));
-    const portalRoleLabel = getPortalRoleLabel();
-    const portalAuthRole = getPortalAuthRole();
     const isAuthLoading = signInLoading;
 
     function goBackToLanding() {
@@ -147,9 +212,7 @@ import { Alert as MuiAlert } from "@mui/material";
             </button>
             <h2 className="auth-title">Login</h2>
             <p className="auth-subtitle">
-              {portalRoleLabel
-                ? `Sign in as ${portalRoleLabel}`
-                : "Welcome back! Please sign in to your account"}
+              Welcome back! Please sign in to your account
             </p>
             <form
               className="auth-form"
@@ -304,25 +367,10 @@ import { Alert as MuiAlert } from "@mui/material";
                     <p className="auth-subtitle" style={{ marginBottom: "0.75rem" }}>
                       Choose your role first to continue with Google.
                     </p>
-                    <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
-                      <a
-                        className="auth-social-btn"
-                        href="/accounts/google/role/mentor/"
-                      >
-                        Continue as Mentor
-                      </a>
-                      <a
-                        className="auth-social-btn"
-                        href="/accounts/google/role/mentee/"
-                      >
-                        Continue as Mentee
-                      </a>
-                    </div>
+                    <a className="auth-social-btn" href="/portal/">
+                      Choose role to sign up
+                    </a>
                   </div>
-                ) : portalAuthRole === "staff" ? (
-                  <p className="auth-subtitle" style={{ margin: 0 }}>
-                    Staff accounts use administrator credentials.
-                  </p>
                 ) : pendingApproval ? (
                   <div className="auth-social" style={{ width: "100%" }}>
                     <p className="auth-subtitle" style={{ marginBottom: "0.75rem" }}>
@@ -366,18 +414,18 @@ import { Alert as MuiAlert } from "@mui/material";
                   </button>
                 )}
               </div>
-              {portalAuthRole !== "staff" && (
-                <div className="auth-footer">
-                  Don't have an account?{" "}
-                  <button
-                    type="button"
-                    className="link-button"
-                    onClick={() => navigateAuthTab(setActiveTab, "signup")}
-                  >
-                    Sign up
-                  </button>
-                </div>
-              )}
+              <div className="auth-footer">
+                Don't have an account?{" "}
+                <button
+                  type="button"
+                  className="link-button"
+                  onClick={() => {
+                    window.location.href = "/portal/";
+                  }}
+                >
+                  Sign up
+                </button>
+              </div>
             </form>
           </div>
         </div>
@@ -390,12 +438,15 @@ import { Alert as MuiAlert } from "@mui/material";
     if (!ctx) return null;
     const [showPassword1, setShowPassword1] = useState(false);
     const [showPassword2, setShowPassword2] = useState(false);
+    const [signupStep, setSignupStep] = useState(1);
     const {
       signUpForm,
       setSignUpForm,
       handleSignUp,
       setActiveTab,
       signUpLoading,
+      authAlert,
+      setAuthAlert,
     } = ctx;
     const portalRoleLabel = getPortalRoleLabel();
     const portalAuthRole = getPortalAuthRole();
@@ -417,6 +468,68 @@ import { Alert as MuiAlert } from "@mui/material";
 
     function goBackToLanding() {
       window.location.href = "/landing/";
+    }
+
+    function goToSignupStep(step) {
+      setAuthAlert(null);
+      setSignupStep(step);
+    }
+
+    function goToSignupStep2() {
+      const firstName = String(signUpForm.first_name || "").trim();
+      const lastName = String(signUpForm.last_name || "").trim();
+      const email = String(signUpForm.email || "").trim();
+      const password1 = String(signUpForm.password1 || "");
+      const password2 = String(signUpForm.password2 || "");
+      if (!firstName) {
+        setAuthAlert({
+          severity: "error",
+          title: "First name required",
+          message: "Enter your first name to continue.",
+        });
+        return;
+      }
+      if (!lastName) {
+        setAuthAlert({
+          severity: "error",
+          title: "Last name required",
+          message: "Enter your last name to continue.",
+        });
+        return;
+      }
+      if (!email) {
+        setAuthAlert({
+          severity: "error",
+          title: "Email required",
+          message: "Enter your email address to continue.",
+        });
+        return;
+      }
+      if (!password1) {
+        setAuthAlert({
+          severity: "error",
+          title: "Password required",
+          message: "Create a password to continue.",
+        });
+        return;
+      }
+      if (!password2) {
+        setAuthAlert({
+          severity: "error",
+          title: "Confirm password required",
+          message: "Confirm your password to continue.",
+        });
+        return;
+      }
+      if (password1 !== password2) {
+        setAuthAlert({
+          severity: "error",
+          title: "Passwords do not match",
+          message: "Make sure both password fields are the same.",
+        });
+        return;
+      }
+      goToSignupStep(2);
     }
 
     return (
@@ -469,9 +582,23 @@ import { Alert as MuiAlert } from "@mui/material";
             <button
               type="button"
               className="auth-back-btn"
-              onClick={goBackToLanding}
-              aria-label="Back to landing page"
-              title="Back to landing page"
+              onClick={() => {
+                if (signupStep === 2) {
+                  goToSignupStep(1);
+                  return;
+                }
+                goBackToLanding();
+              }}
+              aria-label={
+                signupStep === 2
+                  ? "Back to account details"
+                  : "Back to landing page"
+              }
+              title={
+                signupStep === 2
+                  ? "Back to account details"
+                  : "Back to landing page"
+              }
             >
               <svg
                 className="auth-back-icon"
@@ -488,17 +615,63 @@ import { Alert as MuiAlert } from "@mui/material";
             </button>
             <h2 className="auth-title">Sign Up</h2>
             <p className="auth-subtitle">
-              {portalRoleLabel
-                ? `Create your ${portalRoleLabel} account`
-                : "Create your account to get started"}
+              {signupStep === 1
+                ? portalRoleLabel
+                  ? `Create your ${portalRoleLabel} account`
+                  : "Create your account to get started"
+                : "Finish your application for coordinator review"}
             </p>
+            <div className="auth-step-meta" aria-hidden="true">
+              <span
+                className={
+                  "auth-step-dot" + (signupStep === 1 ? " is-active" : "")
+                }
+              />
+              <span
+                className={
+                  "auth-step-dot" + (signupStep === 2 ? " is-active" : "")
+                }
+              />
+              <span className="auth-step-label">
+                Step {signupStep} of 2
+              </span>
+            </div>
             <form
               className="auth-form"
               onSubmit={(e) => {
                 e.preventDefault();
+                if (signupStep === 1) {
+                  goToSignupStep2();
+                  return;
+                }
                 handleSignUp();
               }}
             >
+              {authAlert &&
+                (MuiAlert ? (
+                  <MuiAlert
+                    severity={authAlert.severity || "error"}
+                    variant="filled"
+                    onClose={() => setAuthAlert(null)}
+                    sx={{ mb: 1, alignItems: "flex-start" }}
+                  >
+                    <div className="auth-alert-content">
+                      <p className="auth-alert-title">
+                        {authAlert.title || "Sign up issue"}
+                      </p>
+                      <p className="auth-alert-message">{authAlert.message}</p>
+                    </div>
+                  </MuiAlert>
+                ) : (
+                  <div className="alert auth-inline-alert alert-error" role="alert">
+                    <p className="auth-alert-title">
+                      {authAlert.title || "Sign up issue"}
+                    </p>
+                    <p className="auth-alert-message">{authAlert.message}</p>
+                  </div>
+                ))}
+              {signupStep === 2 && (
+                <>
               <div className="auth-field">
                 <p className="auth-field-label">Role</p>
                 <p
@@ -517,15 +690,14 @@ import { Alert as MuiAlert } from "@mui/material";
                     (signUpForm.role === "mentee" ? "Mentee" : "Mentor")}
                 </p>
                 <small className="auth-field-helper">
-                  This role is selected from the role portal.
+                  This role was selected when you started creating your account.
                 </small>
               </div>
               {isMentorSignup && (
                 <div className="auth-field">
                   <label id="signup-mentor-type-label">Mentor type *</label>
-                  <p className="muted" style={{ margin: "0 0 10px" }}>
-                    Coordinators use this to verify whether you are a student
-                    mentor or an instructor.
+                  <p className="muted" style={{ margin: "0 0 8px" }}>
+                    Student mentor or instructor.
                   </p>
                   <div
                     className="auth-mentor-type-picker"
@@ -548,6 +720,10 @@ import { Alert as MuiAlert } from "@mui/material";
                             setSignUpForm({
                               ...signUpForm,
                               mentor_role: option.value,
+                              year_level:
+                                option.value === "Senior IT Student"
+                                  ? signUpForm.year_level
+                                  : "",
                             })
                           }
                         >
@@ -563,8 +739,80 @@ import { Alert as MuiAlert } from "@mui/material";
                   </div>
                 </div>
               )}
+              {isMentorSignup &&
+                signUpForm.mentor_role === "Senior IT Student" && (
+                <div className="auth-field">
+                  <label id="signup-year-level-label">Year level *</label>
+                  <p className="muted" style={{ margin: "0 0 8px" }}>
+                    Locked after coordinator approval.
+                  </p>
+                  <div
+                    className="auth-mentor-type-picker"
+                    role="radiogroup"
+                    aria-labelledby="signup-year-level-label"
+                  >
+                    {[
+                      { value: 3, title: "3rd year" },
+                      { value: 4, title: "4th year" },
+                    ].map((option) => {
+                      const active =
+                        Number(signUpForm.year_level) === option.value;
+                      return (
+                        <button
+                          key={option.value}
+                          type="button"
+                          role="radio"
+                          aria-checked={active}
+                          className={
+                            "auth-mentor-type-option" +
+                            (active ? " is-active" : "")
+                          }
+                          onClick={() =>
+                            setSignUpForm({
+                              ...signUpForm,
+                              year_level: option.value,
+                            })
+                          }
+                        >
+                          <span className="auth-mentor-type-option-title">
+                            {option.title}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+              {isMentorSignup && (
+                <div className="auth-field">
+                  <label htmlFor="signup-gender">Biological sex *</label>
+                  <p className="muted" style={{ margin: "0 0 8px" }}>
+                    Locked after coordinator approval.
+                  </p>
+                  <select
+                    id="signup-gender"
+                    value={signUpForm.gender || ""}
+                    onChange={(e) =>
+                      setSignUpForm({
+                        ...signUpForm,
+                        gender: e.target.value,
+                      })
+                    }
+                    required
+                  >
+                    <option value="">Select biological sex</option>
+                    <option value="male">Male</option>
+                    <option value="female">Female</option>
+                  </select>
+                </div>
+              )}
+                </>
+              )}
+              {signupStep === 1 && (
+                <>
+              <div className="auth-name-row">
               <div className="auth-field">
-                <label htmlFor="signup-first-name">First name</label>
+                <label htmlFor="signup-first-name">First name *</label>
                 <input
                   id="signup-first-name"
                   autoComplete="given-name"
@@ -573,7 +821,24 @@ import { Alert as MuiAlert } from "@mui/material";
                   onChange={(e) =>
                     setSignUpForm({ ...signUpForm, first_name: e.target.value })
                   }
+                  required
+                  aria-required="true"
                 />
+              </div>
+              <div className="auth-field">
+                <label htmlFor="signup-last-name">Last name *</label>
+                <input
+                  id="signup-last-name"
+                  autoComplete="family-name"
+                  placeholder="Last name"
+                  value={signUpForm.last_name}
+                  onChange={(e) =>
+                    setSignUpForm({ ...signUpForm, last_name: e.target.value })
+                  }
+                  required
+                  aria-required="true"
+                />
+              </div>
               </div>
               <div className="auth-field">
                 <label htmlFor="signup-middle-name">Middle name</label>
@@ -588,19 +853,7 @@ import { Alert as MuiAlert } from "@mui/material";
                 />
               </div>
               <div className="auth-field">
-                <label htmlFor="signup-last-name">Last name</label>
-                <input
-                  id="signup-last-name"
-                  autoComplete="family-name"
-                  placeholder="Last name"
-                  value={signUpForm.last_name}
-                  onChange={(e) =>
-                    setSignUpForm({ ...signUpForm, last_name: e.target.value })
-                  }
-                />
-              </div>
-              <div className="auth-field">
-                <label htmlFor="signup-email">Email</label>
+                <label htmlFor="signup-email">Email *</label>
                 <input
                   id="signup-email"
                   type="email"
@@ -610,34 +863,56 @@ import { Alert as MuiAlert } from "@mui/material";
                   onChange={(e) =>
                     setSignUpForm({ ...signUpForm, email: e.target.value })
                   }
-                />
-              </div>
-              <div className="auth-field">
-                <label htmlFor="signup-verification-file">Academic mentoring application form</label>
-                <input
-                  id="signup-verification-file"
-                  type="file"
-                  accept=".pdf,.png,.jpg,.jpeg"
                   required
-                  onChange={(e) => {
-                    const file = e.target.files && e.target.files[0] ? e.target.files[0] : null;
-                    setSignUpForm({
-                      ...signUpForm,
-                      student_verification_document: file,
-                    });
-                  }}
+                  aria-required="true"
                 />
-                <small className="auth-field-helper">
-                  Upload your completed academic mentoring application form for account review (PDF/JPG/PNG, max 5 MB).
-                </small>
-                {signUpForm.student_verification_document && (
-                  <small className="auth-field-helper">
-                    Selected: {signUpForm.student_verification_document.name}
-                  </small>
-                )}
               </div>
+                </>
+              )}
+              {signupStep === 2 && (
+                isMentorSignup &&
+                signUpForm.mentor_role === "Senior IT Student" ? (
+                  <>
+                    <p className="auth-field-label">Required documents *</p>
+                    <small className="auth-field-helper">
+                      Upload at least one file for each type. You can select
+                      multiple files at once.
+                    </small>
+                    {STUDENT_MENTOR_DOC_FIELDS.map((field) => (
+                      <MultiFileField
+                        key={field.key}
+                        id={`signup-${field.key}`}
+                        label={field.label}
+                        files={signUpForm[field.key]}
+                        required
+                        onChange={(nextFiles) =>
+                          setSignUpForm({
+                            ...signUpForm,
+                            [field.key]: nextFiles,
+                          })
+                        }
+                      />
+                    ))}
+                  </>
+                ) : (
+                  <MultiFileField
+                    id="signup-verification-file"
+                    label="Academic mentoring application form"
+                    files={signUpForm.student_verification_documents}
+                    required
+                    onChange={(nextFiles) =>
+                      setSignUpForm({
+                        ...signUpForm,
+                        student_verification_documents: nextFiles,
+                      })
+                    }
+                  />
+                )
+              )}
+              {signupStep === 1 && (
+                <>
               <div className="auth-field auth-password-wrap">
-                <label htmlFor="signup-password">Password</label>
+                <label htmlFor="signup-password">Password *</label>
                 <div className="auth-password-input-wrap">
                   <input
                     id="signup-password"
@@ -650,6 +925,9 @@ import { Alert as MuiAlert } from "@mui/material";
                         password1: e.target.value,
                       })
                     }
+                    required
+                    aria-required="true"
+                    minLength={8}
                   />
                   <button
                     type="button"
@@ -691,7 +969,7 @@ import { Alert as MuiAlert } from "@mui/material";
                 </div>
               </div>
               <div className="auth-field auth-password-wrap">
-                <label htmlFor="signup-confirm-password">Confirm password</label>
+                <label htmlFor="signup-confirm-password">Confirm password *</label>
                 <div className="auth-password-input-wrap">
                   <input
                     id="signup-confirm-password"
@@ -704,6 +982,9 @@ import { Alert as MuiAlert } from "@mui/material";
                         password2: e.target.value,
                       })
                     }
+                    required
+                    aria-required="true"
+                    minLength={8}
                   />
                   <button
                     type="button"
@@ -744,9 +1025,32 @@ import { Alert as MuiAlert } from "@mui/material";
                   </button>
                 </div>
               </div>
-              <button type="submit" className="auth-primary" disabled={signUpLoading}>
-                {signUpLoading ? <LoadingSpinner inline /> : "Sign Up"}
-              </button>
+                </>
+              )}
+              <div className={signupStep === 2 ? "auth-step-actions is-split" : "auth-step-actions"}>
+                {signupStep === 2 && (
+                  <button
+                    type="button"
+                    className="auth-secondary"
+                    onClick={() => goToSignupStep(1)}
+                  >
+                    Back
+                  </button>
+                )}
+                <button
+                  type="submit"
+                  className="auth-primary"
+                  disabled={signUpLoading}
+                >
+                  {signUpLoading ? (
+                    <LoadingSpinner inline />
+                  ) : signupStep === 1 ? (
+                    "Continue"
+                  ) : (
+                    "Create account"
+                  )}
+                </button>
+              </div>
               <div className="auth-footer">
                 Already have an account?{" "}
                 <button

@@ -6,6 +6,13 @@
 
   const SubjectCategoryPicker =
     window.DashboardApp && window.DashboardApp.SubjectCategoryPicker;
+  const TimePickerField =
+    window.DashboardApp && window.DashboardApp.TimePickerField;
+  const SelectionCatalog =
+    window.DashboardApp && window.DashboardApp.SelectionCatalog;
+  const formatTimeLabel =
+    (window.DashboardApp && window.DashboardApp.formatTimeLabel) ||
+    ((hhmm) => String(hhmm || ""));
   const selectionRequiresTopics =
     window.DashboardApp.selectionRequiresTopics || (() => true);
   const getMajorSubjectsFromSelection =
@@ -58,8 +65,8 @@
   }
 
   function toMinutes(hhmm) {
-    const parts = String(hhmm || "").split(":");
-    if (parts.length !== 2) return null;
+    const parts = String(hhmm || "").trim().split(":");
+    if (parts.length < 2) return null;
     const h = Number(parts[0]);
     const m = Number(parts[1]);
     if (
@@ -75,6 +82,14 @@
     return h * 60 + m;
   }
 
+  function formatHhmm(hhmm) {
+    const mins = toMinutes(hhmm);
+    if (mins == null) return "";
+    const h = Math.floor(mins / 60);
+    const m = mins % 60;
+    return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+  }
+
   function toSingleAvailabilityRange(start, end) {
     const s = toMinutes(start);
     const e = toMinutes(end);
@@ -82,7 +97,7 @@
     const max = toMinutes(MAX_AVAILABLE_TIME);
     if (s == null || e == null || min == null || max == null) return [];
     if (s < min || e > max || s >= e) return [];
-    return [`${start}-${end}`];
+    return [`${formatHhmm(start)}-${formatHhmm(end)}`];
   }
 
   function parseAvailabilityRange(slot) {
@@ -101,16 +116,6 @@
 
   function rangesOverlap(a, b) {
     return a.startMinutes < b.endMinutes && b.startMinutes < a.endMinutes;
-  }
-
-  function formatTimeLabel(hhmm) {
-    const minutes = toMinutes(hhmm);
-    if (minutes == null) return String(hhmm || "");
-    const h24 = Math.floor(minutes / 60);
-    const mins = minutes % 60;
-    const suffix = h24 >= 12 ? "PM" : "AM";
-    const h12 = ((h24 + 11) % 12) + 1;
-    return `${h12}:${String(mins).padStart(2, "0")} ${suffix}`;
   }
 
   function formatAvailabilityLabel(slot) {
@@ -188,68 +193,11 @@
     return { error: "", next: sortAvailabilityRanges(next) };
   }
 
-  function TimePickerField({ id, label, value, min, max, onChange }) {
-    const inputRef = useRef(null);
-    const [pickerSupported, setPickerSupported] = useState(false);
-
-    useEffect(() => {
-      const node = inputRef.current;
-      setPickerSupported(!!node && typeof node.showPicker === "function");
-    }, []);
-
-    function openPicker() {
-      const node = inputRef.current;
-      if (!node) return;
-      if (pickerSupported && typeof node.showPicker === "function") {
-        try {
-          node.showPicker();
-        } catch (_) {
-          setPickerSupported(false);
-        }
-      }
-    }
-
-    return (
-      <div className="time-field">
-        <label htmlFor={id}>{label}</label>
-        <div
-          className="time-input-wrapper"
-          onClick={(e) => {
-            const node = inputRef.current;
-            if (!node) return;
-            if (e.target !== node) node.focus();
-            if (pickerSupported) openPicker();
-          }}
-        >
-          <input
-            ref={inputRef}
-            id={id}
-            type="time"
-            className="time-input"
-            min={min}
-            max={max}
-            value={value}
-            readOnly={pickerSupported}
-            onClick={openPicker}
-            onFocus={() => {
-              if (pickerSupported) openPicker();
-            }}
-            onKeyDown={(e) => {
-              if (pickerSupported) e.preventDefault();
-            }}
-            onChange={onChange}
-          />
-        </div>
-      </div>
-    );
-  }
-
   function MentoringPreferencesPage(props) {
     const embedded = !!(props && props.embedded);
     const ctx = useContext(AppContext);
     const user = ctx && ctx.user;
     const setActiveTab = ctx && ctx.setActiveTab;
-    const subjectsData = (ctx && ctx.subjectsData) || [];
     const menteeMatching = (ctx && ctx.menteeMatching) || {
       subjects: [],
       topics: [],
@@ -262,11 +210,11 @@
     const setMenteeMatching = ctx && ctx.setMenteeMatching;
     const menteeMatchingSaving = !!(ctx && ctx.menteeMatchingSaving);
     const handleMenteeMatchingSave = ctx && ctx.handleMenteeMatchingSave;
-    const Utils = window.DashboardApp.Utils || {};
-    const fetchJSON = Utils.fetchJSON;
+    const setUnsavedChangesDirty = ctx && ctx.setUnsavedChangesDirty;
 
     const generalInfoDone = !!(user && user.mentee_general_info_completed);
     const savedSnapshotRef = useRef(serializePreferences(menteeMatching));
+    const hasUserEditedRef = useRef(false);
     const [savedAt, setSavedAt] = useState(0);
     const [submitAttempted, setSubmitAttempted] = useState(false);
     const [availabilityError, setAvailabilityError] = useState("");
@@ -277,9 +225,46 @@
     const [availabilityEditingIndex, setAvailabilityEditingIndex] =
       useState(null);
 
-    const isPristine =
-      savedSnapshotRef.current === serializePreferences(menteeMatching);
-    const justSaved = savedAt > 0 && Date.now() - savedAt < 2500;
+    const serializedPrefs = serializePreferences(menteeMatching);
+    if (!hasUserEditedRef.current) {
+      savedSnapshotRef.current = serializedPrefs;
+    }
+    const isPristine = savedSnapshotRef.current === serializedPrefs;
+    const justSaved = savedAt > 0;
+
+    useEffect(() => {
+      if (!savedAt) return undefined;
+      const timeoutId = window.setTimeout(() => setSavedAt(0), 2200);
+      return () => window.clearTimeout(timeoutId);
+    }, [savedAt]);
+
+    function markDirty() {
+      hasUserEditedRef.current = true;
+    }
+
+    useEffect(() => {
+      if (typeof setUnsavedChangesDirty === "function") {
+        setUnsavedChangesDirty(!isPristine);
+      }
+    }, [isPristine]);
+
+    useEffect(() => {
+      return () => {
+        if (typeof setUnsavedChangesDirty === "function") {
+          setUnsavedChangesDirty(false);
+        }
+      };
+    }, []);
+
+    useEffect(() => {
+      function onBeforeUnload(event) {
+        if (isPristine) return;
+        event.preventDefault();
+        event.returnValue = "";
+      }
+      window.addEventListener("beforeunload", onBeforeUnload);
+      return () => window.removeEventListener("beforeunload", onBeforeUnload);
+    }, [isPristine]);
 
     const selectedSubjects = Array.isArray(menteeMatching.subjects)
       ? menteeMatching.subjects.filter((item) => String(item || "").trim())
@@ -289,6 +274,7 @@
       [selectedSubjects],
     );
     const [topicOptions, setTopicOptions] = useState([]);
+    const [topicGroups, setTopicGroups] = useState([]);
     const [competencyMap, setCompetencyMap] = useState({});
     const [selectedTopicIds, setSelectedTopicIds] = useState([]);
     const [selectedCompetencyIds, setSelectedCompetencyIds] = useState(
@@ -355,9 +341,72 @@
       }));
     }
 
+    function applySelectionOptions(options) {
+      const uniqueTopics = Array.isArray(options.topics) ? options.topics : [];
+      setTopicOptions(uniqueTopics);
+      setTopicGroups(Array.isArray(options.topicGroups) ? options.topicGroups : []);
+
+      const topicIds = uniqueTopics.map((topic) => topic.id).filter(Boolean);
+      if (!topicIds.length) {
+        setCompetencyMap({});
+        setSelectedTopicIds([]);
+        setSelectedCompetencyIds([]);
+        setMenteeMatching({
+          ...menteeMatching,
+          topics: [],
+          competency_ids: [],
+          competency_needs: {},
+        });
+        return;
+      }
+
+      const competencies = Array.isArray(options.competencies)
+        ? options.competencies
+        : [];
+      const grouped = options.competenciesByTopicId || {};
+      setCompetencyMap(grouped);
+
+      if (hydrateSelectionRef.current) {
+        const savedIds = new Set(
+          (Array.isArray(menteeMatching.competency_ids)
+            ? menteeMatching.competency_ids
+            : [])
+            .map((item) => Number(item))
+            .filter((item) => Number.isFinite(item) && item > 0),
+        );
+        const nextCompetencyIds = [];
+        const nextTopicIds = new Set();
+        competencies.forEach((competency) => {
+          if (!savedIds.has(Number(competency.id))) return;
+          nextCompetencyIds.push(competency.id);
+          if (competency.topic_id) nextTopicIds.add(competency.topic_id);
+        });
+        const hydratedTopicIds = Array.from(nextTopicIds);
+        setSelectedTopicIds(hydratedTopicIds);
+        applyCompetencySelection(nextCompetencyIds, hydratedTopicIds);
+        hydrateSelectionRef.current = false;
+      } else {
+        const validTopicIds = new Set(topicIds);
+        const nextTopicIds = selectedTopicIds.filter((id) =>
+          validTopicIds.has(id),
+        );
+        const allowedCompetencyIds = new Set(
+          nextTopicIds.flatMap((topicItemId) =>
+            (grouped[topicItemId] || []).map((competency) => competency.id),
+          ),
+        );
+        const nextCompetencyIds = selectedCompetencyIds.filter((id) =>
+          allowedCompetencyIds.has(id),
+        );
+        setSelectedTopicIds(nextTopicIds);
+        applyCompetencySelection(nextCompetencyIds, nextTopicIds);
+      }
+    }
+
     async function loadSelectionOptions(subjectNames) {
       if (!Array.isArray(subjectNames) || subjectNames.length === 0) {
         setTopicOptions([]);
+        setTopicGroups([]);
         setCompetencyMap({});
         setSelectedTopicIds([]);
         setSelectedCompetencyIds([]);
@@ -371,84 +420,28 @@
         return;
       }
 
+      const prefetched = SelectionCatalog.peek(subjectNames);
+      if (prefetched) {
+        applySelectionOptions(prefetched);
+        return;
+      }
+
       setSelectionLoading(true);
       try {
-        const topicsResult = await fetchJSON(
-          `/api/topics/?subject_names=${encodeURIComponent(subjectNames.join(","))}`,
-        );
-        const topics =
-          topicsResult.ok && Array.isArray(topicsResult.data?.items)
-            ? [...topicsResult.data.items]
-            : [];
-        const topicsByName = new Map();
-        topics.forEach((topic) => {
-          const key = String(topic.name || "").trim().toLowerCase();
-          if (!key || topicsByName.has(key)) return;
-          topicsByName.set(key, topic);
-        });
-        const uniqueTopics = Array.from(topicsByName.values()).sort((a, b) =>
-          String(a.name || "").localeCompare(String(b.name || "")),
-        );
-        setTopicOptions(uniqueTopics);
-
-        const topicIds = uniqueTopics.map((topic) => topic.id).filter(Boolean);
-        if (!topicIds.length) {
-          setCompetencyMap({});
-          setSelectedTopicIds([]);
-          setSelectedCompetencyIds([]);
-          setMenteeMatching({
-            ...menteeMatching,
-            topics: [],
-            competency_ids: [],
-            competency_needs: {},
-          });
-          return;
-        }
-
-        const competenciesResult = await fetchJSON(
-          `/api/competencies/?topic_ids=${topicIds.join(",")}`,
-        );
-        const competencies =
-          competenciesResult.ok && Array.isArray(competenciesResult.data?.items)
-            ? competenciesResult.data.items
-            : [];
-        const grouped = {};
-        competencies.forEach((competency) => {
-          const topicId = Number(competency.topic_id || 0);
-          if (!topicId) return;
-          if (!grouped[topicId]) grouped[topicId] = [];
-          grouped[topicId].push(competency);
-        });
-        setCompetencyMap(grouped);
-
-        if (hydrateSelectionRef.current) {
-          const savedIds = new Set(
-            (Array.isArray(menteeMatching.competency_ids)
-              ? menteeMatching.competency_ids
-              : [])
-              .map((item) => Number(item))
-              .filter((item) => Number.isFinite(item) && item > 0),
-          );
-          const nextCompetencyIds = [];
-          const nextTopicIds = new Set();
-          competencies.forEach((competency) => {
-            if (!savedIds.has(Number(competency.id))) return;
-            nextCompetencyIds.push(competency.id);
-            if (competency.topic_id) nextTopicIds.add(competency.topic_id);
-          });
-          const hydratedTopicIds = Array.from(nextTopicIds);
-          setSelectedTopicIds(hydratedTopicIds);
-          applyCompetencySelection(nextCompetencyIds, hydratedTopicIds);
-          hydrateSelectionRef.current = false;
-        }
+        applySelectionOptions(await SelectionCatalog.load(subjectNames));
       } finally {
         setSelectionLoading(false);
       }
     }
 
     useEffect(() => {
+      SelectionCatalog.prefetch();
+    }, []);
+
+    useEffect(() => {
       if (!hasSelectedSubject) {
         setTopicOptions([]);
+        setTopicGroups([]);
         setCompetencyMap({});
         setSelectedTopicIds([]);
         setSelectedCompetencyIds([]);
@@ -489,27 +482,20 @@
     );
 
     function toggleSubject(subjectName) {
-      hydrateSelectionRef.current = false;
-      setTopicOptions([]);
-      setCompetencyMap({});
-      setSelectedTopicIds([]);
-      setSelectedCompetencyIds([]);
-      // Keep subject flow to a single major subject at a time.
+      markDirty();
       const nextSubjects = selectedSubjects.includes(subjectName)
-        ? []
-        : [subjectName];
+        ? selectedSubjects.filter((item) => item !== subjectName)
+        : [...selectedSubjects, subjectName];
       setMenteeMatching({
         ...menteeMatching,
         subjects: nextSubjects,
-        topics: [],
-        competency_ids: [],
-        competency_needs: {},
       });
     }
 
     function toggleTopic(topic) {
       const topicId = Number(topic?.id || 0);
       if (!topicId) return;
+      markDirty();
       const nextTopicIds = selectedTopicIds.includes(topicId)
         ? selectedTopicIds.filter((item) => item !== topicId)
         : [...selectedTopicIds, topicId];
@@ -529,24 +515,11 @@
       const competencyId = Number(competency?.id || 0);
       if (!competencyId) return;
       if (!selectedTopicIds.includes(Number(competency.topic_id || 0))) return;
+      markDirty();
       const nextCompetencyIds = selectedCompetencyIds.includes(competencyId)
         ? selectedCompetencyIds.filter((item) => item !== competencyId)
         : [...selectedCompetencyIds, competencyId];
       applyCompetencySelection(nextCompetencyIds);
-    }
-
-    function setCompetencyNeed(competencyId, level) {
-      const nextLevel = Number(level);
-      if (!Number.isFinite(nextLevel) || nextLevel < 1 || nextLevel > 5) return;
-      setMenteeMatching((prev) => ({
-        ...prev,
-        competency_needs: {
-          ...(prev.competency_needs && typeof prev.competency_needs === "object"
-            ? prev.competency_needs
-            : {}),
-          [competencyId]: nextLevel,
-        },
-      }));
     }
 
     function isQuickAvailabilitySelected(range) {
@@ -557,6 +530,7 @@
     }
 
     function applyQuickAvailability(range) {
+      markDirty();
       const slot = `${range.start}-${range.end}`;
       const current = Array.isArray(menteeMatching.availability)
         ? [...menteeMatching.availability]
@@ -584,10 +558,34 @@
 
     async function handleSave() {
       setSubmitAttempted(true);
+      let availability = Array.isArray(menteeMatching.availability)
+        ? menteeMatching.availability
+        : [];
+      if (availabilityDraft.start && availabilityDraft.end) {
+        const { error, next } = buildAvailabilityUpdate(
+          availability,
+          availabilityDraft,
+          availabilityEditingIndex,
+        );
+        if (!next) {
+          setAvailabilityError(error);
+          return;
+        }
+        availability = next;
+        setAvailabilityError("");
+        setMenteeMatching({ ...menteeMatching, availability });
+        setAvailabilityDraft({ start: "", end: "" });
+        setAvailabilityEditingIndex(null);
+        markDirty();
+      }
       if (!canSave) return;
-      const saved = await handleMenteeMatchingSave();
+      const saved = await handleMenteeMatchingSave({ availability });
       if (saved) {
-        savedSnapshotRef.current = serializePreferences(menteeMatching);
+        hasUserEditedRef.current = false;
+        savedSnapshotRef.current = serializePreferences({
+          ...menteeMatching,
+          availability,
+        });
         setSavedAt(Date.now());
       }
     }
@@ -631,6 +629,7 @@
         setAvailabilityEditingIndex(null);
         setAvailabilityError("");
         setSubmitAttempted(false);
+        hasUserEditedRef.current = false;
       } catch (error) {
         console.warn("Unable to restore saved mentoring preferences", error);
       }
@@ -669,7 +668,7 @@
           <div className="mp-main">
         <SectionCard
           title="Subject"
-          description="Select one subject first. Topics and competencies will load from the database for that subject."
+          description="Select every subject you want mentoring in. Topics and competencies will load for each selected subject."
         >
           <div className="mp-inline-meta" aria-live="polite">
             {selectedMajorSubjects.length} selected
@@ -693,7 +692,7 @@
             {hasSelectedSubject && (
               <SectionCard
                 title="Topics"
-                description="Select the topics connected to the chosen subject."
+                description="Select the topics connected to your selected subjects."
               >
                 <div className="mp-inline-meta" aria-live="polite">
                   {selectedTopicCount} selected
@@ -707,6 +706,41 @@
                   <p className="field-helper complete-profile-helper" role="status">
                     No topics are defined for this subject yet.
                   </p>
+                ) : topicGroups.length > 0 ? (
+                  <div className="mp-competency-groups">
+                    {topicGroups.map((group) => (
+                      <section
+                        key={group.subjectId ?? group.subjectName}
+                        className="mp-competency-group"
+                      >
+                        <h3 className="mp-competency-group-title">{group.subjectName}</h3>
+                        <div
+                          className="complete-profile-topic-chips"
+                          role="list"
+                          aria-label={`${group.subjectName} topics`}
+                        >
+                          {(group.topics || []).map((topic) => {
+                            const active = selectedTopicIds.includes(topic.id);
+                            return (
+                              <button
+                                key={topic.id}
+                                type="button"
+                                role="listitem"
+                                className={
+                                  "complete-profile-topic-chip" + (active ? " is-active" : "")
+                                }
+                                aria-pressed={active}
+                                onClick={() => toggleTopic(topic)}
+                              >
+                                {active ? <span className="mp-chip-check">✓</span> : null}
+                                {topic.name}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </section>
+                    ))}
+                  </div>
                 ) : (
                   <div className="complete-profile-topic-wrap">
                     <div className="complete-profile-topic-chips" role="list" aria-label="Topic options">
@@ -791,39 +825,6 @@
                     );
                   })}
                 </div>
-                {selectedCompetencyCount > 0 && (
-                  <div className="form-grid">
-                    {selectedCompetencyIds.map((competencyId) => {
-                      const competency = competencyLookup.get(competencyId);
-                      if (!competency) return null;
-                      const value =
-                        menteeMatching.competency_needs &&
-                        menteeMatching.competency_needs[competencyId] != null
-                          ? menteeMatching.competency_needs[competencyId]
-                          : menteeMatching.difficulty_level || 3;
-                      return (
-                        <div key={competencyId} className="form-group">
-                          <label htmlFor={`mentee-competency-need-${competencyId}`}>
-                            {competency.name} need level
-                          </label>
-                          <select
-                            id={`mentee-competency-need-${competencyId}`}
-                            value={value}
-                            onChange={(event) =>
-                              setCompetencyNeed(competencyId, event.target.value)
-                            }
-                          >
-                            <option value={1}>1 - Comfortable</option>
-                            <option value={2}>2 - Minor Help</option>
-                            <option value={3}>3 - Moderate</option>
-                            <option value={4}>4 - Significant</option>
-                            <option value={5}>5 - Urgent</option>
-                          </select>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
                 {showCompetencyError && (
                   <p className="complete-profile-error" role="alert">
                     Select at least one competency.
@@ -841,12 +842,13 @@
                 <input
                   id="mentee-learning-style"
                   value={menteeMatching.preferred_learning_style || ""}
-                  onChange={(e) =>
+                  onChange={(e) => {
+                    markDirty();
                     setMenteeMatching({
                       ...menteeMatching,
                       preferred_learning_style: e.target.value,
-                    })
-                  }
+                    });
+                  }}
                   placeholder="e.g., visual, hands-on, guided practice"
                 />
               </div>
@@ -866,12 +868,13 @@
                       role="radio"
                       aria-checked={active}
                       className={"mp-difficulty-option" + (active ? " is-active" : "")}
-                      onClick={() =>
+                      onClick={() => {
+                        markDirty();
                         setMenteeMatching({
                           ...menteeMatching,
                           difficulty_level: option.value,
-                        })
-                      }
+                        });
+                      }}
                     >
                       {option.label}
                     </button>
@@ -956,6 +959,7 @@
                       return;
                     }
                     setAvailabilityError("");
+                    markDirty();
                     setMenteeMatching({ ...menteeMatching, availability: next });
                     setAvailabilityDraft({ start: "", end: "" });
                     setAvailabilityEditingIndex(null);
@@ -1020,6 +1024,7 @@
                               const next = menteeMatching.availability.filter(
                                 (_, i) => i !== idx,
                               );
+                              markDirty();
                               setMenteeMatching({
                                 ...menteeMatching,
                                 availability: next,
@@ -1053,7 +1058,7 @@
             <dl className="mp-preview-list">
               <div className="mp-preview-row">
                 <dt>Subjects Selected</dt>
-                <dd>{hasSelectedSubject ? 1 : 0}</dd>
+                <dd>{selectedSubjects.length}</dd>
               </div>
               <div className="mp-preview-row">
                 <dt>Topics Selected</dt>
@@ -1080,17 +1085,24 @@
           </aside>
         </div>
 
-        <div className="mp-sticky-bar">
+        {(!isPristine || justSaved) && (
+        <div
+          className={
+            "mp-sticky-bar" +
+            (justSaved && isPristine ? " is-saved" : " is-dirty")
+          }
+          role="status"
+        >
           <div className="mp-sticky-meta">
             <p className="mp-sticky-title">
-              {isPristine ? "All changes saved" : "Unsaved changes"}
+              {justSaved && isPristine ? "Saved" : "Unsaved changes"}
             </p>
             <p className="mp-sticky-subtitle">
-              {isPristine
-                ? "Your mentoring profile is up to date."
-                : "Review and save to improve your mentor recommendations."}
+              {justSaved && isPristine
+                ? "Your mentoring preferences were updated."
+                : "Save to keep these updates, or discard to revert."}
             </p>
-            {submitAttempted && !canSave && (
+            {submitAttempted && !canSave && !isPristine && (
               <p className="complete-profile-error complete-profile-error-summary" role="alert">
                 {needsTopics
                   ? needsCompetencies
@@ -1099,35 +1111,33 @@
                   : "Select at least one subject and a difficulty level before saving."}
               </p>
             )}
-            {justSaved && (
-              <p className="matching-inline-feedback matching-inline-feedback--success" role="status">
-                Your mentoring preferences were saved.
-              </p>
-            )}
           </div>
+          {!(justSaved && isPristine) && (
           <div className="mp-sticky-actions">
             <button
               type="button"
               className="btn secondary"
               onClick={handleReset}
-              disabled={isPristine || menteeMatchingSaving}
+              disabled={menteeMatchingSaving}
             >
-              Reset
+              Discard
             </button>
             <button
               type="button"
               className="btn"
               onClick={handleSave}
-              disabled={menteeMatchingSaving || (isPristine && canSave)}
+              disabled={menteeMatchingSaving}
             >
               {menteeMatchingSaving
                 ? "Saving..."
                 : embedded
                   ? "Save & finish"
-                  : "Save Preferences"}
+                  : "Save"}
             </button>
           </div>
+          )}
         </div>
+        )}
       </div>
     );
   }

@@ -56,26 +56,30 @@
             <LoadingSpinner inline />
           </div>
         )}
-        {showSignInPrompt && (
-          <div className="card auth-warning cta-card">
-            <h2 className="page-title">Please sign in</h2>
-            <p className="page-subtitle" style={{ marginBottom: 0 }}>
-              You need to log in to access the dashboard.
-            </p>
-            <div
-              className="btn-row"
-              style={{ marginTop: "16px", justifyContent: "center" }}
-            >
-              <button className="btn" onClick={() => setActiveTab("signin")}>
-                Go to sign in
-              </button>
-            </div>
-          </div>
-        )}
+        {authCheckDone && (
+          <>
+            {showSignInPrompt && (
+              <div className="card auth-warning cta-card">
+                <h2 className="page-title">Please sign in</h2>
+                <p className="page-subtitle" style={{ marginBottom: 0 }}>
+                  You need to log in to access the dashboard.
+                </p>
+                <div
+                  className="btn-row"
+                  style={{ marginTop: "16px", justifyContent: "center" }}
+                >
+                  <button className="btn" onClick={() => setActiveTab("signin")}>
+                    Go to sign in
+                  </button>
+                </div>
+              </div>
+            )}
 
-        <ErrorBoundary>
-          <RouteRenderer activeTab={activeTab} />
-        </ErrorBoundary>
+            <ErrorBoundary>
+              <RouteRenderer activeTab={activeTab} />
+            </ErrorBoundary>
+          </>
+        )}
       </>
     );
   }

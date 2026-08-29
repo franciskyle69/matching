@@ -144,6 +144,7 @@
       setActiveTab,
       menteeRecommendations,
       myMentor,
+      menteeMatching,
       theme,
       mentorRequests,
       mentorProfile,
@@ -168,7 +169,7 @@
             <button
               className="btn secondary"
               onClick={() => {
-                window.location.href = "/portal/";
+                window.location.href = "/app/#signin";
               }}
             >
               I already have an account
@@ -335,14 +336,53 @@
                       )}
                     </div>
                     <div>
-                      <p className="mentee-v2-mentor-name">
-                        {myMentor.display_name || myMentor.username}
-                      </p>
+                      <div className="mentee-v2-mentor-identity">
+                        <p className="mentee-v2-mentor-name">
+                          {myMentor.display_name || myMentor.username}
+                        </p>
+                        {myMentor.role && MentorRoleBadge ? (
+                          <MentorRoleBadge role={myMentor.role} prominent />
+                        ) : null}
+                      </div>
                       {myMentor.accepted_at && (
                         <p className="mentee-v2-muted">
                           Mentor accepted {formatDate(myMentor.accepted_at)}
                         </p>
                       )}
+                      {(() => {
+                        const d = myMentor.match_details || {};
+                        let subjects = d.common_subjects || [];
+                        let competencies = d.common_competencies || [];
+                        if (
+                          subjects.length === 0 &&
+                          Array.isArray(menteeMatching?.subjects) &&
+                          Array.isArray(myMentor.subjects)
+                        ) {
+                          const menteeSet = new Set(
+                            menteeMatching.subjects.map((s) =>
+                              String(s).trim().toLowerCase(),
+                            ),
+                          );
+                          subjects = myMentor.subjects.filter((s) =>
+                            menteeSet.has(String(s).trim().toLowerCase()),
+                          );
+                        }
+                        const parts = [];
+                        if (subjects.length) {
+                          parts.push(`Shared subjects: ${subjects.join(", ")}`);
+                        }
+                        if (competencies.length) {
+                          parts.push(
+                            `Shared competencies: ${competencies.join(", ")}`,
+                          );
+                        }
+                        if (!parts.length) return null;
+                        return (
+                          <p className="mentee-v2-muted mentee-v2-match-reason">
+                            {parts.join(" • ")}
+                          </p>
+                        );
+                      })()}
                     </div>
                   </div>
                   <button
@@ -489,8 +529,8 @@
         : [];
       const mentorCapacity = Math.max(
         1,
-        Number(mentorProfile?.capacity ?? userProgress?.mentor_capacity ?? 3) ||
-          3,
+        Number(mentorProfile?.capacity ?? userProgress?.mentor_capacity ?? 5) ||
+          5,
       );
       const capacityUsed = Math.min(mentorCapacity, acceptedRequests.length);
       const capacityPct = Math.round((capacityUsed / mentorCapacity) * 100);

@@ -7,6 +7,10 @@
   const MentorRoleBadge =
     (window.DashboardApp.Utils && window.DashboardApp.Utils.MentorRoleBadge) ||
     null;
+  const formatBiologicalSex =
+    (window.DashboardApp.Utils &&
+      window.DashboardApp.Utils.formatBiologicalSex) ||
+    ((value) => value || "—");
 
   function InfoRow({ icon, label, value }) {
     if (!value && value !== 0) return null;
@@ -125,7 +129,7 @@
                 About
               </h3>
               <div className="prof-card-body">
-                <InfoRow icon="⚥" label="Biological sex" value={mentor.gender || "—"} />
+                <InfoRow icon="⚥" label="Biological sex" value={formatBiologicalSex(mentor.gender)} />
                 {mentor.expertise_level != null && (
                   <div className="prof-info-row">
                     <span className="prof-info-icon" aria-hidden="true">📊</span>

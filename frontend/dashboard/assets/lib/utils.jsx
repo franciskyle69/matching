@@ -489,13 +489,18 @@
     );
   }
 
-  function MentorMatchTitle({ name, role }) {
+  function MentorMatchTitle({ name, role, showRole = true }) {
     const displayName = name || "Unknown";
     return (
       <div className="match-card-title-block">
-        <div className="match-card-title-line">
+        <div
+          className={
+            "match-card-title-line" +
+            (showRole && role ? "" : " match-card-title-line--name-only")
+          }
+        >
           <p className="match-card-title">Mentor: {displayName}</p>
-          {role ? <MentorRoleBadge role={role} prominent /> : null}
+          {showRole && role ? <MentorRoleBadge role={role} prominent /> : null}
         </div>
       </div>
     );
@@ -505,6 +510,20 @@
     if (cat === "achievement") return "trophy";
     if (cat === "project") return "laptop";
     return "fileText";
+  }
+
+  function formatBiologicalSex(value) {
+    const key = String(value || "").trim().toLowerCase();
+    if (key === "male") return "Male";
+    if (key === "female") return "Female";
+    return String(value || "").trim() || "—";
+  }
+
+  function formatStudentYearLevel(year) {
+    const n = Number(year);
+    if (n === 3) return "3rd year";
+    if (n === 4) return "4th year";
+    return n ? `Year ${n}` : "";
   }
 
   window.DashboardApp.DashboardIcon = DashboardIcon;
@@ -522,6 +541,8 @@
     refreshAccessToken,
     fetchJSON,
     formatDate,
+    formatBiologicalSex,
+    formatStudentYearLevel,
     LoadingSpinner,
     OrbitingDotsLoader,
     MatchingLoadingAnimation,

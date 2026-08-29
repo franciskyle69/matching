@@ -26,6 +26,7 @@ from profiles.models import (
     InterestTag,
     MentorCompetency,
     MenteeCompetencyNeed,
+    save_verification_documents,
 )
 
 from accounts.forms import (
@@ -75,7 +76,6 @@ from ..views import (
     get_subjects_list,
     get_mentor_approved,
     get_mentee_approved,
-    invalidate_approval_cache_mentor,
     logger,
 )
 from matching.models import Notification, Subject, Topic
@@ -84,6 +84,18 @@ from django.views.decorators.csrf import ensure_csrf_cookie
 from profiles.questionnaire_utils import filter_topics_for_subjects
 ME_CACHE_TTL_SECONDS = 30
 ME_CACHE_METRICS_LOG_EVERY = 100
+STUDENT_MENTOR_ROLE = "Senior IT Student"
+STUDENT_MENTOR_YEAR_LEVELS = (3, 4)
+
+
+def _mentor_year_level_for_role(role, requested=None, current=None):
+    if str(role or "").strip() != STUDENT_MENTOR_ROLE:
+        return 4
+    if requested in STUDENT_MENTOR_YEAR_LEVELS:
+        return int(requested)
+    if current in STUDENT_MENTOR_YEAR_LEVELS:
+        return int(current)
+    return 4
 
 
 def _sync_user_topic_preferences(user, target, subjects, topics):
@@ -206,7 +218,7 @@ def _record_me_cache_metric(hit: bool):
 def _parse_hhmm_to_minutes(value):
     text = str(value or "").strip()
     parts = text.split(":")
-    if len(parts) != 2:
+    if len(parts) < 2:
         return None
     try:
         hour = int(parts[0])
@@ -230,8 +242,8 @@ def _normalise_availability_slots(value):
 
     out = []
     seen = set()
-    min_minutes = 8 * 60
-    max_minutes = 20 * 60
+    min_minutes = 7 * 60
+    max_minutes = 22 * 60
     for raw in raw_slots:
         if not isinstance(raw, str):
             continue
@@ -364,31 +376,7 @@ def auth_login(request):
             {"error": "Please verify your email before logging in."}, status=401
         )
 
-    expected_role = (_get_str(payload, "expected_role") or "").lower()
-    if expected_role not in ("mentor", "mentee", "staff"):
-        return JsonResponse(
-            {
-                "error": (
-                    "Please choose Staff, Mentor, or Mentee from the role portal "
-                    "before signing in."
-                ),
-            },
-            status=400,
-        )
-
-    actual_role = _resolve_account_role(user)
-    if actual_role != expected_role:
-        actual_label = (actual_role or "another role").replace("_", " ").title()
-        expected_label = expected_role.replace("_", " ").title()
-        return JsonResponse(
-            {
-                "error": (
-                    f"This account is a {actual_label} account, not {expected_label}. "
-                    f"Return to the portal and choose {actual_label}, or use a different account."
-                ),
-            },
-            status=403,
-        )
+    # Role is chosen only when creating an account; sign-in is role-neutral.
 
     if must_change_password(user):
         login(request, user, backend="accounts.auth_backends.EmailOrUsernameModelBackend")
@@ -569,12 +557,25 @@ def auth_register(request):
             return JsonResponse({"errors": form.errors}, status=400)
 
         cleaned = form.cleaned_data
-        first_name = cleaned.get("first_name", "")
+        first_name = (cleaned.get("first_name") or "").strip()
         middle_name = cleaned.get("middle_name", "")
-        last_name = cleaned.get("last_name", "")
-        email = cleaned.get("email", "")
-        password = cleaned.get("password1", "")
-        verification_document = cleaned.get("student_verification_document")
+        last_name = (cleaned.get("last_name") or "").strip()
+        email = (cleaned.get("email") or "").strip()
+        password = cleaned.get("password1") or ""
+        files_by_kind = cleaned.get("verification_files_by_kind") or {}
+        missing = {}
+        if not first_name:
+            missing["first_name"] = ["First name is required."]
+        if not last_name:
+            missing["last_name"] = ["Last name is required."]
+        if not email:
+            missing["email"] = ["Email is required."]
+        if not password:
+            missing["password1"] = ["Password is required."]
+        if not cleaned.get("password2"):
+            missing["password2"] = ["Confirm password is required."]
+        if missing:
+            return JsonResponse({"errors": missing}, status=400)
         base_username = "".join(part for part in [first_name, last_name] if part)
         base_username = "".join(ch for ch in base_username.lower() if ch.isalnum())
         if not base_username:
@@ -623,16 +624,45 @@ def auth_register(request):
                         },
                         status=400,
                     )
-                MentorProfile.objects.create(
+                requested_year = cleaned.get("year_level")
+                if requested_year not in STUDENT_MENTOR_YEAR_LEVELS:
+                    requested_year = _get_int(payload, "year_level")
+                if (
+                    mentor_role == STUDENT_MENTOR_ROLE
+                    and requested_year not in STUDENT_MENTOR_YEAR_LEVELS
+                ):
+                    user.delete()
+                    return JsonResponse(
+                        {
+                            "error": (
+                                "Select whether you are a 3rd year or "
+                                "4th year student mentor."
+                            ),
+                        },
+                        status=400,
+                    )
+                year_level = _mentor_year_level_for_role(
+                    mentor_role,
+                    requested_year,
+                )
+                mentor = MentorProfile.objects.create(
                     user=user,
                     program="BSIT",
-                    year_level=4,
+                    year_level=year_level,
                     role=mentor_role,
-                    verification_document=verification_document,
+                    capacity=5,
+                    gender=_normalise_mentor_gender(
+                        cleaned.get("gender") or _get_str(payload, "gender"),
+                        default="",
+                    ),
                     approved=False,
                 )
+                save_verification_documents(
+                    mentor=mentor,
+                    files_by_kind=files_by_kind,
+                )
             else:
-                MenteeProfile.objects.create(
+                mentee = MenteeProfile.objects.create(
                     user=user,
                     program="BSIT",
                     year_level=1,
@@ -641,15 +671,18 @@ def auth_register(request):
                     contact_no="",
                     admission_type="",
                     sex="",
-                    verification_document=verification_document,
                     approved=False,
+                )
+                save_verification_documents(
+                    mentee=mentee,
+                    files_by_kind=files_by_kind,
                 )
         except Exception as exc:
             logger.exception("auth_register_profile_create_failed", extra={"email": email, "role": role})
             user.delete()
             return JsonResponse(
                 {
-                    "error": "Unable to save your academic mentoring application form. Please upload a valid PDF, JPG, or PNG and try again.",
+                    "error": "Unable to save your verification documents. Please upload valid PDF, JPG, or PNG files and try again.",
                     "detail": str(exc),
                 },
                 status=400,
@@ -912,6 +945,7 @@ def me(request):
         "bio": bio,
         "tags": tags,
         "mentor_approved": get_mentor_approved(mentor) if mentor else None,
+        "mentor_role_locked": bool(get_mentor_approved(mentor)) if mentor else False,
         "mentee_approved": get_mentee_approved(mentee) if mentee else None,
         "mentor_questionnaire_completed": mentor_q_completed if mentor else None,
         "mentee_questionnaire_completed": mentee_q_completed if mentee else None,
@@ -1472,26 +1506,49 @@ def update_mentor_profile(request):
     expertise = _get_int(payload, "expertise_level")
     if expertise is not None and 1 <= expertise <= 5:
         mentor_profile.expertise_level = expertise
-    capacity = _get_int(payload, "capacity", default=None, min_value=1)
-    if capacity is not None:
-        mentor_profile.capacity = capacity
-    role_change_requires_approval = False
+    mentor_profile.capacity = 5
+    role_locked = bool(getattr(mentor_profile, "approved", False)) and not request.user.is_staff
     requested_role = _get_str(payload, "role", mentor_profile.role or "")
     current_role = str(getattr(mentor_profile, "role", "") or "").strip()
+    attempted_locked_role_change = False
     if "role" in payload:
-        mentor_profile.role = requested_role
-        if (
-            not request.user.is_staff
-            and requested_role
-            and requested_role != current_role
-        ):
-            mentor_profile.approved = False
-            role_change_requires_approval = True
+        if role_locked and requested_role != current_role:
+            attempted_locked_role_change = True
+            mentor_profile.role = current_role
+        else:
+            mentor_profile.role = requested_role
 
     if "gender" in payload:
-        mentor_profile.gender = _normalise_mentor_gender(
+        current_gender = _normalise_mentor_gender(
+            getattr(mentor_profile, "gender", ""),
+            default="",
+        )
+        requested_gender = _normalise_mentor_gender(
             payload.get("gender"),
-            default=getattr(mentor_profile, "gender", ""),
+            default=current_gender,
+        )
+        gender_locked = bool(getattr(mentor_profile, "approved", False)) and not request.user.is_staff
+        # Gender is set at signup and locked after coordinator approval.
+        if gender_locked:
+            mentor_profile.gender = current_gender
+        elif requested_gender in ("male", "female"):
+            mentor_profile.gender = requested_gender
+        elif not current_gender:
+            mentor_profile.gender = requested_gender
+        else:
+            mentor_profile.gender = current_gender
+    year_locked = bool(getattr(mentor_profile, "approved", False)) and not request.user.is_staff
+    requested_year = _get_int(payload, "year_level", default=None)
+    if year_locked:
+        if str(mentor_profile.role or "").strip() != STUDENT_MENTOR_ROLE:
+            mentor_profile.year_level = 4
+        elif mentor_profile.year_level not in STUDENT_MENTOR_YEAR_LEVELS:
+            mentor_profile.year_level = 4
+    else:
+        mentor_profile.year_level = _mentor_year_level_for_role(
+            mentor_profile.role,
+            requested_year,
+            mentor_profile.year_level,
         )
     years_experience = _get_int(payload, "years_experience", default=None, min_value=0)
     if years_experience is not None:
@@ -1560,28 +1617,6 @@ def update_mentor_profile(request):
                 competency_id=competency_id,
                 defaults={"proficiency_level": fallback_level},
             )
-    if role_change_requires_approval:
-        invalidate_approval_cache_mentor(mentor_profile.id)
-        staff_users = User.objects.filter(is_staff=True).exclude(id=request.user.id)
-        notifications = [
-            Notification(
-                user=staff_user,
-                message=(
-                    f"{get_user_display_name(request.user) or request.user.username} "
-                    "updated mentor role and requires re-approval."
-                ),
-                action_tab="approvals",
-            )
-            for staff_user in staff_users
-        ]
-        if notifications:
-            Notification.objects.bulk_create(notifications)
-        audit_log(
-            request.user,
-            "mentor_role_change_pending_approval",
-            "mentor_profile",
-            mentor_profile.id,
-        )
     _sync_user_topic_preferences(
         request.user,
         UserTopicPreference.TARGET_MENTOR,
@@ -1624,10 +1659,10 @@ def update_mentor_profile(request):
                 getattr(mentor_profile, "availability", [])
             ),
             "mentor_approved": bool(getattr(mentor_profile, "approved", False)),
-            "role_change_requires_approval": role_change_requires_approval,
+            "mentor_role_locked": role_locked,
             "message": (
-                "Role updated. Your mentor account is now pending coordinator approval."
-                if role_change_requires_approval
+                "Mentor role is locked after coordinator approval and was not changed."
+                if attempted_locked_role_change
                 else ""
             ),
         }

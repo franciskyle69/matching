@@ -1,4 +1,4 @@
-input,
+input:not(.app-topbar-search-input),
 select,
 textarea,
 .form-input,
@@ -13,7 +13,7 @@ textarea,
   background: var(--card);
 }
 
-input:focus,
+input:not(.app-topbar-search-input):focus,
 select:focus,
 textarea:focus,
 .form-input:focus,
@@ -27,7 +27,7 @@ textarea:focus,
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 18%, transparent);
 }
 
-input,
+input:not(.app-topbar-search-input),
 select,
 textarea,
 .form-input,

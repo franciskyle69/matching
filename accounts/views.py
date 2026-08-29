@@ -17,7 +17,7 @@ import time
 
 from .forms import RegisterForm, AccountSettingsForm, PasswordChangeWithCodeForm
 from .models import must_change_password, set_must_change_password
-from profiles.models import MentorProfile, MenteeProfile
+from profiles.models import MentorProfile, MenteeProfile, save_verification_documents
 ROLE_SESSION_KEY = "selected_role"
 GOOGLE_OAUTH_ROLE_SESSION_KEY = "google_oauth_selected_role"
 PASSWORD_CHANGE_CODE_SESSION_KEY = "password_change_verification_code"
@@ -183,24 +183,29 @@ def register(request):
         if form.is_valid():
             user = form.save(commit=True)
             role = form.cleaned_data.get("role")
-            verification_document = form.cleaned_data.get("student_verification_document")
-
+            files_by_kind = form.cleaned_data.get("verification_files_by_kind") or {}
             if role == "mentor":
-                MentorProfile.objects.create(
+                mentor = MentorProfile.objects.create(
                     user=user,
                     program="BSIT",
-                    year_level=4,
+                    year_level=form.cleaned_data.get("year_level") or 4,
                     role=form.cleaned_data.get("mentor_role") or "",
-                    verification_document=verification_document,
                     approved=False,
                 )
+                save_verification_documents(
+                    mentor=mentor,
+                    files_by_kind=files_by_kind,
+                )
             else:
-                MenteeProfile.objects.create(
+                mentee = MenteeProfile.objects.create(
                     user=user,
                     program="BSIT",
                     year_level=1,
-                    verification_document=verification_document,
                     approved=False,
+                )
+                save_verification_documents(
+                    mentee=mentee,
+                    files_by_kind=files_by_kind,
                 )
             current_site = get_current_site(request)
             subject = "Activate your account"

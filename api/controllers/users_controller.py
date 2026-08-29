@@ -19,7 +19,7 @@ from ..views import (
 from accounts.forms import CoordinatorCreateUserForm
 from accounts.models import set_must_change_password
 from accounts.models import get_user_display_name
-from profiles.models import MentorProfile, MenteeProfile
+from profiles.models import MentorProfile, MenteeProfile, serialize_verification_documents
 from matching.models import MenteeMentorRequest
 
 
@@ -242,6 +242,7 @@ def user_create(request):
                 user=user,
                 program="BSIT",
                 year_level=4,
+                capacity=5,
                 verification_document="",
                 approved=False,
             )
@@ -296,7 +297,10 @@ def user_detail(request, user_id):
         return err
     try:
         try:
-            user = User.objects.select_related('mentor_profile', 'mentee_profile').get(id=user_id)
+            user = User.objects.select_related('mentor_profile', 'mentee_profile').prefetch_related(
+                'mentor_profile__verification_documents',
+                'mentee_profile__verification_documents',
+            ).get(id=user_id)
         except User.DoesNotExist:
             return JsonResponse({"ok": False, "error": "User not found"}, status=404)
         
@@ -316,9 +320,10 @@ def user_detail(request, user_id):
                 "approved": mentor.approved,
                 "subjects": mentor.subjects,
                 "topics": mentor.topics,
-                "verification_document_url": mentor.verification_document.url if mentor.verification_document else "",
-                "verification_document_name": mentor.verification_document.name.split("/")[-1] if mentor.verification_document else "",
             }
+            user_data["mentor_profile"].update(
+                serialize_verification_documents(mentor, request)
+            )
 
             mentor_connections = MenteeMentorRequest.objects.filter(
                 mentor=mentor,
@@ -346,9 +351,10 @@ def user_detail(request, user_id):
                 "approved": mentee.approved,
                 "subjects": mentee.subjects,
                 "topics": mentee.topics,
-                "verification_document_url": mentee.verification_document.url if mentee.verification_document else "",
-                "verification_document_name": mentee.verification_document.name.split("/")[-1] if mentee.verification_document else "",
             }
+            user_data["mentee_profile"].update(
+                serialize_verification_documents(mentee, request)
+            )
 
             mentee_connections = MenteeMentorRequest.objects.filter(
                 mentee=mentee,

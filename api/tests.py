@@ -29,14 +29,13 @@ class ApiAuthTests(TestCase):
                 {
                     "email": "mentor1@student.buksu.edu.ph",
                     "password": self.password,
-                    "expected_role": "mentor",
                 }
             ),
             content_type="application/json",
         )
         self.assertEqual(res.status_code, 200)
 
-    def test_login_rejects_wrong_portal_role(self):
+    def test_login_does_not_require_portal_role(self):
         mentee_user = User.objects.create_user(
             username="mentee1",
             email="mentee1@student.buksu.edu.ph",
@@ -50,28 +49,12 @@ class ApiAuthTests(TestCase):
                 {
                     "email": "mentee1@student.buksu.edu.ph",
                     "password": self.password,
-                    "expected_role": "mentor",
                 }
             ),
             content_type="application/json",
         )
 
-        self.assertEqual(res.status_code, 403)
-        self.assertIn("not Mentor", res.json()["error"])
-
-    def test_login_requires_portal_role(self):
-        res = self.client.post(
-            "/api/auth/login/",
-            data=json.dumps(
-                {
-                    "email": "mentor1@student.buksu.edu.ph",
-                    "password": self.password,
-                }
-            ),
-            content_type="application/json",
-        )
-
-        self.assertEqual(res.status_code, 400)
+        self.assertEqual(res.status_code, 200)
 
     def test_login_rate_limit(self):
         for _ in range(8):
@@ -81,7 +64,6 @@ class ApiAuthTests(TestCase):
                     {
                         "email": "mentor1@student.buksu.edu.ph",
                         "password": "wrong",
-                        "expected_role": "mentor",
                     }
                 ),
                 content_type="application/json",
@@ -92,7 +74,6 @@ class ApiAuthTests(TestCase):
                 {
                     "email": "mentor1@student.buksu.edu.ph",
                     "password": "wrong",
-                    "expected_role": "mentor",
                 }
             ),
             content_type="application/json",
@@ -210,3 +191,141 @@ class ApiMatchingTests(TestCase):
                 proficiency_level=5,
             ).exists()
         )
+
+    def test_approved_mentor_cannot_change_role(self):
+        user = User.objects.create_user(
+            username="mentor4",
+            email="mentor4@test.com",
+            password="Pass123!",
+        )
+        mentor_profile = MentorProfile.objects.create(
+            user=user,
+            program="BSIT",
+            year_level=4,
+            role="Senior IT Student",
+            approved=True,
+        )
+        self.client.force_login(user)
+        res = self.client.post(
+            "/api/me/mentor-profile/",
+            data=json.dumps(
+                {
+                    "role": "Instructor",
+                    "capacity": 2,
+                }
+            ),
+            content_type="application/json",
+        )
+        self.assertEqual(res.status_code, 200)
+        body = res.json()
+        self.assertEqual(body["role"], "Senior IT Student")
+        self.assertTrue(body["mentor_approved"])
+        self.assertTrue(body["mentor_role_locked"])
+        mentor_profile.refresh_from_db()
+        self.assertEqual(mentor_profile.role, "Senior IT Student")
+        self.assertTrue(mentor_profile.approved)
+        self.assertEqual(mentor_profile.capacity, 5)
+
+    def test_pending_mentor_can_change_role(self):
+        user = User.objects.create_user(
+            username="mentor5",
+            email="mentor5@test.com",
+            password="Pass123!",
+        )
+        mentor_profile = MentorProfile.objects.create(
+            user=user,
+            program="BSIT",
+            year_level=4,
+            role="Senior IT Student",
+            approved=False,
+        )
+        self.client.force_login(user)
+        res = self.client.post(
+            "/api/me/mentor-profile/",
+            data=json.dumps({"role": "Instructor"}),
+            content_type="application/json",
+        )
+        self.assertEqual(res.status_code, 200)
+        body = res.json()
+        self.assertEqual(body["role"], "Instructor")
+        self.assertFalse(body["mentor_approved"])
+        self.assertFalse(body["mentor_role_locked"])
+        mentor_profile.refresh_from_db()
+        self.assertEqual(mentor_profile.role, "Instructor")
+        self.assertFalse(mentor_profile.approved)
+        self.assertEqual(mentor_profile.year_level, 4)
+
+    def test_pending_student_mentor_can_set_year_level(self):
+        user = User.objects.create_user(
+            username="mentor6",
+            email="mentor6@test.com",
+            password="Pass123!",
+        )
+        mentor_profile = MentorProfile.objects.create(
+            user=user,
+            program="BSIT",
+            year_level=4,
+            role="Senior IT Student",
+            approved=False,
+        )
+        self.client.force_login(user)
+        res = self.client.post(
+            "/api/me/mentor-profile/",
+            data=json.dumps({"year_level": 3, "capacity": 5}),
+            content_type="application/json",
+        )
+        self.assertEqual(res.status_code, 200)
+        body = res.json()
+        self.assertEqual(body["year_level"], 3)
+        mentor_profile.refresh_from_db()
+        self.assertEqual(mentor_profile.year_level, 3)
+
+    def test_approved_student_mentor_cannot_change_year_level(self):
+        user = User.objects.create_user(
+            username="mentor7",
+            email="mentor7@test.com",
+            password="Pass123!",
+        )
+        mentor_profile = MentorProfile.objects.create(
+            user=user,
+            program="BSIT",
+            year_level=3,
+            role="Senior IT Student",
+            approved=True,
+        )
+        self.client.force_login(user)
+        res = self.client.post(
+            "/api/me/mentor-profile/",
+            data=json.dumps({"year_level": 4, "capacity": 5}),
+            content_type="application/json",
+        )
+        self.assertEqual(res.status_code, 200)
+        body = res.json()
+        self.assertEqual(body["year_level"], 3)
+        mentor_profile.refresh_from_db()
+        self.assertEqual(mentor_profile.year_level, 3)
+
+    def test_instructor_year_level_stays_four(self):
+        user = User.objects.create_user(
+            username="mentor8",
+            email="mentor8@test.com",
+            password="Pass123!",
+        )
+        mentor_profile = MentorProfile.objects.create(
+            user=user,
+            program="BSIT",
+            year_level=4,
+            role="Instructor",
+            approved=False,
+        )
+        self.client.force_login(user)
+        res = self.client.post(
+            "/api/me/mentor-profile/",
+            data=json.dumps({"year_level": 3, "capacity": 5}),
+            content_type="application/json",
+        )
+        self.assertEqual(res.status_code, 200)
+        body = res.json()
+        self.assertEqual(body["year_level"], 4)
+        mentor_profile.refresh_from_db()
+        self.assertEqual(mentor_profile.year_level, 4)

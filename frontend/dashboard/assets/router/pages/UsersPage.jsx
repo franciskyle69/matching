@@ -12,6 +12,132 @@
     return d.toLocaleString([], { dateStyle: "short" });
   }
 
+  const ROLE_FILTER_OPTIONS = [
+    { value: "", label: "All roles" },
+    { value: "mentor", label: "Mentors only" },
+    { value: "mentee", label: "Mentees only" },
+    { value: "both", label: "Mentor & mentee" },
+    { value: "none", label: "No profile" },
+  ];
+
+  const STATUS_FILTER_OPTIONS = [
+    { value: "", label: "All statuses" },
+    { value: "active", label: "Active" },
+    { value: "inactive", label: "Inactive" },
+  ];
+
+  const ACCESS_FILTER_OPTIONS = [
+    { value: "", label: "All users" },
+    { value: "yes", label: "Staff only" },
+    { value: "no", label: "Non-staff only" },
+  ];
+
+  const PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
+
+  function optionLabel(options, value) {
+    const match = options.find((option) => option.value === value);
+    return match ? match.label : value;
+  }
+
+  function getInitials(name) {
+    const parts = String(name || "")
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean);
+    if (!parts.length) return "?";
+    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  }
+
+  /** Stable hue per user so avatars keep the same colour between renders. */
+  function avatarHue(seed) {
+    const text = String(seed || "");
+    let hash = 0;
+    for (let index = 0; index < text.length; index += 1) {
+      hash = (hash * 31 + text.charCodeAt(index)) % 360;
+    }
+    return hash;
+  }
+
+  function roleVariant(user) {
+    if (user.role === "both") return "both";
+    if (user.role === "mentor") return "mentor";
+    if (user.role === "mentee") return "mentee";
+    if (user.role === "staff" || user.is_staff) return "staff";
+    return "none";
+  }
+
+  function pendingApprovalLabel(user) {
+    if (user.role === "mentor") {
+      return user.mentor_approved === false ? "Pending approval" : "";
+    }
+    if (user.role === "mentee") {
+      return user.mentee_approved === false ? "Pending approval" : "";
+    }
+    if (user.role === "both") {
+      const pending = [];
+      if (user.mentor_approved === false) pending.push("mentor");
+      if (user.mentee_approved === false) pending.push("mentee");
+      return pending.length ? `Pending ${pending.join(" & ")}` : "";
+    }
+    return "";
+  }
+
+  function renderVerificationDocs(profile, fallbackLabel) {
+    if (!profile) {
+      return <span className="users-edit-meta-value">No file uploaded</span>;
+    }
+    const groups = [
+      ["letter_of_intent", "Letter of intent"],
+      ["study_load", "Study load"],
+      ["grade", "Grade"],
+      ["application", "Application form"],
+    ];
+    const byKind = profile.verification_documents_by_kind || {};
+    const filled = groups.filter(([kind]) => (byKind[kind] || []).length);
+    if (filled.length) {
+      return filled.map(([kind, label]) => (
+        <div key={kind}>
+          <span className="users-edit-meta-label">{label}</span>
+          <div className="users-edit-file-list">
+            {(byKind[kind] || []).map((doc, index) => (
+              <a
+                key={doc.id || `${kind}-${index}`}
+                className="users-edit-file-link"
+                href={doc.url}
+                target="_blank"
+                rel="noreferrer"
+              >
+                {doc.name || "Open uploaded file"}
+              </a>
+            ))}
+          </div>
+        </div>
+      ));
+    }
+    if (profile.verification_document_url) {
+      return (
+        <div>
+          <span className="users-edit-meta-label">{fallbackLabel}</span>
+          <a
+            className="users-edit-file-link"
+            href={profile.verification_document_url}
+            target="_blank"
+            rel="noreferrer"
+          >
+            {profile.verification_document_name || "Open uploaded file"}
+          </a>
+        </div>
+      );
+    }
+    return (
+      <div>
+        <span className="users-edit-meta-label">{fallbackLabel}</span>
+        <span className="users-edit-meta-value">No file uploaded</span>
+      </div>
+    );
+  }
+
   function formatUsername(user) {
     if (user.full_name && user.full_name !== user.username) {
       return `${user.full_name} (@${user.username})`;
@@ -141,7 +267,7 @@
       id: "staff",
       title: "Staff (Admin)",
       description:
-        "Administrative user with access to approvals, activity logs, subjects, and system management.",
+        "Administrative user with access to approvals, activity logs, and system management.",
       icon: "A",
     },
   ];
@@ -363,7 +489,7 @@
               </div>
               <div className="users-edit-fields">
                 <div className="users-edit-field-wrap">
-                  <label className="users-edit-label" htmlFor="create-user-first-name">First Name</label>
+                  <label className="users-edit-label" htmlFor="create-user-first-name">First Name *</label>
                   <input
                     id="create-user-first-name"
                     type="text"
@@ -371,6 +497,8 @@
                     value={formData.first_name}
                     onChange={(e) => onFieldChange("first_name", e.target.value)}
                     autoComplete="given-name"
+                    required
+                    aria-required="true"
                   />
                   {showValidation && errors.first_name && <p className="users-edit-error">{errors.first_name}</p>}
                 </div>
@@ -386,7 +514,7 @@
                   />
                 </div>
                 <div className="users-edit-field-wrap">
-                  <label className="users-edit-label" htmlFor="create-user-last-name">Last Name</label>
+                  <label className="users-edit-label" htmlFor="create-user-last-name">Last Name *</label>
                   <input
                     id="create-user-last-name"
                     type="text"
@@ -394,11 +522,13 @@
                     value={formData.last_name}
                     onChange={(e) => onFieldChange("last_name", e.target.value)}
                     autoComplete="family-name"
+                    required
+                    aria-required="true"
                   />
                   {showValidation && errors.last_name && <p className="users-edit-error">{errors.last_name}</p>}
                 </div>
                 <div className="users-edit-field-wrap">
-                  <label className="users-edit-label" htmlFor="create-user-email">Email</label>
+                  <label className="users-edit-label" htmlFor="create-user-email">Email *</label>
                   <input
                     id="create-user-email"
                     type="email"
@@ -406,6 +536,8 @@
                     value={formData.email}
                     onChange={(e) => onFieldChange("email", e.target.value)}
                     autoComplete="email"
+                    required
+                    aria-required="true"
                   />
                   {showValidation && errors.email && <p className="users-edit-error">{errors.email}</p>}
                 </div>
@@ -691,7 +823,7 @@
                 {activeRole === "staff" && (
                   <div className="users-role-conditional-content">
                     <p className="users-role-panel-title">Admin Permissions Summary</p>
-                    <p>Access to approvals, activity logs, subjects management, and backup tools.</p>
+                    <p>Access to approvals, activity logs, and backup tools.</p>
                     <p>Can update user accounts and manage moderation workflows.</p>
                   </div>
                 )}
@@ -747,36 +879,18 @@
               </div>
 
               <div className="users-edit-meta users-edit-meta-wide">
-                <div>
-                  <span className="users-edit-meta-label">Mentor signup file</span>
-                  {user.mentor_profile?.verification_document_url ? (
-                    <a
-                      className="users-edit-file-link"
-                      href={user.mentor_profile.verification_document_url}
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      {user.mentor_profile.verification_document_name || "Open uploaded file"}
-                    </a>
-                  ) : (
-                    <span className="users-edit-meta-value">No file uploaded</span>
-                  )}
-                </div>
-                <div>
-                  <span className="users-edit-meta-label">Mentee signup file</span>
-                  {user.mentee_profile?.verification_document_url ? (
-                    <a
-                      className="users-edit-file-link"
-                      href={user.mentee_profile.verification_document_url}
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      {user.mentee_profile.verification_document_name || "Open uploaded file"}
-                    </a>
-                  ) : (
-                    <span className="users-edit-meta-value">No file uploaded</span>
-                  )}
-                </div>
+                {user.mentor_profile
+                  ? renderVerificationDocs(
+                      user.mentor_profile,
+                      "Mentor signup file",
+                    )
+                  : null}
+                {user.mentee_profile
+                  ? renderVerificationDocs(
+                      user.mentee_profile,
+                      "Mentee signup file",
+                    )
+                  : null}
               </div>
             </section>
           </div>
@@ -1027,7 +1141,8 @@
             data: "username",
             title: "User",
             render: (_value, _type, row) => {
-              const fullName = escapeHtml(row.full_name || row.username);
+              const displayName = row.full_name || row.username;
+              const fullName = escapeHtml(displayName);
               const username = row.full_name && row.full_name !== row.username
                 ? `<span class="users-username">@${escapeHtml(row.username)}</span>`
                 : "";
@@ -1035,14 +1150,18 @@
               const staffBadge = row.is_staff
                 ? '<span class="badge badge-staff">Staff</span>'
                 : "";
+              const hue = avatarHue(row.username || row.email || row.id);
               return `
                 <div class="users-user-cell">
-                  <div class="users-user-top">
-                    <strong>${fullName}</strong>
-                    ${username}
-                    ${staffBadge}
+                  <span class="users-avatar" style="--users-avatar-hue:${hue}" aria-hidden="true">${escapeHtml(getInitials(displayName))}</span>
+                  <div class="users-user-info">
+                    <div class="users-user-top">
+                      <span class="users-user-name">${fullName}</span>
+                      ${username}
+                      ${staffBadge}
+                    </div>
+                    <div class="users-user-email">${email}</div>
                   </div>
-                  <div class="users-user-email">${email}</div>
                 </div>
               `;
             },
@@ -1050,7 +1169,18 @@
           {
             data: "role",
             title: "Role",
-            render: (_value, _type, row) => `<span class="users-role-badge">${escapeHtml(getRoleDisplay(row))}</span>`,
+            render: (_value, _type, row) => {
+              const pending = pendingApprovalLabel(row);
+              const pendingPill = pending
+                ? `<span class="users-pending-pill">${escapeHtml(pending)}</span>`
+                : "";
+              return `
+                <div class="users-role-cell">
+                  <span class="users-role-badge users-role-badge--${roleVariant(row)}">${escapeHtml(getRoleDisplay(row))}</span>
+                  ${pendingPill}
+                </div>
+              `;
+            },
           },
           {
             data: "is_active",
@@ -1059,13 +1189,13 @@
             render: (value) => {
               const active = !!value;
               const cls = active ? "status-active" : "status-inactive";
-              return `<span class="status-badge ${cls}">${active ? "Active" : "Inactive"}</span>`;
+              return `<span class="status-badge ${cls}"><span class="users-status-dot" aria-hidden="true"></span>${active ? "Active" : "Inactive"}</span>`;
             },
           },
           {
             data: "date_joined",
             title: "Joined",
-            render: (value) => formatDate(value),
+            render: (value) => `<span class="users-joined-cell">${escapeHtml(formatDate(value))}</span>`,
           },
           {
             data: "id",
@@ -1246,80 +1376,220 @@
     const showingFrom = total === 0 ? 0 : (page - 1) * pageSize + 1;
     const showingTo = total === 0 ? 0 : Math.min(page * pageSize, total);
 
+    const hasActiveFilters = !!(search || roleFilter || statusFilter || staffFilter);
+    const activeFilterChips = [];
+    if (search) {
+      activeFilterChips.push({
+        key: "search",
+        name: "Search",
+        value: search,
+        clear: () => setSearch(""),
+      });
+    }
+    if (roleFilter) {
+      activeFilterChips.push({
+        key: "role",
+        name: "Role",
+        value: optionLabel(ROLE_FILTER_OPTIONS, roleFilter),
+        clear: () => setRoleFilter(""),
+      });
+    }
+    if (statusFilter) {
+      activeFilterChips.push({
+        key: "status",
+        name: "Status",
+        value: optionLabel(STATUS_FILTER_OPTIONS, statusFilter),
+        clear: () => setStatusFilter(""),
+      });
+    }
+    if (staffFilter) {
+      activeFilterChips.push({
+        key: "access",
+        name: "Access",
+        value: optionLabel(ACCESS_FILTER_OPTIONS, staffFilter),
+        clear: () => setStaffFilter(""),
+      });
+    }
+
     return (
       <div className="card users-management-page page-shell">
         <div className="users-page-header page-shell-head">
-          <div>
+          <div className="users-page-heading">
             <h1 className="page-title users-page-title">User Management</h1>
             <p className="page-subtitle users-page-subtitle">Manage user access, roles, and approvals from a single admin workspace.</p>
           </div>
-          <button type="button" className="btn" onClick={handleAddUser}>+ Add User</button>
-        </div>
-
-        <div className="users-toolbar">
-          <div className="users-toolbar-main">
-            <input
-              type="text"
-              className="users-search-input"
-              placeholder="Search by name, email, or username..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-          </div>
-
-          <div className="users-toolbar-filters">
-            <select
-              className="users-filter-select"
-              value={roleFilter}
-              onChange={(e) => setRoleFilter(e.target.value)}
-              title="Filter by user role"
-            >
-              <option value="">All Roles</option>
-              <option value="mentor">Mentors Only</option>
-              <option value="mentee">Mentees Only</option>
-              <option value="both">Both Mentor & Mentee</option>
-              <option value="none">No Profile</option>
-            </select>
-
-            <select
-              className="users-filter-select"
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              title="Filter by account status"
-            >
-              <option value="">All Status</option>
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
-            </select>
-
-            <select
-              className="users-filter-select"
-              value={staffFilter}
-              onChange={(e) => setStaffFilter(e.target.value)}
-              title="Filter by staff status"
-            >
-              <option value="">All Users</option>
-              <option value="yes">Staff Only</option>
-              <option value="no">Non-Staff Only</option>
-            </select>
-
-            <button
-              type="button"
-              className="btn secondary"
-              onClick={resetFilters}
-            >
-              Reset filters
+          <div className="users-page-header-actions">
+            <span className="users-total-pill">
+              <strong>{total}</strong> {total === 1 ? "user" : "users"}
+            </span>
+            <button type="button" className="btn users-add-btn" onClick={handleAddUser}>
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <line x1="12" y1="5" x2="12" y2="19" />
+                <line x1="5" y1="12" x2="19" y2="12" />
+              </svg>
+              Add User
             </button>
           </div>
         </div>
 
-        <div className="users-filter-info">
-          {loading ? "Refreshing users..." : `Showing ${showingFrom}-${showingTo} of ${total} users`}
+        <div className="users-toolbar">
+          <div className="users-search-field">
+            <svg
+              className="users-search-icon"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <circle cx="11" cy="11" r="7" />
+              <line x1="16.65" y1="16.65" x2="21" y2="21" />
+            </svg>
+            <input
+              type="search"
+              id="users-search"
+              className="users-search-input"
+              placeholder="Search by name, email, or username"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+            {search && (
+              <button
+                type="button"
+                className="users-search-clear"
+                onClick={() => setSearch("")}
+                aria-label="Clear search"
+              >
+                ×
+              </button>
+            )}
+          </div>
+
+          <div className="users-toolbar-filters">
+            <div className="users-filter-group">
+              <label htmlFor="users-filter-role">Role</label>
+              <select
+                id="users-filter-role"
+                className="users-filter-select"
+                value={roleFilter}
+                onChange={(e) => setRoleFilter(e.target.value)}
+              >
+                {ROLE_FILTER_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="users-filter-group">
+              <label htmlFor="users-filter-status">Status</label>
+              <select
+                id="users-filter-status"
+                className="users-filter-select"
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+              >
+                {STATUS_FILTER_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="users-filter-group">
+              <label htmlFor="users-filter-access">Access</label>
+              <select
+                id="users-filter-access"
+                className="users-filter-select"
+                value={staffFilter}
+                onChange={(e) => setStaffFilter(e.target.value)}
+              >
+                {ACCESS_FILTER_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <button
+              type="button"
+              className="btn secondary users-reset-btn"
+              onClick={resetFilters}
+              disabled={!hasActiveFilters}
+            >
+              Reset
+            </button>
+          </div>
+        </div>
+
+        <div className="users-results-bar">
+          <span className="users-filter-info" aria-live="polite">
+            {loading ? (
+              "Refreshing users…"
+            ) : total === 0 ? (
+              "No users match the current filters"
+            ) : (
+              <>
+                Showing <strong>{showingFrom}–{showingTo}</strong> of{" "}
+                <strong>{total}</strong> users
+              </>
+            )}
+          </span>
+
+          {activeFilterChips.length > 0 && (
+            <div className="users-active-filters">
+              {activeFilterChips.map((chip) => (
+                <button
+                  key={chip.key}
+                  type="button"
+                  className="users-filter-chip"
+                  onClick={chip.clear}
+                  title={`Remove ${chip.name} filter`}
+                >
+                  <span className="users-filter-chip-name">{chip.name}</span>
+                  <span className="users-filter-chip-value">{chip.value}</span>
+                  <span className="users-filter-chip-x" aria-hidden="true">×</span>
+                </button>
+              ))}
+            </div>
+          )}
+
+          <label className="users-page-size">
+            <span>Rows</span>
+            <select
+              className="page-size-select"
+              value={pageSize}
+              onChange={(e) => {
+                const next = Number(e.target.value);
+                if (!next) return;
+                tableInstanceRef.current?.page.len(next).draw("page");
+              }}
+            >
+              {PAGE_SIZE_OPTIONS.map((size) => (
+                <option key={size} value={size}>
+                  {size}
+                </option>
+              ))}
+            </select>
+          </label>
         </div>
 
         <div className="users-table-status" aria-live="polite">
-          {!tableEngineReady && !tableEngineError && "Loading DataTables engine..."}
-          {loading && tableEngineReady && "Loading users table..."}
+          {!tableEngineReady && !tableEngineError && "Loading table engine…"}
+          {loading && tableEngineReady && "Loading users…"}
           {tableEngineError && tableEngineError}
         </div>
 

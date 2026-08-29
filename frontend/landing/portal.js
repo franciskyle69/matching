@@ -38,14 +38,14 @@
     }
   }
 
-  const stepRoles = document.getElementById("portal-step-roles");
-  const stepAuth = document.getElementById("portal-step-auth");
-  const selectedLabel = document.getElementById("portal-selected-role");
-  const signInBtn = document.getElementById("portal-signin-btn");
-  const signUpBtn = document.getElementById("portal-signup-btn");
-  const backBtn = document.getElementById("portal-back-btn");
-
-  if (!stepRoles || !stepAuth) return;
+  function clearPortalRole() {
+    try {
+      sessionStorage.removeItem(STORAGE_KEY);
+      sessionStorage.removeItem(STORAGE_LABEL_KEY);
+    } catch {
+      /* ignore */
+    }
+  }
 
   document.querySelectorAll("[data-portal-role]").forEach((btn) => {
     btn.addEventListener("click", (e) => {
@@ -54,34 +54,16 @@
       const role = ROLES[key];
       if (!role) return;
 
-      savePortalRole(role);
-
+      // Staff accounts are not created here — go straight to sign-in.
       if (role.signinOnly) {
-        window.location.href = authHref("signin", role.authRole);
+        clearPortalRole();
+        window.location.href = authHref("signin");
         return;
       }
 
-      selectedLabel.textContent = role.label;
-      signInBtn.href = authHref("signin", role.authRole);
-      if (signUpBtn) {
-        signUpBtn.href = authHref("signup", role.authRole);
-        signUpBtn.hidden = false;
-      }
-      signInBtn.hidden = false;
-
-      stepRoles.classList.remove("portal-step--visible");
-      stepRoles.hidden = true;
-      stepAuth.hidden = false;
-      stepAuth.classList.add("portal-step--visible");
+      // Mentor / mentee: role choice is for account creation only.
+      savePortalRole(role);
+      window.location.href = authHref("signup", role.authRole);
     });
   });
-
-  if (backBtn) {
-    backBtn.addEventListener("click", () => {
-      stepAuth.hidden = true;
-      stepAuth.classList.remove("portal-step--visible");
-      stepRoles.hidden = false;
-      stepRoles.classList.add("portal-step--visible");
-    });
-  }
 })();

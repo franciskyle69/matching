@@ -73,6 +73,8 @@ def _serialize_mentor_for_matching(m, request=None):
         "competency_ids": list(m.competencies.values_list("id", flat=True)),
         "competency_levels": competency_levels,
         "role": m.role or "",
+        "program": getattr(m, "program", "") or "",
+        "year_level": getattr(m, "year_level", None) or 0,
         "expertise_level": m.expertise_level,
         "years_experience": getattr(m, "years_experience", None),
         "teaching_experience_years": getattr(m, "teaching_experience_years", None),

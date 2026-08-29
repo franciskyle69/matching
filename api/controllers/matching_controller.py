@@ -18,6 +18,7 @@ from matching.models import (
 from matching.services import (
     run_greedy_matching,
     recommend_mentors_for_mentee_with_meta,
+    compute_score,
 )
 
 from ..views import (
@@ -48,6 +49,81 @@ def _recommendations_empty_message(empty_reason: str) -> str:
 
 def _email_from_address() -> str:
     return getattr(settings, "DEFAULT_FROM_EMAIL", "") or getattr(settings, "EMAIL_HOST_USER", "")
+
+
+def _subject_list(values):
+    if isinstance(values, list):
+        return [v for v in values if v]
+    if values:
+        return [values]
+    return []
+
+
+def _build_match_details(mentee_profile, mentor):
+    mentee_subjects = _subject_list(getattr(mentee_profile, "subjects", []))
+    mentee_topics = _subject_list(getattr(mentee_profile, "topics", []))
+    mentor_subjects = _subject_list(getattr(mentor, "subjects", []))
+    mentor_topics = _subject_list(getattr(mentor, "topics", []))
+    mentee_subj_set = {str(x).strip().lower() for x in mentee_subjects if x}
+    mentee_top_set = {str(x).strip().lower() for x in mentee_topics if x}
+    overlap_subjects = [
+        s for s in mentor_subjects if s and str(s).strip().lower() in mentee_subj_set
+    ]
+    overlap_topics = [
+        t for t in mentor_topics if t and str(t).strip().lower() in mentee_top_set
+    ]
+    mentor_competency_ids = set(mentor.competencies.values_list("id", flat=True))
+    mentee_competency_ids = set(mentee_profile.competencies.values_list("id", flat=True))
+    shared_competency_ids = mentor_competency_ids & mentee_competency_ids
+    shared_competencies = []
+    if shared_competency_ids:
+        shared_competencies = list(
+            Competency.objects.filter(id__in=shared_competency_ids)
+            .order_by("name")
+            .values_list("name", flat=True)
+        )
+    return {
+        "common_subjects": overlap_subjects,
+        "common_topics": overlap_topics,
+        "common_competencies": shared_competencies,
+        "mentor_subjects": mentor_subjects,
+        "mentor_topics": mentor_topics,
+        "mentee_subjects": mentee_subjects,
+        "mentee_topics": mentee_topics,
+    }
+
+
+def _paired_mentor_ids_for_mentee(mentee_profile):
+    return set(
+        MenteeMentorRequest.objects.filter(
+            mentee=mentee_profile,
+            accepted=True,
+        ).values_list("mentor_id", flat=True)
+    )
+
+
+def _notify_coordinators_of_match(mentee_name: str, mentor_name: str) -> None:
+    """Notify every coordinator/admin (staff) that a new mentee–mentor pairing was formed.
+
+    The message includes a suggested next action and routes the coordinator to the
+    Users tab, where they can review the pairing and follow up.
+    """
+    from django.contrib.auth import get_user_model
+
+    User = get_user_model()
+    staff_users = list(User.objects.filter(is_staff=True, is_active=True))
+    if not staff_users:
+        return
+    message = (
+        f"New match: {mentee_name} is now paired with {mentor_name}. "
+        "Open Users to review the pairing and follow up with both if needed."
+    )[:255]
+    Notification.objects.bulk_create(
+        [
+            Notification(user=staff_user, message=message, action_tab="users")
+            for staff_user in staff_users
+        ]
+    )
 
 
 def _send_pairing_email(recipient_email: str, subject: str, message: str) -> bool:
@@ -202,49 +278,15 @@ def mentee_recommendations(request):
     accepted_counts = {
         int(row["mentor_id"]): int(row["total"] or 0) for row in accepted_rows
     }
+    paired_mentor_ids = _paired_mentor_ids_for_mentee(mentee_profile)
     data = []
-    mentee_subjects = (
-        mentee_profile.subjects
-        if isinstance(mentee_profile.subjects, list)
-        else ([mentee_profile.subjects] if mentee_profile.subjects else [])
-    )
-    mentee_topics = (
-        mentee_profile.topics
-        if isinstance(mentee_profile.topics, list)
-        else ([mentee_profile.topics] if mentee_profile.topics else [])
-    )
-    mentee_subj_set = {str(x).strip().lower() for x in mentee_subjects if x}
-    mentee_top_set = {str(x).strip().lower() for x in mentee_topics if x}
 
     for mentor, score in recommendations:
+        if mentor.id in paired_mentor_ids:
+            continue
         capacity = max(int(getattr(mentor, "capacity", 0) or 0), 0)
         slots_left = max(capacity - int(accepted_counts.get(mentor.id, 0)), 0)
-        mentor_subjects = (
-            mentor.subjects
-            if isinstance(mentor.subjects, list)
-            else ([mentor.subjects] if mentor.subjects else [])
-        )
-        mentor_topics = (
-            mentor.topics
-            if isinstance(mentor.topics, list)
-            else ([mentor.topics] if mentor.topics else [])
-        )
-        overlap_subjects = [
-            s for s in mentor_subjects if s and str(s).strip().lower() in mentee_subj_set
-        ]
-        overlap_topics = [
-            t for t in mentor_topics if t and str(t).strip().lower() in mentee_top_set
-        ]
-        mentor_competency_ids = set(mentor.competencies.values_list("id", flat=True))
-        mentee_competency_ids = set(mentee_profile.competencies.values_list("id", flat=True))
-        shared_competency_ids = mentor_competency_ids & mentee_competency_ids
-        shared_competencies = []
-        if shared_competency_ids:
-            shared_competencies = list(
-                Competency.objects.filter(id__in=shared_competency_ids)
-                .order_by("name")
-                .values_list("name", flat=True)
-            )
+        match_details = _build_match_details(mentee_profile, mentor)
         data.append(
             {
                 "mentor_id": mentor.id,
@@ -258,15 +300,7 @@ def mentee_recommendations(request):
                 "mentee_display_name": get_user_display_name(mentee_profile.user) or mentee_profile.user.username,
                 "mentee": _serialize_mentee_for_matching(mentee_profile, request),
                 "score": round(float(score), 4),
-                "match_details": {
-                    "common_subjects": overlap_subjects,
-                    "common_topics": overlap_topics,
-                    "common_competencies": shared_competencies,
-                    "mentor_subjects": mentor_subjects,
-                    "mentor_topics": mentor_topics,
-                    "mentee_subjects": mentee_subjects,
-                    "mentee_topics": mentee_topics,
-                },
+                "match_details": match_details,
             }
         )
 
@@ -362,6 +396,7 @@ def mentee_choose_mentor(request):
         message=f"You are now paired with {mentor_name}. Open Matching to view your mentor.",
         action_tab="matching",
     )
+    _notify_coordinators_of_match(mentee_name, mentor_name)
 
     _send_pairing_email(
         getattr(mentor.user, "email", "") or "",
@@ -514,7 +549,8 @@ def my_mentor(request):
         return error
     req = (
         MenteeMentorRequest.objects.filter(mentee=mentee_profile, accepted=True)
-        .select_related("mentor", "mentor__user")
+        .select_related("mentor", "mentor__user", "mentee")
+        .prefetch_related("mentor__competencies", "mentee__competencies")
         .order_by("-accepted_at")
         .first()
     )
@@ -523,5 +559,7 @@ def my_mentor(request):
     m = req.mentor
     mentor_payload = _serialize_mentor_for_matching(m, request)
     mentor_payload["accepted_at"] = req.accepted_at.isoformat()
+    mentor_payload["match_details"] = _build_match_details(mentee_profile, m)
+    mentor_payload["score"] = round(float(compute_score(m, mentee_profile)), 4)
     return JsonResponse({"mentor": mentor_payload})
 

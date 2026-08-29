@@ -71,12 +71,27 @@
       { label: "Email", value: textOrFallback(user.email, "Not available") },
       { label: "Program", value: textOrFallback(mentorProfile.program) },
       {
-        label: "Year level",
-        value: mentorProfile.year_level
-          ? `Year ${mentorProfile.year_level}`
-          : "Not set",
+        label: "Mentor type",
+        value:
+          mentorProfile.role === "Instructor"
+            ? "Instructor"
+            : mentorProfile.role === "Senior IT Student"
+              ? "Student mentor"
+              : textOrFallback(mentorProfile.role, "Not set"),
       },
     ];
+    if (mentorProfile.role === "Senior IT Student") {
+      items.push({
+        label: "Year level",
+        value: mentorProfile.year_level
+          ? Number(mentorProfile.year_level) === 3
+            ? "3rd year"
+            : Number(mentorProfile.year_level) === 4
+              ? "4th year"
+              : `Year ${mentorProfile.year_level}`
+          : "Not set",
+      });
+    }
 
     return (
       <div className="complete-profile-general-grid" role="list">

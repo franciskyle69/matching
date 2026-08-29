@@ -110,6 +110,8 @@ def user_public_profile(request, user_id):
             "capacity": getattr(mp, "capacity", None),
             "role": getattr(mp, "role", "") or "",
         }
+        if str(getattr(mp, "role", "") or "").strip() == "Senior IT Student":
+            details["year_level"] = mp.year_level
     elif me:
         bio = getattr(me, "bio", "") or ""
         cover_url = getattr(me, "cover_url", "") or ""
@@ -121,6 +123,7 @@ def user_public_profile(request, user_id):
             "program": getattr(me, "program", "") or "",
             "year_level": getattr(me, "year_level", None),
             "campus": getattr(me, "campus", "") or "",
+            "sex": getattr(me, "sex", "") or "",
         }
 
     from matching.models import UserPost
