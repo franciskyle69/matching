@@ -3,7 +3,8 @@ import { Alert as MuiAlert } from "@mui/material";
 (function () {
   "use strict";
   const React = window.React;
-  const { useContext, useState } = React;
+  const ReactDOM = window.ReactDOM;
+  const { useContext, useEffect, useRef, useState } = React;
   const AppContext = window.DashboardApp.AppContext;
   const Utils = window.DashboardApp.Utils || {};
   const { LoadingSpinner } = Utils;
@@ -111,8 +112,266 @@ import { Alert as MuiAlert } from "@mui/material";
   }
 
   function getGoogleLoginUrl() {
-    // Sign-in does not use a portal role; Google login is account-based.
-    return "/accounts/google/login/?process=login&next=/app/signin%3Foauth%3Dgoogle";
+    return "/accounts/google/start/login/";
+  }
+
+  function getGoogleSignupUrl() {
+    const role = getPortalAuthRole();
+    if (role !== "mentor" && role !== "mentee") return "/portal/";
+    return (
+      "/accounts/google/start/signup/?role=" + encodeURIComponent(role)
+    );
+  }
+
+  function GoogleMark() {
+    return (
+      <svg className="auth-social-icon" viewBox="0 0 24 24" aria-hidden="true">
+        <path
+          fill="currentColor"
+          d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+        />
+        <path
+          fill="currentColor"
+          d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+        />
+        <path
+          fill="currentColor"
+          d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+        />
+        <path
+          fill="currentColor"
+          d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+        />
+      </svg>
+    );
+  }
+
+  function isOauthMismatchAlert(authAlert) {
+    const code = String((authAlert && authAlert.code) || "").toLowerCase();
+    return code === "no_account" || code === "account_exists";
+  }
+
+  function getOauthModalCopy(authAlert) {
+    const code = String((authAlert && authAlert.code) || "").toLowerCase();
+    if (code === "account_exists") {
+      return {
+        title: (authAlert && authAlert.title) || "Account Already Exists",
+        message:
+          (authAlert && authAlert.message) ||
+          "An account is already registered with this Google email. Would you like to log in instead?",
+        primaryId: "login_google",
+        primaryLabel: "Log In with Google",
+      };
+    }
+    return {
+      title: (authAlert && authAlert.title) || "No Account Found",
+      message:
+        (authAlert && authAlert.message) ||
+        "No account is registered with this Google email. Would you like to create a new account instead?",
+      primaryId: "signup_google",
+      primaryLabel: "Sign Up with Google",
+    };
+  }
+
+  function handleOauthAlertAction(actionId, setActiveTab, setAuthAlert) {
+    if (actionId === "dismiss") {
+      if (setAuthAlert) setAuthAlert(null);
+      return;
+    }
+    if (actionId === "create_account") {
+      const role = getPortalAuthRole();
+      if (role === "mentor" || role === "mentee") {
+        if (setAuthAlert) setAuthAlert(null);
+        navigateAuthTab(setActiveTab, "signup");
+        return;
+      }
+      window.location.href = "/portal/";
+      return;
+    }
+    if (actionId === "signup_google") {
+      window.location.href = getGoogleSignupUrl();
+      return;
+    }
+    if (actionId === "go_login") {
+      if (setAuthAlert) setAuthAlert(null);
+      navigateAuthTab(setActiveTab, "signin");
+      return;
+    }
+    if (actionId === "login_google") {
+      window.location.href = getGoogleLoginUrl();
+    }
+  }
+
+  function WarningBadgeIcon() {
+    return (
+      <svg
+        className="auth-oauth-modal-badge-icon"
+        viewBox="0 0 24 24"
+        fill="none"
+        aria-hidden="true"
+      >
+        <path
+          d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"
+          stroke="currentColor"
+          strokeWidth="1.8"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+    );
+  }
+
+  function AuthOauthWarningModal({ authAlert, setAuthAlert, setActiveTab }) {
+    const dialogRef = useRef(null);
+    const leavingRef = useRef(false);
+    const [leaving, setLeaving] = useState(false);
+    const copy = getOauthModalCopy(authAlert);
+    const titleId = "auth-oauth-modal-title";
+    const descId = "auth-oauth-modal-desc";
+
+    function dismiss() {
+      if (leavingRef.current) return;
+      leavingRef.current = true;
+      setLeaving(true);
+      window.setTimeout(() => {
+        if (setAuthAlert) setAuthAlert(null);
+      }, 200);
+    }
+
+    useEffect(() => {
+      const previousOverflow = document.body.style.overflow;
+      document.body.style.overflow = "hidden";
+      function onKeyDown(event) {
+        if (event.key === "Escape") {
+          event.preventDefault();
+          dismiss();
+        }
+      }
+      document.addEventListener("keydown", onKeyDown);
+      if (dialogRef.current && typeof dialogRef.current.focus === "function") {
+        dialogRef.current.focus();
+      }
+      return () => {
+        document.body.style.overflow = previousOverflow;
+        document.removeEventListener("keydown", onKeyDown);
+      };
+    }, []);
+
+    const overlay = (
+      <div
+        className={
+          "auth-oauth-modal-overlay is-open" + (leaving ? " is-leaving" : "")
+        }
+        data-testid="auth-oauth-modal-overlay"
+        onClick={(event) => {
+          if (event.target === event.currentTarget) dismiss();
+        }}
+      >
+        <div
+          ref={dialogRef}
+          className="auth-oauth-modal"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby={titleId}
+          aria-describedby={descId}
+          tabIndex={-1}
+        >
+          <button
+            type="button"
+            className="auth-oauth-modal-close"
+            onClick={dismiss}
+            aria-label="Close"
+          >
+            ✕
+          </button>
+          <div className="auth-oauth-modal-badge" aria-hidden="true">
+            <WarningBadgeIcon />
+          </div>
+          <h3 id={titleId} className="auth-oauth-modal-title">
+            {copy.title}
+          </h3>
+          <p id={descId} className="auth-oauth-modal-message">
+            {copy.message}
+          </p>
+          <div className="auth-oauth-modal-actions">
+            <button
+              type="button"
+              className="auth-oauth-modal-primary"
+              onClick={() =>
+                handleOauthAlertAction(
+                  copy.primaryId,
+                  setActiveTab,
+                  setAuthAlert,
+                )
+              }
+            >
+              <GoogleMark />
+              {copy.primaryLabel}
+            </button>
+            <button
+              type="button"
+              className="auth-oauth-modal-secondary"
+              onClick={dismiss}
+            >
+              Cancel / Dismiss
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+
+    if (ReactDOM && typeof ReactDOM.createPortal === "function" && document.body) {
+      return ReactDOM.createPortal(overlay, document.body);
+    }
+    return overlay;
+  }
+
+  function AuthAlertBanner({ authAlert, setAuthAlert, defaultTitle }) {
+    if (!authAlert || isOauthMismatchAlert(authAlert)) return null;
+    const body = (
+      <div className="auth-alert-content">
+        <p className="auth-alert-title">
+          {authAlert.title || defaultTitle}
+        </p>
+        <p className="auth-alert-message">{authAlert.message}</p>
+        {authAlert.detail && (
+          <p className="auth-alert-detail">{authAlert.detail}</p>
+        )}
+        {authAlert.attempts && (
+          <p className="auth-alert-attempts">
+            Failed attempts: {authAlert.attempts}
+          </p>
+        )}
+      </div>
+    );
+    if (MuiAlert) {
+      return (
+        <MuiAlert
+          className="auth-inline-alert"
+          severity={authAlert.severity || "error"}
+          variant="outlined"
+          onClose={() => setAuthAlert(null)}
+          sx={{ mb: 2, alignItems: "flex-start" }}
+        >
+          {body}
+        </MuiAlert>
+      );
+    }
+    return (
+      <div
+        className={
+          "alert auth-inline-alert " +
+          (authAlert.severity === "warning"
+            ? "alert-warning"
+            : authAlert.severity === "success"
+              ? "alert-success"
+              : "alert-error")
+        }
+        role="alert"
+      >
+        {body}
+      </div>
+    );
   }
 
   function SignInPage() {
@@ -221,53 +480,11 @@ import { Alert as MuiAlert } from "@mui/material";
                 handleSignIn();
               }}
             >
-              {authAlert &&
-                (MuiAlert ? (
-                  <MuiAlert
-                    severity={authAlert.severity || "error"}
-                    variant="filled"
-                    onClose={() => setAuthAlert(null)}
-                    sx={{ mb: 2, alignItems: "flex-start" }}
-                  >
-                    <div className="auth-alert-content">
-                      <p className="auth-alert-title">
-                        {authAlert.title || "Sign in issue"}
-                      </p>
-                      <p className="auth-alert-message">{authAlert.message}</p>
-                      {authAlert.detail && (
-                        <p className="auth-alert-detail">{authAlert.detail}</p>
-                      )}
-                      {authAlert.attempts && (
-                        <p className="auth-alert-attempts">
-                          Failed attempts: {authAlert.attempts}
-                        </p>
-                      )}
-                    </div>
-                  </MuiAlert>
-                ) : (
-                  <div
-                    className={
-                      "alert auth-inline-alert " +
-                      (authAlert.severity === "warning"
-                        ? "alert-warning"
-                        : "alert-error")
-                    }
-                    role="alert"
-                  >
-                    <p className="auth-alert-title">
-                      {authAlert.title || "Sign in issue"}
-                    </p>
-                    <p className="auth-alert-message">{authAlert.message}</p>
-                    {authAlert.detail && (
-                      <p className="auth-alert-detail">{authAlert.detail}</p>
-                    )}
-                    {authAlert.attempts && (
-                      <p className="auth-alert-attempts">
-                        Failed attempts: {authAlert.attempts}
-                      </p>
-                    )}
-                  </div>
-                ))}
+              <AuthAlertBanner
+                authAlert={authAlert}
+                setAuthAlert={setAuthAlert}
+                defaultTitle="Sign in issue"
+              />
               <div className="auth-field">
                 <label htmlFor="signin-identifier">Email or Username</label>
                 <input
@@ -392,25 +609,8 @@ import { Alert as MuiAlert } from "@mui/material";
                       window.location.href = getGoogleLoginUrl();
                     }}
                   >
-                    <svg className="auth-social-icon" viewBox="0 0 24 24">
-                      <path
-                        fill="currentColor"
-                        d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                      />
-                      <path
-                        fill="currentColor"
-                        d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                      />
-                      <path
-                        fill="currentColor"
-                        d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
-                      />
-                      <path
-                        fill="currentColor"
-                        d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-                      />
-                    </svg>
-                    Google
+                    <GoogleMark />
+                    Log in with Google
                   </button>
                 )}
               </div>
@@ -429,6 +629,13 @@ import { Alert as MuiAlert } from "@mui/material";
             </form>
           </div>
         </div>
+        {isOauthMismatchAlert(authAlert) && (
+          <AuthOauthWarningModal
+            authAlert={authAlert}
+            setAuthAlert={setAuthAlert}
+            setActiveTab={setActiveTab}
+          />
+        )}
       </div>
     );
   }
@@ -647,29 +854,11 @@ import { Alert as MuiAlert } from "@mui/material";
                 handleSignUp();
               }}
             >
-              {authAlert &&
-                (MuiAlert ? (
-                  <MuiAlert
-                    severity={authAlert.severity || "error"}
-                    variant="filled"
-                    onClose={() => setAuthAlert(null)}
-                    sx={{ mb: 1, alignItems: "flex-start" }}
-                  >
-                    <div className="auth-alert-content">
-                      <p className="auth-alert-title">
-                        {authAlert.title || "Sign up issue"}
-                      </p>
-                      <p className="auth-alert-message">{authAlert.message}</p>
-                    </div>
-                  </MuiAlert>
-                ) : (
-                  <div className="alert auth-inline-alert alert-error" role="alert">
-                    <p className="auth-alert-title">
-                      {authAlert.title || "Sign up issue"}
-                    </p>
-                    <p className="auth-alert-message">{authAlert.message}</p>
-                  </div>
-                ))}
+              <AuthAlertBanner
+                authAlert={authAlert}
+                setAuthAlert={setAuthAlert}
+                defaultTitle="Sign up issue"
+              />
               {signupStep === 2 && (
                 <>
               <div className="auth-field">
@@ -1051,6 +1240,25 @@ import { Alert as MuiAlert } from "@mui/material";
                   )}
                 </button>
               </div>
+              {signupStep === 1 && (
+                <>
+                  <div className="auth-divider">
+                    <span>Or continue with</span>
+                  </div>
+                  <div className="auth-social">
+                    <button
+                      className="auth-social-btn"
+                      type="button"
+                      onClick={() => {
+                        window.location.href = getGoogleSignupUrl();
+                      }}
+                    >
+                      <GoogleMark />
+                      Sign up with Google
+                    </button>
+                  </div>
+                </>
+              )}
               <div className="auth-footer">
                 Already have an account?{" "}
                 <button
@@ -1064,6 +1272,13 @@ import { Alert as MuiAlert } from "@mui/material";
             </form>
           </div>
         </div>
+        {isOauthMismatchAlert(authAlert) && (
+          <AuthOauthWarningModal
+            authAlert={authAlert}
+            setAuthAlert={setAuthAlert}
+            setActiveTab={setActiveTab}
+          />
+        )}
       </div>
     );
   }

@@ -1,0 +1,258 @@
+/* Notifications page (#notifications) — glass cards, category icons, filter tabs */
+
+.notifications-page--glass.page-shell {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  overflow: visible;
+  font-family: "Inter", "SF Pro Text", "SF Pro Display", var(--font-sans);
+}
+
+.notifications-page--glass .page-title,
+.notifications-page--glass .section-title {
+  font-family: "Inter", "SF Pro Text", "SF Pro Display", var(--font-sans);
+}
+
+/* ── Filter tabs ─────────────────────────────────────────────── */
+
+.notifications-page--glass .notifications-filter-tabs {
+  margin-bottom: 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.notifications-page--glass .notifications-filter-tabs .MuiTab-root {
+  color: rgba(148, 163, 184, 0.95);
+  font-weight: 600;
+  font-size: 14px;
+  text-transform: none;
+  min-height: 44px;
+}
+
+.notifications-page--glass .notifications-filter-tabs .MuiTab-root.Mui-selected {
+  color: #f8fafc;
+}
+
+.notifications-page--glass .notifications-filter-tabs .MuiTabs-indicator {
+  background: #7c3aed;
+  height: 3px;
+  border-radius: 3px 3px 0 0;
+}
+
+/* ── Notification card ───────────────────────────────────────── */
+
+.notifications-page--glass .notifications-list {
+  display: grid;
+  gap: 12px;
+}
+
+.notifications-page--glass .notification-card {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: start;
+  background: rgba(20, 14, 35, 0.75);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 16px 20px;
+  transition:
+    border-color 0.2s ease,
+    transform 0.2s ease,
+    background 0.2s ease;
+  cursor: pointer;
+}
+
+.notifications-page--glass .notification-card:hover {
+  border-color: rgba(168, 85, 247, 0.4);
+  transform: translateX(2px);
+}
+
+.notifications-page--glass .notification-card.unread {
+  border-left: 4px solid #7c3aed;
+  background: rgba(30, 20, 50, 0.85);
+}
+
+.notifications-page--glass .notification-card.read {
+  background: rgba(20, 14, 35, 0.4);
+}
+
+.notifications-page--glass .notification-card.read .notification-message {
+  color: #94a3b8;
+}
+
+.notifications-page--glass .notification-card.read .notification-time {
+  color: rgba(148, 163, 184, 0.75);
+}
+
+.notifications-page--glass .notification-card.unread::before {
+  content: "";
+  position: absolute;
+  top: 18px;
+  right: 16px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #a855f7;
+  box-shadow: 0 0 10px rgba(168, 85, 247, 0.85);
+}
+
+/* ── Leading icon / avatar ───────────────────────────────────── */
+
+.notifications-page--glass .notification-leading {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.notifications-page--glass .notification-icon-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.notifications-page--glass .notification-icon-wrap svg {
+  font-size: 22px;
+}
+
+.notifications-page--glass .notification-icon-wrap--session_scheduled {
+  color: #67e8f9;
+  background: rgba(6, 182, 212, 0.16);
+  box-shadow: 0 0 18px rgba(6, 182, 212, 0.25);
+}
+
+.notifications-page--glass .notification-icon-wrap--session_completed {
+  color: #6ee7b7;
+  background: rgba(16, 185, 129, 0.16);
+  box-shadow: 0 0 18px rgba(16, 185, 129, 0.25);
+}
+
+.notifications-page--glass .notification-icon-wrap--announcement,
+.notifications-page--glass .notification-icon-wrap--message {
+  color: #c4b5fd;
+  background: rgba(124, 58, 237, 0.16);
+  box-shadow: 0 0 18px rgba(124, 58, 237, 0.2);
+}
+
+.notifications-page--glass .notification-icon-wrap--matching,
+.notifications-page--glass .notification-icon-wrap--general {
+  color: #ddd6fe;
+  background: rgba(168, 85, 247, 0.14);
+}
+
+.notifications-page--glass .notification-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  object-fit: cover;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+}
+
+/* ── Content ─────────────────────────────────────────────────── */
+
+.notifications-page--glass .notification-content {
+  min-width: 0;
+  padding-right: 12px;
+}
+
+.notifications-page--glass .notification-message {
+  margin: 0 0 8px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #f1f5f9;
+}
+
+.notifications-page--glass .notification-time {
+  font-size: 12px;
+  color: rgba(203, 213, 225, 0.8);
+}
+
+.notifications-page--glass .notification-actions-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.notifications-page--glass .notification-cta.MuiButton-root {
+  text-transform: none;
+  font-weight: 600;
+  font-size: 13px;
+  border-radius: 8px;
+}
+
+.notifications-page--glass .notification-cta--outlined.MuiButton-root {
+  border-color: rgba(255, 255, 255, 0.28);
+  color: #f1f5f9;
+}
+
+.notifications-page--glass .notification-cta--outlined.MuiButton-root:hover {
+  border-color: rgba(168, 85, 247, 0.5);
+  background: rgba(124, 58, 237, 0.12);
+}
+
+.notifications-page--glass .notification-cta--text.MuiButton-root {
+  color: #c4b5fd;
+}
+
+.notifications-page--glass .notification-cta--text.MuiButton-root:hover {
+  background: rgba(124, 58, 237, 0.12);
+}
+
+/* ── Mark-read hover action ────────────────────────────────────── */
+
+.notifications-page--glass .notification-card-actions {
+  display: flex;
+  align-items: flex-start;
+  padding-top: 2px;
+}
+
+.notifications-page--glass .notification-mark-read-btn {
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  color: rgba(226, 232, 240, 0.85) !important;
+}
+
+.notifications-page--glass .notification-card:hover .notification-mark-read-btn,
+.notifications-page--glass .notification-mark-read-btn:focus-visible {
+  opacity: 1;
+}
+
+.notifications-page--glass .notification-mark-read-btn:hover {
+  color: #c4b5fd !important;
+  background: rgba(124, 58, 237, 0.15) !important;
+}
+
+/* ── Empty state ───────────────────────────────────────────────── */
+
+.notifications-page--glass .notifications-empty {
+  text-align: center;
+  padding: 40px 24px;
+  border-radius: 16px;
+  border: 1px dashed rgba(255, 255, 255, 0.14);
+  background: rgba(20, 14, 35, 0.45);
+  color: rgba(203, 213, 225, 0.85);
+}
+
+@media (max-width: 640px) {
+  .notifications-page--glass .notification-card {
+    grid-template-columns: auto minmax(0, 1fr);
+    padding: 14px 16px;
+  }
+
+  .notifications-page--glass .notification-card-actions {
+    grid-column: 2;
+    justify-content: flex-end;
+    padding-top: 0;
+  }
+
+  .notifications-page--glass .notification-card.unread::before {
+    top: 14px;
+    right: 12px;
+  }
+}

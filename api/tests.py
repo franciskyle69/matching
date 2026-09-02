@@ -329,3 +329,130 @@ class ApiMatchingTests(TestCase):
         self.assertEqual(body["year_level"], 4)
         mentor_profile.refresh_from_db()
         self.assertEqual(mentor_profile.year_level, 4)
+
+
+class AvailabilitySlotTests(TestCase):
+    def test_normalise_keeps_day_prefix(self):
+        from api.controllers.account_controller import _normalise_availability_slots
+
+        self.assertEqual(
+            _normalise_availability_slots(["Mon/Wed|08:00-12:00"]),
+            ["Mon/Wed|08:00-12:00"],
+        )
+
+    def test_normalise_sorts_and_canonicalises_days(self):
+        from api.controllers.account_controller import _normalise_availability_slots
+
+        self.assertEqual(
+            _normalise_availability_slots(["wednesday/mon|8:00-12:00"]),
+            ["Mon/Wed|08:00-12:00"],
+        )
+
+    def test_normalise_keeps_legacy_slot_without_days(self):
+        from api.controllers.account_controller import _normalise_availability_slots
+
+        self.assertEqual(
+            _normalise_availability_slots(["08:00-10:00"]),
+            ["08:00-10:00"],
+        )
+
+    def test_normalise_rejects_out_of_bounds_and_reversed(self):
+        from api.controllers.account_controller import _normalise_availability_slots
+
+        self.assertEqual(
+            _normalise_availability_slots(
+                ["Mon|06:00-08:00", "Mon|12:00-11:00", "Mon|not-a-time"]
+            ),
+            [],
+        )
+
+    def test_overlap_requires_a_shared_day(self):
+        from matching.services import _normalise_slots, _slots_overlap
+
+        monday = _normalise_slots(["Mon|08:00-12:00"])
+        tuesday = _normalise_slots(["Tue|08:00-12:00"])
+        monday_late = _normalise_slots(["Mon|11:00-13:00"])
+
+        self.assertFalse(_slots_overlap(monday, tuesday))
+        self.assertTrue(_slots_overlap(monday, monday_late))
+
+    def test_legacy_slot_overlaps_any_day(self):
+        from matching.services import _normalise_slots, _slots_overlap
+
+        legacy = _normalise_slots(["08:00-12:00"])
+        saturday = _normalise_slots(["Sat|09:00-10:00"])
+
+        self.assertTrue(_slots_overlap(legacy, saturday))
+
+    def test_overlap_ratio_is_day_aware(self):
+        from matching.ml.features import availability_overlap_ratio
+
+        self.assertEqual(
+            availability_overlap_ratio(["Mon|08:00-12:00"], ["Tue|08:00-12:00"]),
+            0.0,
+        )
+        self.assertEqual(
+            availability_overlap_ratio(["Mon|08:00-12:00"], ["Mon|08:00-12:00"]),
+            1.0,
+        )
+        self.assertEqual(
+            availability_overlap_ratio(
+                ["Mon/Tue|08:00-12:00"], ["Mon|08:00-12:00"]
+            ),
+            0.5,
+        )
+
+
+class CompleteProfileApiTests(TestCase):
+    def setUp(self):
+        self.password = "TestPass123!"
+        self.user = User.objects.create_user(
+            username="oauthmentee",
+            email="oauthmentee@student.buksu.edu.ph",
+            password=self.password,
+        )
+        MenteeProfile.objects.create(
+            user=self.user,
+            program="BSIT",
+            year_level=1,
+            is_profile_complete=False,
+        )
+        self.client.force_login(self.user)
+
+    def test_me_reports_incomplete_profile(self):
+        res = self.client.get("/api/me/")
+        self.assertEqual(res.status_code, 200)
+        self.assertFalse(res.json().get("is_profile_complete"))
+
+    def test_complete_profile_requires_fields(self):
+        res = self.client.post(
+            "/api/me/complete-profile/",
+            data=json.dumps({}),
+            content_type="application/json",
+        )
+        self.assertEqual(res.status_code, 400)
+        self.assertIn("errors", res.json())
+
+    def test_complete_profile_saves_and_flags_complete(self):
+        res = self.client.post(
+            "/api/me/complete-profile/",
+            data=json.dumps(
+                {
+                    "program": "BSIT",
+                    "year_level": 1,
+                    "student_id_no": "2023-0001",
+                    "campus": "MAIN CAMPUS",
+                    "contact_no": "09123456789",
+                    "sex": "female",
+                    "interests": ["Web Development", "UI/UX Design"],
+                }
+            ),
+            content_type="application/json",
+        )
+        self.assertEqual(res.status_code, 200)
+        body = res.json()
+        self.assertTrue(body["is_profile_complete"])
+        self.user.refresh_from_db()
+        mentee = self.user.mentee_profile
+        self.assertTrue(mentee.is_profile_complete)
+        self.assertEqual(mentee.student_id_no, "2023-0001")

@@ -1,3 +1,5 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
+
 @import "./styles/base/tokens.css";
 @import "./styles/base/reset.css";
 @import "./styles/base/typography.css";
@@ -18,3 +20,36 @@
 @import "./styles/pages/phase2.css";
 @import "./styles/pages/users.css";
 @import "./styles/utilities/helpers.css";
+
+/* Fully tokenized surfaces — loaded last so they own the cascade */
+@import "./styles/components/announcements.css";
+@import "./styles/components/matching-profile.css";
+@import "./styles/components/mentee-home.css";
+@import "./styles/components/matching-page.css";
+@import "./styles/components/notifications-page.css";
+@import "./styles/base/light-theme.css";
+@import "./styles/components/sidebar-nav.css";
+@import "./styles/components/profile-matching-card.css";
+@import "./styles/components/preferences-page.css";
+@import "./styles/components/settings-page.css";
+@import "./styles/components/topbar.css";
+@import "./styles/components/avatars.css";
+@import "./styles/components/complete-profile-onboarding.css";
+
+/* Global font rendering — loaded after tokens so --font-sans is available */
+*,
+*::before,
+*::after {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+body,
+input,
+button,
+select,
+textarea,
+.MuiTypography-root {
+  font-family: var(--font-sans) !important;
+}

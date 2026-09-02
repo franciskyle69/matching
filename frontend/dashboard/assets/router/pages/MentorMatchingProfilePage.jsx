@@ -10,9 +10,10 @@
     window.DashboardApp && window.DashboardApp.TimePickerField;
   const SelectionCatalog =
     window.DashboardApp && window.DashboardApp.SelectionCatalog;
-  const formatTimeLabel =
-    (window.DashboardApp && window.DashboardApp.formatTimeLabel) ||
-    ((hhmm) => String(hhmm || ""));
+  const getMentorRoleBadgeMeta =
+    (window.DashboardApp.Utils &&
+      window.DashboardApp.Utils.getMentorRoleBadgeMeta) ||
+    (() => null);
   const selectionRequiresTopics =
     window.DashboardApp.selectionRequiresTopics || (() => true);
   const getMajorSubjectsFromSelection =
@@ -52,8 +53,34 @@
     },
   ];
 
-  const MIN_AVAILABLE_TIME = "07:00";
-  const MAX_AVAILABLE_TIME = "22:00";
+  const Availability = window.DashboardApp.Availability;
+  const {
+    DAY_ORDER,
+    DAY_LABELS,
+    MIN_AVAILABLE_TIME,
+    MAX_AVAILABLE_TIME,
+    parseSlot,
+    formatSlotLabel,
+    buildAvailabilityUpdate,
+  } = Availability;
+
+  const EXPERIENCE_BUCKETS = [
+    { id: "lt1", label: "<1 yr", value: 0, min: 0, max: 0 },
+    { id: "1to3", label: "1-3 yrs", value: 2, min: 1, max: 3 },
+    { id: "3to5", label: "3-5 yrs", value: 4, min: 4, max: 5 },
+    { id: "5plus", label: "5+ yrs", value: 6, min: 6, max: Infinity },
+  ];
+
+  function bucketForYears(years) {
+    if (years == null || years === "") return null;
+    const value = Number(years);
+    if (!Number.isFinite(value)) return null;
+    return (
+      EXPERIENCE_BUCKETS.find(
+        (bucket) => value >= bucket.min && value <= bucket.max,
+      ) || null
+    );
+  }
 
   function serializeMentorQuestionnaire(profile) {
     return JSON.stringify({
@@ -84,138 +111,98 @@
     );
   }
 
-  function toMinutes(hhmm) {
-    const parts = String(hhmm || "").trim().split(":");
-    if (parts.length < 2) return null;
-    const h = Number(parts[0]);
-    const m = Number(parts[1]);
-    if (
-      !Number.isFinite(h) ||
-      !Number.isFinite(m) ||
-      h < 0 ||
-      h > 23 ||
-      m < 0 ||
-      m > 59
-    ) {
-      return null;
-    }
-    return h * 60 + m;
-  }
+  function ExperienceChipField({ label, hint, value, onChange }) {
+    const activeBucket = bucketForYears(value);
+    const groupId = `mp-exp-${String(label).replace(/\s+/g, "-").toLowerCase()}`;
 
-  function formatHhmm(hhmm) {
-    const mins = toMinutes(hhmm);
-    if (mins == null) return "";
-    const h = Math.floor(mins / 60);
-    const m = mins % 60;
-    return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
-  }
-
-  function toSingleAvailabilityRange(start, end) {
-    const s = toMinutes(start);
-    const e = toMinutes(end);
-    const min = toMinutes(MIN_AVAILABLE_TIME);
-    const max = toMinutes(MAX_AVAILABLE_TIME);
-    if (s == null || e == null || min == null || max == null) return [];
-    if (s < min || e > max || s >= e) return [];
-    return [`${formatHhmm(start)}-${formatHhmm(end)}`];
-  }
-
-  function parseAvailabilityRange(slot) {
-    const text = String(slot || "");
-    const parts = text.split("-");
-    if (parts.length !== 2) return null;
-    const start = parts[0];
-    const end = parts[1];
-    const startMinutes = toMinutes(start);
-    const endMinutes = toMinutes(end);
-    if (
-      startMinutes == null ||
-      endMinutes == null ||
-      startMinutes >= endMinutes
-    ) {
-      return null;
-    }
-    return { start, end, startMinutes, endMinutes };
-  }
-
-  function rangesOverlap(a, b) {
-    return a.startMinutes < b.endMinutes && b.startMinutes < a.endMinutes;
-  }
-
-  function formatAvailabilityLabel(slot) {
-    const parsed = parseAvailabilityRange(slot);
-    if (!parsed) return String(slot || "");
-    return `${formatTimeLabel(parsed.start)} - ${formatTimeLabel(parsed.end)}`;
-  }
-
-  function sortAvailabilityRanges(slots) {
-    return [...slots].sort((a, b) => {
-      const one = parseAvailabilityRange(a);
-      const two = parseAvailabilityRange(b);
-      if (!one || !two) return String(a).localeCompare(String(b));
-      return one.startMinutes - two.startMinutes;
-    });
-  }
-
-  function buildAvailabilityUpdate(currentAvailability, draft, editingIndex) {
-    if (!draft.start || !draft.end) {
-      return {
-        error: "Select both start and end time before adding a timeframe.",
-        next: null,
-      };
-    }
-
-    const newSlots = toSingleAvailabilityRange(draft.start, draft.end);
-    if (!Array.isArray(newSlots) || newSlots.length === 0) {
-      return {
-        error:
-          "Choose a valid range where start time is earlier than end time.",
-        next: null,
-      };
-    }
-
-    const newSlot = newSlots[0];
-    const parsedNewSlot = parseAvailabilityRange(newSlot);
-    if (!parsedNewSlot) {
-      return { error: "Choose a valid timeframe.", next: null };
-    }
-
-    const current = Array.isArray(currentAvailability)
-      ? [...currentAvailability]
-      : [];
-
-    const hasDuplicate = current.some(
-      (slot, idx) => idx !== editingIndex && String(slot) === newSlot,
+    return (
+      <div className="mp-experience-field">
+        <span className="mp-field-label" id={groupId}>
+          {label}
+        </span>
+        <div className="mp-chip-row" role="radiogroup" aria-labelledby={groupId}>
+          {EXPERIENCE_BUCKETS.map((bucket) => {
+            const active = activeBucket && activeBucket.id === bucket.id;
+            return (
+              <button
+                key={bucket.id}
+                type="button"
+                role="radio"
+                aria-checked={!!active}
+                className={"mp-pill" + (active ? " is-active" : "")}
+                onClick={() => onChange(active ? null : bucket.value)}
+              >
+                {bucket.label}
+              </button>
+            );
+          })}
+        </div>
+        <p className="mp-field-hint">
+          {activeBucket
+            ? `${hint} Currently recorded as ${value} year${Number(value) === 1 ? "" : "s"}.`
+            : hint}
+        </p>
+      </div>
     );
-    if (hasDuplicate) {
-      return { error: "That timeframe already exists.", next: null };
-    }
+  }
 
-    const hasOverlap = current.some((slot, idx) => {
-      if (idx === editingIndex) return false;
-      const parsed = parseAvailabilityRange(slot);
-      if (!parsed) return false;
-      return rangesOverlap(parsedNewSlot, parsed);
-    });
-    if (hasOverlap) {
-      return {
-        error: "Timeframes cannot overlap with existing ranges.",
-        next: null,
-      };
-    }
+  function DayPicker({ selectedDays, onToggle, onPreset }) {
+    const weekdaysSelected =
+      selectedDays.length === 5 &&
+      selectedDays.every((day) => day !== "Sat" && day !== "Sun");
+    const everyDaySelected = selectedDays.length === DAY_ORDER.length;
 
-    const next = [...current];
-    if (
-      editingIndex != null &&
-      editingIndex >= 0 &&
-      editingIndex < next.length
-    ) {
-      next[editingIndex] = newSlot;
-    } else {
-      next.push(newSlot);
-    }
-
-    return { error: "", next: sortAvailabilityRanges(next) };
+    return (
+      <div className="mp-day-picker">
+        <div className="mp-day-picker-head">
+          <span className="mp-field-label" id="mp-day-picker-label">
+            Days
+          </span>
+          <div className="mp-day-presets">
+            <button
+              type="button"
+              className={
+                "mp-day-preset" + (weekdaysSelected ? " is-active" : "")
+              }
+              onClick={() => onPreset(["Mon", "Tue", "Wed", "Thu", "Fri"])}
+            >
+              Weekdays
+            </button>
+            <button
+              type="button"
+              className={
+                "mp-day-preset" + (everyDaySelected ? " is-active" : "")
+              }
+              onClick={() => onPreset([...DAY_ORDER])}
+            >
+              Every day
+            </button>
+          </div>
+        </div>
+        <div
+          className="mp-day-chips"
+          role="group"
+          aria-labelledby="mp-day-picker-label"
+        >
+          {DAY_ORDER.map((day) => {
+            const active = selectedDays.includes(day);
+            return (
+              <button
+                key={day}
+                type="button"
+                role="checkbox"
+                aria-checked={active}
+                aria-label={DAY_LABELS[day]}
+                className={"mp-day-chip" + (active ? " is-active" : "")}
+                onClick={() => onToggle(day)}
+              >
+                {day}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    );
   }
 
   function MentorMatchingProfilePage(props) {
@@ -243,12 +230,14 @@
     const [savedAt, setSavedAt] = useState(0);
     const [submitAttempted, setSubmitAttempted] = useState(false);
     const [availabilityDraft, setAvailabilityDraft] = useState({
+      days: [],
       start: "",
       end: "",
     });
     const [availabilityEditingIndex, setAvailabilityEditingIndex] =
       useState(null);
     const [availabilityError, setAvailabilityError] = useState("");
+    const [collapsedSubjects, setCollapsedSubjects] = useState([]);
     const savedRef = useRef(serializeMentorQuestionnaire(mentorProfile));
     const hasUserEditedRef = useRef(false);
 
@@ -487,6 +476,69 @@
       (!needsCompetencies || selectedCompetencyCount > 0) &&
       expertiseLevel != null;
 
+    const availabilitySummary = Array.isArray(mentorProfile.availability)
+      ? mentorProfile.availability
+      : [];
+
+    /* Student mentors are ranked on expertise and competencies rather than
+       years worked, so the experience questions do not apply to them. */
+    const mentorRoleMeta = getMentorRoleBadgeMeta(
+      mentorProfile.role || (ctx.user && ctx.user.mentor_role) || "",
+    );
+    const isStudentMentor = !!mentorRoleMeta && mentorRoleMeta.kind === "student";
+    const showExperience = !isStudentMentor;
+
+    const completionSteps = [
+      {
+        id: "subjects",
+        label: "Subjects",
+        done: selectedSubjects.length > 0,
+        value: selectedSubjects.length || "Not set",
+      },
+      {
+        id: "topics",
+        label: "Topics",
+        done: selectedTopicCount > 0,
+        value: selectedTopicCount || "Not set",
+      },
+      {
+        id: "competencies",
+        label: "Competencies",
+        done: selectedCompetencyCount > 0,
+        value: selectedCompetencyCount || "Not set",
+      },
+      {
+        id: "expertise",
+        label: "Expertise level",
+        done: expertiseLevel != null,
+        value: expertiseLevel ? expertiseLevel.label : "Not set",
+      },
+      ...(showExperience
+        ? [
+            {
+              id: "experience",
+              label: "Experience",
+              done: mentorProfile.years_experience != null,
+              value:
+                bucketForYears(mentorProfile.years_experience)?.label ||
+                "Not set",
+            },
+          ]
+        : []),
+      {
+        id: "availability",
+        label: "Availability",
+        done: availabilitySummary.length > 0,
+        value: availabilitySummary.length
+          ? `${availabilitySummary.length} range${availabilitySummary.length === 1 ? "" : "s"}`
+          : "Not set",
+      },
+    ];
+    const completedSteps = completionSteps.filter((step) => step.done).length;
+    const completionPercent = Math.round(
+      (completedSteps / completionSteps.length) * 100,
+    );
+
     const showSubjectError = submitAttempted && !hasSelectedSubject;
     const showTopicError = submitAttempted && needsTopics && selectedTopicCount === 0;
     const showCompetencyError =
@@ -502,6 +554,14 @@
         ...mentorProfile,
         subjects: nextSubjects,
       });
+    }
+
+    function toggleSubjectPanel(groupKey) {
+      setCollapsedSubjects((prev) =>
+        prev.includes(groupKey)
+          ? prev.filter((item) => item !== groupKey)
+          : [...prev, groupKey],
+      );
     }
 
     function toggleTopic(topic) {
@@ -541,7 +601,11 @@
       let availability = Array.isArray(mentorProfile.availability)
         ? mentorProfile.availability
         : [];
-      if (availabilityDraft.start && availabilityDraft.end) {
+      if (
+        availabilityDraft.days.length > 0 &&
+        availabilityDraft.start &&
+        availabilityDraft.end
+      ) {
         const { error, next } = buildAvailabilityUpdate(
           availability,
           availabilityDraft,
@@ -554,7 +618,7 @@
         availability = next;
         setAvailabilityError("");
         setMentorProfile({ ...mentorProfile, availability });
-        setAvailabilityDraft({ start: "", end: "" });
+        setAvailabilityDraft({ days: [], start: "", end: "" });
         setAvailabilityEditingIndex(null);
         markDirty();
       }
@@ -614,7 +678,7 @@
         setSelectedTopicIds(Array.from(nextTopicIds));
         setSelectedCompetencyIds(competencyIds);
         hydrateSelectionRef.current = true;
-        setAvailabilityDraft({ start: "", end: "" });
+        setAvailabilityDraft({ days: [], start: "", end: "" });
         setAvailabilityEditingIndex(null);
         setAvailabilityError("");
         setSubmitAttempted(false);
@@ -687,72 +751,92 @@
                 No topics are defined for this subject yet.
               </p>
             ) : topicGroups.length > 0 ? (
-              <div className="mp-competency-groups">
-                {topicGroups.map((group) => (
-                  <section
-                    key={group.subjectId ?? group.subjectName}
-                    className="mp-competency-group"
-                  >
-                    <h3 className="mp-competency-group-title">{group.subjectName}</h3>
-                    <div
-                      className="complete-profile-topic-chips"
-                      role="list"
-                      aria-label={`${group.subjectName} topics`}
+              <div className="mp-subject-accordions">
+                {topicGroups.map((group) => {
+                  const groupTopics = group.topics || [];
+                  const groupKey = String(group.subjectId ?? group.subjectName);
+                  const selectedInGroup = groupTopics.filter((topic) =>
+                    selectedTopicIds.includes(topic.id),
+                  ).length;
+                  const open = !collapsedSubjects.includes(groupKey);
+                  const panelId = `mp-topics-panel-${groupKey.replace(/\W+/g, "-")}`;
+                  return (
+                    <section
+                      key={groupKey}
+                      className={
+                        "mp-subject-accordion" + (open ? " is-open" : "")
+                      }
                     >
-                      {(group.topics || []).map((topic) => {
-                        const active = selectedTopicIds.includes(topic.id);
-                        return (
-                          <button
-                            key={topic.id}
-                            type="button"
-                            role="listitem"
-                            className={
-                              "complete-profile-topic-chip" +
-                              (active ? " is-active" : "")
-                            }
-                            aria-pressed={active}
-                            onClick={() => toggleTopic(topic)}
-                          >
-                            {active ? (
-                              <span className="mp-chip-check">✓</span>
-                            ) : null}
-                            {topic.name}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </section>
-                ))}
+                      <button
+                        type="button"
+                        className="mp-subject-accordion-head"
+                        aria-expanded={open}
+                        aria-controls={panelId}
+                        onClick={() => toggleSubjectPanel(groupKey)}
+                      >
+                        <span className="mp-subject-accordion-chevron" aria-hidden="true">
+                          ▸
+                        </span>
+                        <span className="mp-subject-accordion-title">
+                          {group.subjectName}
+                        </span>
+                        <span className="mp-subject-accordion-count">
+                          {selectedInGroup} / {groupTopics.length} selected
+                        </span>
+                      </button>
+                      {open && (
+                        <div
+                          className="mp-subject-accordion-body"
+                          id={panelId}
+                          role="list"
+                          aria-label={`${group.subjectName} topics`}
+                        >
+                          {groupTopics.map((topic) => {
+                            const active = selectedTopicIds.includes(topic.id);
+                            return (
+                              <button
+                                key={topic.id}
+                                type="button"
+                                role="listitem"
+                                className={
+                                  "mp-pill" + (active ? " is-active" : "")
+                                }
+                                aria-pressed={active}
+                                onClick={() => toggleTopic(topic)}
+                              >
+                                {active ? (
+                                  <span className="mp-chip-check">✓</span>
+                                ) : null}
+                                {topic.name}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </section>
+                  );
+                })}
               </div>
             ) : (
-              <div className="complete-profile-topic-wrap">
-                <div
-                  className="complete-profile-topic-chips"
-                  role="list"
-                  aria-label="Topic options"
-                >
-                  {topicOptions.map((topic) => {
-                    const active = selectedTopicIds.includes(topic.id);
-                    return (
-                      <button
-                        key={topic.id}
-                        type="button"
-                        role="listitem"
-                        className={
-                          "complete-profile-topic-chip" +
-                          (active ? " is-active" : "")
-                        }
-                        aria-pressed={active}
-                        onClick={() => toggleTopic(topic)}
-                      >
-                        {active ? (
-                          <span className="mp-chip-check">✓</span>
-                        ) : null}
-                        {topic.name}
-                      </button>
-                    );
-                  })}
-                </div>
+              <div className="mp-chip-row" role="list" aria-label="Topic options">
+                {topicOptions.map((topic) => {
+                  const active = selectedTopicIds.includes(topic.id);
+                  return (
+                    <button
+                      key={topic.id}
+                      type="button"
+                      role="listitem"
+                      className={"mp-pill" + (active ? " is-active" : "")}
+                      aria-pressed={active}
+                      onClick={() => toggleTopic(topic)}
+                    >
+                      {active ? (
+                        <span className="mp-chip-check">✓</span>
+                      ) : null}
+                      {topic.name}
+                    </button>
+                  );
+                })}
               </div>
             )}
             {showTopicError && (
@@ -780,7 +864,7 @@
                   <section key={topicId} className="mp-competency-group">
                     <h3 className="mp-competency-group-title">{topic.name}</h3>
                     <div
-                      className="complete-profile-topic-chips"
+                      className="mp-chip-row"
                       role="list"
                       aria-label={`${topic.name} competencies`}
                     >
@@ -794,10 +878,7 @@
                               key={competency.id}
                               type="button"
                               role="listitem"
-                              className={
-                                "complete-profile-topic-chip" +
-                                (active ? " is-active" : "")
-                              }
+                              className={"mp-pill" + (active ? " is-active" : "")}
                               aria-pressed={active}
                               title={competency.description || competency.name}
                               onClick={() => toggleCompetency(competency)}
@@ -885,93 +966,108 @@
           )}
         </SectionCard>
 
-        <SectionCard
-          title="Experience"
-          description="Provide experience details to improve ranking quality."
-        >
-          <div className="form-grid">
-            <div className="form-group">
-              <label htmlFor="mentor-years-experience">Years of experience</label>
-              <input
-                id="mentor-years-experience"
-                type="number"
-                min={0}
-                max={50}
-                value={mentorProfile.years_experience ?? ""}
-                onChange={(e) => {
-                  const raw = e.target.value;
+        {showExperience && (
+          <SectionCard
+            title="Experience"
+            description="Pick the range that matches your background. This improves ranking quality."
+          >
+            <div className="mp-experience-grid">
+              <ExperienceChipField
+                label="Years of experience"
+                hint="Overall time working in these subjects."
+                value={mentorProfile.years_experience}
+                onChange={(next) => {
                   setMentorProfile({
                     ...mentorProfile,
-                    years_experience:
-                      raw === "" ? null : Math.max(0, Math.min(50, Number(raw))),
+                    years_experience: next,
+                  });
+                  markDirty();
+                }}
+              />
+              <ExperienceChipField
+                label="Teaching experience"
+                hint="Time spent tutoring, demonstrating, or teaching."
+                value={mentorProfile.teaching_experience_years}
+                onChange={(next) => {
+                  setMentorProfile({
+                    ...mentorProfile,
+                    teaching_experience_years: next,
                   });
                   markDirty();
                 }}
               />
             </div>
-            <div className="form-group">
-              <label htmlFor="mentor-teaching-years">
-                Teaching experience (years)
-              </label>
-              <input
-                id="mentor-teaching-years"
-                type="number"
-                min={0}
-                max={50}
-                value={mentorProfile.teaching_experience_years ?? ""}
-                onChange={(e) => {
-                  const raw = e.target.value;
-                  setMentorProfile({
-                    ...mentorProfile,
-                    teaching_experience_years:
-                      raw === "" ? null : Math.max(0, Math.min(50, Number(raw))),
-                  });
-                  markDirty();
-                }}
-              />
-            </div>
-          </div>
-        </SectionCard>
+          </SectionCard>
+        )}
 
         <SectionCard
           title="Available time"
-          description="Add one or more time ranges between 7:00 AM and 10:00 PM when you can meet."
+          description="Pick the days you can meet, then a time range between 7:00 AM and 10:00 PM."
         >
-          <div className="time-range-row">
-            <TimePickerField
-              id="mentor-matching-start"
-              label="Start time"
-              min={MIN_AVAILABLE_TIME}
-              max={MAX_AVAILABLE_TIME}
-              value={availabilityDraft.start}
-              onChange={(e) => {
+          <div className="mp-availability-composer">
+            <DayPicker
+              selectedDays={availabilityDraft.days}
+              onToggle={(day) => {
                 setAvailabilityError("");
-                setAvailabilityDraft({
-                  ...availabilityDraft,
-                  start: e.target.value,
+                setAvailabilityDraft((prev) => ({
+                  ...prev,
+                  days: prev.days.includes(day)
+                    ? prev.days.filter((item) => item !== day)
+                    : DAY_ORDER.filter(
+                        (item) => item === day || prev.days.includes(item),
+                      ),
+                }));
+              }}
+              onPreset={(days) => {
+                setAvailabilityError("");
+                setAvailabilityDraft((prev) => {
+                  const same =
+                    prev.days.length === days.length &&
+                    days.every((day) => prev.days.includes(day));
+                  return { ...prev, days: same ? [] : days };
                 });
               }}
             />
-            <TimePickerField
-              id="mentor-matching-end"
-              label="End time"
-              min={MIN_AVAILABLE_TIME}
-              max={MAX_AVAILABLE_TIME}
-              value={availabilityDraft.end}
-              onChange={(e) => {
-                setAvailabilityError("");
-                setAvailabilityDraft({
-                  ...availabilityDraft,
-                  end: e.target.value,
-                });
-              }}
-            />
+            <div className="time-range-row">
+              <TimePickerField
+                id="mentor-matching-start"
+                label="Start time"
+                min={MIN_AVAILABLE_TIME}
+                max={MAX_AVAILABLE_TIME}
+                value={availabilityDraft.start}
+                onChange={(e) => {
+                  setAvailabilityError("");
+                  setAvailabilityDraft({
+                    ...availabilityDraft,
+                    start: e.target.value,
+                  });
+                }}
+              />
+              <TimePickerField
+                id="mentor-matching-end"
+                label="End time"
+                min={MIN_AVAILABLE_TIME}
+                max={MAX_AVAILABLE_TIME}
+                value={availabilityDraft.end}
+                onChange={(e) => {
+                  setAvailabilityError("");
+                  setAvailabilityDraft({
+                    ...availabilityDraft,
+                    end: e.target.value,
+                  });
+                }}
+              />
+            </div>
           </div>
-          <div className="btn-row mp-availability-actions" style={{ marginTop: "8px" }}>
+          <div className="btn-row mp-availability-actions">
             <button
               type="button"
               className="btn secondary small"
-              disabled={!availabilityDraft.start || !availabilityDraft.end}
+              disabled={
+                availabilityDraft.days.length === 0 ||
+                !availabilityDraft.start ||
+                !availabilityDraft.end
+              }
               onClick={() => {
                 const { error, next } = buildAvailabilityUpdate(
                   mentorProfile.availability,
@@ -984,7 +1080,7 @@
                 }
                 setAvailabilityError("");
                 setMentorProfile({ ...mentorProfile, availability: next });
-                setAvailabilityDraft({ start: "", end: "" });
+                setAvailabilityDraft({ days: [], start: "", end: "" });
                 setAvailabilityEditingIndex(null);
                 markDirty();
               }}
@@ -999,7 +1095,7 @@
                 className="btn ghost small"
                 onClick={() => {
                   setAvailabilityEditingIndex(null);
-                  setAvailabilityDraft({ start: "", end: "" });
+                  setAvailabilityDraft({ days: [], start: "", end: "" });
                   setAvailabilityError("");
                 }}
               >
@@ -1013,8 +1109,8 @@
             </p>
           )}
           <p className="field-helper">
-            You can add multiple availability ranges. We&apos;ll match you with
-            people whose times overlap these ranges.
+            You can add multiple ranges. We&apos;ll match you with people whose
+            days and times overlap yours.
           </p>
           {Array.isArray(mentorProfile.availability) &&
             mentorProfile.availability.length > 0 && (
@@ -1028,16 +1124,19 @@
                     }
                   >
                     <span className="availability-item-label">
-                      {formatAvailabilityLabel(slot)}
+                      {formatSlotLabel(slot)}
                     </span>
                     <div className="availability-item-actions">
                       <button
                         type="button"
                         className="availability-action-btn"
                         onClick={() => {
-                          const parsed = parseAvailabilityRange(slot);
+                          const parsed = parseSlot(slot);
                           if (!parsed) return;
                           setAvailabilityDraft({
+                            days: parsed.hasExplicitDays
+                              ? [...parsed.days]
+                              : [...DAY_ORDER],
                             start: parsed.start,
                             end: parsed.end,
                           });
@@ -1060,7 +1159,7 @@
                           });
                           if (availabilityEditingIndex === idx) {
                             setAvailabilityEditingIndex(null);
-                            setAvailabilityDraft({ start: "", end: "" });
+                            setAvailabilityDraft({ days: [], start: "", end: "" });
                           } else if (
                             availabilityEditingIndex != null &&
                             availabilityEditingIndex > idx
@@ -1082,39 +1181,91 @@
         </SectionCard>
           </div>
 
-          <aside className="mp-preview">
+          <aside className="mp-preview matching-card">
             <h3 className="mp-preview-title">Your Matching Profile</h3>
-            <p className="mp-preview-copy">
-              These details help us recommend mentees that match what you can
-              teach.
-            </p>
+
+            <div className="mp-progress">
+              <div className="mp-progress-head">
+                <span className="mp-progress-value">
+                  {completionPercent}% Complete
+                </span>
+                <span className="mp-progress-meta">
+                  {completedSteps} of {completionSteps.length}
+                </span>
+              </div>
+              <div
+                className="mp-progress-track"
+                role="progressbar"
+                aria-valuenow={completionPercent}
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-label="Profile completeness"
+              >
+                <div
+                  className="mp-progress-fill"
+                  style={{ width: `${completionPercent}%` }}
+                />
+              </div>
+            </div>
+
             <dl className="mp-preview-list">
-              <div className="mp-preview-row">
-                <dt>Subjects Selected</dt>
-                <dd>{selectedSubjects.length}</dd>
-              </div>
-              <div className="mp-preview-row">
-                <dt>Topics Selected</dt>
-                <dd>{selectedTopicCount}</dd>
-              </div>
-              <div className="mp-preview-row">
-                <dt>Competencies Selected</dt>
-                <dd>{selectedCompetencyCount}</dd>
-              </div>
-              <div className="mp-preview-row">
-                <dt>Expertise Level</dt>
-                <dd>{expertiseLevel ? expertiseLevel.label : "Not set"}</dd>
-              </div>
-              <div className="mp-preview-row">
-                <dt>Availability</dt>
-                <dd>
-                  {Array.isArray(mentorProfile.availability) &&
-                  mentorProfile.availability.length > 0
-                    ? mentorProfile.availability.length + " range(s)"
-                    : "Not set"}
-                </dd>
-              </div>
+              {completionSteps.map((step) => (
+                <div
+                  key={step.id}
+                  className={
+                    "mp-preview-row" + (step.done ? " is-done" : "")
+                  }
+                >
+                  <dt>
+                    <span className="mp-preview-check" aria-hidden="true">
+                      {step.done ? "✓" : "○"}
+                    </span>
+                    {step.label}
+                  </dt>
+                  <dd>{step.value}</dd>
+                </div>
+              ))}
             </dl>
+
+            {availabilitySummary.length > 0 && (
+              <ul className="mp-preview-slots">
+                {availabilitySummary.map((slot, idx) => (
+                  <li key={`${slot}-${idx}`}>{formatSlotLabel(slot)}</li>
+                ))}
+              </ul>
+            )}
+
+            <div className="mp-preview-actions">
+              <button
+                type="button"
+                className="btn mp-save-preferences"
+                onClick={handleSave}
+                disabled={mentorProfileSaving}
+              >
+                {mentorProfileSaving
+                  ? "Saving…"
+                  : embedded
+                    ? "Save & finish"
+                    : "Save Preferences"}
+              </button>
+              {!isPristine && (
+                <button
+                  type="button"
+                  className="btn secondary small mp-preview-discard"
+                  onClick={handleReset}
+                  disabled={mentorProfileSaving}
+                >
+                  Discard changes
+                </button>
+              )}
+              <p className="mp-preview-status" aria-live="polite">
+                {justSaved && isPristine
+                  ? "All changes saved."
+                  : isPristine
+                    ? "No unsaved changes."
+                    : "You have unsaved changes."}
+              </p>
+            </div>
           </aside>
         </div>
 
@@ -1133,7 +1284,7 @@
             <p className="mp-sticky-subtitle">
               {justSaved && isPristine
                 ? "Your mentor matching profile was updated."
-                : "Save to keep these updates, or discard to revert."}
+                : "Use Save Preferences in the summary panel to keep these updates."}
             </p>
             {submitAttempted && !canSave && !isPristine && (
               <p
@@ -1148,30 +1299,6 @@
               </p>
             )}
           </div>
-          {!(justSaved && isPristine) && (
-          <div className="mp-sticky-actions">
-            <button
-              type="button"
-              className="btn secondary"
-              onClick={handleReset}
-              disabled={mentorProfileSaving}
-            >
-              Discard
-            </button>
-            <button
-              type="button"
-              className="btn"
-              onClick={handleSave}
-              disabled={mentorProfileSaving}
-            >
-              {mentorProfileSaving
-                ? "Saving..."
-                : embedded
-                  ? "Save & finish"
-                  : "Save"}
-            </button>
-          </div>
-          )}
         </div>
         )}
       </div>

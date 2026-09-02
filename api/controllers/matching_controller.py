@@ -497,6 +497,12 @@ def mentor_requests(request):
             "mentee_subjects": subjects,
             "mentee_topics": topics,
             "mentee_difficulty_level": e.difficulty_level,
+            "mentee_bio": getattr(e, "bio", "") or "",
+            "mentee_program": getattr(e, "program", "") or "",
+            "mentee_year_level": getattr(e, "year_level", None) or 0,
+            "mentee_email": e.user.email or "",
+            "mentee_preferred_learning_style": getattr(e, "preferred_learning_style", "") or "",
+            "mentee_availability": e.availability if isinstance(getattr(e, "availability", []), list) else [],
         })
     return JsonResponse({"count": len(data), "results": data})
 

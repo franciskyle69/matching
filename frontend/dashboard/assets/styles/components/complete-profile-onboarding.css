@@ -1,0 +1,267 @@
+.cp-onboard {
+  min-height: calc(100vh - 48px);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 24px 16px 48px;
+}
+
+.cp-onboard-card {
+  width: min(100%, 720px);
+  padding: 28px 28px 24px;
+  border-radius: 20px;
+  background: rgba(24, 21, 46, 0.92);
+  border: 1px solid rgba(124, 58, 237, 0.28);
+  box-shadow:
+    0 24px 64px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  color: #fff;
+}
+
+.cp-onboard-progress {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 22px;
+}
+
+.cp-onboard-progress-meta {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  font-weight: 700;
+  color: #c4b5fd;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.cp-onboard-progress-track {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.cp-onboard-progress-fill {
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.22);
+}
+
+.cp-onboard-progress-fill.is-current {
+  background: linear-gradient(90deg, #7c3aed, #6366f1);
+}
+
+.cp-onboard-eyebrow {
+  margin: 0 0 6px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #a78bfa;
+}
+
+.cp-onboard-title {
+  margin: 0 0 8px;
+  font-size: 1.65rem;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+}
+
+.cp-onboard-copy {
+  margin: 0 0 22px;
+  color: #94a3b8;
+  line-height: 1.55;
+}
+
+.cp-onboard-identity {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px;
+  margin-bottom: 22px;
+  border-radius: 14px;
+  background: rgba(15, 23, 42, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.cp-onboard-avatar {
+  width: 56px;
+  height: 56px;
+  border-radius: 999px;
+  overflow: hidden;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #7c3aed, #4338ca);
+  font-weight: 700;
+}
+
+.cp-onboard-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.cp-onboard-identity-name {
+  margin: 0;
+  font-weight: 700;
+}
+
+.cp-onboard-identity-email,
+.cp-onboard-identity-meta {
+  margin: 2px 0 0;
+  color: #94a3b8;
+  font-size: 13px;
+}
+
+.cp-onboard-form {
+  display: grid;
+  gap: 18px;
+}
+
+.cp-onboard-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.cp-onboard-field {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.cp-onboard-field label,
+.cp-onboard-field legend {
+  font-size: 13px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.cp-onboard-field input,
+.cp-onboard-field select {
+  min-height: 44px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(15, 23, 42, 0.5);
+  color: #fff;
+  padding: 0 12px;
+  font: inherit;
+}
+
+.cp-onboard-field input:focus,
+.cp-onboard-field select:focus {
+  outline: none;
+  border-color: #7c3aed;
+  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.28);
+}
+
+.cp-onboard-locked {
+  margin: 0;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  border-radius: 12px;
+  background: rgba(124, 58, 237, 0.12);
+  border: 1px solid rgba(124, 58, 237, 0.28);
+  color: #e9d5ff;
+  font-weight: 600;
+}
+
+.cp-onboard-role-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.cp-onboard-role-card {
+  text-align: left;
+  padding: 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(15, 23, 42, 0.35);
+  color: #e2e8f0;
+  cursor: pointer;
+  display: grid;
+  gap: 4px;
+}
+
+.cp-onboard-role-card span {
+  color: #94a3b8;
+  font-size: 12px;
+}
+
+.cp-onboard-role-card.is-active {
+  border-color: #7c3aed;
+  background: rgba(124, 58, 237, 0.18);
+  box-shadow: 0 0 0 1px rgba(124, 58, 237, 0.35);
+}
+
+.cp-onboard-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.cp-onboard-chip {
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(15, 23, 42, 0.35);
+  color: #e2e8f0;
+  border-radius: 999px;
+  padding: 8px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.cp-onboard-chip.is-active {
+  background: linear-gradient(135deg, #7c3aed, #6366f1);
+  border-color: transparent;
+  color: #fff;
+}
+
+.cp-onboard-error {
+  margin: 0;
+  color: #fca5a5;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.cp-onboard-error-banner {
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+}
+
+.cp-onboard-submit {
+  min-height: 48px;
+  border: 0;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #7c3aed, #6366f1);
+  color: #fff;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 12px 28px rgba(124, 58, 237, 0.35);
+}
+
+.cp-onboard-submit:disabled {
+  opacity: 0.7;
+  cursor: wait;
+}
+
+@media (max-width: 720px) {
+  .cp-onboard-grid,
+  .cp-onboard-role-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .cp-onboard-card {
+    padding: 22px 16px 18px;
+  }
+}

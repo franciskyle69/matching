@@ -105,20 +105,42 @@ def _parse_hhmm(value: str) -> Optional[int]:
     return hour * 60 + minute
 
 
-def _parse_slot(slot: Any) -> Optional[Tuple[int, int]]:
+DAY_ORDER = ("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
+_DAY_INDEX = {day.lower(): index for index, day in enumerate(DAY_ORDER)}
+_ALL_DAYS = frozenset(range(len(DAY_ORDER)))
+
+# A parsed slot is (frozenset_of_day_indexes, start_minutes, end_minutes).
+Slot = Tuple[frozenset, int, int]
+
+
+def _parse_days(value: str) -> frozenset:
+    found = set()
+    for token in str(value or "").split("/"):
+        index = _DAY_INDEX.get(token.strip().lower()[:3])
+        if index is not None:
+            found.add(index)
+    return frozenset(found)
+
+
+def _parse_slot(slot: Any) -> Optional[Slot]:
+    """Parse "Mon/Wed|08:00-12:00"; a missing day prefix means every day."""
     if not isinstance(slot, str):
         return None
-    parts = slot.split("-")
+    day_part, separator, time_part = slot.partition("|")
+    if not separator:
+        day_part, time_part = "", slot
+    parts = time_part.split("-")
     if len(parts) != 2:
         return None
     start = _parse_hhmm(parts[0])
     end = _parse_hhmm(parts[1])
     if start is None or end is None or start >= end:
         return None
-    return start, end
+    days = _parse_days(day_part) if separator else frozenset()
+    return (days or _ALL_DAYS), start, end
 
 
-def _normalise_slots(value: Any) -> List[Tuple[int, int]]:
+def _normalise_slots(value: Any) -> List[Slot]:
     if value is None:
         return []
     if isinstance(value, (list, tuple)):
@@ -128,8 +150,8 @@ def _normalise_slots(value: Any) -> List[Tuple[int, int]]:
     else:
         raw_slots = []
 
-    slots: List[Tuple[int, int]] = []
-    seen: Set[Tuple[int, int]] = set()
+    slots: List[Slot] = []
+    seen: Set[Slot] = set()
     for raw in raw_slots:
         parsed = _parse_slot(raw)
         if not parsed or parsed in seen:
@@ -139,11 +161,14 @@ def _normalise_slots(value: Any) -> List[Tuple[int, int]]:
     return slots
 
 
-def _slots_overlap(a_slots: List[Tuple[int, int]], b_slots: List[Tuple[int, int]]) -> bool:
+def _slots_overlap(a_slots: List[Slot], b_slots: List[Slot]) -> bool:
+    """Two slots overlap only when they share a day and their times intersect."""
     if not a_slots or not b_slots:
         return False
-    for a_start, a_end in a_slots:
-        for b_start, b_end in b_slots:
+    for a_days, a_start, a_end in a_slots:
+        for b_days, b_start, b_end in b_slots:
+            if not (a_days & b_days):
+                continue
             if max(a_start, b_start) < min(a_end, b_end):
                 return True
     return False
@@ -155,8 +180,13 @@ def _format_minutes(total_minutes: int) -> str:
     return f"{hour:02d}:{minute:02d}"
 
 
-def _format_slot(slot: Tuple[int, int]) -> str:
-    return f"{_format_minutes(slot[0])}-{_format_minutes(slot[1])}"
+def _format_slot(slot: Slot) -> str:
+    days, start, end = slot
+    times = f"{_format_minutes(start)}-{_format_minutes(end)}"
+    if not days or days == _ALL_DAYS:
+        return times
+    labels = "/".join(DAY_ORDER[index] for index in sorted(days))
+    return f"{labels}|{times}"
 
 
 def _accepted_mentee_counts(mentor_ids: List[int]) -> Dict[int, int]:
@@ -227,15 +257,15 @@ def _filter_mentors_for_mentee(
     if time_filtered:
         return MentorFilterResult(mentors=time_filtered, empty_reason=None, suggested_time_slots=[])
 
-    suggested: List[Tuple[int, int]] = []
-    seen_slots: Set[Tuple[int, int]] = set()
+    suggested: List[Slot] = []
+    seen_slots: Set[Slot] = set()
     for mentor in capacity_filtered:
         for slot in _normalise_slots(getattr(mentor, "availability", [])):
             if slot in seen_slots:
                 continue
             seen_slots.add(slot)
             suggested.append(slot)
-    suggested.sort(key=lambda item: (item[0], item[1]))
+    suggested.sort(key=lambda item: (min(item[0]) if item[0] else 0, item[1], item[2]))
     suggested_labels = [_format_slot(slot) for slot in suggested[:8]]
     return MentorFilterResult(
         mentors=[],
@@ -280,18 +310,20 @@ def _build_row(mentor: MentorProfile, mentee: MenteeProfile) -> Dict[str, Any]:
         "mentee_subjects": mentee.subjects or mentee.skills,
         "mentee_topics": mentee.topics or mentee.skills,
         "mentee_competencies": list(
-            mentee.competencies.values_list("id", flat=True)
+            mentee.competencies.values_list("name", flat=True)
         ) if hasattr(mentee, "competencies") else [],
         "mentee_difficulty_level": mentee.difficulty_level,
+        "mentee_year_level": getattr(mentee, "year_level", 0) or 0,
         "mentee_competency_needs": mentee_competency_needs,
         "mentee_availability": getattr(mentee, "availability", []),
         "mentor_role": mentor.role,
         "mentor_subjects": mentor.subjects or mentor.skills,
         "mentor_topics": mentor.topics or mentor.skills,
         "mentor_competencies": list(
-            mentor.competencies.values_list("id", flat=True)
+            mentor.competencies.values_list("name", flat=True)
         ) if hasattr(mentor, "competencies") else [],
         "mentor_expertise_level": mentor.expertise_level,
+        "mentor_year_level": getattr(mentor, "year_level", 0) or 0,
         "mentor_competency_levels": mentor_competency_levels,
         "mentor_years_experience": getattr(mentor, "years_experience", 0) or 0,
         "mentor_teaching_experience_years": getattr(mentor, "teaching_experience_years", 0) or 0,

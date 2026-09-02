@@ -1,6 +1,16 @@
 .card {
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--border);
-  background: var(--card);
-  box-shadow: var(--shadow-md);
+  border-radius: var(--card-radius, var(--radius-lg));
+  border: var(--card-border, 1px solid var(--border));
+  background: var(--card-bg, var(--card));
+  box-shadow: var(--card-shadow, var(--shadow-md));
+}
+
+[data-theme="light"] .card {
+  transition: border-color var(--motion-base) var(--ease-standard);
+}
+
+[data-theme="light"] .card:hover {
+  border-color: #94a3b8;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  transform: none;
 }

@@ -1,0 +1,457 @@
+/* Light mode — clean, plain, high-contrast (GitHub / Stripe style)
+   Every rule scoped under [data-theme="light"] only. */
+
+/* ── Base & page background ──────────────────────────────────── */
+
+[data-theme="light"] body:not(:has(.auth-page)) {
+  background-color: var(--app-bg);
+  color: var(--text-primary);
+}
+
+[data-theme="light"] body:not(:has(.auth-page))::before,
+[data-theme="light"] body:not(:has(.auth-page))::after {
+  background: none;
+  opacity: 0;
+}
+
+/* ── Typography hierarchy ────────────────────────────────────── */
+
+[data-theme="light"] h1,
+[data-theme="light"] h2,
+[data-theme="light"] h3,
+[data-theme="light"] h4,
+[data-theme="light"] .page-title,
+[data-theme="light"] .section-title,
+[data-theme="light"] .mentee-hero-title,
+[data-theme="light"] .mentee-card-head h2,
+[data-theme="light"] .announcement-section-title {
+  color: var(--text-primary);
+  font-weight: 700;
+}
+
+[data-theme="light"] p,
+[data-theme="light"] .page-subtitle,
+[data-theme="light"] .mentee-muted,
+[data-theme="light"] .mentee-hero-subtitle,
+[data-theme="light"] .announcements-page-subtitle,
+[data-theme="light"] .notification-time,
+[data-theme="light"] .mentee-stat-label,
+[data-theme="light"] .mentee-stat-hint,
+[data-theme="light"] .text-secondary,
+[data-theme="light"] .muted {
+  color: var(--text-secondary);
+}
+
+[data-theme="light"] label,
+[data-theme="light"] .form-group label,
+[data-theme="light"] .match-filter-label,
+[data-theme="light"] .announcement-card-head small {
+  color: var(--text-label);
+  font-weight: 600;
+}
+
+[data-theme="light"] .app-topbar-meta-label {
+  color: var(--text-muted);
+}
+
+[data-theme="light"] .app-topbar-meta-title {
+  color: var(--text-primary);
+  font-weight: 700;
+}
+
+/* ── App chrome (flat, no blur gimmicks) ─────────────────────── */
+
+[data-theme="light"] .app-main-shell {
+  background: transparent;
+}
+
+[data-theme="light"] .sidebar {
+  background: #ffffff;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border-right: 1px solid #cbd5e1;
+  box-shadow: none;
+}
+
+[data-theme="light"] .app-topbar {
+  background: #ffffff;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border-bottom: 1px solid #cbd5e1;
+  box-shadow: none;
+}
+
+[data-theme="light"] .app-topbar-search-input {
+  background: var(--input-bg);
+  border: var(--input-border);
+  color: var(--input-text);
+  box-shadow: none;
+}
+
+[data-theme="light"] .app-topbar-search-input::placeholder {
+  color: var(--text-muted);
+}
+
+[data-theme="light"] .app-topbar-search-input:focus {
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 3px var(--focus-ring);
+}
+
+/* Sidebar nav styles live in components/sidebar-nav.css */
+
+[data-theme="light"] .card,
+[data-theme="light"] .dashboard-card,
+[data-theme="light"] .announcement-card,
+[data-theme="light"] .matching-card,
+[data-theme="light"] .notification-card,
+[data-theme="light"] .page-shell.card {
+  background-color: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+[data-theme="light"] .dashboard-card:hover,
+[data-theme="light"] .announcement-card--post:hover,
+[data-theme="light"] .card.page-shell:hover,
+[data-theme="light"] .matching-card:hover {
+  border-color: #94a3b8;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  transform: none;
+}
+
+[data-theme="light"] .profile-matching-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--accent-primary);
+  box-shadow: 0 10px 24px -12px rgba(124, 58, 237, 0.28);
+}
+
+[data-theme="light"] .home-dashboard-space,
+[data-theme="light"] .home-dashboard-space.page-shell,
+[data-theme="light"] .matching-page--mentee.page-shell,
+[data-theme="light"] .notifications-page--glass.page-shell,
+[data-theme="light"] .mentee-home.page-shell {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  padding: 0;
+}
+
+/* ── Sub-containers & inner grouping ─────────────────────────── */
+
+[data-theme="light"] .mentee-slot,
+[data-theme="light"] .mentee-chip,
+[data-theme="light"] .mentee-quick-action,
+[data-theme="light"] .match-tag,
+[data-theme="light"] .match-reason-chip,
+[data-theme="light"] .form-section,
+[data-theme="light"] .settings-section,
+[data-theme="light"] .complete-profile-section,
+[data-theme="light"] .fancy-empty,
+[data-theme="light"] .matching-empty,
+[data-theme="light"] .mentee-spotlight-facts > div,
+[data-theme="light"] .announcement-comment,
+[data-theme="light"] .mp-section-inner {
+  background: var(--subcard-bg);
+  border: var(--subcard-border);
+  color: var(--text-secondary);
+}
+
+[data-theme="light"] .mentee-stat-card {
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+[data-theme="light"] .mentee-stat-card:hover {
+  border-color: #94a3b8;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  transform: none;
+}
+
+/* ── Mentee home ─────────────────────────────────────────────── */
+
+[data-theme="light"] .mentee-home .mentee-hero.dashboard-card {
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+[data-theme="light"] .mentee-home .mentee-hero-mesh {
+  display: none;
+}
+
+[data-theme="light"] .mentee-home .mentee-hero-pill {
+  background: var(--subcard-bg);
+  border: var(--subcard-border);
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+[data-theme="light"] .mentee-home .mentee-stat-icon {
+  background: var(--subcard-bg);
+  border: var(--subcard-border);
+  color: var(--text-primary);
+}
+
+[data-theme="light"] .mentee-home .mentee-stat-value {
+  color: var(--text-primary);
+  font-weight: 700;
+}
+
+[data-theme="light"] .mentee-home .btn.mentee-cta-glass {
+  background: #ffffff;
+  border: 1px solid #64748b;
+  color: var(--text-primary);
+  font-weight: 600;
+  box-shadow: none;
+}
+
+[data-theme="light"] .mentee-home .btn.mentee-cta-glass:hover {
+  background: #f1f5f9;
+  border-color: #64748b;
+  color: var(--text-primary);
+}
+
+[data-theme="light"] .mentee-home .btn.mentee-cta-primary {
+  background: var(--accent-primary);
+  border-color: var(--accent-primary);
+  color: #ffffff;
+  font-weight: 700;
+  box-shadow: none;
+}
+
+[data-theme="light"] .mentee-home .btn.mentee-cta-primary:hover {
+  background: var(--accent-primary-hover);
+  border-color: var(--accent-primary-hover);
+}
+
+/* ── Status badges & pills ───────────────────────────────────── */
+
+[data-theme="light"] .match-role-badge,
+[data-theme="light"] .mentor-role-badge {
+  background: var(--badge-role-bg);
+  color: var(--badge-role-text);
+  border: 1px solid #e9d5ff;
+  font-weight: 700;
+}
+
+[data-theme="light"] .match-score-pill,
+[data-theme="light"] .mentee-match-badge {
+  background: var(--badge-score-bg);
+  color: var(--badge-score-text);
+  border: 1px solid #bbf7d0;
+  font-weight: 700;
+  box-shadow: none;
+}
+
+[data-theme="light"] .match-official-badge {
+  background: var(--badge-official-bg);
+  color: var(--badge-official-text);
+  border: 1px solid #c7d2fe;
+  font-weight: 700;
+  box-shadow: none;
+}
+
+[data-theme="light"] .matching-page--mentee .match-tag--subject,
+[data-theme="light"] .matching-page--mentee .match-reason-chip--subject,
+[data-theme="light"] .matching-page--mentee .match-tag--competency,
+[data-theme="light"] .matching-page--mentee .match-reason-chip--competency,
+[data-theme="light"] .matching-page--mentee .match-reason-chip--schedule {
+  background: var(--subcard-bg);
+  border: var(--subcard-border);
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+/* ── Matching & notifications text ───────────────────────────── */
+
+[data-theme="light"] .matching-page--mentee .match-grid-card-name,
+[data-theme="light"] .matching-page--mentee .match-spotlight-name,
+[data-theme="light"] .notifications-page--glass .notification-message {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+[data-theme="light"] .matching-page--mentee .match-grid-card-dept,
+[data-theme="light"] .matching-page--mentee .match-grid-card-slots,
+[data-theme="light"] .matching-page--mentee .match-spotlight-date {
+  color: var(--text-secondary);
+}
+
+[data-theme="light"] .matching-page--mentee .match-filter-input,
+[data-theme="light"] .matching-page--mentee .match-filter-select {
+  background: var(--input-bg);
+  border: var(--input-border);
+  color: var(--input-text);
+}
+
+[data-theme="light"] .matching-page--mentee .match-filter-input::placeholder {
+  color: var(--text-muted);
+}
+
+[data-theme="light"] .notifications-page--glass .notification-card.unread {
+  background: #ffffff;
+  border-left: 4px solid var(--accent-primary);
+}
+
+[data-theme="light"] .notifications-page--glass .notification-card.read {
+  background: var(--subcard-bg);
+}
+
+[data-theme="light"] .notifications-page--glass .notification-card.read .notification-message {
+  color: var(--text-secondary);
+}
+
+[data-theme="light"] .notifications-page--glass .notification-card.unread::before {
+  background: var(--accent-primary);
+  box-shadow: none;
+}
+
+[data-theme="light"] .notifications-page--glass .notification-card:hover {
+  transform: none;
+  border-color: #94a3b8;
+}
+
+/* ── Matching profile pills ──────────────────────────────────── */
+
+[data-theme="light"] .mentor-matching-profile-page .mp-pill,
+[data-theme="light"] .mentoring-preferences-page .mp-pill {
+  background: var(--subcard-bg);
+  border: var(--subcard-border);
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+[data-theme="light"] .mentor-matching-profile-page .mp-pill.is-active,
+[data-theme="light"] .mentoring-preferences-page .mp-pill.is-active {
+  background: var(--badge-role-bg);
+  border: 1px solid #e9d5ff;
+  color: var(--badge-role-text);
+  font-weight: 700;
+}
+
+[data-theme="light"] .mentor-matching-profile-page .mp-pill:hover:not(.is-active),
+[data-theme="light"] .mentoring-preferences-page .mp-pill:hover:not(.is-active) {
+  background: var(--bg-subtle);
+  border-color: #cbd5e1;
+  color: var(--text-primary);
+}
+
+/* ── Forms ───────────────────────────────────────────────────── */
+
+[data-theme="light"] input:not(.app-topbar-search-input):not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="color"]),
+[data-theme="light"] select,
+[data-theme="light"] textarea,
+[data-theme="light"] .form-input {
+  background: var(--input-bg);
+  border: var(--input-border);
+  color: var(--input-text);
+  box-shadow: none;
+}
+
+[data-theme="light"] input::placeholder,
+[data-theme="light"] textarea::placeholder {
+  color: var(--text-muted);
+}
+
+[data-theme="light"] input:not(.app-topbar-search-input):focus,
+[data-theme="light"] select:focus,
+[data-theme="light"] textarea:focus,
+[data-theme="light"] .form-input:focus {
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 3px var(--focus-ring);
+}
+
+/* ── Buttons ───────────────────────────────────────────────────── */
+
+[data-theme="light"] .btn,
+[data-theme="light"] .btn.btn-primary,
+[data-theme="light"] .btn-primary {
+  background: var(--accent-primary);
+  border: 1px solid var(--accent-primary);
+  color: #ffffff;
+  font-weight: 700;
+  box-shadow: none;
+}
+
+[data-theme="light"] .btn:hover:not(:disabled),
+[data-theme="light"] .btn.btn-primary:hover:not(:disabled),
+[data-theme="light"] .btn-primary:hover:not(:disabled) {
+  background: var(--accent-primary-hover);
+  border-color: var(--accent-primary-hover);
+  box-shadow: none;
+  transform: none;
+}
+
+[data-theme="light"] .btn.secondary,
+[data-theme="light"] .btn.btn-secondary,
+[data-theme="light"] .btn-secondary {
+  background: #ffffff;
+  border: 1px solid #64748b;
+  color: var(--text-primary);
+  font-weight: 600;
+  box-shadow: none;
+}
+
+[data-theme="light"] .btn.secondary:hover:not(:disabled),
+[data-theme="light"] .btn.btn-secondary:hover:not(:disabled),
+[data-theme="light"] .btn-secondary:hover:not(:disabled) {
+  background: #f1f5f9;
+  border-color: #64748b;
+  color: var(--text-primary);
+}
+
+[data-theme="light"] .match-mui-btn--primary.MuiButton-root {
+  background: var(--accent-primary);
+  color: #ffffff;
+  font-weight: 700;
+  box-shadow: none;
+}
+
+[data-theme="light"] .match-mui-btn--primary.MuiButton-root:hover {
+  background: var(--accent-primary-hover);
+  box-shadow: none;
+}
+
+[data-theme="light"] .match-mui-btn--outlined.MuiButton-root {
+  background: #ffffff;
+  border-color: #64748b;
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+[data-theme="light"] .match-mui-btn--outlined.MuiButton-root:hover {
+  background: #f1f5f9;
+  border-color: #64748b;
+}
+
+[data-theme="light"] .notification-cta--outlined.MuiButton-root {
+  border-color: #64748b;
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+[data-theme="light"] .notification-cta--text.MuiButton-root {
+  color: var(--accent-primary);
+  font-weight: 600;
+}
+
+/* ── Tabs ──────────────────────────────────────────────────────── */
+
+[data-theme="light"] .notifications-filter-tabs .MuiTab-root {
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+[data-theme="light"] .notifications-filter-tabs .MuiTab-root.Mui-selected {
+  color: var(--text-primary);
+  font-weight: 700;
+}
+
+[data-theme="light"] .notifications-filter-tabs .MuiTabs-indicator {
+  background: var(--accent-primary);
+}

@@ -34,7 +34,6 @@ def _mentee_general_info_complete(mentee):
         and getattr(mentee, "campus", "")
         and getattr(mentee, "student_id_no", "")
         and getattr(mentee, "contact_no", "")
-        and getattr(mentee, "admission_type", "")
         and getattr(mentee, "sex", "")
     )
 

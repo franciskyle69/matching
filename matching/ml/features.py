@@ -1,8 +1,13 @@
 from __future__ import annotations
 
+from functools import lru_cache
 from typing import Iterable, Set, Dict, Any, List, Tuple
 
 import numpy as np
+from sklearn.metrics.pairwise import cosine_similarity
+from sklearn.preprocessing import MultiLabelBinarizer
+
+from profiles.subject_catalog import COMPETENCY_VOCABULARY, MAJOR_SUBJECT_NAMES
 
 
 def _to_set(items: Any) -> Set[str]:
@@ -104,21 +109,40 @@ def _safe_float(value: Any, default: float = 0.0) -> float:
         return default
 
 
-def _coerce_slots(value: Any) -> List[Tuple[int, int]]:
+_DAY_ORDER = ("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
+_DAY_INDEX = {day.lower(): index for index, day in enumerate(_DAY_ORDER)}
+_ALL_DAYS = frozenset(range(len(_DAY_ORDER)))
+
+
+def _coerce_days(value: str) -> frozenset:
+    found = set()
+    for token in str(value or "").split("/"):
+        index = _DAY_INDEX.get(token.strip().lower()[:3])
+        if index is not None:
+            found.add(index)
+    return frozenset(found)
+
+
+def _coerce_slots(value: Any) -> List[Tuple[frozenset, int, int]]:
+    """Parse "Mon/Wed|08:00-12:00"; a missing day prefix means every day."""
     if value is None:
         return []
     raw_slots = value if isinstance(value, list) else str(value).split(",")
-    out: List[Tuple[int, int]] = []
+    out: List[Tuple[frozenset, int, int]] = []
     for raw in raw_slots:
         text = str(raw or "").strip()
-        parts = text.split("-")
+        day_part, separator, time_part = text.partition("|")
+        if not separator:
+            day_part, time_part = "", text
+        parts = time_part.split("-")
         if len(parts) != 2:
             continue
         start = _hhmm_to_minutes(parts[0])
         end = _hhmm_to_minutes(parts[1])
         if start is None or end is None or start >= end:
             continue
-        out.append((start, end))
+        days = _coerce_days(day_part) if separator else frozenset()
+        out.append(((days or _ALL_DAYS), start, end))
     return out
 
 
@@ -136,22 +160,75 @@ def _hhmm_to_minutes(value: str):
     return hour * 60 + minute
 
 
-def availability_overlap_ratio(mentee_slots: Any, mentor_slots: Any) -> float:
+def _availability_overlap_minutes(mentee_slots: Any, mentor_slots: Any) -> float:
     mentee_ranges = _coerce_slots(mentee_slots)
     mentor_ranges = _coerce_slots(mentor_slots)
     if not mentee_ranges or not mentor_ranges:
         return 0.0
     overlap = 0
-    mentee_total = sum(end - start for start, end in mentee_ranges)
-    if mentee_total <= 0:
-        return 0.0
-    for m_start, m_end in mentee_ranges:
-        for t_start, t_end in mentor_ranges:
+    for m_days, m_start, m_end in mentee_ranges:
+        for t_days, t_start, t_end in mentor_ranges:
+            shared_days = len(m_days & t_days)
+            if not shared_days:
+                continue
             start = max(m_start, t_start)
             end = min(m_end, t_end)
             if start < end:
-                overlap += end - start
+                overlap += shared_days * (end - start)
+    return float(overlap)
+
+
+def availability_overlap_hours(mentee_slots: Any, mentor_slots: Any) -> float:
+    """Total overlapping weekly hours across shared weekdays."""
+    return _availability_overlap_minutes(mentee_slots, mentor_slots) / 60.0
+
+
+def availability_overlap_ratio(mentee_slots: Any, mentor_slots: Any) -> float:
+    """Share of the mentee's weekly minutes a mentor can actually cover.
+
+    Minutes are counted per weekday, so a mentor free only on Monday does not
+    cover a mentee who is free only on Tuesday.
+    """
+    mentee_ranges = _coerce_slots(mentee_slots)
+    if not mentee_ranges:
+        return 0.0
+    mentee_total = sum(len(days) * (end - start) for days, start, end in mentee_ranges)
+    if mentee_total <= 0:
+        return 0.0
+    overlap = _availability_overlap_minutes(mentee_slots, mentor_slots)
     return min(1.0, overlap / mentee_total)
+
+
+@lru_cache(maxsize=4)
+def _fit_mlb(classes: Tuple[str, ...]) -> MultiLabelBinarizer:
+    mlb = MultiLabelBinarizer(classes=list(classes), sparse_output=False)
+    mlb.fit([list(classes)])
+    return mlb
+
+
+def multilabel_cosine(mentee_items: Iterable[str], mentor_items: Iterable[str], classes: List[str]) -> float:
+    """Cosine similarity of two binary MultiLabelBinarizer vectors."""
+    if not classes:
+        return 0.0
+    vocab = tuple(classes)
+    mentee_set = {str(item).strip() for item in mentee_items if str(item).strip()}
+    mentor_set = {str(item).strip() for item in mentor_items if str(item).strip()}
+    allowed = set(classes)
+    mentee_set &= allowed
+    mentor_set &= allowed
+    if not mentee_set and not mentor_set:
+        return 0.0
+    mlb = _fit_mlb(vocab)
+    left = mlb.transform([sorted(mentee_set)])
+    right = mlb.transform([sorted(mentor_set)])
+    if float(left.sum()) == 0.0 and float(right.sum()) == 0.0:
+        return 0.0
+    return float(cosine_similarity(left, right)[0, 0])
+
+
+def academic_gap_score(mentor_year: Any, mentee_year: Any) -> float:
+    """Mentor year_level minus mentee year_level (faculty mentors use 4)."""
+    return _safe_float(mentor_year, 0.0) - _safe_float(mentee_year, 0.0)
 
 
 def build_features(row: Dict[str, Any]) -> Dict[str, float]:
@@ -240,6 +317,24 @@ def build_features(row: Dict[str, Any]) -> Dict[str, float]:
         "availability_overlap_ratio": availability_overlap_ratio(
             row.get("mentee_availability"),
             row.get("mentor_availability"),
+        ),
+        "availability_overlap_hours": availability_overlap_hours(
+            row.get("mentee_availability"),
+            row.get("mentor_availability"),
+        ),
+        "subject_cosine": multilabel_cosine(
+            mentee_subjects,
+            mentor_subjects,
+            [name.lower() for name in MAJOR_SUBJECT_NAMES],
+        ),
+        "competencies_cosine": multilabel_cosine(
+            mentee_competencies,
+            mentor_competencies,
+            [name.lower() for name in COMPETENCY_VOCABULARY],
+        ),
+        "academic_gap": academic_gap_score(
+            row.get("mentor_year_level"),
+            row.get("mentee_year_level"),
         ),
     }
 

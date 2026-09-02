@@ -1,19 +1,29 @@
+import EventAvailableOutlined from "@mui/icons-material/EventAvailableOutlined";
+import ScheduleOutlined from "@mui/icons-material/ScheduleOutlined";
+import HandshakeOutlined from "@mui/icons-material/HandshakeOutlined";
+import FlagOutlined from "@mui/icons-material/FlagOutlined";
+import ChatBubbleOutline from "@mui/icons-material/ChatBubbleOutline";
+import PersonOutline from "@mui/icons-material/PersonOutline";
+import CampaignOutlined from "@mui/icons-material/CampaignOutlined";
+import TuneOutlined from "@mui/icons-material/TuneOutlined";
+import ExploreOutlined from "@mui/icons-material/ExploreOutlined";
+import NotificationsNoneOutlined from "@mui/icons-material/NotificationsNoneOutlined";
+import AutoAwesomeOutlined from "@mui/icons-material/AutoAwesomeOutlined";
+import CheckCircleOutline from "@mui/icons-material/CheckCircleOutline";
+import GroupsOutlined from "@mui/icons-material/GroupsOutlined";
+
 (function () {
   "use strict";
   const React = window.React;
   const { useContext, useEffect, useRef } = React;
   const AppContext = window.DashboardApp.AppContext;
   const Utils = window.DashboardApp.Utils || {};
-  const { formatDate, MentorRoleBadge } = Utils;
+  const { formatDate, MentorRoleBadge, formatMatchScore } = Utils;
+  const Availability = window.DashboardApp.Availability;
+  const formatSlotList =
+    (Availability && Availability.formatSlotList) ||
+    ((slots) => (Array.isArray(slots) ? slots.join(", ") : ""));
 
-  function formatMinutesAsHours(min) {
-    const m = Number(min) || 0;
-    const h = Math.floor(m / 60);
-    const mins = m % 60;
-    return mins > 0 ? `${h}h ${mins}min` : `${h}h`;
-  }
-
-  /** Stroke SVG icons (same style as sidebar) for mentee dashboard */
   function MenteeDashIcon({ name, size }) {
     const s = size != null ? size : 18;
     const p = {
@@ -109,10 +119,94 @@
           <circle cx="12" cy="7" r="4" />
         </svg>
       ),
+      mail: (
+        <svg {...p}>
+          <rect x="2" y="4" width="20" height="16" rx="2" />
+          <path d="m22 7-10 6L2 7" />
+        </svg>
+      ),
+      target: (
+        <svg {...p}>
+          <circle cx="12" cy="12" r="10" />
+          <circle cx="12" cy="12" r="6" />
+          <circle cx="12" cy="12" r="2" />
+        </svg>
+      ),
+      compass: (
+        <svg {...p}>
+          <circle cx="12" cy="12" r="10" />
+          <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76" />
+        </svg>
+      ),
     };
     const node = icons[name];
     if (!node) return null;
     return <span className="mentee-dash-icon-wrap">{node}</span>;
+  }
+
+  function MenteeAvatar({ name, url, className }) {
+    const initial = String(name || "?")
+      .slice(0, 1)
+      .toUpperCase();
+    return (
+      <div className={"sidebar-avatar-wrapper " + (className || "")}>
+        {url ? (
+          <img src={url} alt="" className="sidebar-avatar" />
+        ) : (
+          <div className="sidebar-avatar fallback">{initial}</div>
+        )}
+      </div>
+    );
+  }
+
+  function StatCard({ icon, label, value, hint }) {
+    return (
+      <article className="dashboard-card mentee-stat-card">
+        <span className="mentee-stat-icon">{icon}</span>
+        <p className="mentee-stat-value">{value}</p>
+        <p className="mentee-stat-label">{label}</p>
+        {hint ? <p className="mentee-stat-hint">{hint}</p> : null}
+      </article>
+    );
+  }
+
+  function formatHoursValue(minutes) {
+    const mins = Number(minutes) || 0;
+    if (mins <= 0) return "—";
+    const hours = Math.round((mins / 60) * 10) / 10;
+    return `${hours} hrs`;
+  }
+
+  function formatCountdown(start) {
+    if (!(start instanceof Date) || Number.isNaN(start.getTime())) return "";
+    const ms = start.getTime() - Date.now();
+    if (ms <= 0) return "";
+    const hours = Math.round(ms / 3600000);
+    if (hours < 1) return "Next window in under an hour";
+    if (hours === 1) return "Next window in 1 hour";
+    if (hours < 48) return `Next window in ${hours} hours`;
+    return `Next window ${start.toLocaleDateString(undefined, {
+      weekday: "short",
+    })}`;
+  }
+
+  function gmailComposeUrl(email) {
+    const to = String(email || "").trim();
+    if (!to) return "";
+    return `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(to)}`;
+  }
+
+  function MatchBadge({ score }) {
+    if (score == null || !formatMatchScore) return null;
+    const { percentage, label, tier } = formatMatchScore(score);
+    return (
+      <span
+        className={"mentee-match-badge match-score-tier-" + tier}
+        title={label}
+      >
+        {percentage}% Match
+      </span>
+    );
   }
 
   function WelcomeHeroAvatar({ user }) {
@@ -194,276 +288,548 @@
       const hasQuestionnaire = !!(
         user.mentee_questionnaire_completed ?? user.questionnaire_completed
       );
-      const matchCount = (menteeRecommendations || []).length;
-      const userProgress = stats && stats.user_progress;
+      const recommendations = Array.isArray(menteeRecommendations)
+        ? menteeRecommendations
+        : [];
+      const matchCount = recommendations.length;
+      const firstName = String(
+        user.full_name || user.display_name || user.username || "",
+      )
+        .trim()
+        .split(/\s+/)[0];
+
+      const menteeSlots = Array.isArray(menteeMatching?.availability)
+        ? menteeMatching.availability
+        : [];
+      const sharedSlots =
+        Availability && myMentor
+          ? Availability.intersectSlots(menteeSlots, myMentor.availability)
+          : [];
+      const scheduleSlots = myMentor && sharedSlots.length
+        ? sharedSlots
+        : menteeSlots;
+      const upcoming = Availability
+        ? Availability.nextOccurrences(scheduleSlots, 4)
+        : [];
+      const nextWindow = upcoming[0] || null;
+      const weeklyMinutes = Availability
+        ? Availability.weeklyMinutes(
+            myMentor && sharedSlots.length ? sharedSlots : menteeSlots,
+          )
+        : 0;
+
+      const planSubjects = Array.isArray(menteeMatching?.subjects)
+        ? menteeMatching.subjects.filter((item) => String(item || "").trim())
+        : [];
+      const planTopics = Array.isArray(menteeMatching?.topics)
+        ? menteeMatching.topics.filter((item) => String(item || "").trim())
+        : [];
+
+      /* Best score we can honestly show: the paired mentor's, else the
+         strongest recommendation. */
+      const topRecommendation = recommendations.reduce(
+        (best, item) =>
+          best == null || Number(item.score) > Number(best.score) ? item : best,
+        null,
+      );
+      const headlineScore =
+        myMentor && myMentor.score != null
+          ? myMentor.score
+          : topRecommendation
+            ? topRecommendation.score
+            : null;
+      const headlineMatch =
+        headlineScore != null && formatMatchScore
+          ? formatMatchScore(headlineScore)
+          : null;
+
+      const mentorName = myMentor
+        ? myMentor.display_name || myMentor.username
+        : "";
+      const mentorSubjects = (() => {
+        if (!myMentor) return [];
+        const details = myMentor.match_details || {};
+        if ((details.common_subjects || []).length) {
+          return details.common_subjects;
+        }
+        if (
+          Array.isArray(myMentor.subjects) &&
+          Array.isArray(menteeMatching?.subjects)
+        ) {
+          const wanted = new Set(
+            menteeMatching.subjects.map((s) => String(s).trim().toLowerCase()),
+          );
+          return myMentor.subjects.filter((s) =>
+            wanted.has(String(s).trim().toLowerCase()),
+          );
+        }
+        return [];
+      })();
+
+      const goalTotal = planSubjects.length || planTopics.length;
+      const goalDone = myMentor
+        ? mentorSubjects.length || Math.min(goalTotal, planTopics.length)
+        : 0;
+
+      const heroPill = (() => {
+        if (nextWindow && myMentor) {
+          return formatCountdown(nextWindow.start);
+        }
+        if (myMentor && headlineMatch) {
+          return `${headlineMatch.percentage}% match with ${mentorName}`;
+        }
+        if (!hasQuestionnaire) {
+          return "Finish your profile to unlock matches";
+        }
+        if (matchCount > 0) {
+          return `${matchCount} mentor match${matchCount === 1 ? "" : "es"} ready`;
+        }
+        return "We're lining up mentors for you";
+      })();
+
+      function openMentorProfile(userId) {
+        if (userId == null || typeof window === "undefined") return;
+        window.location.hash = `profile/mentor/${userId}`;
+      }
 
       return (
-        <div className="home-dashboard-space mentee-dashboard mentee-dashboard-v2 page-shell">
-          <section className="mentee-v2-panel mentee-v2-hero">
-            <div className="mentee-v2-hero-leading">
-              <WelcomeHeroAvatar user={user} />
-              <div className="mentee-v2-hero-copy">
-                <h1 className="mentee-v2-title">
-                  Welcome back
-                  {user.full_name || user.display_name
-                    ? `, ${user.full_name || user.display_name}`
-                    : user.username
-                      ? `, ${user.username}`
-                      : ""}
-                </h1>
-                <p className="mentee-v2-subtitle">
-                  A focused view of your mentoring journey, matching, and next
-                  best actions.
-                </p>
-              </div>
-            </div>
-            <div className="mentee-v2-hero-actions">
-              <button
-                type="button"
-                className="btn"
-                onClick={() => setActiveTab("matching")}
-              >
-                Find mentors
-              </button>
-              <button
-                type="button"
-                className="btn secondary"
-                onClick={() => setActiveTab("announcements")}
-              >
-                Announcements
-              </button>
-            </div>
-          </section>
-
-          <section className="mentee-v2-quickbar" aria-label="Quick actions">
-            <button
-              type="button"
-              className="mentee-v2-quickbar-btn is-primary"
-              onClick={() => setActiveTab("matching")}
-            >
-              <MenteeDashIcon name="users" size={16} />
-              <span>Find mentors</span>
-            </button>
-            <button
-              type="button"
-              className="mentee-v2-quickbar-btn"
-              onClick={() => setActiveTab("matching")}
-            >
-              <MenteeDashIcon name="plus" size={16} />
-              <span>View matches</span>
-            </button>
-            <button
-              type="button"
-              className="mentee-v2-quickbar-btn"
-              onClick={() => setActiveTab("matching")}
-            >
-              <MenteeDashIcon name="barChart" size={16} />
-              <span>View matches</span>
-            </button>
-            <button
-              type="button"
-              className="mentee-v2-quickbar-btn"
-              onClick={() => setActiveTab("announcements")}
-            >
-              <MenteeDashIcon name="megaphone" size={16} />
-              <span>Announcements</span>
-            </button>
-          </section>
-
-          <section className="mentee-v2-panel mentee-v2-analytics">
-            <div className="mentee-v2-section-head">
-              <h2>Analytics snapshot</h2>
-              <p>Key metrics at a glance</p>
-            </div>
-            <div className="mentee-v2-metric-grid">
-              <article className="mentee-v2-metric-card">
-                <span className="mentee-v2-metric-icon">
-                  <MenteeDashIcon name="users" />
-                </span>
-                <p className="mentee-v2-metric-label">Mentor recommendations</p>
-                <p className="mentee-v2-metric-value">{matchCount}</p>
-              </article>
-              <article className="mentee-v2-metric-card">
-                <span className="mentee-v2-metric-icon">
-                  <MenteeDashIcon name="calendar" />
-                </span>
-                <p className="mentee-v2-metric-label">Has mentor</p>
-                <p className="mentee-v2-metric-value">
-                  {userProgress?.has_mentor ? "Yes" : "No"}
-                </p>
-              </article>
-              <article className="mentee-v2-metric-card">
-                <span className="mentee-v2-metric-icon">
-                  <MenteeDashIcon name="clock" />
-                </span>
-                <p className="mentee-v2-metric-label">Recommendations</p>
-                <p className="mentee-v2-metric-value">{matchCount}</p>
-              </article>
-              <article className="mentee-v2-metric-card">
-                <span className="mentee-v2-metric-icon">
-                  <MenteeDashIcon name="pending" />
-                </span>
-                <p className="mentee-v2-metric-label">Pairings</p>
-                <p className="mentee-v2-metric-value">
-                  {stats?.accepted_pairings ?? 0}
-                </p>
-              </article>
-            </div>
-          </section>
-
-          <div className="mentee-v2-main-grid">
-            <section className="mentee-v2-panel mentee-v2-mentor">
-              <div className="mentee-v2-section-head">
-                <h2>Your mentor</h2>
-                <p>Primary relationship and next action</p>
-              </div>
-              {myMentor ? (
-                <div className="mentee-v2-mentor-card">
-                  <div className="mentee-v2-mentor-main">
-                    <div className="sidebar-avatar-wrapper">
-                      {myMentor.avatar_url ? (
-                        <img
-                          src={myMentor.avatar_url}
-                          alt={myMentor.display_name || myMentor.username}
-                          className="sidebar-avatar"
-                        />
-                      ) : (
-                        <div className="sidebar-avatar fallback">
-                          {(myMentor.display_name || myMentor.username || "?")
-                            .slice(0, 1)
-                            .toUpperCase()}
-                        </div>
-                      )}
-                    </div>
-                    <div>
-                      <div className="mentee-v2-mentor-identity">
-                        <p className="mentee-v2-mentor-name">
-                          {myMentor.display_name || myMentor.username}
-                        </p>
-                        {myMentor.role && MentorRoleBadge ? (
-                          <MentorRoleBadge role={myMentor.role} prominent />
-                        ) : null}
-                      </div>
-                      {myMentor.accepted_at && (
-                        <p className="mentee-v2-muted">
-                          Mentor accepted {formatDate(myMentor.accepted_at)}
-                        </p>
-                      )}
-                      {(() => {
-                        const d = myMentor.match_details || {};
-                        let subjects = d.common_subjects || [];
-                        let competencies = d.common_competencies || [];
-                        if (
-                          subjects.length === 0 &&
-                          Array.isArray(menteeMatching?.subjects) &&
-                          Array.isArray(myMentor.subjects)
-                        ) {
-                          const menteeSet = new Set(
-                            menteeMatching.subjects.map((s) =>
-                              String(s).trim().toLowerCase(),
-                            ),
-                          );
-                          subjects = myMentor.subjects.filter((s) =>
-                            menteeSet.has(String(s).trim().toLowerCase()),
-                          );
-                        }
-                        const parts = [];
-                        if (subjects.length) {
-                          parts.push(`Shared subjects: ${subjects.join(", ")}`);
-                        }
-                        if (competencies.length) {
-                          parts.push(
-                            `Shared competencies: ${competencies.join(", ")}`,
-                          );
-                        }
-                        if (!parts.length) return null;
-                        return (
-                          <p className="mentee-v2-muted mentee-v2-match-reason">
-                            {parts.join(" • ")}
-                          </p>
-                        );
-                      })()}
+        <div className="home-dashboard-space mentee-home page-shell">
+          <div className="mentee-home-grid">
+            <div className="mentee-home-main">
+              <section className="dashboard-card mentee-hero">
+                <span className="mentee-hero-mesh" aria-hidden="true" />
+                <div className="mentee-hero-body">
+                  <div className="mentee-hero-leading">
+                    <WelcomeHeroAvatar user={user} />
+                    <div className="mentee-hero-copy">
+                      <h1 className="mentee-hero-title">
+                        Welcome back{firstName ? `, ${firstName}` : ""}
+                      </h1>
+                      <p className="mentee-hero-subtitle">
+                        Your mentoring journey, matches, and next best actions
+                        in one place.
+                      </p>
                     </div>
                   </div>
-                  <button
-                    type="button"
-                    className="btn small"
-                    onClick={() => setActiveTab("matching")}
-                  >
-                    View matching
-                  </button>
+                  <span className="mentee-hero-pill">{heroPill}</span>
+                  <div className="mentee-hero-actions">
+                    <button
+                      type="button"
+                      className="btn mentee-cta-primary"
+                      onClick={() => setActiveTab("matching")}
+                    >
+                      Find a Mentor
+                    </button>
+                    <button
+                      type="button"
+                      className="btn mentee-cta-glass"
+                      onClick={() => setActiveTab("mentoring-preferences")}
+                    >
+                      Browse Subjects
+                    </button>
+                  </div>
                 </div>
-              ) : (
-                <div className="mentee-v2-empty-state">
-                  <p>You do not have an official mentor yet.</p>
-                  <button
-                    type="button"
-                    className="btn"
-                    onClick={() => setActiveTab("matching")}
-                  >
-                    Browse recommendations
-                  </button>
-                </div>
-              )}
+              </section>
 
-              {!hasQuestionnaire && (
-                <div className="mentee-v2-inline-cta">
-                  <span>
-                    <MenteeDashIcon name="sparkles" size={16} />
-                  </span>
-                  <p>
-                    Set your mentoring subjects and competencies to unlock
-                    better mentor matches.
-                  </p>
-                  <button
-                    type="button"
-                    className="btn secondary small"
-                    onClick={() => setActiveTab("onboarding")}
-                  >
-                    Continue onboarding
-                  </button>
-                </div>
-              )}
-            </section>
-          </div>
+              <section
+                className="mentee-stat-grid"
+                aria-label="Your matching snapshot"
+              >
+                <StatCard
+                  icon={<EventAvailableOutlined fontSize="inherit" />}
+                  label="Upcoming sessions"
+                  value={
+                    upcoming.length
+                      ? `${upcoming.length} ${upcoming.length === 1 ? "window" : "windows"}`
+                      : "0"
+                  }
+                  hint={
+                    myMentor && sharedSlots.length
+                      ? "Shared times this month"
+                      : upcoming.length
+                        ? "From your availability"
+                        : "No windows set"
+                  }
+                />
+                <StatCard
+                  icon={<ScheduleOutlined fontSize="inherit" />}
+                  label="Mentoring hours"
+                  value={formatHoursValue(weeklyMinutes)}
+                  hint={
+                    myMentor && sharedSlots.length
+                      ? "Weekly overlap with your mentor"
+                      : menteeSlots.length
+                        ? "Weekly hours you are free"
+                        : "Add availability to start"
+                  }
+                />
+                <StatCard
+                  icon={<HandshakeOutlined fontSize="inherit" />}
+                  label="Completed pairings"
+                  value={myMentor ? 1 : 0}
+                  hint={
+                    myMentor
+                      ? `Paired with ${mentorName}`
+                      : "No official mentor yet"
+                  }
+                />
+                <StatCard
+                  icon={<FlagOutlined fontSize="inherit" />}
+                  label="Active learning goals"
+                  value={
+                    goalTotal
+                      ? `${goalDone} / ${goalTotal}`
+                      : "—"
+                  }
+                  hint={
+                    goalTotal
+                      ? goalDone
+                        ? "Subjects covered with your mentor"
+                        : "Subjects in your plan"
+                      : "Choose subjects to track"
+                  }
+                />
+              </section>
 
-          <div className="mentee-v2-main-grid">
-            <section className="mentee-v2-panel mentee-v2-activity">
-              <div className="mentee-v2-section-head">
-                <h2>Recent activity</h2>
-                <p>Latest events in your learning flow</p>
-              </div>
-              <ul className="mentee-v2-timeline">
-                {matchCount > 0 && (
-                  <li className="mentee-v2-timeline-item">
-                    <span className="mentee-v2-timeline-icon">
-                      <MenteeDashIcon name="users" size={14} />
-                    </span>
-                    <div>
-                      <p className="mentee-v2-timeline-title">
-                        New mentor recommendations
-                      </p>
-                      <p className="mentee-v2-muted">
-                        You currently have {matchCount} recommendation
-                        {matchCount !== 1 ? "s" : ""}.
-                      </p>
+              <section className="dashboard-card mentee-spotlight">
+                <div className="mentee-card-head">
+                  <h2>Your mentor</h2>
+                  {myMentor ? <MatchBadge score={myMentor.score} /> : null}
+                </div>
+
+                {myMentor ? (
+                  <>
+                    <div className="mentee-spotlight-identity">
+                      <div className="mentee-spotlight-avatar">
+                        <MenteeAvatar
+                          name={mentorName}
+                          url={myMentor.avatar_url}
+                        />
+                        <span
+                          className="mentee-spotlight-status"
+                          title="Active pairing"
+                          aria-label="Active pairing"
+                        />
+                      </div>
+                      <div className="mentee-spotlight-meta">
+                        <div className="mentee-spotlight-name-row">
+                          <p className="mentee-spotlight-name">{mentorName}</p>
+                          {myMentor.role && MentorRoleBadge ? (
+                            <MentorRoleBadge role={myMentor.role} prominent />
+                          ) : null}
+                        </div>
+                        {myMentor.accepted_at && (
+                          <p className="mentee-muted">
+                            Paired since {formatDate(myMentor.accepted_at)}
+                          </p>
+                        )}
+                        {mentorSubjects.length > 0 && (
+                          <div className="mentee-chip-row">
+                            {mentorSubjects.slice(0, 4).map((subject) => (
+                              <span key={subject} className="mentee-chip">
+                                {subject}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  </li>
+
+                    <dl className="mentee-spotlight-facts">
+                      <div>
+                        <dt>Next window</dt>
+                        <dd>
+                          {nextWindow
+                            ? `${nextWindow.dateLabel} • ${nextWindow.timeLabel}`
+                            : "No overlapping time yet"}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt>Weekly hours</dt>
+                        <dd>{formatHoursValue(weeklyMinutes)}</dd>
+                      </div>
+                    </dl>
+
+                    <div className="mentee-spotlight-actions">
+                      {myMentor.email ? (
+                        <a
+                          className="btn mentee-cta-primary"
+                          href={gmailComposeUrl(myMentor.email)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          <ChatBubbleOutline fontSize="inherit" />
+                          <span>Send Message</span>
+                        </a>
+                      ) : null}
+                      <button
+                        type="button"
+                        className="btn mentee-cta-glass"
+                        onClick={() => openMentorProfile(myMentor.user_id)}
+                      >
+                        <PersonOutline fontSize="inherit" />
+                        <span>View Profile</span>
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <div className="mentee-empty">
+                    <p>You do not have an official mentor yet.</p>
+                    <button
+                      type="button"
+                      className="btn mentee-cta-primary"
+                      onClick={() => setActiveTab("matching")}
+                    >
+                      Browse recommendations
+                    </button>
+                  </div>
                 )}
-                {!matchCount && (
-                  <li className="mentee-v2-empty-state">
-                    <p>No recent activity yet.</p>
+
+                {!hasQuestionnaire && (
+                  <div className="mentee-inline-cta">
+                    <AutoAwesomeOutlined fontSize="inherit" />
+                    <p>
+                      Set your mentoring subjects and competencies to unlock
+                      better mentor matches.
+                    </p>
                     <button
                       type="button"
                       className="btn secondary small"
-                      onClick={() => setActiveTab("matching")}
+                      onClick={() => setActiveTab("onboarding")}
                     >
-                      Start exploring mentors
+                      Continue onboarding
                     </button>
-                  </li>
+                  </div>
                 )}
-              </ul>
-            </section>
+              </section>
+
+              <section className="dashboard-card mentee-activity">
+                <div className="mentee-card-head">
+                  <h2>Next steps</h2>
+                </div>
+                <ul className="mentee-timeline">
+                  {!hasQuestionnaire && (
+                    <li className="mentee-timeline-item">
+                      <span className="mentee-timeline-icon">
+                        <AutoAwesomeOutlined fontSize="inherit" />
+                      </span>
+                      <div>
+                        <p className="mentee-timeline-title">
+                          Finish your mentoring preferences
+                        </p>
+                        <p className="mentee-muted">
+                          Subjects and competencies drive every match we show
+                          you.
+                        </p>
+                      </div>
+                    </li>
+                  )}
+                  {menteeSlots.length === 0 && (
+                    <li className="mentee-timeline-item">
+                      <span className="mentee-timeline-icon">
+                        <ScheduleOutlined fontSize="inherit" />
+                      </span>
+                      <div>
+                        <p className="mentee-timeline-title">
+                          Add your availability
+                        </p>
+                        <p className="mentee-muted">
+                          Mentors are only matched when your days and times
+                          overlap.
+                        </p>
+                      </div>
+                    </li>
+                  )}
+                  {matchCount > 0 && (
+                    <li className="mentee-timeline-item">
+                      <span className="mentee-timeline-icon">
+                        <GroupsOutlined fontSize="inherit" />
+                      </span>
+                      <div>
+                        <p className="mentee-timeline-title">
+                          {matchCount} mentor recommendation
+                          {matchCount === 1 ? "" : "s"} waiting
+                        </p>
+                        <p className="mentee-muted">
+                          Review them and choose the mentor that fits you best.
+                        </p>
+                      </div>
+                    </li>
+                  )}
+                  {myMentor && (
+                    <li className="mentee-timeline-item">
+                      <span className="mentee-timeline-icon">
+                        <CheckCircleOutline fontSize="inherit" />
+                      </span>
+                      <div>
+                        <p className="mentee-timeline-title">
+                          You are paired with {mentorName}
+                        </p>
+                        <p className="mentee-muted">
+                          Reach out to agree on a regular meeting time.
+                        </p>
+                      </div>
+                    </li>
+                  )}
+                  {hasQuestionnaire &&
+                    menteeSlots.length > 0 &&
+                    !matchCount &&
+                    !myMentor && (
+                      <li className="mentee-empty">
+                        <p>
+                          No mentor recommendations yet. Try widening your
+                          availability or adding subjects.
+                        </p>
+                        <button
+                          type="button"
+                          className="btn secondary small"
+                          onClick={() => setActiveTab("mentoring-preferences")}
+                        >
+                          Adjust preferences
+                        </button>
+                      </li>
+                    )}
+                </ul>
+              </section>
+            </div>
+
+            <aside className="mentee-home-rail" aria-label="Dashboard sidebar">
+              <section className="dashboard-card mentee-rail-card">
+                <div className="mentee-card-head">
+                  <h2>Upcoming sessions</h2>
+                </div>
+                {upcoming.length > 0 ? (
+                  <>
+                    <p className="mentee-muted">
+                      {myMentor && sharedSlots.length
+                        ? `Next overlapping windows with ${mentorName}.`
+                        : "The next times you marked as free."}
+                    </p>
+                    <ul className="mentee-slot-list">
+                      {upcoming.map((occ) => (
+                        <li key={`${occ.slot}-${occ.start.getTime()}`} className="mentee-slot mentee-slot--schedule">
+                          <span className="mentee-slot-icon">
+                            <EventAvailableOutlined fontSize="inherit" />
+                          </span>
+                          <div className="mentee-slot-copy">
+                            <span className="mentee-slot-when">{occ.dateLabel}</span>
+                            <span className="mentee-slot-time">{occ.timeLabel}</span>
+                          </div>
+                          <button
+                            type="button"
+                            className="mentee-slot-action"
+                            onClick={() =>
+                              setActiveTab("mentoring-preferences")
+                            }
+                          >
+                            Reschedule
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  </>
+                ) : (
+                  <p className="mentee-muted">
+                    {myMentor
+                      ? `You and ${mentorName} have no overlapping times yet.`
+                      : "You have not set any availability yet."}
+                  </p>
+                )}
+                <button
+                  type="button"
+                  className="btn mentee-cta-glass mentee-rail-action"
+                  onClick={() => setActiveTab("mentoring-preferences")}
+                >
+                  {upcoming.length ? "Reschedule" : "Edit availability"}
+                </button>
+              </section>
+
+              <section className="dashboard-card mentee-rail-card">
+                <div className="mentee-card-head">
+                  <h2>Recommended mentors</h2>
+                </div>
+                {matchCount > 0 ? (
+                  <ul className="mentee-rec-list">
+                    {recommendations.slice(0, 3).map((match) => {
+                      const mentor = match.mentor || {};
+                      const name =
+                        match.mentor_display_name ||
+                        mentor.display_name ||
+                        match.mentor_username ||
+                        "Mentor";
+                      return (
+                        <li key={match.mentor_id} className="mentee-rec-item">
+                          <MenteeAvatar name={name} url={mentor.avatar_url} />
+                          <div className="mentee-rec-meta">
+                            <p className="mentee-rec-name">{name}</p>
+                            <MatchBadge score={match.score} />
+                          </div>
+                          <button
+                            type="button"
+                            className="btn secondary small"
+                            onClick={() => setActiveTab("matching")}
+                          >
+                            Connect
+                          </button>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                ) : (
+                  <p className="mentee-muted">
+                    No recommendations yet. Complete your preferences to see
+                    matched mentors here.
+                  </p>
+                )}
+                <button
+                  type="button"
+                  className="btn mentee-cta-glass mentee-rail-action"
+                  onClick={() => setActiveTab("matching")}
+                >
+                  See all matches
+                </button>
+              </section>
+
+              <section className="dashboard-card mentee-rail-card">
+                <div className="mentee-card-head">
+                  <h2>Quick actions</h2>
+                </div>
+                <div className="mentee-quick-actions">
+                  <button
+                    type="button"
+                    className="mentee-quick-action"
+                    onClick={() => setActiveTab("matching")}
+                  >
+                    <ExploreOutlined fontSize="inherit" />
+                    <span>Find mentors</span>
+                  </button>
+                  <button
+                    type="button"
+                    className="mentee-quick-action"
+                    onClick={() => setActiveTab("mentoring-preferences")}
+                  >
+                    <TuneOutlined fontSize="inherit" />
+                    <span>Mentoring preferences</span>
+                  </button>
+                  <button
+                    type="button"
+                    className="mentee-quick-action"
+                    onClick={() => setActiveTab("announcements")}
+                  >
+                    <CampaignOutlined fontSize="inherit" />
+                    <span>Announcements</span>
+                  </button>
+                  <button
+                    type="button"
+                    className="mentee-quick-action"
+                    onClick={() => setActiveTab("notifications")}
+                  >
+                    <NotificationsNoneOutlined fontSize="inherit" />
+                    <span>Notifications</span>
+                  </button>
+                </div>
+              </section>
+            </aside>
           </div>
         </div>
       );
@@ -754,7 +1120,9 @@
                 <div>
                   <span>Availability</span>
                   <strong>
-                    {availability.length ? availability.join(", ") : "Not set"}
+                    {availability.length
+                      ? formatSlotList(availability)
+                      : "Not set"}
                   </strong>
                 </div>
                 <div>

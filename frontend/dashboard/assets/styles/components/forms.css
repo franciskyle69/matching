@@ -1,4 +1,4 @@
-input:not(.app-topbar-search-input),
+input:not(.app-topbar-search-input):not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="color"]),
 select,
 textarea,
 .form-input,
@@ -11,9 +11,10 @@ textarea,
   border-radius: var(--radius-sm);
   color: var(--text);
   background: var(--card);
+  font-family: var(--font-sans);
 }
 
-input:not(.app-topbar-search-input):focus,
+input:not(.app-topbar-search-input):not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="color"]):focus,
 select:focus,
 textarea:focus,
 .form-input:focus,
@@ -27,7 +28,7 @@ textarea:focus,
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 18%, transparent);
 }
 
-input:not(.app-topbar-search-input),
+input:not(.app-topbar-search-input):not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="color"]),
 select,
 textarea,
 .form-input,
@@ -38,4 +39,23 @@ textarea,
 .users-edit-select {
   min-height: 40px;
   width: 100%;
+}
+
+input[type="checkbox"],
+input[type="radio"] {
+  width: 18px;
+  height: 18px;
+  min-width: 18px;
+  min-height: 18px;
+  max-width: 18px;
+  max-height: 18px;
+  margin: 0;
+  padding: 0;
+  flex-shrink: 0;
+  vertical-align: middle;
+  accent-color: #a855f7;
+}
+
+textarea {
+  font-family: var(--font-sans);
 }

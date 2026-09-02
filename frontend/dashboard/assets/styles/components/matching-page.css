@@ -1,0 +1,487 @@
+/* Mentee matching page (#matching) — glass cards, unified badges, match grid */
+
+.matching-page--mentee.page-shell {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  overflow: visible;
+  font-family: "Inter", "SF Pro Text", "SF Pro Display", var(--font-sans);
+}
+
+.matching-page--mentee .page-title,
+.matching-page--mentee .section-title,
+.matching-page--mentee .match-card-title {
+  font-family: "Inter", "SF Pro Text", "SF Pro Display", var(--font-sans);
+}
+
+/* ── Glass card token ─────────────────────────────────────────── */
+
+.matching-page--mentee .matching-card {
+  background: rgba(20, 14, 35, 0.75);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 16px;
+  padding: 24px;
+  transition:
+    transform 0.2s ease,
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.matching-page--mentee .matching-card:hover {
+  border-color: rgba(168, 85, 247, 0.4);
+}
+
+/* ── Unified badges ───────────────────────────────────────────── */
+
+.matching-page--mentee .match-role-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  background: rgba(168, 85, 247, 0.15);
+  color: #c084fc;
+  border: 1px solid rgba(168, 85, 247, 0.3);
+  white-space: nowrap;
+}
+
+.matching-page--mentee .match-score-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: #fff;
+  white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.25);
+}
+
+.matching-page--mentee .match-official-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  background: #7c3aed;
+  color: #fff;
+  white-space: nowrap;
+}
+
+/* ── Official mentor spotlight ─────────────────────────────────── */
+
+.matching-page--mentee .match-spotlight-section {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.matching-page--mentee .match-spotlight {
+  display: grid;
+  gap: 20px;
+}
+
+.matching-page--mentee .match-spotlight-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.matching-page--mentee .match-spotlight-identity {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  min-width: 0;
+}
+
+.matching-page--mentee .match-spotlight-avatar {
+  width: 72px;
+  height: 72px;
+  border-radius: 14px;
+  object-fit: cover;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  flex-shrink: 0;
+}
+
+.matching-page--mentee .match-spotlight-name {
+  margin: 0 0 6px;
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: var(--text-primary, #f8fafc);
+  line-height: 1.25;
+}
+
+.matching-page--mentee .match-spotlight-date {
+  margin: 0 0 10px;
+  font-size: 13px;
+  color: rgba(226, 232, 240, 0.72);
+}
+
+.matching-page--mentee .match-spotlight-badges {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.matching-page--mentee .match-spotlight-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+.matching-page--mentee .match-spotlight-why-title {
+  margin: 0 0 12px;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: rgba(226, 232, 240, 0.85);
+}
+
+/* ── Match reason chips ───────────────────────────────────────── */
+
+.matching-page--mentee .match-reason-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-content: flex-start;
+  align-items: flex-start;
+}
+
+.matching-page--mentee .match-reason-chip {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  width: fit-content;
+  max-width: 100%;
+  height: auto;
+  padding: 8px 12px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.35;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(241, 245, 249, 0.95);
+  white-space: normal;
+  word-break: break-word;
+}
+
+.matching-page--mentee .match-reason-chip--subject {
+  border-color: rgba(96, 165, 250, 0.35);
+  background: rgba(59, 130, 246, 0.12);
+  color: #bfdbfe;
+}
+
+.matching-page--mentee .match-reason-chip--competency {
+  border-color: rgba(251, 191, 36, 0.35);
+  background: rgba(245, 158, 11, 0.12);
+  color: #fde68a;
+}
+
+.matching-page--mentee .match-reason-chip--schedule {
+  border-color: rgba(168, 85, 247, 0.35);
+  background: rgba(124, 58, 237, 0.12);
+  color: #ddd6fe;
+}
+
+/* ── Filter bar ───────────────────────────────────────────────── */
+
+.matching-page--mentee .match-filter-bar {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  padding: 16px 20px;
+  margin-bottom: 4px;
+}
+
+.matching-page--mentee .match-filter-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.matching-page--mentee .match-filter-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: rgba(226, 232, 240, 0.65);
+}
+
+.matching-page--mentee .match-filter-input,
+.matching-page--mentee .match-filter-select {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(15, 10, 28, 0.55);
+  color: #f1f5f9;
+  font-size: 14px;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.2s ease;
+}
+
+.matching-page--mentee .match-filter-input::placeholder {
+  color: rgba(148, 163, 184, 0.75);
+}
+
+.matching-page--mentee .match-filter-input:focus,
+.matching-page--mentee .match-filter-select:focus {
+  border-color: rgba(168, 85, 247, 0.55);
+}
+
+.matching-page--mentee .match-filter-select option {
+  background: #1e1033;
+  color: #f1f5f9;
+}
+
+/* ── Match grid ───────────────────────────────────────────────── */
+
+.matching-page--mentee .match-grid-section {
+  display: grid;
+  gap: 16px;
+}
+
+.matching-page--mentee .match-grid-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.matching-page--mentee .match-grid-head .section-title {
+  margin: 0;
+}
+
+.matching-page--mentee .match-grid,
+.matching-page--mentor .match-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 16px;
+  align-items: start;
+}
+
+.matching-page--mentee .match-grid-card {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  height: 100%;
+  min-height: 0;
+}
+
+.matching-page--mentee .match-grid-card-header {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+}
+
+.matching-page--mentee .match-grid-card-avatar {
+  width: 56px;
+  height: 56px;
+  border-radius: 12px;
+  object-fit: cover;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  flex-shrink: 0;
+}
+
+.matching-page--mentee .match-grid-card-meta {
+  flex: 1;
+  min-width: 0;
+}
+
+.matching-page--mentee .match-grid-card-name {
+  margin: 0 0 4px;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text-primary, #f8fafc);
+  line-height: 1.3;
+}
+
+.matching-page--mentee .match-grid-card-dept {
+  margin: 0 0 10px;
+  font-size: 13px;
+  color: rgba(203, 213, 225, 0.8);
+  line-height: 1.4;
+}
+
+.matching-page--mentee .match-grid-card-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.matching-page--mentee .match-grid-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex: 1;
+  min-height: 0;
+}
+
+.matching-page--mentee .match-grid-card-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-content: flex-start;
+  align-items: flex-start;
+  align-self: flex-start;
+  width: 100%;
+}
+
+.matching-page--mentee .match-tag {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  width: fit-content;
+  max-width: 100%;
+  height: auto;
+  padding: 5px 10px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.35;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: rgba(241, 245, 249, 0.92);
+  white-space: normal;
+  word-break: break-word;
+}
+
+.matching-page--mentee .match-tag--subject {
+  border-color: rgba(96, 165, 250, 0.3);
+  background: rgba(59, 130, 246, 0.1);
+  color: #bfdbfe;
+}
+
+.matching-page--mentee .match-tag--competency {
+  border-color: rgba(251, 191, 36, 0.3);
+  background: rgba(245, 158, 11, 0.1);
+  color: #fde68a;
+}
+
+.matching-page--mentee .match-grid-card-slots {
+  margin: 0;
+  font-size: 12px;
+  color: rgba(148, 163, 184, 0.9);
+}
+
+.matching-page--mentee .match-grid-card-footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding-top: 4px;
+  margin-top: auto;
+}
+
+/* ── MUI / CTA buttons on matching page ───────────────────────── */
+
+.matching-page--mentee .match-mui-btn.MuiButton-root {
+  text-transform: none;
+  font-weight: 600;
+  font-size: 14px;
+  border-radius: 10px;
+  padding: 8px 16px;
+  box-shadow: none;
+}
+
+.matching-page--mentee .match-mui-btn--primary.MuiButton-root {
+  background: #7c3aed;
+  color: #fff;
+}
+
+.matching-page--mentee .match-mui-btn--primary.MuiButton-root:hover {
+  background: #6d28d9;
+  box-shadow: 0 4px 14px rgba(124, 58, 237, 0.35);
+}
+
+.matching-page--mentee .match-mui-btn--outlined.MuiButton-root {
+  border-color: rgba(255, 255, 255, 0.28);
+  color: #f1f5f9;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.matching-page--mentee .match-mui-btn--outlined.MuiButton-root:hover {
+  border-color: rgba(168, 85, 247, 0.5);
+  background: rgba(124, 58, 237, 0.12);
+}
+
+.matching-page--mentee .match-spotlight-actions .match-mui-btn.MuiButton-root {
+  min-width: 148px;
+}
+
+.matching-page--mentee .match-filter-empty {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 32px 16px;
+  color: rgba(203, 213, 225, 0.85);
+}
+
+/* ── Modal list ───────────────────────────────────────────────── */
+
+.matching-page--mentee .matching-modal-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 14px;
+  max-height: min(70vh, 640px);
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+/* ── Responsive ───────────────────────────────────────────────── */
+
+@media (max-width: 960px) {
+  .matching-page--mentee .match-filter-bar {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  .matching-page--mentee .match-filter-bar .match-filter-field:first-child {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 640px) {
+  .matching-page--mentee .match-filter-bar {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .matching-page--mentee .match-spotlight-top {
+    flex-direction: column;
+  }
+
+  .matching-page--mentee .match-spotlight-actions {
+    width: 100%;
+  }
+
+  .matching-page--mentee .match-spotlight-actions .match-mui-btn.MuiButton-root {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .matching-page--mentee .match-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .matching-page--mentee .matching-card {
+    padding: 18px;
+  }
+}

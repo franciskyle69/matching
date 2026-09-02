@@ -14,7 +14,7 @@ from .helpers import (
 @require_GET
 def notifications_list(request):
     items = Notification.objects.filter(user=request.user).order_by("-created_at")
-    return JsonResponse({"items": [_serialize_notification(item) for item in items]})
+    return JsonResponse({"items": [_serialize_notification(item, request) for item in items]})
 
 
 @login_required

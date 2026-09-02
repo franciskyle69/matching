@@ -109,6 +109,430 @@
     );
   }
 
+  const ACCOUNT_PROGRAMS = [
+    { value: "BSIT", label: "BSIT — Information Technology" },
+    { value: "BSCS", label: "BSCS — Computer Science" },
+  ];
+  const ACCOUNT_YEARS = [
+    { value: 1, label: "1st Year" },
+    { value: 2, label: "2nd Year" },
+    { value: 3, label: "3rd Year" },
+    { value: 4, label: "4th Year" },
+  ];
+  const ACCOUNT_INTERESTS = [
+    "UI/UX Design",
+    "Web Development",
+    "Data Science",
+    "Machine Learning",
+    "Mobile Development",
+    "Cybersecurity",
+    "Cloud Computing",
+    "Database",
+    "Algorithms",
+    "DevOps",
+  ];
+
+  function FieldError({ show, children }) {
+    if (!show) return null;
+    return (
+      <p className="cp-onboard-error" role="alert">
+        {children}
+      </p>
+    );
+  }
+
+  function AccountOnboardingForm({ ctx }) {
+    const user = ctx.user;
+    const isMentor = user.role === "mentor";
+    const isMentee = user.role === "mentee";
+    const menteeProfile = ctx.menteeProfile || {};
+    const mentorProfile = ctx.mentorProfile || {};
+    const saving = !!(ctx.completeProfileSaving);
+    const Utils = (window.DashboardApp && window.DashboardApp.Utils) || {};
+    const getAvatarInitials = Utils.getAvatarInitials || (() => "?");
+    const initialTrack =
+      mentorProfile.role === "Instructor"
+        ? "faculty"
+        : mentorProfile.role === "Senior IT Student"
+          ? "student"
+          : isMentee
+            ? "student"
+            : "";
+    const [form, setForm] = useState({
+      track: initialTrack,
+      student_id_no:
+        menteeProfile.student_id_no || mentorProfile.student_id_no || "",
+      program: menteeProfile.program || mentorProfile.program || "BSIT",
+      year_level: Number(menteeProfile.year_level || mentorProfile.year_level || 0),
+      campus: menteeProfile.campus || "",
+      contact_no: menteeProfile.contact_no || "",
+      admission_type: menteeProfile.admission_type || "",
+      sex: menteeProfile.sex || "",
+      interests: Array.isArray(user.tags) ? [...user.tags] : [],
+    });
+    const [errors, setErrors] = useState({});
+    const [submitAttempted, setSubmitAttempted] = useState(false);
+
+    const displayName =
+      user.full_name ||
+      [user.first_name, user.last_name].filter(Boolean).join(" ") ||
+      user.display_name ||
+      user.email ||
+      "PeerLink user";
+    const initials = getAvatarInitials(displayName, user.email);
+    const isGoogle = user.auth_provider === "google";
+
+    function updateField(key, value) {
+      setForm((prev) => ({ ...prev, [key]: value }));
+      setErrors((prev) => {
+        if (!prev[key]) return prev;
+        const next = { ...prev };
+        delete next[key];
+        return next;
+      });
+    }
+
+    function toggleInterest(name) {
+      setForm((prev) => {
+        const selected = prev.interests.includes(name)
+          ? prev.interests.filter((item) => item !== name)
+          : [...prev.interests, name];
+        return { ...prev, interests: selected };
+      });
+      setErrors((prev) => {
+        if (!prev.interests) return prev;
+        const next = { ...prev };
+        delete next.interests;
+        return next;
+      });
+    }
+
+    function validate() {
+      const next = {};
+      if (isMentor && form.track !== "student" && form.track !== "faculty") {
+        next.track = "Choose Student or Faculty / Instructor.";
+      }
+      if (!String(form.student_id_no || "").trim()) {
+        next.student_id_no = "Enter your institutional or student ID.";
+      }
+      if (isMentor && !form.program) {
+        next.program = "Select your department or program.";
+      }
+      if (
+        isMentor &&
+        form.track !== "faculty" &&
+        ![1, 2, 3, 4].includes(Number(form.year_level))
+      ) {
+        next.year_level = "Select your year level.";
+      }
+      if (!form.interests.length) {
+        next.interests = "Select at least one mentoring interest.";
+      }
+      if (isMentee) {
+        if (!form.campus) next.campus = "Select your campus.";
+        if (String(form.contact_no || "").replace(/\D/g, "").length < 11) {
+          next.contact_no = "Enter an 11-digit contact number.";
+        }
+        if (!form.sex) next.sex = "Select your sex.";
+      }
+      return next;
+    }
+
+    async function handleSubmit(event) {
+      event.preventDefault();
+      setSubmitAttempted(true);
+      const nextErrors = validate();
+      setErrors(nextErrors);
+      if (Object.keys(nextErrors).length) return;
+      const result = await ctx.handleCompleteProfileSave({
+        track: isMentee ? "student" : form.track,
+        student_id_no: form.student_id_no,
+        program: isMentee ? "BSIT" : form.program,
+        year_level: isMentee
+          ? 1
+          : form.track === "faculty"
+            ? 4
+            : Number(form.year_level),
+        campus: form.campus,
+        contact_no: form.contact_no,
+        sex: form.sex,
+        interests: form.interests,
+      });
+      if (result && !result.ok) {
+        setErrors(result.errors || {});
+      }
+    }
+
+    const showYear = form.track !== "faculty";
+
+    return (
+      <div className="cp-onboard">
+        <div className="cp-onboard-card">
+          <div className="cp-onboard-progress" aria-label="Setup progress">
+            <div className="cp-onboard-progress-meta">
+              <span>Step 1 of 2</span>
+              <span>Account details</span>
+            </div>
+            <div className="cp-onboard-progress-track">
+              <span className="cp-onboard-progress-fill is-current" />
+              <span className="cp-onboard-progress-fill" />
+            </div>
+          </div>
+
+          <header className="cp-onboard-header">
+            <p className="cp-onboard-eyebrow">Welcome to PeerLink</p>
+            <h1 className="cp-onboard-title">
+              Let&apos;s finish setting up your account.
+            </h1>
+            <p className="cp-onboard-copy">
+              Google only shared your name and email. Add the school details we
+              need before you can use the dashboard.
+            </p>
+          </header>
+
+          <section className="cp-onboard-identity" aria-label="Google account">
+            <div className="cp-onboard-avatar">
+              {user.avatar_url ? (
+                <img src={user.avatar_url} alt="" />
+              ) : (
+                <span>{initials}</span>
+              )}
+            </div>
+            <div>
+              <p className="cp-onboard-identity-name">{displayName}</p>
+              <p className="cp-onboard-identity-email">{user.email}</p>
+              <p className="cp-onboard-identity-meta">
+                {isGoogle ? "Signed in with Google" : "Account email"} · read-only
+              </p>
+            </div>
+          </section>
+
+          <form className="cp-onboard-form" onSubmit={handleSubmit} noValidate>
+            {isMentor && (
+              <fieldset className="cp-onboard-field">
+                <legend>Role *</legend>
+                <div className="cp-onboard-role-grid">
+                  {[
+                    {
+                      id: "student",
+                      title: "Student",
+                      detail: "Senior IT student mentor",
+                    },
+                    {
+                      id: "faculty",
+                      title: "Faculty / Instructor",
+                      detail: "Faculty member mentoring students",
+                    },
+                  ].map((option) => (
+                    <button
+                      key={option.id}
+                      type="button"
+                      className={
+                        "cp-onboard-role-card" +
+                        (form.track === option.id ? " is-active" : "")
+                      }
+                      aria-pressed={form.track === option.id}
+                      onClick={() => updateField("track", option.id)}
+                    >
+                      <strong>{option.title}</strong>
+                      <span>{option.detail}</span>
+                    </button>
+                  ))}
+                </div>
+                <FieldError show={submitAttempted && errors.track}>
+                  {errors.track}
+                </FieldError>
+              </fieldset>
+            )}
+
+            {isMentee && (
+              <div className="cp-onboard-field">
+                <label>Role</label>
+                <p className="cp-onboard-locked">Student mentee</p>
+              </div>
+            )}
+
+            {submitAttempted && Object.keys(errors).length > 0 && (
+              <p className="cp-onboard-error cp-onboard-error-banner" role="alert">
+                {errors.interests ||
+                  "Some required fields still need a value. Check the highlighted items."}
+              </p>
+            )}
+
+            <fieldset className="cp-onboard-field">
+              <legend>Primary mentoring goals / interests *</legend>
+              <div className="cp-onboard-chips">
+                {ACCOUNT_INTERESTS.map((name) => {
+                  const active = form.interests.includes(name);
+                  return (
+                    <button
+                      key={name}
+                      type="button"
+                      className={
+                        "cp-onboard-chip" + (active ? " is-active" : "")
+                      }
+                      aria-pressed={active}
+                      onClick={() => toggleInterest(name)}
+                    >
+                      {name}
+                    </button>
+                  );
+                })}
+              </div>
+              <FieldError show={submitAttempted && errors.interests}>
+                {errors.interests}
+              </FieldError>
+            </fieldset>
+
+            <div className="cp-onboard-grid">
+              <div className="cp-onboard-field">
+                <label htmlFor="cp-student-id">Institutional / Student ID *</label>
+                <input
+                  id="cp-student-id"
+                  value={form.student_id_no}
+                  onChange={(e) =>
+                    updateField("student_id_no", e.target.value.slice(0, 20))
+                  }
+                  placeholder="2023-XXXX"
+                />
+                <FieldError show={submitAttempted && errors.student_id_no}>
+                  {errors.student_id_no}
+                </FieldError>
+              </div>
+
+              {isMentee ? (
+                <div className="cp-onboard-field">
+                  <label>Department / Program</label>
+                  <p className="cp-onboard-locked">BSIT</p>
+                </div>
+              ) : (
+                <div className="cp-onboard-field">
+                  <label htmlFor="cp-program">Department / Program *</label>
+                  <select
+                    id="cp-program"
+                    value={form.program}
+                    onChange={(e) => updateField("program", e.target.value)}
+                  >
+                    <option value="">Select program</option>
+                    {ACCOUNT_PROGRAMS.map((item) => (
+                      <option key={item.value} value={item.value}>
+                        {item.label}
+                      </option>
+                    ))}
+                  </select>
+                  <FieldError show={submitAttempted && errors.program}>
+                    {errors.program}
+                  </FieldError>
+                </div>
+              )}
+
+              {isMentee ? (
+                <div className="cp-onboard-field">
+                  <label>Year level</label>
+                  <p className="cp-onboard-locked">1st Year</p>
+                </div>
+              ) : showYear ? (
+                <div className="cp-onboard-field">
+                  <label htmlFor="cp-year">Year level *</label>
+                  <select
+                    id="cp-year"
+                    value={form.year_level || ""}
+                    onChange={(e) =>
+                      updateField("year_level", Number(e.target.value))
+                    }
+                  >
+                    <option value="">Select year</option>
+                    {ACCOUNT_YEARS.map((item) => (
+                      <option key={item.value} value={item.value}>
+                        {item.label}
+                      </option>
+                    ))}
+                  </select>
+                  <FieldError show={submitAttempted && errors.year_level}>
+                    {errors.year_level}
+                  </FieldError>
+                </div>
+              ) : (
+                <div className="cp-onboard-field">
+                  <label>Position</label>
+                  <p className="cp-onboard-locked">Faculty / Instructor</p>
+                </div>
+              )}
+
+              {isMentee && (
+                <>
+                  <div className="cp-onboard-field">
+                    <label htmlFor="cp-campus">Campus *</label>
+                    <select
+                      id="cp-campus"
+                      value={form.campus}
+                      onChange={(e) => updateField("campus", e.target.value)}
+                    >
+                      <option value="">Select campus</option>
+                      {(
+                        (window.DashboardApp &&
+                          window.DashboardApp.CAMPUS_OPTIONS) ||
+                        []
+                      ).map((campus) => (
+                        <option key={campus} value={campus}>
+                          {campus}
+                        </option>
+                      ))}
+                    </select>
+                    <FieldError show={submitAttempted && errors.campus}>
+                      {errors.campus}
+                    </FieldError>
+                  </div>
+                  <div className="cp-onboard-field">
+                    <label htmlFor="cp-contact">Contact No. *</label>
+                    <input
+                      id="cp-contact"
+                      value={form.contact_no}
+                      onChange={(e) =>
+                        updateField(
+                          "contact_no",
+                          e.target.value.replace(/\D/g, "").slice(0, 11),
+                        )
+                      }
+                      placeholder="11 digits"
+                      inputMode="numeric"
+                    />
+                    <FieldError show={submitAttempted && errors.contact_no}>
+                      {errors.contact_no}
+                    </FieldError>
+                  </div>
+                  <div className="cp-onboard-field">
+                    <label htmlFor="cp-sex">Sex *</label>
+                    <select
+                      id="cp-sex"
+                      value={form.sex}
+                      onChange={(e) => updateField("sex", e.target.value)}
+                    >
+                      <option value="">Select</option>
+                      <option value="male">Male</option>
+                      <option value="female">Female</option>
+                    </select>
+                    <FieldError show={submitAttempted && errors.sex}>
+                      {errors.sex}
+                    </FieldError>
+                  </div>
+                </>
+              )}
+            </div>
+
+            <button
+              type="submit"
+              className="cp-onboard-submit"
+              disabled={saving}
+            >
+              {saving ? "Saving..." : "Save and continue"}
+            </button>
+          </form>
+        </div>
+      </div>
+    );
+  }
+
   function CompleteProfilePage(props) {
     const embedded = !!(props && props.embedded);
     const ctx = useContext(AppContext);
@@ -172,6 +596,9 @@
     );
 
     if (!ctx || !user) return null;
+    if (user.is_profile_complete === false && ctx.handleCompleteProfileSave) {
+      return <AccountOnboardingForm ctx={ctx} />;
+    }
 
     const mentorProgressSteps = [
       {
@@ -407,43 +834,6 @@
                   pattern="[0-9]*"
                   maxLength={11}
                 />
-              </div>
-
-              <div className="form-group">
-                <label htmlFor="complete-profile-admission">
-                  Admission Type *
-                </label>
-                <select
-                  id="complete-profile-admission"
-                  value={menteeProfile.admission_type || ""}
-                  onChange={(e) =>
-                    setMenteeProfile({
-                      ...menteeProfile,
-                      admission_type: e.target.value,
-                    })
-                  }
-                >
-                  <option value="">Select admission type</option>
-                  <option value="regular">Regular</option>
-                  <option value="transferee">Transferee</option>
-                  <option value="shiftee">Shiftee</option>
-                  <option value="returnee">Returnee</option>
-                  <option value="irregular">Irregular</option>
-                  {menteeProfile.admission_type &&
-                    ![
-                      "regular",
-                      "transferee",
-                      "shiftee",
-                      "returnee",
-                      "irregular",
-                    ].includes(
-                      String(menteeProfile.admission_type).toLowerCase(),
-                    ) && (
-                      <option value={menteeProfile.admission_type}>
-                        {menteeProfile.admission_type}
-                      </option>
-                    )}
-                </select>
               </div>
 
               <div className="form-group">
@@ -726,4 +1116,7 @@
   window.DashboardApp = window.DashboardApp || {};
   window.DashboardApp.Pages = window.DashboardApp.Pages || {};
   window.DashboardApp.Pages["complete-profile"] = CompleteProfilePage;
+  if (typeof module !== "undefined" && module.exports) {
+    module.exports = { CompleteProfilePage };
+  }
 })();

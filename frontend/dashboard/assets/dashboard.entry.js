@@ -1,12 +1,43 @@
 import React from "react";
 import * as ReactDOM from "react-dom/client";
 import * as Mui from "@mui/material";
+import { createTheme } from "@mui/material/styles";
+
+const dashboardTheme = createTheme({
+	typography: {
+		fontFamily:
+			"'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+		h1: {
+			fontSize: "1.75rem",
+			fontWeight: 700,
+			letterSpacing: "-0.025em",
+			lineHeight: 1.2,
+		},
+		h2: {
+			fontSize: "1.35rem",
+			fontWeight: 700,
+			letterSpacing: "-0.02em",
+			lineHeight: 1.25,
+		},
+		h3: {
+			fontSize: "1.10rem",
+			fontWeight: 600,
+			letterSpacing: "-0.015em",
+			lineHeight: 1.3,
+		},
+		body1: { fontSize: "0.875rem", lineHeight: 1.5 },
+		body2: { fontSize: "0.80rem", lineHeight: 1.4 },
+		button: { textTransform: "none", fontWeight: 600, fontSize: "0.875rem" },
+		caption: { fontSize: "0.725rem", fontWeight: 500, letterSpacing: "0.01em" },
+	},
+});
 
 window.React = React;
 window.ReactDOM = ReactDOM;
 window.Mui = Mui;
 window.MaterialUI = Mui;
 window.DashboardApp = window.DashboardApp || {};
+window.DashboardApp.theme = dashboardTheme;
 
 async function loadDashboardModules() {
 	await import("./lib/constants.jsx");
@@ -14,8 +45,10 @@ async function loadDashboardModules() {
 	await import("./components/TimePickerField.jsx");
 	await import("./components/AmuFooter.jsx");
 	await import("./lib/utils.jsx");
+	await import("./lib/availability.jsx");
 	await import("./lib/selectionCatalog.jsx");
 	await import("./context.jsx");
+	await import("./components/MentorProfileCard.jsx");
 	await import("./router/pages/AllPages.jsx");
 	await import("./router/pages/AuthPages.jsx");
 	await import("./router/pages/HomePage.jsx");

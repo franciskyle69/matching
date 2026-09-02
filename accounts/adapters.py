@@ -7,10 +7,36 @@ from allauth.exceptions import ImmediateHttpResponse
 from django import forms
 
 from profiles.models import MentorProfile, MenteeProfile
+from profiles.profile_completion import (
+    compute_is_profile_complete,
+    social_picture_url,
+)
+from accounts.oauth_gate import (
+    ACCOUNT_EXISTS,
+    INTENT_SESSION_KEY,
+    LOGIN_MISSING_MESSAGE,
+    NO_ACCOUNT,
+    SIGNUP_EXISTS_MESSAGE,
+    SIGNUP_INTENT,
+    normalize_oauth_intent,
+    resolve_google_oauth_gate,
+)
 
 User = get_user_model()
 ROLE_SESSION_KEY = "selected_role"
 GOOGLE_OAUTH_ROLE_SESSION_KEY = "google_oauth_selected_role"
+
+
+def _social_email(sociallogin):
+    user = sociallogin.user
+    if sociallogin.email_addresses:
+        return sociallogin.email_addresses[0].email
+    email = getattr(user, "email", None)
+    if email:
+        return email
+    account = getattr(sociallogin, "account", None)
+    extra = getattr(account, "extra_data", None) or {}
+    return extra.get("email")
 
 
 class RoleAwareSocialAccountAdapter(DefaultSocialAccountAdapter):
@@ -20,18 +46,16 @@ class RoleAwareSocialAccountAdapter(DefaultSocialAccountAdapter):
     Also handles linking Google accounts to existing email/password accounts.
     """
 
+    def is_open_for_signup(self, request, sociallogin):
+        intent = normalize_oauth_intent(request.session.get(INTENT_SESSION_KEY))
+        return intent == SIGNUP_INTENT
+
     def pre_social_login(self, request, sociallogin: SocialLogin):
         selected_role = request.session.get(ROLE_SESSION_KEY)
         selected_google_role = request.session.get(GOOGLE_OAUTH_ROLE_SESSION_KEY)
         user = sociallogin.user
-        email = None
-        if sociallogin.email_addresses:
-            email = sociallogin.email_addresses[0].email
-        if not email:
-            email = getattr(user, "email", None)
-        if not email:
-            email = sociallogin.account.extra_data.get("email") if getattr(sociallogin, "account", None) else None
-        
+        email = _social_email(sociallogin)
+
         # Validate institutional email domain for Google OAuth
         if email:
             from accounts.forms import validate_institutional_email
@@ -45,17 +69,31 @@ class RoleAwareSocialAccountAdapter(DefaultSocialAccountAdapter):
         else:
             messages.error(request, "Google account email could not be read.")
             raise ImmediateHttpResponse(redirect("/app/signin?oauth_error=missing_email"))
-        
-        # If a local account exists for this email, attach the social login to that user
-        # and continue normal login flow. Using 'connect' here forces allauth's
-        # /accounts/login/?next=/accounts/3rdparty/ fallback.
-        if email and not user.pk:
-            try:
-                existing_user = User.objects.get(email__iexact=email)
-                sociallogin.user = existing_user
-            except User.DoesNotExist:
-                pass  # New user, continue with normal flow
-        
+
+        existing_user = User.objects.filter(email__iexact=email).first()
+        account_exists = bool(
+            getattr(sociallogin, "is_existing", False)
+            or existing_user is not None
+            or getattr(user, "pk", None)
+        )
+        intent = normalize_oauth_intent(request.session.get(INTENT_SESSION_KEY))
+        gate = resolve_google_oauth_gate(intent, account_exists)
+        if gate == NO_ACCOUNT:
+            messages.warning(request, LOGIN_MISSING_MESSAGE)
+            raise ImmediateHttpResponse(
+                redirect("/app/signin?oauth_error=no_account")
+            )
+        if gate == ACCOUNT_EXISTS:
+            messages.warning(request, SIGNUP_EXISTS_MESSAGE)
+            raise ImmediateHttpResponse(
+                redirect("/app/signup?oauth_error=account_exists")
+            )
+
+        # Login (or continuing signup of a brand-new user): attach Google to a
+        # matching local account when one already exists.
+        if email and not getattr(user, "pk", None) and existing_user:
+            sociallogin.user = existing_user
+
         # Update user reference after potential linking
         user = sociallogin.user
         is_mentor = hasattr(user, "mentor_profile")
@@ -113,6 +151,8 @@ class RoleAwareSocialAccountAdapter(DefaultSocialAccountAdapter):
                     program="BSIT",
                     year_level=4,
                     approved=False,
+                    is_profile_complete=False,
+                    avatar_url=social_picture_url(sociallogin),
                 )
             elif selected_role == "mentee":
                 MenteeProfile.objects.create(
@@ -120,6 +160,8 @@ class RoleAwareSocialAccountAdapter(DefaultSocialAccountAdapter):
                     program="BSIT",
                     year_level=1,
                     approved=False,
+                    is_profile_complete=False,
+                    avatar_url=social_picture_url(sociallogin),
                 )
 
     def _generate_unique_username(self, base_username):
@@ -148,12 +190,15 @@ class RoleAwareSocialAccountAdapter(DefaultSocialAccountAdapter):
         user = super().save_user(request, sociallogin, form)
         selected_role = request.session.get(ROLE_SESSION_KEY)
 
+        picture = social_picture_url(sociallogin)
         if selected_role == "mentor" and not hasattr(user, "mentor_profile"):
             MentorProfile.objects.create(
                 user=user,
                 program="BSIT",
                 year_level=4,
                 approved=False,
+                is_profile_complete=False,
+                avatar_url=picture,
             )
         elif selected_role == "mentee":
             if not hasattr(user, "mentee_profile"):
@@ -162,9 +207,30 @@ class RoleAwareSocialAccountAdapter(DefaultSocialAccountAdapter):
                     program="BSIT",
                     year_level=1,
                     approved=False,
+                    is_profile_complete=False,
+                    avatar_url=picture,
                 )
             request.session.pop(GOOGLE_OAUTH_ROLE_SESSION_KEY, None)
+        else:
+            self._apply_google_avatar(user, picture)
         return user
 
+    def _apply_google_avatar(self, user, picture):
+        if not picture:
+            return
+        profile = None
+        if hasattr(user, "mentor_profile"):
+            profile = user.mentor_profile
+        elif hasattr(user, "mentee_profile"):
+            profile = user.mentee_profile
+        if profile and not getattr(profile, "avatar_url", ""):
+            profile.avatar_url = picture
+            profile.save(update_fields=["avatar_url"])
+
     def get_login_redirect_url(self, request):
-        return "/app/signin?oauth=google"
+        user = getattr(request, "user", None)
+        if user and getattr(user, "is_authenticated", False):
+            if not compute_is_profile_complete(user):
+                return "/app/complete-profile?oauth=google"
+            return "/app/?oauth=google"
+        return "/app/complete-profile?oauth=google"

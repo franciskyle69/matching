@@ -65,7 +65,6 @@
     { id: "mentees", label: "Mentees", role: "mentor" },
     { id: "matching", label: "Matching", role: "non-staff" },
     { id: "announcements", label: "Announcements", role: "any" },
-    { id: "notifications", label: "Notifications", role: "any" },
     { id: "approvals", label: "User approvals", role: "staff" },
     { id: "users", label: "Users", role: "staff" },
     { id: "activity-logs", label: "Activity Logs", role: "staff" },
@@ -75,10 +74,22 @@
 
   window.DashboardApp.FEATURE_NEWSFEED = FEATURE_NEWSFEED;
   window.DashboardApp.ROUTES = ROUTES;
+  // Topbar-only tabs: routable but hidden from sidebar navigation.
+  window.DashboardApp.HIDDEN_TABS = [
+    { id: "notifications", label: "Notifications" },
+  ];
   window.DashboardApp.MAIN_TABS = ROUTES.map(({ id, label }) => ({
     id,
     label,
   }));
+  window.DashboardApp.getTabMeta = function getTabMeta(tabId) {
+    const visible = ROUTES.find((tab) => tab.id === tabId);
+    if (visible) return { id: visible.id, label: visible.label };
+    const hidden = window.DashboardApp.HIDDEN_TABS.find(
+      (tab) => tab.id === tabId,
+    );
+    return hidden ? { id: hidden.id, label: hidden.label } : null;
+  };
   window.DashboardApp.SUBJECT_CATEGORY_LABELS = {
     major: "Major subjects",
     ge: "General Education (GE)",
@@ -158,31 +169,50 @@
     return window.DashboardApp.getMajorSubjectsFromSelection(subjects).length > 0;
   };
   window.DashboardApp.MENTOR_TOPIC_OPTIONS = [
-    "Arrays",
-    "Loops",
-    "Input and Output Handling",
-    "Error Handling",
-    "HTML",
-    "CSS",
-    "Javascript",
-    "UI/UX",
+    "History & Hardware Evolution",
+    "Digital Logic & Data Representation",
+    "Operating Systems & Architecture",
+    "Computer Networks Basics",
+    "Control Structures",
+    "Data Structures",
+    "Modular Programming",
+    "Debugging & Execution",
+    "Web Markup",
+    "Web Styling",
+    "Client-Side Scripting",
+    "Command Line & Web Infra",
+    "HCI Principles & Guidelines",
+    "Interaction Design & Cognitive Models",
+    "User Research & Behavioral Mapping",
+    "Prototyping & UI Tooling",
+    "High-Fidelity Design & Documentation",
   ];
   window.DashboardApp.QUESTIONNAIRE_TOPIC_MAP = {
-    "Computer Programming": [
-      "Arrays",
-      "Loops",
-      "Input and Output Handling",
-      "Error Handling",
-      "Javascript",
-    ],
     "Introduction to Computing": [
-      "Arrays",
-      "Loops",
-      "Input and Output Handling",
-      "Error Handling",
+      "History & Hardware Evolution",
+      "Digital Logic & Data Representation",
+      "Operating Systems & Architecture",
+      "Computer Networks Basics",
     ],
-    "Intro to Human Computer Interaction": ["UI/UX"],
-    "IT Fundamentals": ["HTML", "CSS", "Javascript"],
+    "Computer Programming": [
+      "Control Structures",
+      "Data Structures",
+      "Modular Programming",
+      "Debugging & Execution",
+    ],
+    "IT Fundamentals": [
+      "Web Markup",
+      "Web Styling",
+      "Client-Side Scripting",
+      "Command Line & Web Infra",
+    ],
+    "Intro to Human Computer Interaction": [
+      "HCI Principles & Guidelines",
+      "Interaction Design & Cognitive Models",
+      "User Research & Behavioral Mapping",
+      "Prototyping & UI Tooling",
+      "High-Fidelity Design & Documentation",
+    ],
   };
   window.DashboardApp.getAllowedTopicsForSubjects =
     function getAllowedTopicsForSubjects(subjects) {

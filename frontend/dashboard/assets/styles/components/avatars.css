@@ -1,0 +1,53 @@
+/* Center initials inside every circular fallback avatar. */
+
+.sidebar-avatar-wrapper,
+.search-dropdown-avatar,
+.sp-avatar-wrap,
+.sp-woym-avatar,
+.sp-post-author-avatar,
+.sp-pm-comment-avatar,
+.settings-avatar-preview,
+.approval-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+.sidebar-avatar.fallback,
+.dashboard-welcome-avatar-wrap .sidebar-avatar.fallback,
+.app-topbar-profile-btn .sidebar-avatar.fallback,
+.mentee-rec-item .sidebar-avatar.fallback,
+.mentee-spotlight-avatar .sidebar-avatar.fallback,
+.sp-avatar-fallback,
+.sp-woym-avatar-fallback,
+.sp-post-author-fallback,
+.prof-avatar-fallback,
+.settings-avatar-fallback,
+.search-dropdown-avatar-fallback,
+.sessions-page .session-avatar-fallback,
+.approval-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  padding: 0;
+  line-height: 1;
+  text-align: center;
+}
+
+.pmc-avatar-fallback,
+.match-column-avatar-fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  padding: 0;
+  line-height: 1;
+  text-align: center;
+}
+
+.search-dropdown-avatar-fallback {
+  width: 100%;
+  height: 100%;
+}

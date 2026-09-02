@@ -1,3 +1,23 @@
+import BackupOutlinedIcon from "@mui/icons-material/BackupOutlined";
+import CampaignOutlinedIcon from "@mui/icons-material/CampaignOutlined";
+import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
+import DarkModeOutlinedIcon from "@mui/icons-material/DarkModeOutlined";
+import DashboardOutlinedIcon from "@mui/icons-material/DashboardOutlined";
+import DescriptionOutlinedIcon from "@mui/icons-material/DescriptionOutlined";
+import DynamicFeedOutlinedIcon from "@mui/icons-material/DynamicFeedOutlined";
+import GroupsOutlinedIcon from "@mui/icons-material/GroupsOutlined";
+import HandshakeOutlinedIcon from "@mui/icons-material/HandshakeOutlined";
+import KeyboardArrowDownOutlinedIcon from "@mui/icons-material/KeyboardArrowDownOutlined";
+import LightModeOutlinedIcon from "@mui/icons-material/LightModeOutlined";
+import LogoutOutlinedIcon from "@mui/icons-material/LogoutOutlined";
+import NotificationsOutlinedIcon from "@mui/icons-material/NotificationsOutlined";
+import PeopleOutlineIcon from "@mui/icons-material/PeopleOutline";
+import PersonOutlineIcon from "@mui/icons-material/PersonOutline";
+import SchoolOutlinedIcon from "@mui/icons-material/SchoolOutlined";
+import SettingsOutlinedIcon from "@mui/icons-material/SettingsOutlined";
+import TuneOutlinedIcon from "@mui/icons-material/TuneOutlined";
+import VerifiedOutlinedIcon from "@mui/icons-material/VerifiedOutlined";
+
 (function () {
   "use strict";
   const React = window.React;
@@ -10,246 +30,64 @@
   const LOGO_URL = window.DashboardApp.LOGO_URL || "/static/assets/logo.png";
   const LOGO_ALT = window.DashboardApp.LOGO_ALT || "AMU Mentoring";
 
+  function SidebarNavIcon({ IconComponent }) {
+    return (
+      <IconComponent className="sidebar-mui-icon" fontSize="inherit" aria-hidden="true" />
+    );
+  }
+
   const TAB_ICONS = {
-    home: (
-      <svg
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        aria-hidden="true"
-      >
-        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
-        <polyline points="9 22 9 12 15 12 15 22" />
-      </svg>
-    ),
-    newsfeed: (
-      <svg
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        aria-hidden="true"
-      >
-        <path d="M4 4h16v16H4z" />
-        <path d="M4 9h16" />
-        <path d="M9 4v16" />
-      </svg>
-    ),
-    profile: (
-      <svg
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        aria-hidden="true"
-      >
-        <circle cx="12" cy="7" r="4" />
-        <path d="M5 21v-1a5 5 0 0 1 5-5h4a5 5 0 0 1 5 5v1" />
-      </svg>
-    ),
-    "complete-profile": (
-      <svg
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        aria-hidden="true"
-      >
-        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-        <circle cx="12" cy="7" r="4" />
-      </svg>
-    ),
-    onboarding: (
-      <svg
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        aria-hidden="true"
-      >
-        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
-        <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
-        <path d="M8 7h8" />
-        <path d="M8 11h6" />
-      </svg>
-    ),
-    "mentoring-preferences": (
-      <svg
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        aria-hidden="true"
-      >
-        <path d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5L12 3z" />
-        <path d="M5 19h14" />
-        <path d="M8 16h8" />
-      </svg>
-    ),
-    "mentor-matching-profile": (
-      <svg
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        aria-hidden="true"
-      >
-        <path d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5L12 3z" />
-        <path d="M5 19h14" />
-        <path d="M8 16h8" />
-      </svg>
-    ),
-    matching: (
-      <svg
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        aria-hidden="true"
-      >
-        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-        <circle cx="9" cy="7" r="4" />
-        <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
-        <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-      </svg>
-    ),
-    mentees: (
-      <svg
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        aria-hidden="true"
-      >
-        <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
-        <circle cx="9" cy="7" r="4" />
-        <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
-        <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-      </svg>
-    ),
-    announcements: (
-      <svg
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        aria-hidden="true"
-      >
-        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-      </svg>
-    ),
-    notifications: (
-      <svg
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        aria-hidden="true"
-      >
-        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-        <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-      </svg>
-    ),
-    approvals: (
-      <svg
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        aria-hidden="true"
-      >
-        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
-        <polyline points="22 4 12 14.01 9 11.01" />
-      </svg>
-    ),
-    subjects: (
-      <svg
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        aria-hidden="true"
-      >
-        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
-        <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
-        <line x1="8" y1="6" x2="16" y2="6" />
-        <line x1="8" y1="10" x2="16" y2="10" />
-      </svg>
-    ),
-    "activity-logs": (
-      <svg
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        aria-hidden="true"
-      >
-        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-        <polyline points="14 2 14 8 20 8" />
-        <line x1="16" y1="13" x2="8" y2="13" />
-        <line x1="16" y1="17" x2="8" y2="17" />
-        <polyline points="10 9 9 9 8 9" />
-      </svg>
-    ),
-    backup: (
-      <svg
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        aria-hidden="true"
-      >
-        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-        <polyline points="17 8 12 3 7 8" />
-        <line x1="12" y1="3" x2="12" y2="15" />
-      </svg>
-    ),
-    settings: (
-      <svg
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        aria-hidden="true"
-      >
-        <circle cx="12" cy="12" r="3" />
-        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
-      </svg>
-    ),
+    home: <SidebarNavIcon IconComponent={DashboardOutlinedIcon} />,
+    newsfeed: <SidebarNavIcon IconComponent={DynamicFeedOutlinedIcon} />,
+    profile: <SidebarNavIcon IconComponent={PersonOutlineIcon} />,
+    "complete-profile": <SidebarNavIcon IconComponent={VerifiedOutlinedIcon} />,
+    onboarding: <SidebarNavIcon IconComponent={SchoolOutlinedIcon} />,
+    "mentoring-preferences": <SidebarNavIcon IconComponent={TuneOutlinedIcon} />,
+    "mentor-matching-profile": <SidebarNavIcon IconComponent={TuneOutlinedIcon} />,
+    matching: <SidebarNavIcon IconComponent={HandshakeOutlinedIcon} />,
+    mentees: <SidebarNavIcon IconComponent={GroupsOutlinedIcon} />,
+    announcements: <SidebarNavIcon IconComponent={CampaignOutlinedIcon} />,
+    notifications: <SidebarNavIcon IconComponent={NotificationsOutlinedIcon} />,
+    approvals: <SidebarNavIcon IconComponent={CheckCircleOutlineIcon} />,
+    users: <SidebarNavIcon IconComponent={PeopleOutlineIcon} />,
+    "activity-logs": <SidebarNavIcon IconComponent={DescriptionOutlinedIcon} />,
+    backup: <SidebarNavIcon IconComponent={BackupOutlinedIcon} />,
+    settings: <SidebarNavIcon IconComponent={SettingsOutlinedIcon} />,
   };
+
+  function getTopbarDisplayName(user) {
+    return (
+      (user && (user.display_name || user.full_name || user.username)) ||
+      "Account"
+    );
+  }
+
+  function getTopbarRoleLabel(user, isStaff, mentorProfile) {
+    if (isStaff) return "Coordinator";
+    const role = user && user.role;
+    if (role === "mentor") {
+      const mentorRole =
+        (mentorProfile && mentorProfile.role) ||
+        (user && user.mentor_info && user.mentor_info.role) ||
+        "";
+      const getMeta =
+        window.DashboardApp && window.DashboardApp.getMentorRoleBadgeMeta;
+      const meta = typeof getMeta === "function" ? getMeta(mentorRole) : null;
+      if (meta && meta.kind === "instructor") return "Instructor";
+      if (meta && meta.kind === "student") return "Student Mentor";
+      if (mentorRole) return mentorRole;
+      return "Mentor";
+    }
+    if (role === "mentee") return "Mentee";
+    return "Member";
+  }
+
+  function getSearchShortcutLabel() {
+    if (typeof navigator === "undefined") return "Ctrl+K";
+    const platform = navigator.platform || "";
+    if (/Mac|iPhone|iPad|iPod/i.test(platform)) return "⌘K";
+    return "Ctrl+K";
+  }
 
   function HighlightText({ text, query }) {
     if (!query || !text) return text || "";
@@ -297,6 +135,7 @@
       loadUserProfile,
       isPendingApproval,
       pendingApprovalLandingTab,
+      mentorProfile,
     } = ctx;
 
     const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
@@ -358,6 +197,14 @@
     };
     const goTo = (tabId) => {
       const changeTab = ctx.requestTabChange || setActiveTab;
+      if (user && user.is_profile_complete === false && !isStaff) {
+        if (tabId !== "complete-profile") {
+          changeTab("complete-profile");
+          window.scrollTo(0, 0);
+          closeMobileMenu();
+          return;
+        }
+      }
       if (isPendingApproval) {
         const allowedPendingTabs = new Set([
           "onboarding",
@@ -381,10 +228,19 @@
     const [searchQuery, setSearchQuery] = useState("");
     const [searchFocused, setSearchFocused] = useState(false);
     const [searchHighlight, setSearchHighlight] = useState(0);
+    const [profileMenuOpen, setProfileMenuOpen] = useState(false);
+    const searchInputRef = useRef(null);
+    const profileMenuRef = useRef(null);
+    const shortcutLabel = getSearchShortcutLabel();
 
     const isStaff = !!(user?.is_staff || user?.role === "staff");
+    const topbarDisplayName = getTopbarDisplayName(user);
+    const topbarRoleLabel = getTopbarRoleLabel(user, isStaff, mentorProfile);
 
     const filteredTabs = MAIN_TABS.filter((tab) => {
+      if (user && user.is_profile_complete === false && !isStaff) {
+        return tab.id === "complete-profile";
+      }
       if (isPendingApproval) {
         return (
           tab.id === "onboarding" ||
@@ -435,7 +291,6 @@
       "matching",
       "mentees",
       "announcements",
-      "notifications",
       "approvals",
       "users",
       "activity-logs",
@@ -548,8 +403,6 @@
         });
 
     const trimmedQuery = searchQuery.trim().toLowerCase();
-    const activeTabMeta = MAIN_TABS.find((tab) => tab.id === activeTab);
-    const topbarTitle = activeTabMeta?.label || "Dashboard";
     const pendingPrimaryTab = pendingApprovalLandingTab || "onboarding";
     const pendingPrimaryLabel =
       pendingPrimaryTab === "onboarding"
@@ -596,6 +449,42 @@
       // comes from context and is stable for the lifetime of the app, so
       // including it can cause unnecessary re-runs.
     }, [searchQuery, isPendingApproval]);
+
+    useEffect(() => {
+      const onKeyDown = (e) => {
+        if (!isAuthenticated || isPendingApproval) return;
+        const key = e.key || "";
+        if (key !== "k" && key !== "K") return;
+        if (!(e.metaKey || e.ctrlKey)) return;
+        e.preventDefault();
+        if (searchInputRef.current) {
+          searchInputRef.current.focus();
+          searchInputRef.current.select();
+        }
+        setSearchFocused(true);
+      };
+      window.addEventListener("keydown", onKeyDown);
+      return () => window.removeEventListener("keydown", onKeyDown);
+    }, [isAuthenticated, isPendingApproval]);
+
+    useEffect(() => {
+      if (!profileMenuOpen) return;
+      const onPointerDown = (e) => {
+        const root = profileMenuRef.current;
+        if (root && !root.contains(e.target)) {
+          setProfileMenuOpen(false);
+        }
+      };
+      const onKeyDown = (e) => {
+        if (e.key === "Escape") setProfileMenuOpen(false);
+      };
+      document.addEventListener("mousedown", onPointerDown);
+      document.addEventListener("keydown", onKeyDown);
+      return () => {
+        document.removeEventListener("mousedown", onPointerDown);
+        document.removeEventListener("keydown", onKeyDown);
+      };
+    }, [profileMenuOpen]);
 
     function handleSuggestionSelect(item) {
       if (!item) return;
@@ -732,12 +621,14 @@
               </div>
               <div className="sidebar-section">
                 {dashboardTab && (
-                  <div className="sidebar-links">
+                  <>
+                    <div className="sidebar-title nav-section-label">Main</div>
+                    <div className="sidebar-links">
                     <button
                       key={dashboardTab.id}
                       type="button"
                       className={
-                        "sidebar-link " +
+                        "sidebar-link nav-item " +
                         (activeTab === dashboardTab.id ? "active" : "")
                       }
                       onClick={() => goTo(dashboardTab.id)}
@@ -746,23 +637,24 @@
                       <span className="sidebar-link-icon">
                         {TAB_ICONS[dashboardTab.id] || TAB_ICONS.home}
                       </span>
-                      <span className="sidebar-link-text">
+                      <span className="sidebar-link-text nav-item-label">
                         {dashboardTab.label}
                       </span>
                     </button>
                   </div>
+                  </>
                 )}
 
                 {activityTabs.length > 0 && (
                   <>
-                    <div className="sidebar-title">My Activities</div>
+                    <div className="sidebar-title nav-section-label">My Activities</div>
                     <div className="sidebar-links">
                       {activityTabs.map((tab) => (
                         <button
                           key={tab.id}
                           type="button"
                           className={
-                            "sidebar-link " +
+                            "sidebar-link nav-item " +
                             (activeTab === tab.id ? "active" : "")
                           }
                           onClick={() => goTo(tab.id)}
@@ -771,7 +663,7 @@
                           <span className="sidebar-link-icon">
                             {TAB_ICONS[tab.id] || TAB_ICONS.home}
                           </span>
-                          <span className="sidebar-link-text">{tab.label}</span>
+                          <span className="sidebar-link-text nav-item-label">{tab.label}</span>
                         </button>
                       ))}
                     </div>
@@ -780,14 +672,14 @@
 
                 {accountTabs.length > 0 && (
                   <>
-                    <div className="sidebar-title">Account Pages</div>
+                    <div className="sidebar-title nav-section-label">Account Pages</div>
                     <div className="sidebar-links">
                       {accountTabs.map((tab) => (
                         <button
                           key={tab.id}
                           type="button"
                           className={
-                            "sidebar-link " +
+                            "sidebar-link nav-item " +
                             (activeTab === tab.id ? "active" : "")
                           }
                           onClick={() => goTo(tab.id)}
@@ -796,7 +688,7 @@
                           <span className="sidebar-link-icon">
                             {TAB_ICONS[tab.id] || TAB_ICONS.home}
                           </span>
-                          <span className="sidebar-link-text">{tab.label}</span>
+                          <span className="sidebar-link-text nav-item-label">{tab.label}</span>
                         </button>
                       ))}
                     </div>
@@ -806,54 +698,42 @@
               <div className="sidebar-section sidebar-footer">
                 <button
                   type="button"
-                  className="theme-toggle"
+                  className={
+                    "theme-toggle theme-toggle--switch" +
+                    (theme === "light" ? " is-light" : "")
+                  }
                   onClick={toggleTheme}
                   aria-label={
                     theme === "dark"
                       ? "Switch to light mode"
                       : "Switch to dark mode"
                   }
+                  aria-pressed={theme === "light"}
                   title={theme === "dark" ? "Light mode" : "Dark mode"}
                 >
-                  {theme === "dark" ? (
-                    <>
-                      <svg
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        aria-hidden="true"
-                      >
-                        <circle cx="12" cy="12" r="5" />
-                        <line x1="12" y1="1" x2="12" y2="3" />
-                        <line x1="12" y1="21" x2="12" y2="23" />
-                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
-                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
-                        <line x1="1" y1="12" x2="3" y2="12" />
-                        <line x1="21" y1="12" x2="23" y2="12" />
-                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
-                        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
-                      </svg>
-                      <span className="theme-toggle-label">Light mode</span>
-                    </>
-                  ) : (
-                    <>
-                      <svg
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        aria-hidden="true"
-                      >
-                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
-                      </svg>
-                      <span className="theme-toggle-label">Dark mode</span>
-                    </>
-                  )}
+                  <span className="theme-toggle-copy">
+                    <span className="theme-toggle-label">
+                      {theme === "dark" ? "Dark mode" : "Light mode"}
+                    </span>
+                    <span className="theme-toggle-hint">Appearance</span>
+                  </span>
+                  <span className="theme-toggle-track" aria-hidden="true">
+                    <span className="theme-toggle-thumb">
+                      {theme === "dark" ? (
+                        <DarkModeOutlinedIcon
+                          className="sidebar-mui-icon sidebar-mui-icon--toggle"
+                          fontSize="inherit"
+                          aria-hidden="true"
+                        />
+                      ) : (
+                        <LightModeOutlinedIcon
+                          className="sidebar-mui-icon sidebar-mui-icon--toggle"
+                          fontSize="inherit"
+                          aria-hidden="true"
+                        />
+                      )}
+                    </span>
+                  </span>
                 </button>
                 <button
                   type="button"
@@ -868,20 +748,11 @@
                       aria-hidden="true"
                     />
                   ) : (
-                    <svg
-                      className="sidebar-logout-icon"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
+                    <LogoutOutlinedIcon
+                      className="sidebar-mui-icon sidebar-logout-icon"
+                      fontSize="inherit"
                       aria-hidden="true"
-                    >
-                      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-                      <polyline points="16 17 21 12 16 7" />
-                      <line x1="21" y1="12" x2="9" y2="12" />
-                    </svg>
+                    />
                   )}
                   <span className="sidebar-logout-text">
                     {logoutLoading ? "Logging out..." : "Log out"}
@@ -895,24 +766,39 @@
         <div className="app-main-shell">
           {isAuthenticated && (
             <header className="app-topbar">
-              <div className="app-topbar-meta">
-                <div className="app-topbar-meta-label">
-                  Pages / {topbarTitle}
+              <div className="app-topbar-left">
+                <div className="app-topbar-meta">
+                  <div className="app-topbar-meta-label">{LOGO_ALT}</div>
+                  <div className="app-topbar-title-row">
+                    <h1 className="app-topbar-meta-title">PeerLink</h1>
+                  </div>
                 </div>
-                <div className="app-topbar-meta-title">{topbarTitle}</div>
               </div>
 
               {!isPendingApproval ? (
-                <>
+                <div className="app-topbar-right">
                   <div className="app-topbar-search-wrapper">
                     <div className="app-topbar-search">
+                      <span className="app-topbar-search-icon" aria-hidden="true">
+                        <svg
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <circle cx="11" cy="11" r="7" />
+                          <line x1="16.65" y1="16.65" x2="21" y2="21" />
+                        </svg>
+                      </span>
                       <input
+                        ref={searchInputRef}
                         type="search"
                         className="app-topbar-search-input"
-                        placeholder={
-                          searchFocused ? "Search users and actions…" : ""
-                        }
-                        aria-label="Global search"
+                        placeholder="Search mentors, students, or skills..."
+                        aria-label="Search mentors, students, or skills"
+                        aria-keyshortcuts="Control+K Meta+K"
                         value={searchQuery}
                         onChange={(e) => {
                           setSearchQuery(e.target.value);
@@ -927,26 +813,16 @@
                       />
                       <button
                         type="button"
-                        className="app-topbar-search-btn"
-                        aria-label="Search"
+                        className="app-topbar-shortcut"
+                        aria-label={"Focus search, " + shortcutLabel}
+                        title={"Focus search (" + shortcutLabel + ")"}
                         onClick={() => {
-                          if (suggestions.length) {
-                            handleSuggestionSelect(suggestions[0]);
+                          if (searchInputRef.current) {
+                            searchInputRef.current.focus();
                           }
                         }}
                       >
-                        <svg
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          aria-hidden="true"
-                        >
-                          <circle cx="11" cy="11" r="7" />
-                          <line x1="16.65" y1="16.65" x2="21" y2="21" />
-                        </svg>
+                        <kbd>{shortcutLabel}</kbd>
                       </button>
                     </div>
                     {showSuggestions && (
@@ -1074,12 +950,16 @@
                       </div>
                     )}
                   </div>
-                  <>
+                  <div className="app-topbar-actions">
                     <button
                       type="button"
                       className="sidebar-icon-btn app-topbar-bell"
                       onClick={() => goTo("notifications")}
-                      aria-label="Notifications"
+                      aria-label={
+                        unreadCount > 0
+                          ? "Notifications, " + unreadCount + " unread"
+                          : "Notifications"
+                      }
                     >
                       <svg
                         className="sidebar-icon-bell"
@@ -1094,63 +974,108 @@
                         <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
                         <path d="M13.73 21a2 2 0 0 1-3.46 0" />
                       </svg>
+                      <span
+                        className={
+                          "app-topbar-bell-dot" +
+                          (unreadCount > 0 ? " is-active" : "")
+                        }
+                        aria-hidden="true"
+                      />
                       {unreadCount > 0 && (
                         <span className="nav-badge">
                           {unreadCount > 99 ? "99+" : unreadCount}
                         </span>
                       )}
                     </button>
+                    <div className="app-topbar-profile" ref={profileMenuRef}>
+                      <button
+                        type="button"
+                        className={
+                          "app-topbar-profile-btn" +
+                          (profileMenuOpen ? " is-open" : "")
+                        }
+                        onClick={() => setProfileMenuOpen((open) => !open)}
+                        aria-label={
+                          "Account menu for " + topbarDisplayName
+                        }
+                        aria-haspopup="menu"
+                        aria-expanded={profileMenuOpen ? "true" : "false"}
+                        title={topbarDisplayName}
+                      >
+                        <div className="sidebar-avatar-wrapper">
+                          {user && user.avatar_url ? (
+                            <img
+                              src={user.avatar_url}
+                              alt=""
+                              className="sidebar-avatar"
+                            />
+                          ) : (
+                            <div className="sidebar-avatar fallback">
+                              {topbarDisplayName.slice(0, 1).toUpperCase()}
+                            </div>
+                          )}
+                        </div>
+                        <span className="app-topbar-user-text">
+                          <span className="app-topbar-user-name">
+                            {topbarDisplayName}
+                          </span>
+                          <span className="app-topbar-user-role">
+                            {topbarRoleLabel}
+                          </span>
+                        </span>
+                        <KeyboardArrowDownOutlinedIcon
+                          className="app-topbar-caret"
+                          fontSize="inherit"
+                          aria-hidden="true"
+                        />
+                      </button>
+                      {profileMenuOpen && (
+                        <div className="app-topbar-profile-menu" role="menu">
+                          {!isStaff && (
+                            <button
+                              type="button"
+                              role="menuitem"
+                              onClick={() => {
+                                setProfileMenuOpen(false);
+                                goTo("profile");
+                              }}
+                            >
+                              View profile
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            role="menuitem"
+                            onClick={() => {
+                              setProfileMenuOpen(false);
+                              goTo("settings");
+                            }}
+                          >
+                            Settings
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="app-topbar-right">
+                  <div className="btn-row" style={{ margin: 0 }}>
                     <button
                       type="button"
-                      className="app-topbar-avatar-btn"
-                      onClick={() => goTo(isStaff ? "settings" : "profile")}
-                      aria-label={isStaff ? "Open settings" : "Open profile"}
-                      title={isStaff ? "Settings" : "Profile"}
+                      className="btn"
+                      onClick={() => goTo(pendingPrimaryTab)}
                     >
-                      <div className="sidebar-avatar-wrapper">
-                        {user.avatar_url ? (
-                          <img
-                            src={user.avatar_url}
-                            alt={
-                              user.display_name ||
-                              user.full_name ||
-                              user.username ||
-                              "Profile"
-                            }
-                            className="sidebar-avatar"
-                          />
-                        ) : (
-                          <div className="sidebar-avatar fallback">
-                            {(
-                              user.display_name ||
-                              user.full_name ||
-                              user.username ||
-                              "?"
-                            )
-                              .slice(0, 1)
-                              .toUpperCase()}
-                          </div>
-                        )}
-                      </div>
+                      {pendingPrimaryLabel}
                     </button>
-                  </>
-                </>
-              ) : (
-                <div className="btn-row" style={{ margin: 0 }}>
-                  <button
-                    type="button"
-                    className="btn"
-                    onClick={() => goTo(pendingPrimaryTab)}
-                  >
-                    {pendingPrimaryLabel}
-                  </button>
-                  <button
-                    type="button"
-                    className="btn secondary"
-                    onClick={() => goTo("settings")}
-                  >
-                    Account settings
-                  </button>
+                    <button
+                      type="button"
+                      className="btn secondary"
+                      onClick={() => goTo("settings")}
+                    >
+                      Account settings
+                    </button>
+                  </div>
                 </div>
               )}
             </header>

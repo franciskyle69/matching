@@ -43,6 +43,72 @@ describe("HomePage", () => {
     expect(screen.getByText("10")).toBeInTheDocument();
   });
 
+  it("renders the mentee spotlight and sidebar from real context data", () => {
+    const ctx = {
+      user: {
+        username: "mila",
+        full_name: "Mila Cruz",
+        role: "mentee",
+        mentee_questionnaire_completed: true,
+      },
+      authCheckDone: true,
+      stats: { user_progress: { role: "mentee", has_mentor: true } },
+      setActiveTab: () => {},
+      menteeMatching: {
+        subjects: ["Data Structures", "Networking"],
+        availability: ["Mon/Wed|08:00-12:00"],
+      },
+      myMentor: {
+        user_id: 42,
+        display_name: "Prof. Reyes",
+        email: "reyes@example.edu",
+        score: 0.92,
+        availability: ["Mon|09:00-11:00"],
+        match_details: { common_subjects: ["Data Structures"] },
+      },
+      menteeRecommendations: [
+        {
+          mentor_id: 7,
+          mentor_display_name: "Ana Lim",
+          mentor: { user_id: 7 },
+          score: 0.81,
+        },
+      ],
+    };
+    render(withContext(React.createElement(HomePage), ctx));
+
+    expect(screen.getByRole("heading", { name: /welcome back, mila/i })).toBeInTheDocument();
+    expect(screen.getByText("Prof. Reyes")).toBeInTheDocument();
+    // Send Message falls back to the mentor's email since there is no chat feature.
+    expect(screen.getByRole("link", { name: /send message/i })).toHaveAttribute(
+      "href",
+      "https://mail.google.com/mail/?view=cm&fs=1&to=reyes%40example.edu",
+    );
+    expect(screen.queryByRole("link", { name: /schedule session/i })).toBeNull();
+    // Overlap of Mon/Wed 08:00-12:00 with Mon 09:00-11:00, shown as the next Monday.
+    expect(screen.getAllByText(/9:00 AM - 11:00 AM/i).length).toBeGreaterThan(0);
+    expect(screen.getByText("Ana Lim")).toBeInTheDocument();
+    expect(screen.getByText("81% Match")).toBeInTheDocument();
+    expect(screen.getByText("Completed pairings")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /connect/i })).toBeInTheDocument();
+  });
+
+  it("does not render a message link when the mentee has no mentor", () => {
+    const ctx = {
+      user: { username: "mila", role: "mentee" },
+      authCheckDone: true,
+      stats: { user_progress: { role: "mentee", has_mentor: false } },
+      setActiveTab: () => {},
+      menteeMatching: { subjects: [], availability: [] },
+      myMentor: null,
+      menteeRecommendations: [],
+    };
+    render(withContext(React.createElement(HomePage), ctx));
+
+    expect(screen.getByText(/do not have an official mentor yet/i)).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /send message/i })).toBeNull();
+  });
+
   it("returns null when auth check not done", () => {
     const ctx = {
       user: null,

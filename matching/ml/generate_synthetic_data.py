@@ -3,8 +3,7 @@ from __future__ import annotations
 """
 Generate synthetic mentor–mentee CSV rows for training the matching model.
 
-Uses the same subject catalog as preferences (major IT + minor GE/NSTP/PE).
-Topics are only sampled for major subjects; minor-only rows may have empty topics.
+Uses the canonical BSIT curriculum matrix in profiles.subject_catalog.
 
 Run from the Django project root:
 
@@ -18,28 +17,35 @@ import random
 import sys
 from pathlib import Path
 
-# Allow importing profiles.subject_catalog when run as __main__
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from profiles.subject_catalog import (  # noqa: E402
+    COMPETENCY_VOCABULARY,
+    MAJOR_SUBJECT_NAMES,
     SUBJECT_CATALOG,
-    SUBJECT_TOPIC_MAP,
+    competencies_for_subjects,
     is_minor_subject,
+    topics_for_competencies,
 )
 
 RNG = random.Random(42)
 
-MAJOR_SUBJECTS = [e["name"] for e in SUBJECT_CATALOG if e["category"] == "major"]
 MINOR_SUBJECTS = [e["name"] for e in SUBJECT_CATALOG if e["category"] != "major"]
 GE_SUBJECTS = [e["name"] for e in SUBJECT_CATALOG if e["category"] == "ge"]
 NSTP_SUBJECTS = [e["name"] for e in SUBJECT_CATALOG if e["category"] == "nstp"]
 PE_SUBJECTS = [e["name"] for e in SUBJECT_CATALOG if e["category"] == "pe"]
 
-TOPICS = sorted({topic for topics in SUBJECT_TOPIC_MAP.values() for topic in topics})
 MENTOR_ROLES = ["Senior IT Student", "Instructor"]
-SLOT_BLOCKS = ["08:00-10:00", "10:00-12:00", "13:00-15:00", "15:00-17:00", "18:00-20:00"]
+SLOT_BLOCKS = [
+    "Mon|09:00-11:00",
+    "Tue|10:00-12:00",
+    "Wed|13:00-15:00",
+    "Thu|15:00-17:00",
+    "Fri|18:00-20:00",
+    "Sat|09:00-11:00",
+]
 
 
 def sample_subset(options: list[str], min_n: int, max_n: int) -> list[str]:
@@ -53,22 +59,7 @@ def sample_subset(options: list[str], min_n: int, max_n: int) -> list[str]:
     return RNG.sample(options, n)
 
 
-def topics_for_major_subjects(subject_names: list[str]) -> list[str]:
-    allowed: list[str] = []
-    seen: set[str] = set()
-    for name in subject_names:
-        if is_minor_subject(name):
-            continue
-        for topic in SUBJECT_TOPIC_MAP.get(name, []):
-            if topic in seen:
-                continue
-            seen.add(topic)
-            allowed.append(topic)
-    return allowed
-
-
 def _pick_minor_subjects() -> list[str]:
-    """Sample 1–2 minor subjects, sometimes from the same category."""
     roll = RNG.random()
     if roll < 0.45:
         return sample_subset(GE_SUBJECTS, 1, 2)
@@ -78,150 +69,118 @@ def _pick_minor_subjects() -> list[str]:
 
 
 def _pick_major_subjects() -> list[str]:
-    base_subjects = ["Computer Programming", "IT Fundamentals"]
-    extra_subjects = [s for s in MAJOR_SUBJECTS if s not in base_subjects]
-    subjects: set[str] = {RNG.choice(base_subjects)}
-    if RNG.random() < 0.7:
-        subjects.add(RNG.choice(base_subjects))
-    if RNG.random() < 0.4:
-        subjects.add(RNG.choice(extra_subjects))
-    return sorted(subjects)
+    return sample_subset(MAJOR_SUBJECT_NAMES, 1, 3)
 
 
-def sample_competencies_for_topics(topics: list[str], max_per_topic: int = 2) -> list[str]:
-    out = []
-    for topic in topics:
-        labels = [
-            f"{topic} Basics",
-            f"{topic} Practice",
-            f"{topic} Problem Solving",
-        ]
-        picks = sample_subset(labels, 1, min(max_per_topic, len(labels)))
-        out.extend(picks)
-    seen = set()
-    deduped = []
-    for item in out:
-        if item in seen:
-            continue
-        seen.add(item)
-        deduped.append(item)
-    return deduped
+def sample_competencies_for_subjects(subjects: list[str], min_n: int, max_n: int) -> list[str]:
+    pool = competencies_for_subjects(subjects)
+    if not pool:
+        pool = list(COMPETENCY_VOCABULARY)
+    return sample_subset(pool, min_n, min(max_n, len(pool)))
 
 
 def sample_availability() -> list[str]:
-    return sample_subset(SLOT_BLOCKS, 1, 3)
+    return sample_subset(SLOT_BLOCKS, 2, 4)
 
 
 def sample_mentee_row() -> dict:
     roll = RNG.random()
-    subjects: list[str]
-
-    if roll < 0.22:
-        # Minor-only mentee (GE / NSTP / PE) — no topics
+    if roll < 0.18:
         subjects = _pick_minor_subjects()
-        if RNG.random() < 0.35:
-            subjects = sorted(set(subjects + sample_subset(_pick_minor_subjects(), 1, 1)))
+        competencies: list[str] = []
         topics: list[str] = []
-    elif roll < 0.55:
-        # Major-focused mentee
-        subjects = _pick_major_subjects()
-        if RNG.random() < 0.18:
-            subjects = sorted(set(subjects + _pick_minor_subjects()))
-        allowed_topics = topics_for_major_subjects(subjects)
-        topics = sample_subset(allowed_topics, 2, min(5, len(allowed_topics))) if allowed_topics else []
     else:
-        # Mixed profile
-        subjects = sorted(set(_pick_major_subjects() + _pick_minor_subjects()))
-        allowed_topics = topics_for_major_subjects(subjects)
-        topics = sample_subset(allowed_topics, 1, min(4, len(allowed_topics))) if allowed_topics else []
-
-    difficulty_choices = [2, 3, 3, 4, 4, 5]
-    difficulty_level = RNG.choice(difficulty_choices)
-    competencies = sample_competencies_for_topics(topics, max_per_topic=2)
-    availability = sample_availability()
+        subjects = _pick_major_subjects()
+        if RNG.random() < 0.22:
+            subjects = sorted(set(subjects + _pick_minor_subjects()))
+        competencies = sample_competencies_for_subjects(subjects, 3, 5)
+        topics = topics_for_competencies(competencies)
 
     return {
         "mentee_subjects": ", ".join(subjects),
         "mentee_topics": ", ".join(topics),
         "mentee_competencies": ", ".join(competencies),
-        "mentee_availability": ", ".join(availability),
-        "mentee_difficulty_level": difficulty_level,
+        "mentee_availability": ", ".join(sample_availability()),
+        "mentee_difficulty_level": RNG.choice([2, 3, 3, 4, 4, 5]),
+        "mentee_year_level": 1,
     }
 
 
 def sample_mentor_row() -> dict:
+    role = RNG.choices(MENTOR_ROLES, weights=[0.35, 0.65], k=1)[0]
     roll = RNG.random()
-    role = RNG.choices(MENTOR_ROLES, weights=[0.7, 0.3], k=1)[0]
-
-    if roll < 0.18:
+    if roll < 0.12:
         subjects = _pick_minor_subjects()
-        if RNG.random() < 0.3:
-            subjects = sorted(set(subjects + sample_subset(MINOR_SUBJECTS, 1, 2)))
-        topics = []
-    elif roll < 0.52:
-        subjects = sample_subset(MAJOR_SUBJECTS, 1, 3)
-        if RNG.random() < 0.22:
-            subjects = sorted(set(subjects + _pick_minor_subjects()))
-        allowed_topics = topics_for_major_subjects(subjects)
-        topics = sample_subset(allowed_topics, 3, min(6, len(allowed_topics))) if allowed_topics else []
+        competencies: list[str] = []
+        topics: list[str] = []
     else:
-        subjects = sorted(set(sample_subset(MAJOR_SUBJECTS, 1, 2) + _pick_minor_subjects()))
-        allowed_topics = topics_for_major_subjects(subjects)
-        topics = sample_subset(allowed_topics, 2, min(5, len(allowed_topics))) if allowed_topics else []
+        subjects = sample_subset(MAJOR_SUBJECT_NAMES, 2, 4)
+        if RNG.random() < 0.2:
+            subjects = sorted(set(subjects + _pick_minor_subjects()))
+        competencies = sample_competencies_for_subjects(subjects, 3, 5)
+        topics = topics_for_competencies(competencies)
 
     if role == "Instructor":
+        year_level = 4
         expertise_level = RNG.choice([4, 4, 5, 5])
+        years_experience = RNG.randint(3, 15)
+        teaching_experience_years = RNG.randint(2, years_experience)
     else:
+        year_level = RNG.choice([3, 4])
         expertise_level = RNG.choice([3, 3, 4, 4, 5])
-    competencies = sample_competencies_for_topics(topics, max_per_topic=3)
-    availability = sample_availability()
-    years_experience = RNG.randint(1, 12)
-    teaching_experience_years = RNG.randint(0, years_experience)
+        years_experience = RNG.randint(1, 4)
+        teaching_experience_years = RNG.randint(0, years_experience)
 
     return {
         "mentor_role": role,
         "mentor_subjects": ", ".join(subjects),
         "mentor_topics": ", ".join(topics),
         "mentor_competencies": ", ".join(competencies),
-        "mentor_availability": ", ".join(availability),
+        "mentor_availability": ", ".join(sample_availability()),
         "mentor_years_experience": years_experience,
         "mentor_teaching_experience_years": teaching_experience_years,
         "mentor_expertise_level": expertise_level,
+        "mentor_year_level": year_level,
     }
+
+
+def _token_set(value: str) -> set[str]:
+    return {part.strip().lower() for part in str(value or "").split(",") if part.strip()}
 
 
 def compute_label(mentee: dict, mentor: dict) -> int:
-    mentee_subjects = {
-        s.strip().lower() for s in str(mentee["mentee_subjects"]).split(",") if s.strip()
-    }
-    mentor_subjects = {
-        s.strip().lower() for s in str(mentor["mentor_subjects"]).split(",") if s.strip()
-    }
-    subj_intersection = len(mentee_subjects & mentor_subjects)
+    mentee_subjects = _token_set(mentee["mentee_subjects"])
+    mentor_subjects = _token_set(mentor["mentor_subjects"])
+    mentee_topics = _token_set(mentee["mentee_topics"])
+    mentor_topics = _token_set(mentor["mentor_topics"])
+    mentee_competencies = _token_set(mentee["mentee_competencies"])
+    mentor_competencies = _token_set(mentor["mentor_competencies"])
 
-    mentee_topics = {
-        s.strip().lower() for s in str(mentee["mentee_topics"]).split(",") if s.strip()
-    }
-    mentor_topics = {
-        s.strip().lower() for s in str(mentor["mentor_topics"]).split(",") if s.strip()
-    }
+    subj_intersection = len(mentee_subjects & mentor_subjects)
     topic_intersection = len(mentee_topics & mentor_topics)
+    competency_intersection = len(mentee_competencies & mentor_competencies)
+    competency_union = len(mentee_competencies | mentor_competencies)
+    competency_jaccard = (
+        competency_intersection / competency_union if competency_union else 0.0
+    )
 
     mentee_diff = int(mentee["mentee_difficulty_level"])
     mentor_exp = int(mentor["mentor_expertise_level"])
+    academic_gap = int(mentor["mentor_year_level"]) - int(mentee["mentee_year_level"])
 
     score = 0.0
     score += subj_intersection * 1.0
-    score += topic_intersection * 0.5
-    score += 0.5 if mentor_exp >= mentee_diff else -0.5
+    score += topic_intersection * 0.4
+    score += competency_jaccard * 2.0
+    score += 0.5 if mentor_exp >= mentee_diff else -0.4
+    score += 0.25 if academic_gap >= 2 else 0.0
 
-    # Minor-only pairs rely on subject overlap; empty topics should not penalize heavily
-    mentee_has_major = any(not is_minor_subject(s) for s in mentee_subjects)
+    mentee_has_major = any(not is_minor_subject(s) for s in mentee["mentee_subjects"].split(", "))
     if not mentee_has_major and subj_intersection >= 1 and mentor_exp >= mentee_diff:
         score += 0.75
 
-    score += RNG.uniform(-0.5, 0.5)
-    return 1 if score >= 1.5 else 0
+    score += RNG.uniform(-0.35, 0.35)
+    return 1 if score >= 1.4 else 0
 
 
 def write_csv(output_path: Path, rows: list[dict]) -> None:
@@ -232,6 +191,7 @@ def write_csv(output_path: Path, rows: list[dict]) -> None:
         "mentee_competencies",
         "mentee_availability",
         "mentee_difficulty_level",
+        "mentee_year_level",
         "mentor_role",
         "mentor_subjects",
         "mentor_topics",
@@ -240,6 +200,7 @@ def write_csv(output_path: Path, rows: list[dict]) -> None:
         "mentor_years_experience",
         "mentor_teaching_experience_years",
         "mentor_expertise_level",
+        "mentor_year_level",
         "label",
     ]
     with output_path.open("w", newline="", encoding="utf-8") as f:

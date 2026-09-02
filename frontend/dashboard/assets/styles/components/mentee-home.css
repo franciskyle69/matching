@@ -1,0 +1,642 @@
+/* Mentee home dashboard (#home).
+   Glass surfaces over the fixed dark purple background, driven by the tokens
+   in styles/base/tokens.css. */
+
+.mentee-home.page-shell {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  overflow: visible;
+  font-family: "Inter", "SF Pro Text", "SF Pro Display", var(--font-sans);
+}
+
+.mentee-home h1,
+.mentee-home h2,
+.mentee-home h3,
+.mentee-home .mentee-stat-value,
+.mentee-home .mentee-stat-label,
+.mentee-home .mentee-match-badge,
+.mentee-home .btn {
+  font-family: "Inter", "SF Pro Text", "SF Pro Display", var(--font-sans);
+}
+
+/* ── Glass card ──────────────────────────────────────────────── */
+
+.dashboard-card {
+  padding: var(--space-6);
+  border: var(--card-border);
+  border-radius: var(--card-radius);
+  background: var(--card-bg);
+  box-shadow: var(--card-shadow);
+  backdrop-filter: var(--card-blur);
+  -webkit-backdrop-filter: var(--card-blur);
+  color: var(--text-primary);
+  transition:
+    transform var(--motion-fast) var(--ease-standard),
+    border-color var(--motion-fast) var(--ease-standard),
+    box-shadow var(--motion-fast) var(--ease-standard);
+}
+
+.dashboard-card:hover {
+  border-color: rgba(168, 85, 247, 0.4);
+  box-shadow: 0 10px 30px -10px rgba(124, 58, 237, 0.3);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .mentee-stat-card:hover {
+    transform: translateY(-2px);
+  }
+}
+
+/* ── 70 / 30 layout ──────────────────────────────────────────── */
+
+.mentee-home-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 70fr) minmax(0, 30fr);
+  align-items: start;
+  gap: var(--space-5);
+}
+
+.mentee-home-main,
+.mentee-home-rail {
+  display: grid;
+  gap: var(--space-5);
+  align-content: start;
+  min-width: 0;
+}
+
+.mentee-home-rail {
+  position: sticky;
+  top: 24px;
+}
+
+@media (max-width: 900px) {
+  .mentee-home-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .mentee-home-rail {
+    position: static;
+  }
+}
+
+/* ── Hero ────────────────────────────────────────────────────── */
+
+.mentee-hero {
+  position: relative;
+  overflow: hidden;
+  border-color: rgba(168, 85, 247, 0.28);
+}
+
+/* Mesh glow sits behind the copy without intercepting clicks. */
+.mentee-hero-mesh {
+  position: absolute;
+  inset: -40% -10% auto -10%;
+  height: 220%;
+  pointer-events: none;
+  background:
+    radial-gradient(40% 40% at 12% 20%, rgba(124, 58, 237, 0.45), transparent 70%),
+    radial-gradient(35% 35% at 82% 10%, rgba(168, 85, 247, 0.32), transparent 70%),
+    radial-gradient(30% 30% at 65% 90%, rgba(56, 189, 248, 0.16), transparent 70%);
+  filter: blur(6px);
+}
+
+.mentee-hero-body {
+  position: relative;
+  display: grid;
+  gap: var(--space-4);
+  justify-items: start;
+}
+
+.mentee-hero-leading {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.mentee-hero-copy {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.mentee-hero-title {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: clamp(1.6rem, 2.6vw, 2.1rem);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--text-primary);
+}
+
+.mentee-hero-subtitle {
+  margin: 0;
+  font-size: var(--text-sm);
+  line-height: var(--line-relaxed);
+  color: var(--text-secondary);
+}
+
+.mentee-hero-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 7px 14px;
+  border: 1px solid rgba(168, 85, 247, 0.4);
+  border-radius: 999px;
+  background: rgba(124, 58, 237, 0.16);
+  color: var(--text-primary);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.mentee-hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+/* ── Buttons ─────────────────────────────────────────────────── */
+
+.mentee-home .btn.mentee-cta-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  background: #7c3aed;
+  border: 1px solid #7c3aed;
+  color: #ffffff;
+  font-weight: 700;
+  text-decoration: none;
+  box-shadow: none;
+}
+
+.mentee-home .btn.mentee-cta-primary:hover {
+  background: #6d28d9;
+  border-color: #6d28d9;
+  filter: none;
+}
+
+.mentee-home .btn.mentee-cta-glass {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  color: var(--text-primary);
+  font-weight: 600;
+  box-shadow: none;
+}
+
+.mentee-home .btn.mentee-cta-glass:hover {
+  border-color: rgba(168, 85, 247, 0.5);
+  background: rgba(124, 58, 237, 0.16);
+  filter: none;
+}
+
+/* ── Stat grid ───────────────────────────────────────────────── */
+
+.mentee-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: var(--space-4);
+}
+
+.mentee-stat-card {
+  display: grid;
+  gap: var(--space-1);
+  padding: var(--space-5);
+  border: 1px solid rgba(168, 85, 247, 0.2);
+}
+
+.mentee-stat-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  margin-bottom: var(--space-2);
+  border-radius: var(--radius-sm);
+  background: rgba(124, 58, 237, 0.18);
+  color: #c4b5fd;
+  font-size: 20px;
+}
+
+.mentee-stat-icon .MuiSvgIcon-root {
+  font-size: inherit;
+}
+
+.mentee-stat-value {
+  margin: 0;
+  font-size: clamp(1.6rem, 2.4vw, 2rem);
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  color: #f8fafc;
+}
+
+.mentee-stat-label {
+  margin: 0;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.mentee-stat-hint {
+  margin: 0;
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+  opacity: 0.8;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+[data-theme="light"] .mentee-stat-value {
+  color: var(--text-primary);
+}
+
+/* ── Card headings ───────────────────────────────────────────── */
+
+.mentee-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.mentee-card-head h2 {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: var(--text-lg);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--text-primary);
+}
+
+.mentee-muted {
+  margin: 0;
+  font-size: var(--text-sm);
+  line-height: var(--line-relaxed);
+  color: var(--text-secondary);
+}
+
+/* ── Mentor spotlight ────────────────────────────────────────── */
+
+.mentee-spotlight {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.mentee-spotlight-identity {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-4);
+}
+
+.mentee-spotlight-avatar {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.mentee-spotlight-avatar .sidebar-avatar-wrapper,
+.mentee-spotlight-avatar .sidebar-avatar {
+  width: 68px;
+  height: 68px;
+}
+
+.mentee-spotlight-status {
+  position: absolute;
+  right: 2px;
+  bottom: 2px;
+  width: 15px;
+  height: 15px;
+  border: 2px solid rgba(20, 14, 35, 0.9);
+  border-radius: 50%;
+  background: #22c55e;
+}
+
+.mentee-spotlight-meta {
+  display: grid;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.mentee-spotlight-name-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.mentee-spotlight-name {
+  margin: 0;
+  font-size: var(--text-lg);
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.mentee-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.mentee-chip {
+  padding: 5px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.05);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.mentee-spotlight-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.mentee-spotlight-actions .btn {
+  font-size: 16px;
+}
+
+.mentee-spotlight-facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: var(--space-3);
+  margin: 0;
+}
+
+.mentee-spotlight-facts div {
+  padding: 12px 14px;
+  border: 1px solid rgba(168, 85, 247, 0.2);
+  border-radius: var(--radius-sm);
+  background: rgba(124, 58, 237, 0.1);
+}
+
+.mentee-spotlight-facts dt {
+  margin: 0 0 4px;
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.mentee-spotlight-facts dd {
+  margin: 0;
+  font-size: var(--text-sm);
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.mentee-match-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 12px;
+  border: 1px solid rgba(168, 85, 247, 0.45);
+  border-radius: 999px;
+  background: rgba(124, 58, 237, 0.2);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  white-space: nowrap;
+  color: #ddd6fe;
+}
+
+[data-theme="light"] .mentee-match-badge {
+  color: var(--accent-primary);
+}
+
+/* ── Timeline / next steps ───────────────────────────────────── */
+
+.mentee-timeline {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: var(--space-3);
+}
+
+.mentee-timeline-item {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+
+.mentee-timeline-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: rgba(124, 58, 237, 0.18);
+  color: #c4b5fd;
+}
+
+.mentee-timeline-title {
+  margin: 0 0 2px;
+  font-size: var(--text-sm);
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.mentee-empty,
+.mentee-inline-cta {
+  display: grid;
+  gap: var(--space-3);
+  justify-items: start;
+  padding: var(--space-4);
+  border: 1px dashed rgba(255, 255, 255, 0.16);
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+}
+
+.mentee-empty p,
+.mentee-inline-cta p {
+  margin: 0;
+}
+
+/* ── Sidebar rail ────────────────────────────────────────────── */
+
+.mentee-rail-card {
+  display: grid;
+  gap: var(--space-3);
+  align-content: start;
+}
+
+.mentee-rail-action {
+  width: 100%;
+  justify-content: center;
+}
+
+.mentee-slot-list,
+.mentee-rec-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: var(--space-2);
+}
+
+.mentee-slot {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 8px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.04);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.mentee-slot--schedule {
+  align-items: stretch;
+}
+
+.mentee-slot-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  color: #c4b5fd;
+}
+
+.mentee-slot-copy {
+  display: grid;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.mentee-slot-when {
+  color: var(--text-primary);
+  font-weight: 700;
+}
+
+.mentee-slot-time {
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.mentee-slot-action {
+  align-self: center;
+  padding: 4px 8px;
+  border: 1px solid rgba(168, 85, 247, 0.35);
+  border-radius: 999px;
+  background: transparent;
+  color: #ddd6fe;
+  font-family: var(--font-sans);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.mentee-slot-action:hover {
+  border-color: #7c3aed;
+  background: rgba(124, 58, 237, 0.18);
+  color: #ffffff;
+}
+
+.mentee-rec-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: 8px;
+  border-radius: var(--radius-sm);
+  transition: background-color var(--motion-fast) var(--ease-standard);
+}
+
+.mentee-rec-item:hover {
+  background: rgba(124, 58, 237, 0.12);
+}
+
+.mentee-rec-item .sidebar-avatar-wrapper,
+.mentee-rec-item .sidebar-avatar {
+  width: 38px;
+  height: 38px;
+}
+
+.mentee-rec-meta {
+  display: grid;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
+}
+
+.mentee-rec-name {
+  margin: 0;
+  font-size: var(--text-sm);
+  font-weight: 650;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mentee-rec-meta .mentee-match-badge {
+  justify-self: start;
+}
+
+/* ── Quick actions ───────────────────────────────────────────── */
+
+.mentee-quick-actions {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.mentee-quick-action {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color var(--motion-fast) var(--ease-standard),
+    background-color var(--motion-fast) var(--ease-standard);
+}
+
+.mentee-quick-action .MuiSvgIcon-root,
+.mentee-timeline-icon .MuiSvgIcon-root,
+.mentee-inline-cta .MuiSvgIcon-root {
+  font-size: 18px;
+  color: #c4b5fd;
+}
+
+.mentee-quick-action:hover {
+  border-color: rgba(168, 85, 247, 0.45);
+  background: rgba(124, 58, 237, 0.16);
+}
+
+.mentee-quick-action:focus-visible {
+  outline: 2px solid var(--input-border-focus);
+  outline-offset: 2px;
+}
+
+@media (max-width: 640px) {
+  .dashboard-card {
+    padding: var(--space-4);
+  }
+
+  .mentee-spotlight-actions .btn,
+  .mentee-hero-actions .btn {
+    flex: 1 1 100%;
+    justify-content: center;
+  }
+}

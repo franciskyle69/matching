@@ -28,6 +28,15 @@ from profiles.models import (
     MenteeCompetencyNeed,
     save_verification_documents,
 )
+from profiles.profile_completion import (
+    INSTRUCTOR_ROLE,
+    STUDENT_MENTOR_ROLE,
+    compute_is_profile_complete,
+    get_auth_provider,
+    mark_profile_complete,
+    mentee_account_fields_complete,
+    mentor_account_fields_complete,
+)
 
 from accounts.forms import (
     AccountSettingsForm,
@@ -230,7 +239,27 @@ def _parse_hhmm_to_minutes(value):
     return hour * 60 + minute
 
 
+AVAILABILITY_DAY_ORDER = ("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
+_AVAILABILITY_DAY_INDEX = {day.lower(): index for index, day in enumerate(AVAILABILITY_DAY_ORDER)}
+
+
+def _parse_availability_days(value):
+    """Map loose day tokens onto canonical Mon..Sun order."""
+    found = set()
+    for token in str(value or "").split("/"):
+        key = token.strip().lower()[:3]
+        index = _AVAILABILITY_DAY_INDEX.get(key)
+        if index is not None:
+            found.add(index)
+    return [AVAILABILITY_DAY_ORDER[index] for index in sorted(found)]
+
+
 def _normalise_availability_slots(value):
+    """Canonicalise availability into "Mon/Wed|08:00-12:00" strings.
+
+    A slot saved without a day prefix predates day selection and is kept
+    as-is so existing profiles continue to match.
+    """
     if value is None:
         return []
     if isinstance(value, (list, tuple)):
@@ -247,7 +276,10 @@ def _normalise_availability_slots(value):
     for raw in raw_slots:
         if not isinstance(raw, str):
             continue
-        parts = raw.split("-")
+        day_part, separator, time_part = raw.partition("|")
+        if not separator:
+            day_part, time_part = "", raw
+        parts = time_part.split("-")
         if len(parts) != 2:
             continue
         start = _parse_hhmm_to_minutes(parts[0])
@@ -256,7 +288,9 @@ def _normalise_availability_slots(value):
             continue
         if start < min_minutes or end > max_minutes:
             continue
-        slot = f"{start // 60:02d}:{start % 60:02d}-{end // 60:02d}:{end % 60:02d}"
+        times = f"{start // 60:02d}:{start % 60:02d}-{end // 60:02d}:{end % 60:02d}"
+        days = _parse_availability_days(day_part) if separator else []
+        slot = f"{'/'.join(days)}|{times}" if days else times
         if slot in seen:
             continue
         seen.add(slot)
@@ -842,6 +876,10 @@ def me(request):
             "contact_no": getattr(mentee, "contact_no", ""),
             "admission_type": getattr(mentee, "admission_type", ""),
             "sex": getattr(mentee, "sex", ""),
+            "is_profile_complete": bool(
+                getattr(mentee, "is_profile_complete", False)
+                or mentee_account_fields_complete(mentee)
+            ),
         }
     mentee_general_info_completed = bool(
         mentee
@@ -850,7 +888,6 @@ def me(request):
         and getattr(mentee, "campus", "")
         and getattr(mentee, "student_id_no", "")
         and getattr(mentee, "contact_no", "")
-        and getattr(mentee, "admission_type", "")
         and getattr(mentee, "sex", "")
     )
 
@@ -876,6 +913,11 @@ def me(request):
         mentor_info = {
             "program": mentor.program or "",
             "year_level": mentor.year_level or 0,
+            "student_id_no": getattr(mentor, "student_id_no", "") or "",
+            "is_profile_complete": bool(
+                getattr(mentor, "is_profile_complete", False)
+                or mentor_account_fields_complete(mentor)
+            ),
             "role": mentor.role or "",
             "subjects": list(mentor_subs) if mentor_subs else [],
             "topics": list(mentor_tops) if mentor_tops else [],
@@ -956,6 +998,8 @@ def me(request):
         else False,
         "mentee_info": mentee_info,
         "mentee_general_info_completed": mentee_general_info_completed,
+        "is_profile_complete": compute_is_profile_complete(request.user),
+        "auth_provider": get_auth_provider(request.user),
         "mentor_info": mentor_info,
         "mentee_matching": mentee_matching,
         "stats": {
@@ -1349,6 +1393,8 @@ def update_mentee_profile(request):
         payload, "sex", getattr(mentee_profile, "sex", "")
     )
     mentee_profile.save()
+    if mentee_account_fields_complete(mentee_profile):
+        mark_profile_complete(mentee_profile, True)
     _clear_me_cache(request.user.id)
     audit_log(request.user, "update", "mentee_profile", mentee_profile.id)
 
@@ -1361,6 +1407,150 @@ def update_mentee_profile(request):
             "contact_no": mentee_profile.contact_no,
             "admission_type": mentee_profile.admission_type,
             "sex": mentee_profile.sex,
+            "is_profile_complete": compute_is_profile_complete(request.user),
+        }
+    )
+
+
+def _normalize_student_id(raw):
+    cleaned = "".join(
+        ch for ch in str(raw or "") if ch.isalnum() or ch in "-/"
+    ).strip()
+    return cleaned[:20]
+
+
+def _normalize_interest_names(raw_tags):
+    names = []
+    seen = set()
+    for item in raw_tags if isinstance(raw_tags, list) else []:
+        name = str(item).strip()[:50]
+        if not name:
+            continue
+        key = name.lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        names.append(name)
+        if len(names) >= MAX_TAGS:
+            break
+    return names
+
+
+def _set_interest_tags(profile, names):
+    tag_objects = []
+    for name in names:
+        tag = InterestTag.objects.filter(name__iexact=name).first()
+        if tag is None:
+            tag = InterestTag.objects.create(name=name)
+        tag_objects.append(tag)
+    profile.interest_tags.set(tag_objects)
+    profile.interests = ", ".join(names)
+    profile.save(update_fields=["interests"])
+    return [tag.name for tag in tag_objects]
+
+
+@login_required
+@require_http_methods(["POST"])
+def complete_profile(request):
+    """Finish required account details after Google (or any) first-time signup."""
+    mentor = getattr(request.user, "mentor_profile", None)
+    mentee = getattr(request.user, "mentee_profile", None)
+    if not mentor and not mentee:
+        return JsonResponse({"error": "No profile found."}, status=404)
+
+    payload = _get_payload(request)
+    errors = {}
+    program = (_get_str(payload, "program") or "").strip()
+    student_id = _normalize_student_id(
+        _get_str(payload, "student_id_no") or payload.get("institutional_id")
+    )
+    year_level = _get_int(payload, "year_level", default=None)
+    interests = _normalize_interest_names(
+        payload.get("interests") or payload.get("tags")
+    )
+    track = (_get_str(payload, "track") or _get_str(payload, "role_track") or "").strip().lower()
+
+    if not mentee and not program:
+        errors["program"] = "Select your department or program."
+    if not student_id:
+        errors["student_id_no"] = "Enter your institutional or student ID."
+    if not interests:
+        errors["interests"] = "Select at least one mentoring interest."
+
+    if mentee:
+        campus = (_get_str(payload, "campus") or "").strip()
+        contact = "".join(ch for ch in (_get_str(payload, "contact_no") or "") if ch.isdigit())[:11]
+        sex = (_get_str(payload, "sex") or "").strip()
+        if not campus:
+            errors["campus"] = "Select your campus."
+        if len(contact) < 11:
+            errors["contact_no"] = "Enter an 11-digit contact number."
+        if sex not in ("male", "female"):
+            errors["sex"] = "Select your sex."
+        if errors:
+            return JsonResponse({"error": "Please complete the required fields.", "errors": errors}, status=400)
+        mentee.program = "BSIT"
+        mentee.year_level = 1
+        mentee.student_id_no = student_id
+        mentee.campus = campus
+        mentee.contact_no = contact
+        mentee.admission_type = mentee.admission_type or "regular"
+        mentee.sex = sex
+        mentee.save()
+        tags = _set_interest_tags(mentee, interests)
+        mark_profile_complete(mentee, True)
+        _clear_me_cache(request.user.id)
+        audit_log(request.user, "update", "complete_profile", mentee.id)
+        return JsonResponse(
+            {
+                "is_profile_complete": True,
+                "role": "mentee",
+                "tags": tags,
+                "mentee_info": {
+                    "program": mentee.program,
+                    "year_level": mentee.year_level,
+                    "campus": mentee.campus,
+                    "student_id_no": mentee.student_id_no,
+                    "contact_no": mentee.contact_no,
+                    "admission_type": mentee.admission_type,
+                    "sex": mentee.sex,
+                },
+            }
+        )
+
+    role = (
+        INSTRUCTOR_ROLE
+        if track in ("faculty", "instructor")
+        else STUDENT_MENTOR_ROLE
+        if track in ("student", "senior it student")
+        else (_get_str(payload, "role") or mentor.role or "").strip()
+    )
+    if role not in (STUDENT_MENTOR_ROLE, INSTRUCTOR_ROLE):
+        errors["track"] = "Choose Student or Faculty / Instructor."
+    if role == STUDENT_MENTOR_ROLE and year_level not in (1, 2, 3, 4):
+        errors["year_level"] = "Select your year level."
+    if errors:
+        return JsonResponse({"error": "Please complete the required fields.", "errors": errors}, status=400)
+    mentor.program = program
+    mentor.student_id_no = student_id
+    mentor.role = role
+    mentor.year_level = 4 if role == INSTRUCTOR_ROLE else year_level
+    mentor.save()
+    tags = _set_interest_tags(mentor, interests)
+    mark_profile_complete(mentor, True)
+    _clear_me_cache(request.user.id)
+    audit_log(request.user, "update", "complete_profile", mentor.id)
+    return JsonResponse(
+        {
+            "is_profile_complete": True,
+            "role": "mentor",
+            "tags": tags,
+            "mentor_info": {
+                "program": mentor.program,
+                "year_level": mentor.year_level,
+                "student_id_no": mentor.student_id_no,
+                "role": mentor.role,
+            },
         }
     )
 
@@ -1508,6 +1698,14 @@ def update_mentor_profile(request):
         mentor_profile.expertise_level = expertise
     mentor_profile.capacity = 5
     role_locked = bool(getattr(mentor_profile, "approved", False)) and not request.user.is_staff
+    if "program" in payload:
+        mentor_profile.program = _get_str(payload, "program", mentor_profile.program)
+    if "student_id_no" in payload:
+        mentor_profile.student_id_no = "".join(
+            ch
+            for ch in (_get_str(payload, "student_id_no") or "")
+            if ch.isalnum() or ch in "-/"
+        )[:20]
     requested_role = _get_str(payload, "role", mentor_profile.role or "")
     current_role = str(getattr(mentor_profile, "role", "") or "").strip()
     attempted_locked_role_change = False
@@ -1588,6 +1786,8 @@ def update_mentor_profile(request):
             payload.get("availability")
         )
     mentor_profile.save()
+    if mentor_account_fields_complete(mentor_profile):
+        mark_profile_complete(mentor_profile, True)
     if raw_competency_ids is not None:
         mentor_profile.competencies.set(
             Competency.objects.filter(id__in=competency_ids)

@@ -12,8 +12,10 @@ class EmailOrUsernameModelBackend(ModelBackend):
         UserModel = get_user_model()
         # Support identifier, email, or username parameters
         identifier = kwargs.get("identifier") or kwargs.get("email") or username or kwargs.get(UserModel.USERNAME_FIELD)
+        if identifier is not None:
+            identifier = str(identifier).strip()
         
-        if identifier is None or password is None:
+        if not identifier or password is None:
             return None
 
         user = None
@@ -27,12 +29,14 @@ class EmailOrUsernameModelBackend(ModelBackend):
             except UserModel.MultipleObjectsReturned:
                 user = UserModel.objects.filter(email__iexact=identifier).order_by("id").first()
         
-        # If not found by email, try by username
+        # If not found by email, try by username (case-insensitive).
         if user is None:
             try:
-                user = UserModel.objects.get(username=identifier)
+                user = UserModel.objects.get(username__iexact=identifier)
             except UserModel.DoesNotExist:
                 return None
+            except UserModel.MultipleObjectsReturned:
+                user = UserModel.objects.filter(username__iexact=identifier).order_by("id").first()
         
         if user and user.check_password(password) and self.user_can_authenticate(user):
             return user

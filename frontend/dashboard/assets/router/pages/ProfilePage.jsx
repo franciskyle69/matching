@@ -3,6 +3,10 @@
   const React = window.React;
   const { useContext, useState, useEffect, useRef } = React;
   const AppContext = window.DashboardApp.AppContext;
+  const formatSlotLabel =
+    (window.DashboardApp.Availability &&
+      window.DashboardApp.Availability.formatSlotLabel) ||
+    ((slot) => String(slot || ""));
   const {
     getCookie,
     fetchJSON,
@@ -702,7 +706,7 @@
         {availability.length > 0 && (
           <div className="sp-sidebar-card">
             <h4 className="sp-sidebar-card-title">Availability</h4>
-            <div className="sp-sidebar-avail">{availability.map((s) => <span key={s} className="prof-avail-slot"><span className="prof-avail-clock" aria-hidden="true"><DashboardIcon name="clock" size={14} /></span>{s}</span>)}</div>
+            <div className="sp-sidebar-avail">{availability.map((s) => <span key={s} className="prof-avail-slot"><span className="prof-avail-clock" aria-hidden="true"><DashboardIcon name="clock" size={14} /></span>{formatSlotLabel(s)}</span>)}</div>
           </div>
         )}
       </aside>
@@ -771,7 +775,7 @@
             {availability.length > 0 && (
               <div className="sp-sidebar-card">
                 <h4 className="sp-sidebar-card-title">Availability</h4>
-                <div className="sp-sidebar-avail">{availability.map((s) => <span key={s} className="prof-avail-slot"><span className="prof-avail-clock" aria-hidden="true"><DashboardIcon name="clock" size={14} /></span>{s}</span>)}</div>
+                <div className="sp-sidebar-avail">{availability.map((s) => <span key={s} className="prof-avail-slot"><span className="prof-avail-clock" aria-hidden="true"><DashboardIcon name="clock" size={14} /></span>{formatSlotLabel(s)}</span>)}</div>
               </div>
             )}
           </aside>
@@ -968,7 +972,7 @@
             {availability.length > 0 && (
               <div className="sp-sidebar-card">
                 <h4 className="sp-sidebar-card-title">Availability</h4>
-                <div className="sp-sidebar-avail">{availability.map((s) => <span key={s} className="prof-avail-slot"><span className="prof-avail-clock" aria-hidden="true"><DashboardIcon name="clock" size={14} /></span>{s}</span>)}</div>
+                <div className="sp-sidebar-avail">{availability.map((s) => <span key={s} className="prof-avail-slot"><span className="prof-avail-clock" aria-hidden="true"><DashboardIcon name="clock" size={14} /></span>{formatSlotLabel(s)}</span>)}</div>
               </div>
             )}
           </aside>

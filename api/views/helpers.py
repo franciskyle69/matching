@@ -80,6 +80,7 @@ def _serialize_mentor_for_matching(m, request=None):
         "teaching_experience_years": getattr(m, "teaching_experience_years", None),
         "capacity": getattr(m, "capacity", None) or 0,
         "gender": getattr(m, "gender", "") or "",
+        "bio": getattr(m, "bio", "") or "",
         "availability": m.availability if isinstance(getattr(m, "availability", []), list) else [],
     }
     if request and getattr(m, "avatar_url", None):
@@ -118,6 +119,9 @@ def _serialize_mentee_for_matching(e, request=None):
         "competency_needs": competency_needs,
         "difficulty_level": e.difficulty_level,
         "preferred_learning_style": getattr(e, "preferred_learning_style", "") or "",
+        "program": getattr(e, "program", "") or "",
+        "year_level": getattr(e, "year_level", None) or 0,
+        "bio": getattr(e, "bio", "") or "",
         "availability": e.availability if isinstance(getattr(e, "availability", []), list) else [],
     }
     if request and getattr(e, "avatar_url", None):
@@ -322,14 +326,119 @@ def _get_str(payload, key, default=""):
     return str(value).strip()
 
 
-def _serialize_notification(item: Notification):
+def _infer_notification_category(message: str, action_tab: str) -> str:
+    lower = (message or "").lower()
+    tab = (action_tab or "").lower()
+    if "session" in lower and any(
+        word in lower for word in ("scheduled", "upcoming", "booked")
+    ):
+        return "session_scheduled"
+    if "session" in lower and any(
+        word in lower for word in ("completed", "finished", "ended")
+    ):
+        return "session_completed"
+    if tab == "announcements" or "announcement" in lower:
+        return "announcement"
+    if tab in ("matching", "mentees") or any(
+        word in lower for word in ("paired", "pairing", "mentor", "mentee")
+    ):
+        return "matching"
+    if tab == "newsfeed" or "message" in lower or "comment" in lower:
+        return "message"
+    return "general"
+
+
+def _find_user_for_notification_actor(name_or_username: str):
+    from django.contrib.auth import get_user_model
+    from django.db.models import Q
+
+    token = (name_or_username or "").strip()
+    if not token:
+        return None
+    User = get_user_model()
+    user = User.objects.filter(username__iexact=token).first()
+    if user:
+        return user
+    parts = token.split()
+    if len(parts) >= 2:
+        user = User.objects.filter(
+            first_name__iexact=parts[0],
+            last_name__iexact=" ".join(parts[1:]),
+        ).first()
+        if user:
+            return user
+    return User.objects.filter(
+        Q(first_name__iexact=token) | Q(last_name__iexact=token)
+    ).first()
+
+
+def _notification_actor_payload(user, request):
+    from profiles.models import MentorProfile
+
+    avatar = ""
+    for profile_cls in (MentorProfile, MenteeProfile):
+        profile = profile_cls.objects.filter(user=user).first()
+        if profile and getattr(profile, "avatar_url", None):
+            avatar = _avatar_url(request, profile.avatar_url)
+            break
     return {
+        "actor_username": user.username,
+        "actor_display_name": _user_display_name(user),
+        "actor_avatar_url": avatar,
+    }
+
+
+def _notification_actor_from_message(message: str, request):
+    import re
+
+    if not message:
+        return {}
+    username_match = re.search(r"\b(mentor\d+|mentee\d+)\b", message, re.I)
+    if username_match:
+        user = _find_user_for_notification_actor(username_match.group(1))
+        if user:
+            return _notification_actor_payload(user, request)
+    paired = re.search(r"paired with ([^.]+)\.", message, re.I)
+    if paired:
+        user = _find_user_for_notification_actor(paired.group(1).strip())
+        if user:
+            return _notification_actor_payload(user, request)
+    chosen = re.search(r"^([^.]+) has chosen you", message, re.I)
+    if chosen:
+        user = _find_user_for_notification_actor(chosen.group(1).strip())
+        if user:
+            return _notification_actor_payload(user, request)
+    return {}
+
+
+def _format_notification_message(message: str, actor: dict) -> str:
+    import re
+
+    text = message or ""
+    username = (actor or {}).get("actor_username") or ""
+    display = (actor or {}).get("actor_display_name") or ""
+    if username and display and username.lower() != display.lower():
+        text = re.sub(re.escape(username), display, text, flags=re.I)
+    return text
+
+
+def _serialize_notification(item: Notification, request=None):
+    message = item.message or ""
+    category = _infer_notification_category(message, item.action_tab or "")
+    actor = _notification_actor_from_message(message, request) if request else {}
+    payload = {
         "id": item.id,
-        "message": item.message,
+        "message": message,
+        "formatted_message": _format_notification_message(message, actor),
         "is_read": item.is_read,
         "action_tab": item.action_tab or "",
         "created_at": item.created_at.isoformat(),
+        "category": category,
+        "actor_username": actor.get("actor_username", ""),
+        "actor_display_name": actor.get("actor_display_name", ""),
+        "actor_avatar_url": actor.get("actor_avatar_url", ""),
     }
+    return payload
 
 
 def _serialize_subject(subject: Subject):

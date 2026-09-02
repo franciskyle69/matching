@@ -25,10 +25,19 @@
   function getPendingApprovalLandingTab(userData) {
     if (!userData) return "settings";
     if (userData.must_change_password) return "settings";
+    if (needsCompleteProfile(userData)) return "complete-profile";
     if (userData.role === "mentee" || userData.role === "mentor") {
       return "onboarding";
     }
     return "settings";
+  }
+
+  function needsCompleteProfile(userData) {
+    return !!(
+      userData &&
+      userData.is_profile_complete === false &&
+      (userData.role === "mentor" || userData.role === "mentee")
+    );
   }
 
   function isPendingApprovalMessage(message) {
@@ -87,7 +96,10 @@
     const value = String(rawHash || "").replace(/^#/, "");
     if (!value) return null;
     const base = value.split("/")[0];
-    return MAIN_TABS.some((tab) => tab.id === base) ? base : null;
+    if (MAIN_TABS.some((tab) => tab.id === base)) return base;
+    const hiddenTabs =
+      (window.DashboardApp && window.DashboardApp.HIDDEN_TABS) || [];
+    return hiddenTabs.some((tab) => tab.id === base) ? base : null;
   }
 
   function replaceAppUrl(tab) {
@@ -107,6 +119,12 @@
       const path = (window.location.pathname || "").replace(/\/+$/, "");
       if (path.endsWith("/app/signin")) return "signin";
       if (path.endsWith("/app/signup")) return "signup";
+      if (
+        path.endsWith("/app/complete-profile") ||
+        path.endsWith("/app/onboarding/complete-profile")
+      ) {
+        return "complete-profile";
+      }
       return "home";
     });
     const [user, setUser] = useState(null);
@@ -150,6 +168,7 @@
       sex: "",
     });
     const [menteeProfileSaving, setMenteeProfileSaving] = useState(false);
+    const [completeProfileSaving, setCompleteProfileSaving] = useState(false);
     const [signInLoading, setSignInLoading] = useState(false);
     const [signUpLoading, setSignUpLoading] = useState(false);
     const [logoutLoading, setLogoutLoading] = useState(false);
@@ -395,7 +414,14 @@
     useEffect(() => {
       if (!authCheckDone) return;
       const hash = window.location.hash.replace("#", "");
-      const validTabs = [...MAIN_TABS.map((t) => t.id), "signin", "signup"];
+      const validTabs = [
+        ...MAIN_TABS.map((t) => t.id),
+        ...((window.DashboardApp && window.DashboardApp.HIDDEN_TABS) || []).map(
+          (t) => t.id,
+        ),
+        "signin",
+        "signup",
+      ];
       if (
         user &&
         (hash === "signin" || hash === "signup") &&
@@ -444,6 +470,11 @@
       if (!authCheckDone || !authRequired) return;
       // Role portal is only required when creating an account.
       if (activeTab !== "signup") return;
+      const oauthError = String(
+        new URLSearchParams(window.location.search || "").get("oauth_error") ||
+          "",
+      ).toLowerCase();
+      if (oauthError === "account_exists") return;
       if (!getPortalAuthRole()) {
         window.location.replace("/portal/");
       }
@@ -472,6 +503,19 @@
         path.endsWith("/app/signin") || path.endsWith("/app/signup");
       if (!hasOauthParams && !authPathVariant) return;
 
+      const oauthError = new URLSearchParams(normalizedSearch).get(
+        "oauth_error",
+      );
+      if (oauthError) {
+        const code = String(oauthError).toLowerCase();
+        if (code === "account_exists" && activeTab !== "signup") {
+          setActiveTab("signup");
+        } else if (code === "no_account" && activeTab !== "signin") {
+          setActiveTab("signin");
+        }
+        return;
+      }
+
       if (authRequired || !user) {
         // Keep OAuth query params only while on Sign In so the page can show the right UI state.
         if (hasOauthParams) {
@@ -487,6 +531,11 @@
         return;
       }
 
+      if (needsCompleteProfile(user)) {
+        replaceAppUrl("complete-profile");
+        return;
+      }
+
       if (getIsPendingApproval(user)) {
         replaceAppUrl(getPendingApprovalLandingTab(user));
         return;
@@ -494,9 +543,11 @@
 
       const validTabIds = new Set([
         ...MAIN_TABS.map((t) => t.id),
+        ...((window.DashboardApp && window.DashboardApp.HIDDEN_TABS) || []).map(
+          (t) => t.id,
+        ),
         "complete-profile",
         "settings",
-        "notifications",
       ]);
       replaceAppUrl(validTabIds.has(activeTab) ? activeTab : "home");
     }, [authCheckDone, authRequired, user, activeTab]);
@@ -521,6 +572,32 @@
           message:
             "We could not read your Google account email. Try another Google account.",
         });
+      } else if (oauthError === "no_account") {
+        setActiveTab("signin");
+        setAuthAlert({
+          severity: "warning",
+          code: "no_account",
+          title: "No Account Found",
+          message:
+            "No account is registered with this Google email. Would you like to create a new account instead?",
+        });
+      } else if (oauthError === "account_exists") {
+        setActiveTab("signup");
+        setAuthAlert({
+          severity: "warning",
+          code: "account_exists",
+          title: "Account Already Exists",
+          message:
+            "An account is already registered with this Google email. Would you like to log in instead?",
+        });
+      } else {
+        return;
+      }
+
+      if (oauthError === "account_exists") {
+        replaceAppUrl("signup");
+      } else {
+        replaceAppUrl("signin");
       }
     }, [authCheckDone]);
 
@@ -581,6 +658,12 @@
 
     useEffect(() => {
       if (!authCheckDone || !user) return;
+      if (needsCompleteProfile(user)) {
+        if (activeTab !== "complete-profile") {
+          setActiveTab("complete-profile");
+        }
+        return;
+      }
       if (!getIsPendingApproval(user)) return;
       const allowedPendingTabs = new Set([
         "onboarding",
@@ -653,6 +736,9 @@
         user.role === "mentee"
       ) {
         loadMyMentor({ role: "mentee" });
+      }
+      if (activeTab === "home" && user.role === "mentee") {
+        loadMenteeRecommendations();
       }
       if (activeTab === "announcements" && !announcementsLoaded)
         loadAnnouncements();
@@ -748,7 +834,7 @@
       if (result.data.mentee_info) {
         const info = result.data.mentee_info || {};
         setMenteeProfile({
-          program: info.program || "",
+          program: info.program || "BSIT",
           year_level: Number(info.year_level || 0),
           campus: info.campus || "",
           student_id_no: info.student_id_no || "",
@@ -785,6 +871,8 @@
           capacity: 5,
           gender: info.gender || "",
           year_level: Number(info.year_level || 0),
+          program: info.program || "BSIT",
+          student_id_no: info.student_id_no || "",
           availability: Array.isArray(info.availability)
             ? [...info.availability]
             : [],
@@ -829,6 +917,11 @@
       setShowMenteeInfoModal(false);
       setShowMentorInfoModal(false);
       setAuthRequired(false);
+      if (needsCompleteProfile(result.data)) {
+        setActiveTab("complete-profile");
+        setAuthCheckDone(true);
+        return result.data;
+      }
       if (unapproved) {
         setAuthAlert({
           severity: "warning",
@@ -1847,18 +1940,15 @@
       if (!user || user.role !== "mentee") return false;
       setError("");
       const requiredFields = [
-        "program",
         "campus",
         "student_id_no",
         "contact_no",
-        "admission_type",
         "sex",
       ];
       const missing = requiredFields.filter(
         (field) => !String(menteeProfile[field] || "").trim(),
       );
-      const yearOk = Number(menteeProfile.year_level) > 0;
-      if (missing.length > 0 || !yearOk) {
+      if (missing.length > 0) {
         const message =
           "Please complete all general information fields before saving.";
         setError(message);
@@ -1867,12 +1957,11 @@
       }
       setMenteeProfileSaving(true);
       const payload = {
-        program: menteeProfile.program,
-        year_level: menteeProfile.year_level,
+        program: "BSIT",
+        year_level: 1,
         campus: menteeProfile.campus,
         student_id_no: menteeProfile.student_id_no,
         contact_no: menteeProfile.contact_no,
-        admission_type: menteeProfile.admission_type,
         sex: menteeProfile.sex,
       };
       const result = await fetchJSON("/api/me/mentee-profile/", {
@@ -1899,6 +1988,122 @@
           : prev,
       );
       return true;
+    }
+
+    async function saveCompleteProfileFallback(payload) {
+      const data = payload || {};
+      const isMentor = user && user.role === "mentor";
+      if (isMentor) {
+        const mentorRes = await fetchJSON("/api/me/mentor-profile/", {
+          method: "POST",
+          headers: { "X-CSRFToken": getCookie("csrftoken") },
+          body: JSON.stringify({
+            program: data.program,
+            student_id_no: data.student_id_no,
+            year_level: data.year_level,
+            role:
+              data.track === "faculty"
+                ? "Instructor"
+                : "Senior IT Student",
+          }),
+        });
+        if (!mentorRes.ok) return mentorRes;
+      } else {
+        const menteeRes = await fetchJSON("/api/me/mentee-profile/", {
+          method: "POST",
+          headers: { "X-CSRFToken": getCookie("csrftoken") },
+          body: JSON.stringify({
+            program: "BSIT",
+            year_level: 1,
+            campus: data.campus,
+            student_id_no: data.student_id_no,
+            contact_no: data.contact_no,
+            sex: data.sex,
+          }),
+        });
+        if (!menteeRes.ok) return menteeRes;
+      }
+      if (Array.isArray(data.interests) && data.interests.length) {
+        await fetchJSON("/api/me/tags/", {
+          method: "POST",
+          headers: { "X-CSRFToken": getCookie("csrftoken") },
+          body: JSON.stringify({ tags: data.interests }),
+        });
+      }
+      return {
+        ok: true,
+        status: 200,
+        data: {
+          is_profile_complete: true,
+          tags: Array.isArray(data.interests) ? data.interests : [],
+          mentee_info: isMentor ? undefined : data,
+          mentor_info: isMentor
+            ? {
+                program: data.program,
+                year_level: data.year_level,
+                student_id_no: data.student_id_no,
+                role:
+                  data.track === "faculty"
+                    ? "Instructor"
+                    : "Senior IT Student",
+              }
+            : undefined,
+        },
+      };
+    }
+
+    async function handleCompleteProfileSave(payload) {
+      setCompleteProfileSaving(true);
+      setError("");
+      let result = await fetchJSON("/api/me/complete-profile/", {
+        method: "POST",
+        headers: { "X-CSRFToken": getCookie("csrftoken") },
+        body: JSON.stringify(payload || {}),
+      });
+      if (!result.ok && (result.status === 404 || result.status === 405)) {
+        result = await saveCompleteProfileFallback(payload);
+      }
+      if (!result.ok) {
+        setCompleteProfileSaving(false);
+        const message =
+          (result.data && result.data.error) ||
+          (result.status === 404
+            ? "Could not save profile. Refresh the page and try again."
+            : "Please complete the required fields.");
+        setError(message);
+        addToast(message, "warning");
+        return { ok: false, errors: (result.data && result.data.errors) || {}, message };
+      }
+      if (result.data.mentee_info) {
+        setMenteeProfile((prev) => ({ ...prev, ...result.data.mentee_info }));
+      }
+      if (result.data.mentor_info) {
+        setMentorProfile((prev) => ({ ...prev, ...result.data.mentor_info }));
+      }
+      if (Array.isArray(result.data.tags)) {
+        setSettingsForm((prev) => ({ ...prev, tags: [...result.data.tags] }));
+        setUser((prev) =>
+          prev
+            ? {
+                ...prev,
+                tags: [...result.data.tags],
+                is_profile_complete: true,
+                mentee_general_info_completed:
+                  prev.role === "mentee"
+                    ? true
+                    : prev.mentee_general_info_completed,
+              }
+            : prev,
+        );
+      } else {
+        setUser((prev) =>
+          prev ? { ...prev, is_profile_complete: true } : prev,
+        );
+      }
+      addToast("Account details saved.");
+      setCompleteProfileSaving(false);
+      await loadMe({ force: true });
+      return { ok: true, data: result.data };
     }
 
     async function handleMentorProfileSave(overrides) {
@@ -2423,6 +2628,8 @@
       menteeProfile,
       setMenteeProfile,
       menteeProfileSaving,
+      completeProfileSaving,
+      handleCompleteProfileSave,
       handleMenteeProfileSave,
       mentorProfile,
       setMentorProfile,
@@ -2511,9 +2718,12 @@
     };
 
     const LayoutComponent = Layout;
-    return (
-      <AppContext.Provider value={contextValue}>
-        <LayoutComponent />
+    const ThemeProvider =
+      window.Mui && window.Mui.ThemeProvider ? window.Mui.ThemeProvider : null;
+    const muiTheme = window.DashboardApp && window.DashboardApp.theme;
+    const appTree = (
+        <AppContext.Provider value={contextValue}>
+          <LayoutComponent />
         {leaveGuard ? (
           <div
             className="unsaved-leave-backdrop"
@@ -2556,8 +2766,12 @@
             </div>
           ))}
         </div>
-      </AppContext.Provider>
+        </AppContext.Provider>
     );
+    if (ThemeProvider && muiTheme) {
+      return <ThemeProvider theme={muiTheme}>{appTree}</ThemeProvider>;
+    }
+    return appTree;
   }
 
   window.DashboardApp = window.DashboardApp || {};

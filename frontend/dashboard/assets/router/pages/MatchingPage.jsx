@@ -5,78 +5,206 @@
   const AppContext = window.DashboardApp.AppContext;
   const Utils = window.DashboardApp.Utils || {};
   const PLACEHOLDER_AVATAR = window.DashboardApp.PLACEHOLDER_AVATAR || "";
+  const formatSlotList =
+    (window.DashboardApp.Availability &&
+      window.DashboardApp.Availability.formatSlotList) ||
+    ((slots) => (Array.isArray(slots) ? slots.join(", ") : ""));
+  const formatSlotLabel =
+    (window.DashboardApp.Availability &&
+      window.DashboardApp.Availability.formatSlotLabel) ||
+    ((slot) => String(slot || ""));
   const {
     formatMatchScore,
-    formatDate,
     LoadingSpinner,
     MatchingLoadingAnimation,
     MentorRoleBadge,
-    MentorMatchTitle,
+    getAvatarInitials: getAvatarInitialsFromUtils,
   } = Utils;
+  const intersectSlots =
+    (window.DashboardApp.Availability &&
+      window.DashboardApp.Availability.intersectSlots) ||
+    null;
+  const MentorProfileCard = window.DashboardApp.MentorProfileCard;
 
-  function formatMatchSummary(matchDetails) {
-    const d = matchDetails || {};
-    const commonSubjects = d.common_subjects || [];
-    const commonCompetencies = d.common_competencies || [];
-    const parts = [];
-    if (commonSubjects.length > 0) {
-      parts.push(`Shared subjects: ${commonSubjects.join(", ")}`);
+  function getAvatarInitials(name, fallback) {
+    if (typeof getAvatarInitialsFromUtils === "function") {
+      return getAvatarInitialsFromUtils(name, fallback);
     }
-    if (commonCompetencies.length > 0) {
-      parts.push(`Shared competencies: ${commonCompetencies.join(", ")}`);
-    }
-    return parts.join(" • ");
+    const source = String(name || fallback || "").trim();
+    if (!source) return "?";
+    const parts = source.split(/\s+/).filter(Boolean);
+    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
   }
 
-  function buildOfficialMatchReasons(myMentor, menteeMatching) {
-    const d = (myMentor && myMentor.match_details) || {};
-    let commonSubjects = Array.isArray(d.common_subjects)
-      ? d.common_subjects
-      : [];
-    let commonCompetencies = Array.isArray(d.common_competencies)
-      ? d.common_competencies
-      : [];
-    const commonTopics = Array.isArray(d.common_topics) ? d.common_topics : [];
-    const mentor = myMentor || {};
-    const menteeSubjects = Array.isArray(menteeMatching?.subjects)
-      ? menteeMatching.subjects
-      : [];
-    const mentorSubjects = Array.isArray(mentor.subjects) ? mentor.subjects : [];
+  function MatchPersonAvatar({ name, url, className }) {
+    const src = String(url || "").trim();
+    const hasPhoto = src && src !== PLACEHOLDER_AVATAR;
+    if (hasPhoto) {
+      return <img src={src} alt={name} className={className} />;
+    }
+    return (
+      <span
+        className={(className || "") + " match-column-avatar-fallback"}
+        role="img"
+        aria-label={name || "Profile"}
+      >
+        {getAvatarInitials(name)}
+      </span>
+    );
+  }
 
-    if (
-      commonSubjects.length === 0 &&
-      menteeSubjects.length > 0 &&
-      mentorSubjects.length > 0
-    ) {
-      const menteeSet = new Set(
-        menteeSubjects.map((subject) => String(subject).trim().toLowerCase()),
-      );
-      commonSubjects = mentorSubjects.filter((subject) =>
-        menteeSet.has(String(subject).trim().toLowerCase()),
-      );
-    }
+  function OfficialMentorSpotlight({
+    myMentor,
+    menteeMatching,
+  }) {
+    const displayName = myMentor.display_name || myMentor.username || "Mentor";
+    if (!MentorProfileCard) return null;
+    return (
+      <div className="match-spotlight-section matching-section-block">
+        <div className="section-title">Your mentor</div>
+        <p className="page-subtitle matching-section-subtitle">
+          Your official mentor. View announcements and stay in touch through the
+          dashboard.
+        </p>
+        <MentorProfileCard
+          person={myMentor}
+          displayName={displayName}
+          email={myMentor.email}
+          score={myMentor.score}
+          matchDetails={myMentor.match_details}
+          variant="hero"
+          kind="mentor"
+          isOfficial
+          menteeMatching={menteeMatching}
+          savedId={myMentor.user_id || myMentor.id}
+        />
+      </div>
+    );
+  }
 
-    if (commonCompetencies.length === 0 && commonTopics.length > 0) {
-      commonCompetencies = commonTopics;
-    }
+  function parseMentorMatchRow(match) {
+    const mentor = match.mentor || {};
+    const displayName =
+      match.mentor_display_name || match.mentor_username || "Mentor";
+    return { mentor, displayName };
+  }
 
-    const mentorAvailability = Array.isArray(mentor.availability)
-      ? mentor.availability.join(", ")
-      : "";
-    const reasons = [];
-    if (commonSubjects.length > 0) {
-      reasons.push(`Same subjects: ${commonSubjects.join(", ")}`);
-    }
-    if (commonCompetencies.length > 0) {
-      reasons.push(`Strong competency matches: ${commonCompetencies.join(", ")}`);
-    }
-    if (mentorAvailability) {
-      reasons.push(`Compatible schedule: ${mentorAvailability}`);
-    }
-    if (reasons.length === 0) {
-      reasons.push("Good overall fit based on your mentoring preferences.");
-    }
-    return reasons;
+  function MentorMatchCard({
+    match,
+    myMentor,
+    chosenMentorId,
+    unavailableMentorIds,
+    onRequestPairing,
+    onViewProfile,
+    compact = false,
+    menteeMatching = null,
+  }) {
+    if (!MentorProfileCard) return null;
+    const parsed = parseMentorMatchRow(match);
+    const { mentor, displayName } = parsed;
+    const isOfficialPair =
+      (myMentor && isSameMentorMatch(match, myMentor)) ||
+      chosenMentorId === match.mentor_id;
+    const isNotAvailable = unavailableMentorIds.includes(match.mentor_id);
+    const slotsLeft = Number(match.slots_left ?? mentor.capacity ?? 0);
+
+    return (
+      <MentorProfileCard
+        person={mentor}
+        displayName={displayName}
+        email={mentor.email}
+        score={match.score}
+        matchDetails={match.match_details}
+        variant={compact ? "grid" : "grid"}
+        kind="mentor"
+        isOfficial={isOfficialPair}
+        isUnavailable={isNotAvailable}
+        menteeMatching={menteeMatching}
+        slotsLeft={slotsLeft}
+        compact={compact}
+        savedId={mentor.user_id || match.mentor_id}
+        onRequestPairing={() => onRequestPairing(match.mentor_id)}
+        onViewProfile={() => onViewProfile(match)}
+      />
+    );
+  }
+
+  function MentorMatchFilterBar({
+    search,
+    onSearchChange,
+    sort,
+    onSortChange,
+    subject,
+    onSubjectChange,
+    availability,
+    onAvailabilityChange,
+    subjectOptions,
+  }) {
+    return (
+      <div className="matching-card match-filter-bar">
+        <div className="match-filter-field">
+          <label className="match-filter-label" htmlFor="match-search">
+            Search
+          </label>
+          <input
+            id="match-search"
+            type="search"
+            className="match-filter-input"
+            placeholder="Search mentors by name or subject..."
+            value={search}
+            onChange={(e) => onSearchChange(e.target.value)}
+          />
+        </div>
+        <div className="match-filter-field">
+          <label className="match-filter-label" htmlFor="match-sort">
+            Sort
+          </label>
+          <select
+            id="match-sort"
+            className="match-filter-select"
+            value={sort}
+            onChange={(e) => onSortChange(e.target.value)}
+          >
+            <option value="score-desc">Match Score (High to Low)</option>
+            <option value="score-asc">Match Score (Low to High)</option>
+            <option value="name">Name (A–Z)</option>
+          </select>
+        </div>
+        <div className="match-filter-field">
+          <label className="match-filter-label" htmlFor="match-subject">
+            Subject
+          </label>
+          <select
+            id="match-subject"
+            className="match-filter-select"
+            value={subject}
+            onChange={(e) => onSubjectChange(e.target.value)}
+          >
+            <option value="">All subjects</option>
+            {subjectOptions.map((opt) => (
+              <option key={opt} value={opt}>
+                {opt}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="match-filter-field">
+          <label className="match-filter-label" htmlFor="match-availability">
+            Availability
+          </label>
+          <select
+            id="match-availability"
+            className="match-filter-select"
+            value={availability}
+            onChange={(e) => onAvailabilityChange(e.target.value)}
+          >
+            <option value="">Any availability</option>
+            <option value="compatible">Compatible schedule</option>
+          </select>
+        </div>
+      </div>
+    );
   }
 
   function isSameMentorMatch(match, mentorRef) {
@@ -132,14 +260,18 @@
       setActiveTab,
       setViewedMentorProfile,
       setMentorProfileHashId,
+      loadUserProfile,
     } = ctx;
     const Spinner = LoadingSpinner;
     const MatchingLoading = MatchingLoadingAnimation;
     const didAutoLoadRecsRef = useRef(false);
     const [showMoreMentors, setShowMoreMentors] = useState(false);
     const [selectedMentorDetails, setSelectedMentorDetails] = useState(null);
-    const [expandedMentorId, setExpandedMentorId] = useState(null);
     const [unavailableMentorIds, setUnavailableMentorIds] = useState([]);
+    const [matchSearch, setMatchSearch] = useState("");
+    const [matchSort, setMatchSort] = useState("score-desc");
+    const [matchSubjectFilter, setMatchSubjectFilter] = useState("");
+    const [matchAvailabilityFilter, setMatchAvailabilityFilter] = useState("");
 
     const isMentee = user.role === "mentee";
     const menteeQuestionnaireCompleted = !!(
@@ -174,6 +306,104 @@
         return true;
       });
     }, [sortedMenteeRecs, myMentor, chosenMentorId]);
+
+    const matchSubjectOptions = useMemo(() => {
+      const subjects = new Set();
+      visibleMenteeRecs.forEach((match) => {
+        const d = match.match_details || {};
+        (d.common_subjects || []).forEach((s) => subjects.add(s));
+        const mentor = match.mentor || {};
+        (mentor.subjects || d.mentor_subjects || []).forEach((s) =>
+          subjects.add(s),
+        );
+      });
+      return Array.from(subjects).sort((a, b) =>
+        String(a).localeCompare(String(b)),
+      );
+    }, [visibleMenteeRecs]);
+
+    const filteredMenteeRecs = useMemo(() => {
+      let list = visibleMenteeRecs.slice();
+      const query = matchSearch.trim().toLowerCase();
+      if (query) {
+        list = list.filter((match) => {
+          const name = (
+            match.mentor_display_name ||
+            match.mentor_username ||
+            ""
+          ).toLowerCase();
+          const d = match.match_details || {};
+          const mentor = match.mentor || {};
+          const subjects = [
+            ...(d.common_subjects || []),
+            ...(mentor.subjects || d.mentor_subjects || []),
+          ];
+          const topics = [
+            ...(d.common_topics || []),
+            ...(mentor.topics || d.mentor_topics || []),
+          ];
+          const haystack = [name, ...subjects, ...topics]
+            .join(" ")
+            .toLowerCase();
+          return haystack.includes(query);
+        });
+      }
+      if (matchSubjectFilter) {
+        list = list.filter((match) => {
+          const d = match.match_details || {};
+          const mentor = match.mentor || {};
+          const subjects = [
+            ...(d.common_subjects || []),
+            ...(mentor.subjects || d.mentor_subjects || []),
+          ];
+          return subjects.includes(matchSubjectFilter);
+        });
+      }
+      if (matchAvailabilityFilter === "compatible") {
+        const menteeSlots = menteeMatching?.availability || [];
+        list = list.filter((match) => {
+          const mentorSlots = match.mentor?.availability || [];
+          if (
+            !intersectSlots ||
+            !menteeSlots.length ||
+            !mentorSlots.length
+          ) {
+            return false;
+          }
+          return intersectSlots(menteeSlots, mentorSlots).length > 0;
+        });
+      }
+      list.sort((a, b) => {
+        if (matchSort === "score-desc") {
+          return (b.score ?? 0) - (a.score ?? 0);
+        }
+        if (matchSort === "score-asc") {
+          return (a.score ?? 0) - (b.score ?? 0);
+        }
+        if (matchSort === "name") {
+          const nameA = (
+            a.mentor_display_name ||
+            a.mentor_username ||
+            ""
+          ).toLowerCase();
+          const nameB = (
+            b.mentor_display_name ||
+            b.mentor_username ||
+            ""
+          ).toLowerCase();
+          return nameA.localeCompare(nameB);
+        }
+        return 0;
+      });
+      return list;
+    }, [
+      visibleMenteeRecs,
+      matchSearch,
+      matchSort,
+      matchSubjectFilter,
+      matchAvailabilityFilter,
+      menteeMatching,
+    ]);
 
     useEffect(() => {
       if (!isMentee) return;
@@ -390,49 +620,36 @@
                         </button>
                       </div>
                       {accepted.map((r) => (
-                        <div
+                        <MentorProfileCard
                           key={r.mentee_id}
-                          className="match-card match-card-mentee-list match-card-accepted"
-                        >
-                          <div className="match-card-header">
-                            <div className="match-card-main">
-                              <p className="match-card-title">
-                                Mentee:{" "}
-                                {r.mentee_display_name || r.mentee_username}
-                              </p>
-                              <div className="notification-time">
-                                Accepted {formatDate(r.accepted_at)}
-                              </div>
-                            </div>
-                            <span className="match-request-badge match-request-badge-accepted">
-                              Official mentee
-                            </span>
-                          </div>
-                          {(r.mentee_subjects?.length ||
-                            r.mentee_topics?.length ||
-                            r.mentee_difficulty_level != null) && (
-                            <div className="match-card-body">
-                              {r.mentee_subjects?.length > 0 && (
-                                <p>
-                                  <strong>Subjects:</strong>{" "}
-                                  {r.mentee_subjects.join(", ")}
-                                </p>
-                              )}
-                              {r.mentee_topics?.length > 0 && (
-                                <p>
-                                  <strong>Topics:</strong>{" "}
-                                  {r.mentee_topics.join(", ")}
-                                </p>
-                              )}
-                              {r.mentee_difficulty_level != null && (
-                                <p>
-                                  <strong>Difficulty level:</strong>{" "}
-                                  {r.mentee_difficulty_level}/5
-                                </p>
-                              )}
-                            </div>
-                          )}
-                        </div>
+                          person={{
+                            avatar_url: r.mentee_avatar_url,
+                            display_name: r.mentee_display_name,
+                            username: r.mentee_username,
+                            subjects: r.mentee_subjects,
+                            topics: r.mentee_topics,
+                            bio: r.mentee_bio,
+                            program: r.mentee_program,
+                            year_level: r.mentee_year_level,
+                            preferred_learning_style:
+                              r.mentee_preferred_learning_style,
+                            availability: r.mentee_availability,
+                            difficulty_level: r.mentee_difficulty_level,
+                          }}
+                          displayName={
+                            r.mentee_display_name || r.mentee_username
+                          }
+                          email={r.mentee_email}
+                          variant="hero"
+                          kind="mentee"
+                          isOfficial
+                          savedId={r.mentee_user_id || r.mentee_id}
+                          onViewProfile={
+                            r.mentee_user_id
+                              ? () => loadUserProfile(r.mentee_user_id)
+                              : undefined
+                          }
+                        />
                       ))}
                     </div>
                   )}
@@ -443,54 +660,37 @@
                         These mentees could not be auto-confirmed because your
                         capacity is full.
                       </p>
+                      <div className="match-grid">
                       {pending.map((r) => (
-                        <div
+                        <MentorProfileCard
                           key={r.mentee_id}
-                          className="match-card match-card-mentee-list"
-                        >
-                          <div className="match-card-header">
-                            <div className="match-card-main">
-                              <p className="match-card-title">
-                                Mentee:{" "}
-                                {r.mentee_display_name || r.mentee_username}
-                              </p>
-                              <div className="notification-time">
-                                {formatDate(r.created_at)}
-                              </div>
-                            </div>
-                            <span className="match-request-badge">
-                              Not Available
-                            </span>
-                          </div>
-                          <div className="match-card-body">
-                            {r.mentee_subjects?.length > 0 && (
-                              <p>
-                                <strong>Subjects:</strong>{" "}
-                                {r.mentee_subjects.join(", ")}
-                              </p>
-                            )}
-                            {r.mentee_topics?.length > 0 && (
-                              <p>
-                                <strong>Topics:</strong>{" "}
-                                {r.mentee_topics.join(", ")}
-                              </p>
-                            )}
-                            {r.mentee_difficulty_level != null && (
-                              <p>
-                                <strong>Difficulty level:</strong>{" "}
-                                {r.mentee_difficulty_level}/5
-                              </p>
-                            )}
-                            {!r.mentee_subjects?.length &&
-                              !r.mentee_topics?.length &&
-                              r.mentee_difficulty_level == null && (
-                                <p className="muted">
-                                  No subjects or difficulty specified.
-                                </p>
-                              )}
-                          </div>
-                        </div>
+                          person={{
+                            avatar_url: r.mentee_avatar_url,
+                            display_name: r.mentee_display_name,
+                            username: r.mentee_username,
+                            subjects: r.mentee_subjects,
+                            topics: r.mentee_topics,
+                            bio: r.mentee_bio,
+                            program: r.mentee_program,
+                            year_level: r.mentee_year_level,
+                            preferred_learning_style:
+                              r.mentee_preferred_learning_style,
+                            availability: r.mentee_availability,
+                            difficulty_level: r.mentee_difficulty_level,
+                          }}
+                          displayName={
+                            r.mentee_display_name || r.mentee_username
+                          }
+                          email={r.mentee_email}
+                          variant="grid"
+                          kind="mentee"
+                          isOfficial={false}
+                          isUnavailable
+                          compact
+                          savedId={r.mentee_user_id || r.mentee_id}
+                        />
                       ))}
+                      </div>
                     </div>
                   )}
                 </>
@@ -499,76 +699,12 @@
             return null;
           })()}
 
-        {isMentee && myMentor && (() => {
-          const matchReasons = buildOfficialMatchReasons(
-            myMentor,
-            menteeMatching,
-          );
-          const scoreInfo =
-            myMentor.score != null ? formatMatchScore(myMentor.score) : null;
-          return (
-          <div className="match-mentee-list matching-section-block">
-            <div className="section-title">Your mentor</div>
-            <p className="page-subtitle matching-section-subtitle">
-              Your official mentor. View announcements and stay in touch through
-              the dashboard.
-            </p>
-            <div className="match-card match-card-mentee-list match-card-accepted">
-              <div className="match-card-header">
-                <div className="match-card-main">
-                  <div className="match-card-title-row">
-                    <img
-                      src={myMentor.avatar_url || PLACEHOLDER_AVATAR}
-                      alt={myMentor.display_name || myMentor.username}
-                      className="match-column-avatar"
-                    />
-                    <div>
-                      <MentorMatchTitle
-                        name={myMentor.display_name || myMentor.username}
-                        role={myMentor.role}
-                        showRole={false}
-                      />
-                      {myMentor.accepted_at && (
-                        <div className="notification-time">
-                          Accepted {formatDate(myMentor.accepted_at)}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-                <div className="match-card-header-right">
-                  <div className="match-card-header-meta-row">
-                    {myMentor.role ? (
-                      <MentorRoleBadge role={myMentor.role} prominent />
-                    ) : null}
-                    {scoreInfo && (
-                      <span
-                        className={
-                          "match-card-score match-score-badge match-score-tier-" +
-                          scoreInfo.tier
-                        }
-                      >
-                        {scoreInfo.percentage}% · {scoreInfo.label}
-                      </span>
-                    )}
-                    <span className="match-request-badge match-request-badge-accepted">
-                      Official mentor
-                    </span>
-                  </div>
-                </div>
-              </div>
-              <div className="match-card-body match-card-body--official">
-                <p className="match-why-title">Why you matched</p>
-                <ul className="match-why-list">
-                  {matchReasons.map((reason, index) => (
-                    <li key={index}>{reason}</li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-          </div>
-          );
-        })()}
+        {isMentee && myMentor ? (
+          <OfficialMentorSpotlight
+            myMentor={myMentor}
+            menteeMatching={menteeMatching}
+          />
+        ) : null}
 
         {isMentee &&
           menteeQuestionnaireCompleted &&
@@ -577,9 +713,7 @@
               return <MatchingLoading />;
             }
 
-            const recs = visibleMenteeRecs;
-
-            if (recs.length === 0) {
+            if (visibleMenteeRecs.length === 0) {
               if (myMentor) {
                 return null;
               }
@@ -601,7 +735,7 @@
                       </p>
                       <ul className="matching-suggested-times-list">
                         {suggestedSlots.map((slot) => (
-                          <li key={slot}>{slot}</li>
+                          <li key={slot}>{formatSlotLabel(slot)}</li>
                         ))}
                       </ul>
                     </div>
@@ -631,14 +765,14 @@
             }
 
             return (
-              <div className="match-mentee-list">
-                <div className="match-mentee-list-head">
+              <div className="match-grid-section">
+                <div className="match-grid-head">
                   <div className="section-title">Your mentor matches</div>
-                  {recs.length >= 1 && (
+                  {visibleMenteeRecs.length >= 1 ? (
                     <div className="btn-row match-mentee-list-head-actions">
                       <button
                         type="button"
-                        className="btn"
+                        className="btn secondary small"
                         disabled={menteeRecLoading}
                         onClick={() => {
                           setShowMoreMentors(true);
@@ -650,300 +784,39 @@
                           : "View more mentors"}
                       </button>
                     </div>
-                  )}
+                  ) : null}
                 </div>
-                {recs.map((match, idx) => {
-                  const mentor = match.mentor || {};
-                  const d = match.match_details || {};
-                  const { percentage, label, tier } = formatMatchScore(
-                    match.score,
-                  );
-                  const commonSubjects = d.common_subjects || [];
-                  const commonTopics = d.common_topics || [];
-                  const commonCompetencies =
-                    d.common_competencies && d.common_competencies.length
-                      ? d.common_competencies
-                      : commonTopics;
-                  const isOfficialPair =
-                    (myMentor && isSameMentorMatch(match, myMentor)) ||
-                    chosenMentorId === match.mentor_id;
-                  const isNotAvailable = unavailableMentorIds.includes(
-                    match.mentor_id,
-                  );
-                  const slotsLeft = Number(
-                    match.slots_left ?? mentor.capacity ?? 0,
-                  );
-                  const statusText = isOfficialPair
-                    ? "Official Pair"
-                    : isNotAvailable
-                      ? "Not Available"
-                      : null;
-
-                  const chips = [];
-                  if (mentor.program) chips.push(mentor.program);
-                  if (
-                    mentor.role === "Senior IT Student" &&
-                    mentor.year_level
-                  ) {
-                    chips.push(
-                      Number(mentor.year_level) === 3
-                        ? "3rd year"
-                        : Number(mentor.year_level) === 4
-                          ? "4th year"
-                          : `Year ${mentor.year_level}`,
-                    );
-                  }
-                  const mentorSubjects =
-                    mentor.subjects && mentor.subjects.length
-                      ? mentor.subjects
-                      : d.mentor_subjects || [];
-                  if (mentorSubjects.length > 0) {
-                    const previewSubjects = mentorSubjects
-                      .slice(0, 2)
-                      .join(", ");
-                    const remainingSubjects = mentorSubjects.length - 2;
-                    chips.push(
-                      `Strong in: ${previewSubjects}${remainingSubjects > 0 ? ` +${remainingSubjects} more` : ""}`,
-                    );
-                  }
-                  const mentorTopics =
-                    mentor.topics && mentor.topics.length
-                      ? mentor.topics
-                      : d.mentor_topics || [];
-                  const mentorAvailability = Array.isArray(mentor.availability)
-                    ? mentor.availability.join(", ")
-                    : "";
-                  const isExpanded = expandedMentorId === match.mentor_id;
-
-                  const whyReasons = [];
-                  if (commonSubjects.length) {
-                    whyReasons.push(
-                      `Same subjects: ${commonSubjects.join(", ")}`,
-                    );
-                  }
-                  if (commonCompetencies.length) {
-                    whyReasons.push(
-                      `Strong competency matches: ${commonCompetencies.join(", ")}`,
-                    );
-                  }
-                  if (mentorAvailability) {
-                    whyReasons.push(
-                      `Compatible schedule: ${mentorAvailability}`,
-                    );
-                  }
-                  if (whyReasons.length === 0) {
-                    whyReasons.push(
-                      `Good overall fit based on your mentoring preferences.`,
-                    );
-                  }
-                  const sharedSubjectsPreview = commonSubjects.slice(0, 2);
-                  const sharedTopicsPreview = commonCompetencies.slice(0, 2);
-                  const hasSharedDetails =
-                    sharedSubjectsPreview.length > 0 ||
-                    sharedTopicsPreview.length > 0;
-
-                  return (
-                    <div
-                      key={match.mentor_id + "-" + idx}
-                      className={
-                        "match-card match-card-mentee-list" +
-                        (isOfficialPair ? " match-card-requested" : "") +
-                        (isExpanded ? " match-card-expanded" : "")
-                      }
-                    >
-                      <div
-                        className="match-card-header match-card-header-clickable"
-                        onClick={() => {
-                          setExpandedMentorId(
-                            isExpanded ? null : match.mentor_id,
-                          );
-                        }}
-                        role="button"
-                        tabIndex={0}
-                        aria-expanded={isExpanded}
-                        aria-controls={`mentor-card-${match.mentor_id}`}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter" || e.key === " ") {
-                            e.preventDefault();
-                            setExpandedMentorId(
-                              isExpanded ? null : match.mentor_id,
-                            );
-                          }
-                        }}
-                      >
-                        <div className="match-card-main">
-                          <div className="match-card-title-row">
-                            <img
-                              src={mentor.avatar_url || PLACEHOLDER_AVATAR}
-                              alt={
-                                match.mentor_display_name ||
-                                match.mentor_username
-                              }
-                              className="match-column-avatar"
-                            />
-                            <div>
-                              <MentorMatchTitle
-                                name={
-                                  match.mentor_display_name ||
-                                  match.mentor_username
-                                }
-                                role={mentor.role}
-                                showRole={false}
-                              />
-                              {hasSharedDetails && (
-                                <p className="match-card-subtitle">
-                                  {sharedSubjectsPreview.length > 0
-                                    ? `Shared subjects: ${sharedSubjectsPreview.join(", ")}`
-                                    : ""}
-                                  {sharedSubjectsPreview.length > 0 &&
-                                  sharedTopicsPreview.length > 0
-                                    ? " • "
-                                    : ""}
-                                  {sharedTopicsPreview.length > 0
-                                    ? `Shared competencies: ${sharedTopicsPreview.join(", ")}`
-                                    : ""}
-                                </p>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                        <div className="match-card-header-right">
-                          <div className="match-card-header-meta">
-                            <div className="match-card-header-meta-row">
-                              {mentor.role ? (
-                                <MentorRoleBadge role={mentor.role} prominent />
-                              ) : null}
-                              <span
-                                className={
-                                  "match-card-score match-score-badge match-score-tier-" +
-                                  tier
-                                }
-                              >
-                                {percentage}% · {label}
-                              </span>
-                            </div>
-                            <div className="match-score-bar-inline">
-                              <div
-                                className={
-                                  "match-score-bar-fill match-score-tier-" +
-                                  tier
-                                }
-                                style={{
-                                  width: Math.min(100, percentage) + "%",
-                                }}
-                              />
-                            </div>
-                            {statusText && (
-                              <span className="match-request-badge match-request-badge-inline">
-                                {statusText}
-                              </span>
-                            )}
-                          </div>
-                          <span
-                            className={
-                              "match-card-expand-indicator" +
-                              (isExpanded ? " is-open" : "")
-                            }
-                            aria-hidden="true"
-                          >
-                            <svg
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth="2"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                            >
-                              <polyline points="6 9 12 15 18 9" />
-                            </svg>
-                          </span>
-                        </div>
-                      </div>
-                      {isExpanded && (
-                        <div
-                          id={`mentor-card-${match.mentor_id}`}
-                          className="match-card-body"
-                        >
-                          {chips.length > 0 && (
-                            <div className="match-meta-chips">
-                              {chips.map((text, i) => (
-                                <span key={i} className="match-chip">
-                                  {text}
-                                </span>
-                              ))}
-                            </div>
-                          )}
-                          {(mentor.subjects || d.mentor_subjects || []).length >
-                            0 && (
-                            <p>
-                              <strong>Subjects:</strong>{" "}
-                              {(mentor.subjects && mentor.subjects.length
-                                ? mentor.subjects
-                                : d.mentor_subjects || []
-                              ).join(", ") || "—"}
-                            </p>
-                          )}
-                          {mentorTopics.length > 0 && (
-                            <p>
-                              <strong>Topics:</strong> {mentorTopics.join(", ")}
-                            </p>
-                          )}
-                          {mentorAvailability && (
-                            <p>
-                              <strong>When you can meet:</strong>{" "}
-                              {mentorAvailability}
-                            </p>
-                          )}
-                          <div className="match-reason">
-                            <p className="match-why-title">Why this match</p>
-                            <ul className="match-why-list">
-                              {whyReasons.map((reason, i) => (
-                                <li key={i}>{reason}</li>
-                              ))}
-                            </ul>
-                          </div>
-                          {slotsLeft >= 0 && (
-                            <p className="match-card-subtitle">
-                              {slotsLeft} slot{slotsLeft === 1 ? "" : "s"} left
-                            </p>
-                          )}
-                          {statusText && (
-                            <p className="match-card-subtitle">
-                              <strong>Status:</strong> {statusText}
-                            </p>
-                          )}
-                          <div className="btn-row matching-card-inline-actions">
-                            <button
-                              type="button"
-                              className="btn secondary small"
-                              onClick={() => {
-                                openMentorProfileInNewTab(match);
-                              }}
-                            >
-                              View profile
-                            </button>
-                          </div>
-                          <div className="btn-row matching-empty-actions">
-                            <button
-                              type="button"
-                              className="btn small"
-                              onClick={() =>
-                                handleChooseMentor(match.mentor_id)
-                              }
-                              disabled={isOfficialPair || isNotAvailable}
-                            >
-                              {isOfficialPair
-                                ? "Official Pair"
-                                : isNotAvailable
-                                  ? "Not Available"
-                                  : "Choose this mentor"}
-                            </button>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
+                <MentorMatchFilterBar
+                  search={matchSearch}
+                  onSearchChange={setMatchSearch}
+                  sort={matchSort}
+                  onSortChange={setMatchSort}
+                  subject={matchSubjectFilter}
+                  onSubjectChange={setMatchSubjectFilter}
+                  availability={matchAvailabilityFilter}
+                  onAvailabilityChange={setMatchAvailabilityFilter}
+                  subjectOptions={matchSubjectOptions}
+                />
+                {filteredMenteeRecs.length === 0 ? (
+                  <div className="matching-card match-filter-empty">
+                    <p>No mentors match your current search or filters.</p>
+                  </div>
+                ) : (
+                  <div className="match-grid">
+                    {filteredMenteeRecs.map((match, idx) => (
+                      <MentorMatchCard
+                        key={match.mentor_id + "-" + idx}
+                        match={match}
+                        myMentor={myMentor}
+                        chosenMentorId={chosenMentorId}
+                        unavailableMentorIds={unavailableMentorIds}
+                        onRequestPairing={handleChooseMentor}
+                        onViewProfile={openMentorProfileInNewTab}
+                        menteeMatching={menteeMatching}
+                      />
+                    ))}
+                  </div>
+                )}
               </div>
             );
           })()}
@@ -965,146 +838,28 @@
                 Scroll to explore additional mentors that fit your subjects and
                 topics.
               </p>
-              <div className="matching-modal-list">
-                {visibleMenteeRecs.length === 0 && !menteeRecLoading && (
-                  <p className="muted">
+              <div className="matching-modal-grid">
+                {filteredMenteeRecs.length === 0 && !menteeRecLoading && (
+                  <p className="muted match-filter-empty">
                     No additional mentors to show right now.
                   </p>
                 )}
-                {visibleMenteeRecs.map((match, idx) => {
-                  const mentor = match.mentor || {};
-                  const d = match.match_details || {};
-                  const { percentage, label, tier } = formatMatchScore(
-                    match.score,
-                  );
-                  const commonSubjects = d.common_subjects || [];
-                  const commonTopics = d.common_topics || [];
-                  const commonCompetencies =
-                    d.common_competencies && d.common_competencies.length
-                      ? d.common_competencies
-                      : commonTopics;
-                  const isOfficialPair =
-                    (myMentor && isSameMentorMatch(match, myMentor)) ||
-                    chosenMentorId === match.mentor_id;
-                  const isNotAvailable = unavailableMentorIds.includes(
-                    match.mentor_id,
-                  );
-                  const mentorSubjects =
-                    mentor.subjects && mentor.subjects.length
-                      ? mentor.subjects
-                      : d.mentor_subjects || [];
-                  const mentorTopics =
-                    mentor.topics && mentor.topics.length
-                      ? mentor.topics
-                      : d.mentor_topics || [];
-                  const mentorAvailability = Array.isArray(mentor.availability)
-                    ? mentor.availability.join(", ")
-                    : "";
-                  const slotsLeft = Number(
-                    match.slots_left ?? mentor.capacity ?? 0,
-                  );
-
-                  let whySentence = `This mentor is a ${label.toLowerCase()} match based on your subjects, topics, and difficulty level.`;
-                  if (commonSubjects.length && commonCompetencies.length) {
-                    whySentence = `You both selected subjects like ${commonSubjects.join(", ")} and competencies such as ${commonCompetencies.join(", ")}, so their strengths line up well with what you want mentoring on.`;
-                  } else if (commonSubjects.length) {
-                    whySentence = `You both focus on ${commonSubjects.join(", ")}, which matches the subjects you said you need mentoring in.`;
-                  } else if (commonCompetencies.length) {
-                    whySentence = `You both highlighted competencies like ${commonCompetencies.join(", ")}, so this mentor is aligned with the areas you want to improve.`;
-                  }
-
-                  return (
-                    <div
-                      key={"modal-" + match.mentor_id + "-" + idx}
-                      className={
-                        "match-card match-card-mentee-list" +
-                        (isOfficialPair ? " match-card-requested" : "")
-                      }
-                    >
-                      <div className="match-card-header">
-                        <div className="match-card-main">
-                          <div className="match-card-title-row">
-                            <img
-                              src={mentor.avatar_url || PLACEHOLDER_AVATAR}
-                              alt={
-                                match.mentor_display_name ||
-                                match.mentor_username
-                              }
-                              className="match-column-avatar"
-                            />
-                            <MentorMatchTitle
-                              name={
-                                match.mentor_display_name ||
-                                match.mentor_username
-                              }
-                              role={mentor.role}
-                              showRole={false}
-                            />
-                          </div>
-                        </div>
-                        <div className="match-card-header-right">
-                          <div className="match-card-header-meta-row">
-                            {mentor.role ? (
-                              <MentorRoleBadge role={mentor.role} prominent />
-                            ) : null}
-                            <span
-                              className={
-                                "match-card-score match-score-badge match-score-tier-" +
-                                tier
-                              }
-                            >
-                              {percentage}% · {label}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="match-card-body">
-                        {(mentorSubjects || []).length > 0 && (
-                          <p>
-                            <strong>Subjects:</strong>{" "}
-                            {mentorSubjects.join(", ") || "—"}
-                          </p>
-                        )}
-                        {mentorTopics.length > 0 && (
-                          <p>
-                            <strong>Topics:</strong> {mentorTopics.join(", ")}
-                          </p>
-                        )}
-                        {mentorAvailability && (
-                          <p>
-                            <strong>When you can meet:</strong>{" "}
-                            {mentorAvailability}
-                          </p>
-                        )}
-                        {slotsLeft >= 0 && (
-                          <p>
-                            <strong>Remaining slots:</strong> {slotsLeft}
-                          </p>
-                        )}
-                        <p className="match-reason">
-                          <strong>Why this match:</strong> {whySentence}
-                        </p>
-                        <div className="btn-row matching-card-inline-actions">
-                          <button
-                            type="button"
-                            className="btn small"
-                            onClick={() => {
-                              handleChooseMentor(match.mentor_id);
-                              setShowMoreMentors(false);
-                            }}
-                            disabled={isOfficialPair || isNotAvailable}
-                          >
-                            {isOfficialPair
-                              ? "Official Pair"
-                              : isNotAvailable
-                                ? "Not Available"
-                                : "Choose this mentor"}
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
+                {filteredMenteeRecs.map((match, idx) => (
+                  <MentorMatchCard
+                    key={"modal-" + match.mentor_id + "-" + idx}
+                    match={match}
+                    myMentor={myMentor}
+                    chosenMentorId={chosenMentorId}
+                    unavailableMentorIds={unavailableMentorIds}
+                    compact
+                    menteeMatching={menteeMatching}
+                    onRequestPairing={(mentorId) => {
+                      handleChooseMentor(mentorId);
+                      setShowMoreMentors(false);
+                    }}
+                    onViewProfile={openMentorProfileInNewTab}
+                  />
+                ))}
                 {menteeRecLoading && (
                   <div className="matching-loading-inline">
                     <MatchingLoading />
@@ -1162,11 +917,12 @@
                     <div className="match-card-header matching-modal-header">
                       <div className="match-card-main">
                         <div className="match-card-title-row">
-                          <img
-                            src={mentor.avatar_url || PLACEHOLDER_AVATAR}
-                            alt={
-                              match.mentor_display_name || match.mentor_username
+                          <MatchPersonAvatar
+                            name={
+                              match.mentor_display_name ||
+                              match.mentor_username
                             }
+                            url={mentor.avatar_url}
                             className="match-column-avatar"
                           />
                           <div>
@@ -1222,7 +978,7 @@
                         {(mentor.availability || []).length > 0 && (
                           <p>
                             <strong>Availability:</strong>{" "}
-                            {mentor.availability.join(", ")}
+                            {formatSlotList(mentor.availability)}
                           </p>
                         )}
                         {mentorSubjects.length > 0 && (
@@ -1306,9 +1062,11 @@
                   <div className="match-card-columns">
                     <div className="match-column">
                       <div className="match-column-header">
-                        <img
-                          src={mentor.avatar_url || PLACEHOLDER_AVATAR}
-                          alt={row.mentor_display_name || row.mentor_username}
+                        <MatchPersonAvatar
+                          name={
+                            row.mentor_display_name || row.mentor_username
+                          }
+                          url={mentor.avatar_url}
                           className="match-column-avatar"
                         />
                         <h4>
@@ -1341,9 +1099,11 @@
                     </div>
                     <div className="match-column">
                       <div className="match-column-header">
-                        <img
-                          src={mentee.avatar_url || PLACEHOLDER_AVATAR}
-                          alt={row.mentee_display_name || row.mentee_username}
+                        <MatchPersonAvatar
+                          name={
+                            row.mentee_display_name || row.mentee_username
+                          }
+                          url={mentee.avatar_url}
                           className="match-column-avatar"
                         />
                         <h4>

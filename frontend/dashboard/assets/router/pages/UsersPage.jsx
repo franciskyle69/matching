@@ -5,6 +5,10 @@
   const AppContext = window.DashboardApp.AppContext;
   const Utils = window.DashboardApp.Utils || {};
   const { getCookie, fetchJSON } = Utils;
+  const formatSlotList =
+    (window.DashboardApp.Availability &&
+      window.DashboardApp.Availability.formatSlotList) ||
+    ((slots) => (Array.isArray(slots) ? slots.join(", ") : ""));
 
   function formatDate(iso) {
     if (!iso) return "—";
@@ -817,7 +821,7 @@
                     <p className="users-role-panel-title">Mentee Preferences Summary</p>
                     <p>Difficulty level: {user.mentee_profile?.difficulty_level ?? "Not provided"}</p>
                     <p>Preferred subjects: {Array.isArray(user.mentee_profile?.subjects) ? user.mentee_profile.subjects.join(", ") : "Not provided"}</p>
-                    <p>Availability: {Array.isArray(user.mentee_profile?.availability) ? user.mentee_profile.availability.join(", ") : "Not provided"}</p>
+                    <p>Availability: {Array.isArray(user.mentee_profile?.availability) ? formatSlotList(user.mentee_profile.availability) : "Not provided"}</p>
                   </div>
                 )}
                 {activeRole === "staff" && (

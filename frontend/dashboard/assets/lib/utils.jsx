@@ -251,6 +251,44 @@
     }
   }
 
+  function formatRelativeTime(value) {
+    if (!value) return "";
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return String(value);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMin = Math.floor(diffMs / 60000);
+    const diffHr = Math.floor(diffMin / 60);
+    const diffDay = Math.floor(diffHr / 24);
+
+    if (diffMin < 1) return "Just now";
+    if (diffMin < 60) {
+      return diffMin === 1 ? "1 minute ago" : diffMin + " minutes ago";
+    }
+    if (diffHr < 24) {
+      return diffHr === 1 ? "1 hour ago" : diffHr + " hours ago";
+    }
+    const yesterday = new Date(now);
+    yesterday.setDate(yesterday.getDate() - 1);
+    if (date.toDateString() === yesterday.toDateString()) {
+      return (
+        "Yesterday at " +
+        date.toLocaleTimeString(undefined, {
+          hour: "numeric",
+          minute: "2-digit",
+        })
+      );
+    }
+    if (diffDay < 7) {
+      return diffDay === 1 ? "1 day ago" : diffDay + " days ago";
+    }
+    return date.toLocaleDateString(undefined, {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
+  }
+
   /** Stroke icons (sidebar-style) for profile, settings, post categories */
   function DashboardIcon({ name, size = 18, className = "" }) {
     const s = size;
@@ -526,6 +564,14 @@
     return n ? `Year ${n}` : "";
   }
 
+  function getAvatarInitials(name, fallback) {
+    const source = String(name || fallback || "").trim();
+    if (!source) return "?";
+    const parts = source.split(/\s+/).filter(Boolean);
+    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  }
+
   window.DashboardApp.DashboardIcon = DashboardIcon;
   window.DashboardApp.categoryIconName = categoryIconName;
 
@@ -541,6 +587,7 @@
     refreshAccessToken,
     fetchJSON,
     formatDate,
+    formatRelativeTime,
     formatBiologicalSex,
     formatStudentYearLevel,
     LoadingSpinner,
@@ -549,6 +596,7 @@
     DashboardIcon,
     categoryIconName,
     getMentorRoleBadgeMeta,
+    getAvatarInitials,
     MentorRoleBadge,
     MentorMatchTitle,
   };

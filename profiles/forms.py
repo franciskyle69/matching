@@ -2,21 +2,12 @@ from django import forms
 
 from .models import MentorProfile, MenteeProfile
 from .questionnaire_utils import filter_topics_for_subjects
-from .subject_catalog import get_subject_choices
+from .subject_catalog import TOPIC_VOCABULARY, get_subject_choices
 
 
 SUBJECT_CHOICES = get_subject_choices()
 
-TOPIC_CHOICES = [
-    ("Arrays", "Arrays"),
-    ("Loops", "Loops"),
-    ("Input and Output Handling", "Input and Output Handling"),
-    ("Error Handling", "Error Handling"),
-    ("HTML", "HTML"),
-    ("CSS", "CSS"),
-    ("Javascript", "Javascript"),
-    ("UI/UX", "UI/UX"),
-]
+TOPIC_CHOICES = [(name, name) for name in TOPIC_VOCABULARY]
 
 ROLE_CHOICES = [
     ("Senior IT Student", "Senior IT Student"),

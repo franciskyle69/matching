@@ -1,7 +1,7 @@
 (function () {
   "use strict";
   const React = window.React;
-  const { useContext, useState, useEffect } = React;
+  const { useContext, useState, useEffect, useRef } = React;
   const AppContext = window.DashboardApp.AppContext;
   const Utils = window.DashboardApp.Utils || {};
   const { LoadingSpinner } = Utils;
@@ -10,16 +10,35 @@
     if (!iso) return "";
     const d = new Date(iso);
     const now = new Date();
-    const sameDay = d.getDate() === now.getDate() && d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
-    if (sameDay) return "Today at " + d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-    return d.toLocaleDateString([], { dateStyle: "medium" }) + " at " + d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    const sameDay =
+      d.getDate() === now.getDate() &&
+      d.getMonth() === now.getMonth() &&
+      d.getFullYear() === now.getFullYear();
+    if (sameDay)
+      return (
+        "Today at " +
+        d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+      );
+    return (
+      d.toLocaleDateString([], { dateStyle: "medium" }) +
+      " at " +
+      d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+    );
   }
 
-  function CommentThread({ targetType, targetId, comments, loadComments, addComment, commentKey }) {
+  function CommentThread({
+    targetType,
+    targetId,
+    comments,
+    loadComments,
+    addComment,
+    commentKey,
+  }) {
     const [open, setOpen] = useState(false);
     const [input, setInput] = useState("");
     const [submitting, setSubmitting] = useState(false);
-    const keyFn = typeof commentKey === "function" ? commentKey : (t, id) => t + ":" + id;
+    const keyFn =
+      typeof commentKey === "function" ? commentKey : (t, id) => t + ":" + id;
     const key = keyFn(targetType, targetId);
     const list = comments[key] || [];
     const loaded = Array.isArray(comments[key]);
@@ -42,8 +61,16 @@
 
     return (
       <div className="comment-thread">
-        <button type="button" className="comment-thread-toggle" onClick={() => setOpen(!open)} aria-expanded={open}>
-          {open ? "Hide" : "Show"} comments {list.length > 0 && <span className="comment-count">({list.length})</span>}
+        <button
+          type="button"
+          className="comment-thread-toggle"
+          onClick={() => setOpen(!open)}
+          aria-expanded={open}
+        >
+          {open ? "Hide" : "Show"} comments{" "}
+          {list.length > 0 && (
+            <span className="comment-count">({list.length})</span>
+          )}
         </button>
         {open && (
           <div className="comment-thread-body">
@@ -55,8 +82,13 @@
               ) : (
                 list.map((c) => (
                   <li key={c.id} className="comment-item">
-                    <span className="comment-author">{c.author_display_name || c.author_username}</span>
-                    <span className="comment-meta"> · {formatDate(c.created_at)}</span>
+                    <span className="comment-author">
+                      {c.author_display_name || c.author_username}
+                    </span>
+                    <span className="comment-meta">
+                      {" "}
+                      · {formatDate(c.created_at)}
+                    </span>
                     <p className="comment-content">{c.content}</p>
                   </li>
                 ))
@@ -69,14 +101,71 @@
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 rows={2}
-                onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSubmit(); } }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSubmit();
+                  }
+                }}
               />
-              <button type="button" className="btn small" onClick={handleSubmit} disabled={!input.trim() || submitting}>
+              <button
+                type="button"
+                className="btn small"
+                onClick={handleSubmit}
+                disabled={!input.trim() || submitting}
+              >
                 {submitting ? "Posting…" : "Comment"}
               </button>
             </div>
           </div>
         )}
+      </div>
+    );
+  }
+
+  const AUDIENCE_OPTIONS = [
+    { value: "all", label: "All mentees" },
+    { value: "specific", label: "Specific mentees" },
+  ];
+
+  function AudienceSegmentedControl({ value, onChange, labelledBy }) {
+    function handleKeyDown(event) {
+      if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+      event.preventDefault();
+      const index = AUDIENCE_OPTIONS.findIndex((o) => o.value === value);
+      const delta = event.key === "ArrowRight" ? 1 : -1;
+      const next =
+        AUDIENCE_OPTIONS[
+          (index + delta + AUDIENCE_OPTIONS.length) % AUDIENCE_OPTIONS.length
+        ];
+      onChange(next.value);
+    }
+
+    return (
+      <div
+        className="segmented-control"
+        role="radiogroup"
+        aria-labelledby={labelledBy}
+        onKeyDown={handleKeyDown}
+      >
+        {AUDIENCE_OPTIONS.map((option) => {
+          const active = value === option.value;
+          return (
+            <button
+              key={option.value}
+              type="button"
+              role="radio"
+              aria-checked={active}
+              tabIndex={active ? 0 : -1}
+              className={
+                "segmented-option" + (active ? " is-active" : "")
+              }
+              onClick={() => onChange(option.value)}
+            >
+              {option.label}
+            </button>
+          );
+        })}
       </div>
     );
   }
@@ -106,157 +195,376 @@
     } = ctx;
     const isMentor = user?.role === "mentor";
     const Spinner = LoadingSpinner;
+    const messageRef = useRef(null);
+    const composerRef = useRef(null);
 
     function toggleRecipient(id) {
       setAnnouncementRecipientIds((prev) =>
-        prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+        prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
       );
+    }
+
+    function handleAudienceChange(next) {
+      setAnnouncementTargetType(next);
+      if (next === "all") setAnnouncementRecipientIds([]);
+    }
+
+    const menteeCount = announcementMenteeOptions.length;
+    const latestAnnouncement = announcements.reduce(
+      (latest, item) =>
+        !latest || new Date(item.created_at) > new Date(latest.created_at)
+          ? item
+          : latest,
+      null,
+    );
+
+    function focusComposer() {
+      if (composerRef.current) {
+        composerRef.current.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+        });
+      }
+      window.setTimeout(() => {
+        if (messageRef.current) {
+          messageRef.current.focus();
+        }
+      }, 220);
     }
 
     return (
       <div className="home-dashboard-space announcements-page page-shell">
-        <div className="page-shell-head">
-          <div>
-            <h1 className="page-title">Announcements</h1>
-            <p className="page-subtitle">
-              {isMentor ? "Post announcements to your mentees. They can comment below." : "Announcements from your mentors. You can add comments."}
-            </p>
-          </div>
+        <div className="page-shell-head announcements-page-head">
+          <p className="page-subtitle announcements-page-subtitle">
+            {isMentor
+              ? "Post announcements to your mentees. They can comment below."
+              : "Announcements from your mentors. You can add comments."}
+          </p>
           <div className="page-shell-actions">
-            <button type="button" className="btn secondary small" onClick={loadAnnouncements}>
+            <button
+              type="button"
+              className="btn secondary small"
+              onClick={loadAnnouncements}
+            >
               Refresh
             </button>
           </div>
         </div>
 
-        {isMentor && (
-          <div className="announcement-post-card">
-            <label className="announcement-post-label">Post an announcement</label>
-            <textarea
-              className="announcement-post-input"
-              placeholder="Write your message or notification…"
-              value={announcementMessage}
-              onChange={(e) => setAnnouncementMessage(e.target.value)}
-              rows={4}
-            />
-            <div className="announcement-send-to">
-              <span className="announcement-send-to-label">Send to</span>
-              <label className="radio-inline">
-                <input
-                  type="radio"
-                  name="announcement-target"
-                  checked={announcementTargetType === "all"}
-                  onChange={() => { setAnnouncementTargetType("all"); setAnnouncementRecipientIds([]); }}
-                />
-                <span>All my mentees</span>
-              </label>
-              <label className="radio-inline">
-                <input
-                  type="radio"
-                  name="announcement-target"
-                  checked={announcementTargetType === "specific"}
-                  onChange={() => setAnnouncementTargetType("specific")}
-                />
-                <span>Specific mentees</span>
-              </label>
-            </div>
-            {announcementTargetType === "specific" && announcementMenteeOptions.length > 0 && (
-              <div className="announcement-recipients-checkboxes">
-                {announcementMenteeOptions.map((m) => (
-                  <label key={m.id} className="checkbox-row">
-                    <input
-                      type="checkbox"
-                      checked={announcementRecipientIds.includes(m.id)}
-                      onChange={() => toggleRecipient(m.id)}
-                    />
-                    <span>{m.display_name || m.username}</span>
-                  </label>
-                ))}
-              </div>
-            )}
-            {announcementTargetType === "specific" && announcementMenteeOptions.length === 0 && (
-              <p className="muted announcement-no-mentees">You have no accepted mentees yet. Pair with mentees in Matching first to send to specific mentees.</p>
-            )}
-            <div className="btn-row" style={{ marginTop: "12px" }}>
-              <button
-                className="btn"
-                onClick={postAnnouncement}
-                disabled={
-                  !announcementMessage.trim() ||
-                  postAnnouncementLoading ||
-                  (announcementTargetType === "specific" && announcementRecipientIds.length === 0)
-                }
+        <div className="announcements-grid">
+          <div className="announcements-main">
+            {isMentor && (
+              <section
+                className="announcement-card announcement-card--composer"
+                ref={composerRef}
+                aria-labelledby="announcement-composer-title"
               >
-                {postAnnouncementLoading ? <Spinner inline /> : "Post announcement"}
-              </button>
-            </div>
-          </div>
-        )}
+                <h2
+                  className="announcement-section-title"
+                  id="announcement-composer-title"
+                >
+                  Post an announcement
+                </h2>
 
-        <section className="announcements-list">
-          <h2 className="section-title">Recent announcements</h2>
-          {announcementsLoading && (
-            <>
-              {[1, 2].map((i) => (
-                <div key={i} className="announcement-card-skeleton">
-                  <div className="loading-skeleton" /><div className="loading-skeleton" /><div className="loading-skeleton" /><div className="loading-skeleton" />
+                <div className="announcement-field">
+                  <label
+                    className="announcement-field-label"
+                    htmlFor="announcement-message"
+                  >
+                    Message
+                  </label>
+                  <textarea
+                    id="announcement-message"
+                    ref={messageRef}
+                    className="announcement-input announcement-textarea"
+                    placeholder="Write your message or notification…"
+                    value={announcementMessage}
+                    onChange={(e) => setAnnouncementMessage(e.target.value)}
+                    rows={4}
+                  />
                 </div>
-              ))}
-            </>
-          )}
-          {!announcementsLoading && announcements.length === 0 && (
-            <div className="fancy-empty announcements-empty">
-              <span className="fancy-empty-icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="24" height="24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
-              </span>
-              <p className="muted">No announcements yet.</p>
-              <div className="btn-row" style={{ marginTop: "10px" }}>
-                {isMentor ? (
+
+                <div className="announcement-field">
+                  <span
+                    className="announcement-field-label"
+                    id="announcement-audience-label"
+                  >
+                    Send to
+                  </span>
+                  <AudienceSegmentedControl
+                    value={announcementTargetType}
+                    onChange={handleAudienceChange}
+                    labelledBy="announcement-audience-label"
+                  />
+                </div>
+
+                {announcementTargetType === "specific" && (
+                  <div className="announcement-recipients" aria-live="polite">
+                    <div className="announcement-recipients-head">
+                      <p className="announcement-recipients-title">
+                        Choose mentees
+                      </p>
+                      <p className="announcement-recipients-meta">
+                        {menteeCount === 0
+                          ? "No mentees available"
+                          : `${announcementRecipientIds.length} of ${menteeCount} selected`}
+                      </p>
+                    </div>
+                    {menteeCount > 0 ? (
+                      <div
+                        className="announcement-chip-group"
+                        role="group"
+                        aria-label="Mentee recipients"
+                      >
+                        {announcementMenteeOptions.map((m) => {
+                          const selected = announcementRecipientIds.includes(
+                            m.id,
+                          );
+                          return (
+                            <button
+                              key={m.id}
+                              type="button"
+                              role="checkbox"
+                              aria-checked={selected}
+                              className={
+                                "announcement-chip" +
+                                (selected ? " is-selected" : "")
+                              }
+                              onClick={() => toggleRecipient(m.id)}
+                            >
+                              <span
+                                className="announcement-chip-check"
+                                aria-hidden="true"
+                              >
+                                ✓
+                              </span>
+                              {m.display_name || m.username}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <p className="announcement-empty-note">
+                        You have no accepted mentees yet. Pair with mentees in
+                        Matching first to send to specific mentees.
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                <div className="announcement-composer-actions">
+                  <span className="announcement-composer-hint">
+                    {announcementTargetType === "all"
+                      ? `Goes to all ${menteeCount} of your mentees.`
+                      : `Goes to ${announcementRecipientIds.length} selected mentee${announcementRecipientIds.length === 1 ? "" : "s"}.`}
+                  </span>
                   <button
                     type="button"
-                    className="btn secondary small"
-                    onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+                    className="btn announcement-post-submit"
+                    onClick={postAnnouncement}
+                    disabled={
+                      !announcementMessage.trim() ||
+                      postAnnouncementLoading ||
+                      (announcementTargetType === "specific" &&
+                        announcementRecipientIds.length === 0)
+                    }
                   >
-                    Post first announcement
+                    {postAnnouncementLoading ? (
+                      <Spinner inline />
+                    ) : (
+                      "Post announcement"
+                    )}
                   </button>
-                ) : (
-                  <button
-                    type="button"
-                    className="btn secondary small"
-                    onClick={loadAnnouncements}
-                  >
-                    Refresh announcements
-                  </button>
+                </div>
+              </section>
+            )}
+
+            <section
+              className="announcements-feed announcements-list"
+              aria-labelledby="announcements-feed-title"
+            >
+              <div className="announcements-feed-head">
+                <h2
+                  className="announcement-section-title"
+                  id="announcements-feed-title"
+                >
+                  Recent announcements
+                </h2>
+                {!announcementsLoading && announcements.length > 0 && (
+                  <span className="announcements-feed-count">
+                    {announcements.length} total
+                  </span>
                 )}
               </div>
-            </div>
-          )}
-          {!announcementsLoading && announcements.length > 0 && announcements.map((ann) => (
-            <article key={ann.id} className="announcement-card">
-              <div className="announcement-header">
-                <span className="announcement-author">{ann.mentor_display_name || ann.mentor_username}</span>
-                <span className="announcement-date">{formatDate(ann.created_at)}</span>
-                {user.role === "mentor" && ann.mentor_user_id === user.id && handleDeleteAnnouncement && (
-                  <button type="button" className="btn danger small" style={{ marginLeft: "auto" }} onClick={() => handleDeleteAnnouncement(ann.id)}>Delete</button>
-                )}
-              </div>
-              {((ann.recipient_display_names && ann.recipient_display_names.length > 0) || (ann.recipient_usernames && ann.recipient_usernames.length > 0)) ? (
-                <p className="announcement-to">To: {(ann.recipient_display_names && ann.recipient_display_names.length > 0 ? ann.recipient_display_names : ann.recipient_usernames).join(", ")}</p>
-              ) : (
-                <p className="announcement-to">To: Everyone</p>
+              {announcementsLoading &&
+                [1, 2].map((i) => (
+                  <div key={i} className="announcement-card-skeleton">
+                    <div className="loading-skeleton" />
+                    <div className="loading-skeleton" />
+                    <div className="loading-skeleton" />
+                    <div className="loading-skeleton" />
+                  </div>
+                ))}
+              {!announcementsLoading && announcements.length === 0 && (
+                <div className="fancy-empty announcements-empty">
+                  <span className="fancy-empty-icon" aria-hidden="true">
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      width="24"
+                      height="24"
+                    >
+                      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                    </svg>
+                  </span>
+                  <p className="muted">No announcements yet.</p>
+                  <div className="btn-row announcements-empty-actions">
+                    {isMentor ? (
+                      <button
+                        type="button"
+                        className="btn secondary small"
+                        onClick={focusComposer}
+                      >
+                        Write your first announcement
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        className="btn secondary small"
+                        onClick={loadAnnouncements}
+                      >
+                        Refresh announcements
+                      </button>
+                    )}
+                  </div>
+                </div>
               )}
-              <div className="announcement-message">{ann.message}</div>
-              <CommentThread
-                targetType="announcement"
-                targetId={ann.id}
-                comments={commentsByKey}
-                loadComments={loadComments}
-                addComment={addComment}
-                commentKey={commentKey}
-              />
-            </article>
-          ))}
-        </section>
+              {!announcementsLoading &&
+                announcements.length > 0 &&
+                announcements.map((ann) => (
+                  <article
+                    key={ann.id}
+                    className="announcement-card announcement-card--post"
+                  >
+                    <div className="announcement-header">
+                      <span className="announcement-author">
+                        {ann.mentor_display_name || ann.mentor_username}
+                      </span>
+                      <span className="announcement-date">
+                        {formatDate(ann.created_at)}
+                      </span>
+                      {user.role === "mentor" &&
+                        ann.mentor_user_id === user.id &&
+                        handleDeleteAnnouncement && (
+                          <button
+                            type="button"
+                            className="btn danger small"
+                            style={{ marginLeft: "auto" }}
+                            onClick={() => handleDeleteAnnouncement(ann.id)}
+                          >
+                            Delete
+                          </button>
+                        )}
+                    </div>
+                    {(ann.recipient_display_names &&
+                      ann.recipient_display_names.length > 0) ||
+                    (ann.recipient_usernames &&
+                      ann.recipient_usernames.length > 0) ? (
+                      <p className="announcement-to">
+                        To:{" "}
+                        {(ann.recipient_display_names &&
+                        ann.recipient_display_names.length > 0
+                          ? ann.recipient_display_names
+                          : ann.recipient_usernames
+                        ).join(", ")}
+                      </p>
+                    ) : (
+                      <p className="announcement-to">To: Everyone</p>
+                    )}
+                    <p className="announcement-message">{ann.message}</p>
+                    <CommentThread
+                      targetType="announcement"
+                      targetId={ann.id}
+                      comments={commentsByKey}
+                      loadComments={loadComments}
+                      addComment={addComment}
+                      commentKey={commentKey}
+                    />
+                  </article>
+                ))}
+            </section>
+          </div>
+
+          <aside className="announcements-rail" aria-label="Announcement summary">
+            <section className="announcement-card announcement-card--rail">
+              <div className="announcement-card-head">
+                <h2 className="announcement-card-title">At a glance</h2>
+              </div>
+              <div className="announcement-stat-grid">
+                <div className="announcement-stat">
+                  <span className="announcement-stat-value">
+                    {announcements.length}
+                  </span>
+                  <span className="announcement-stat-label">Announcements</span>
+                </div>
+                {isMentor && (
+                  <div className="announcement-stat">
+                    <span className="announcement-stat-value">
+                      {menteeCount}
+                    </span>
+                    <span className="announcement-stat-label">Mentees</span>
+                  </div>
+                )}
+              </div>
+              <p className="announcement-rail-note">
+                {latestAnnouncement
+                  ? `Last posted ${formatDate(latestAnnouncement.created_at)}.`
+                  : isMentor
+                    ? "Nothing posted yet — your first announcement will appear here."
+                    : "Nothing from your mentors yet."}
+              </p>
+            </section>
+
+            {isMentor && (
+              <section className="announcement-card announcement-card--rail">
+                <div className="announcement-card-head">
+                  <h2 className="announcement-card-title">Your mentees</h2>
+                  <span className="announcement-recipients-meta">
+                    {announcementTargetType === "specific"
+                      ? `${announcementRecipientIds.length} targeted`
+                      : "All targeted"}
+                  </span>
+                </div>
+                {menteeCount > 0 ? (
+                  <ul className="announcement-roster">
+                    {announcementMenteeOptions.map((m) => (
+                      <li
+                        key={m.id}
+                        className={
+                          "announcement-roster-item" +
+                          (announcementTargetType === "all" ||
+                          announcementRecipientIds.includes(m.id)
+                            ? " is-selected"
+                            : "")
+                        }
+                      >
+                        {m.display_name || m.username}
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="announcement-empty-note">
+                    No accepted mentees yet.
+                  </p>
+                )}
+              </section>
+            )}
+          </aside>
+        </div>
       </div>
     );
   }
@@ -266,5 +574,6 @@
   window.DashboardApp.Pages.announcements = AnnouncementsPage;
   window.DashboardApp.CommentThread = CommentThread;
   window.DashboardApp.formatCommentDate = formatDate;
-  if (typeof module !== "undefined" && module.exports) module.exports = { AnnouncementsPage, CommentThread };
+  if (typeof module !== "undefined" && module.exports)
+    module.exports = { AnnouncementsPage, CommentThread };
 })();

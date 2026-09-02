@@ -9,7 +9,24 @@
   const BIO_MAX = 200;
   const MAX_TAGS = 8;
   const OPEN_SECTION_STORAGE_KEY = "settings:open-section";
-  const SECTION_KEYS = ["account", "password", "bio", "general"];
+  const TAB_IDS = ["account", "password", "academic"];
+  const LEGACY_SECTION_MAP = { general: "academic", bio: "account" };
+
+  /** Reads the section from a "settings/<section>" hash so links can open one directly. */
+  function sectionFromHash() {
+    const raw = String(window.location.hash || "").replace(/^#/, "");
+    if (!raw.startsWith("settings")) return null;
+    const section = raw.split("/")[1] || "";
+    const normalized = LEGACY_SECTION_MAP[section] || section;
+    return TAB_IDS.includes(normalized) ? normalized : null;
+  }
+
+  function writeSectionHash(section) {
+    const base = window.location.pathname + window.location.search;
+    const next = section ? `${base}#settings/${section}` : `${base}#settings`;
+    window.history.replaceState(null, "", next);
+  }
+
   const PASSWORD_STRENGTH_LABELS = [
     "Too weak",
     "Too weak",
@@ -18,18 +35,34 @@
     "Strong",
   ];
 
-  /** Reads the section from a "settings/<section>" hash so links can open one directly. */
-  function sectionFromHash() {
-    const raw = String(window.location.hash || "").replace(/^#/, "");
-    if (!raw.startsWith("settings")) return null;
-    const section = raw.split("/")[1] || "";
-    return SECTION_KEYS.includes(section) ? section : null;
+  function formatYearLevel(value) {
+    const level = Number(value);
+    if (!level) return "—";
+    if (level === 1) return "1st Year";
+    if (level === 2) return "2nd Year";
+    if (level === 3) return "3rd Year";
+    if (level === 4) return "4th Year";
+    return `Year ${level}`;
   }
 
-  function writeSectionHash(section) {
-    const base = window.location.pathname + window.location.search;
-    const next = section ? `${base}#settings/${section}` : `${base}#settings`;
-    window.history.replaceState(null, "", next);
+  function SettingsTabNav({ tabs, activeTab, onChange }) {
+    return (
+      <nav className="settings-tabs" aria-label="Settings sections">
+        {tabs.map((tab) => (
+          <button
+            key={tab.id}
+            type="button"
+            className={
+              "settings-tab-btn" + (activeTab === tab.id ? " is-active" : "")
+            }
+            aria-selected={activeTab === tab.id}
+            onClick={() => onChange(tab.id)}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </nav>
+    );
   }
 
   function getPasswordChecks(password) {
@@ -42,104 +75,11 @@
     ];
   }
 
-  /** Inline pencil (always visible; avoids cache/missing DashboardIcon on Bio card) */
-  function BioInterestsHeaderIcon() {
+  function ReadOnlyBadge() {
     return (
-      <svg
-        className="settings-bio-header-icon"
-        width="20"
-        height="20"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        aria-hidden="true"
-      >
-        <path d="M12 20h9" />
-        <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
-      </svg>
-    );
-  }
-
-  function SettingsAccordionCard({
-    id,
-    title,
-    subtitle,
-    icon,
-    isOpen,
-    onToggle,
-    className = "",
-    bodyClassName = "",
-    meta = "",
-    metaTone = "neutral",
-    children,
-  }) {
-    return (
-      <div
-        className={
-          `settings-card settings-accordion-card ${className}`.trim() +
-          (isOpen ? " is-open" : "")
-        }
-      >
-        <button
-          type="button"
-          className="settings-accordion-trigger"
-          aria-expanded={isOpen}
-          aria-controls={id + "-panel"}
-          onClick={onToggle}
-        >
-          <div className="settings-card-header-main settings-accordion-header-main">
-            <div className="settings-card-icon">{icon}</div>
-            <div>
-              <h2
-                className="section-title settings-accordion-title"
-                style={{ borderBottom: "none", paddingBottom: 0 }}
-              >
-                {title}
-              </h2>
-              {subtitle && (
-                <p className="page-subtitle settings-card-subtitle-tight settings-accordion-subtitle">
-                  {subtitle}
-                </p>
-              )}
-            </div>
-          </div>
-          <div className="settings-accordion-header-aside">
-            {meta ? (
-              <span className={"settings-accordion-meta is-" + metaTone}>
-                {meta}
-              </span>
-            ) : null}
-            <span
-              className={
-                "settings-accordion-chevron" + (isOpen ? " is-open" : "")
-              }
-              aria-hidden="true"
-            >
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <polyline points="6 9 12 15 18 9" />
-              </svg>
-            </span>
-          </div>
-        </button>
-        {isOpen && (
-          <div
-            id={id + "-panel"}
-            className={`settings-accordion-body is-open ${bodyClassName}`.trim()}
-          >
-            <div className="settings-accordion-body-inner">{children}</div>
-          </div>
-        )}
-      </div>
+      <span className="settings-readonly-badge" aria-label="Read only">
+        🔒 Read only
+      </span>
     );
   }
 
@@ -148,8 +88,6 @@
     tags,
     onBioSave,
     onTagsSave,
-    isOpen,
-    onToggle,
     onDirtyChange,
     registerActions,
   }) {
@@ -298,16 +236,11 @@
     }, [bio, tags, bioText, localTags, bioChanged, tagsChanged]);
 
     return (
-      <SettingsAccordionCard
-        id="settings-bio"
-        title="Bio & interests"
-        subtitle="Tell others about yourself and what you’re interested in."
-        icon={<BioInterestsHeaderIcon />}
-        isOpen={isOpen}
-        onToggle={onToggle}
-        className="settings-card--bio"
-        meta={`${localTags.length}/${MAX_TAGS} interests`}
-      >
+      <div className="settings-bio-panel">
+        <h3 className="settings-bio-panel-title">Bio &amp; interests</h3>
+        <p className="settings-helper-text">
+          Tell others about yourself and what you&apos;re interested in.
+        </p>
         <div className="settings-bio-section">
           <div className="settings-section-label">Bio</div>
           <div className="form-group settings-bio-form-group">
@@ -421,7 +354,7 @@
             </button>
           </div>
         </div>
-      </SettingsAccordionCard>
+      </div>
     );
   }
 
@@ -430,6 +363,7 @@
     if (!ctx || !ctx.user) return null;
     const {
       user,
+      setUser,
       setError,
       addToast,
       settingsForm,
@@ -447,13 +381,13 @@
       setUnsavedChangesDirty,
     } = ctx;
 
-    const [openSection, setOpenSection] = useState(() => {
+    const [activeTab, setActiveTab] = useState(() => {
       const fromHash = sectionFromHash();
       if (fromHash) return fromHash;
       try {
-        return (
-          window.sessionStorage.getItem(OPEN_SECTION_STORAGE_KEY) ?? "account"
-        );
+        const stored =
+          window.sessionStorage.getItem(OPEN_SECTION_STORAGE_KEY) ?? "account";
+        return LEGACY_SECTION_MAP[stored] || stored;
       } catch {
         return "account";
       }
@@ -499,17 +433,17 @@
 
     useEffect(() => {
       try {
-        window.sessionStorage.setItem(OPEN_SECTION_STORAGE_KEY, openSection);
+        window.sessionStorage.setItem(OPEN_SECTION_STORAGE_KEY, activeTab);
       } catch {
         /* storage unavailable */
       }
-      writeSectionHash(openSection);
-    }, [openSection]);
+      writeSectionHash(activeTab);
+    }, [activeTab]);
 
     useEffect(() => {
       function onHashChange() {
         const section = sectionFromHash();
-        if (section) setOpenSection(section);
+        if (section) setActiveTab(section);
       }
       window.addEventListener("hashchange", onHashChange);
       return () => window.removeEventListener("hashchange", onHashChange);
@@ -523,8 +457,15 @@
       return () => window.clearInterval(timer);
     }, [passwordResendSeconds]);
 
-    function toggleSection(section) {
-      setOpenSection((current) => (current === section ? "" : section));
+    function selectTab(tabId) {
+      setActiveTab(tabId);
+    }
+
+    async function handleRemoveAvatar() {
+      if (!settingsForm.avatar_url) return;
+      setSettingsForm((prev) => ({ ...prev, avatar_url: "" }));
+      setUser((prev) => (prev ? { ...prev, avatar_url: "" } : prev));
+      addToast("Profile photo removed from preview. Upload a new photo to save one.");
     }
 
     async function handleSendPasswordCode() {
@@ -713,10 +654,21 @@
     const dirtyLabels = [
       accountChanged && "Account",
       bioDirty && "Bio & interests",
-      generalChanged && "General information",
+      generalChanged && "Academic & personal info",
     ].filter(Boolean);
     const isDirty = dirtyLabels.length > 0;
     const justSaved = savedAt > 0 && !isDirty;
+
+    const settingsTabs = [
+      { id: "account", label: "Account Profile" },
+      { id: "password", label: "Password & Security" },
+    ];
+    if (isMentee) {
+      settingsTabs.push({
+        id: "academic",
+        label: "Academic & Personal Info",
+      });
+    }
 
     useEffect(() => {
       if (typeof setUnsavedChangesDirty === "function") {
@@ -818,43 +770,47 @@
         <header className="settings-page-head">
           <h1 className="page-title settings-page-title">Settings</h1>
           <p className="page-subtitle settings-page-head-subtitle">
-            Manage your account, security, and how your profile appears to
-            others. Open a section to make changes.
+            Manage your account, security, and profile information.
           </p>
         </header>
 
-        <div className="settings-page-grid">
-          <SettingsAccordionCard
-            id="settings-account"
-            title="Account"
-            subtitle="Update the email and photo used across the dashboard."
-            icon={<DashboardIcon name="user" size={20} />}
-            isOpen={openSection === "account"}
-            onToggle={() => toggleSection("account")}
-            className="settings-card--account"
-            meta={settingsForm.email || user.email || "No email set"}
-          >
+        <SettingsTabNav
+          tabs={settingsTabs}
+          activeTab={activeTab}
+          onChange={selectTab}
+        />
+
+        {activeTab === "account" && (
+          <div className="settings-tab-panel">
+            <h2 className="settings-tab-panel-title">Account Profile</h2>
+            <p className="settings-tab-panel-subtitle">
+              Update the email and photo used across the dashboard.
+            </p>
             <div className="form-grid">
               <div className="form-group">
-                <label htmlFor="settings-display-name">
-                  Display name (read only)
+                <label htmlFor="settings-display-name" className="settings-label">
+                  Display name
+                  <ReadOnlyBadge />
                 </label>
                 <input
                   id="settings-display-name"
                   type="text"
+                  className="readonly-field-input"
                   value={
                     settingsForm.display_name || user.display_name || "—"
                   }
                   readOnly
                   disabled
                 />
-                <p className="field-helper">
+                <p className="field-helper settings-helper-text settings-helper-text--bright">
                   Taken from your enrolment record. Contact an administrator if
                   it needs to change.
                 </p>
               </div>
               <div className="form-group">
-                <label htmlFor="settings-email">Email</label>
+                <label htmlFor="settings-email" className="settings-label">
+                  Email
+                </label>
                 <input
                   id="settings-email"
                   type="email"
@@ -866,8 +822,8 @@
                 />
               </div>
               <div className="form-group" style={{ gridColumn: "1 / -1" }}>
-                <label>Profile picture</label>
-                <div className="settings-avatar-row">
+                <label className="settings-label">Profile picture</label>
+                <div className="settings-avatar-block">
                   <button
                     type="button"
                     className="settings-avatar-uploader"
@@ -916,81 +872,101 @@
                     <input
                       id="settings-avatar-input"
                       type="file"
-                      accept="image/*"
+                      accept="image/png,image/jpeg,image/jpg,image/webp"
                       onChange={handleAvatarChange}
                       disabled={avatarUploading}
                       style={{ display: "none" }}
                     />
-                    <p className="field-helper">
-                      Use a clear, front-facing photo so mentees and mentors can
-                      recognize you.
-                    </p>
-                    <p className="field-helper">
-                      Recommended: square image, at least 256×256px.
+                    <div className="settings-avatar-actions">
+                      <button
+                        type="button"
+                        className="settings-btn-upload"
+                        onClick={() => {
+                          const input = document.getElementById(
+                            "settings-avatar-input",
+                          );
+                          if (input) input.click();
+                        }}
+                        disabled={avatarUploading}
+                      >
+                        {avatarUploading ? "Uploading…" : "Upload photo"}
+                      </button>
+                      <button
+                        type="button"
+                        className="settings-btn-text"
+                        onClick={handleRemoveAvatar}
+                        disabled={avatarUploading || !settingsForm.avatar_url}
+                      >
+                        Remove
+                      </button>
+                    </div>
+                    <p className="field-helper settings-helper-text">
+                      Clear front-facing photo (PNG or JPG, max 5MB).
                     </p>
                   </div>
                 </div>
               </div>
             </div>
-            <div className="btn-row settings-card-footer">
-              <button
-                className="btn"
-                onClick={handleSettingsSave}
-                disabled={settingsSaving || !accountChanged}
-              >
-                {settingsSaving
-                  ? "Saving..."
-                  : accountChanged
-                    ? "Save changes"
-                    : "No changes"}
-              </button>
-              <p className="field-helper settings-card-footer-note">
-                Your photo is saved as soon as you upload it.
-              </p>
-            </div>
-          </SettingsAccordionCard>
+            {accountChanged && (
+              <div className="settings-tab-footer">
+                <button
+                  className="btn"
+                  onClick={handleSettingsSave}
+                  disabled={settingsSaving}
+                >
+                  {settingsSaving ? "Saving..." : "Save email changes"}
+                </button>
+              </div>
+            )}
 
-          <SettingsAccordionCard
-            id="settings-password"
-            title="Password & security"
-            subtitle="Request a code, verify it, then set a new password."
-            icon={<DashboardIcon name="lock" size={20} />}
-            isOpen={openSection === "password"}
-            onToggle={() => toggleSection("password")}
-            className="settings-card--account"
-            meta="Email verification"
-          >
-            <div className="settings-password-flow">
-              <section className="settings-password-step">
+            <BioAndInterestsCard
+              bio={settingsForm.bio || ""}
+              tags={Array.isArray(settingsForm.tags) ? settingsForm.tags : []}
+              onBioSave={handleBioSave}
+              onTagsSave={handleTagsSave}
+              onDirtyChange={setBioDirty}
+              registerActions={(actions) => {
+                bioActionsRef.current = actions;
+              }}
+            />
+          </div>
+        )}
+
+        {activeTab === "password" && (
+          <div className="settings-tab-panel">
+            <h2 className="settings-tab-panel-title">Password &amp; Security</h2>
+            <p className="settings-tab-panel-subtitle">
+              Verify your email, then set a new password.
+            </p>
+            <div className="settings-password-flow-v2">
+              <section className="settings-password-step-v2">
                 <div className="settings-password-step-header">
                   <span className="settings-password-step-badge">1</span>
                   <div>
-                    <div className="settings-password-step-title">
+                    <h3 className="settings-password-step-title">
                       Request verification code
-                    </div>
-                    <p className="field-helper settings-password-step-copy">
-                      We’ll send a 6-digit code to your account email.
+                    </h3>
+                    <p className="field-helper settings-helper-text">
+                      We&apos;ll send a 6-digit code to your account email.
                     </p>
                   </div>
                 </div>
                 <div className="form-group settings-password-email-group">
-                  <label>Email address</label>
+                  <label className="settings-label">Email address</label>
                   <input
                     type="email"
+                    className="readonly-field-input"
                     value={passwordEmail}
                     readOnly
                     aria-readonly="true"
                     placeholder="you@example.com"
                     autoComplete="email"
                   />
-                  <p className="field-helper settings-password-step-copy">
-                    This must match the email on your account.
-                  </p>
                 </div>
                 <div className="settings-password-actions">
                   <button
                     type="button"
-                    className="btn secondary"
+                    className="settings-btn-upload"
                     onClick={handleSendPasswordCode}
                     disabled={
                       passwordCodeSending ||
@@ -1007,23 +983,23 @@
 
               <section
                 className={
-                  "settings-password-step" +
+                  "settings-password-step-v2" +
                   (passwordCodeSent ? "" : " is-muted")
                 }
               >
                 <div className="settings-password-step-header">
                   <span className="settings-password-step-badge">2</span>
                   <div>
-                    <div className="settings-password-step-title">
-                      Enter verification code
-                    </div>
-                    <p className="field-helper settings-password-step-copy">
-                      Enter the 6-digit code sent to your email address.
+                    <h3 className="settings-password-step-title">
+                      Verify &amp; update
+                    </h3>
+                    <p className="field-helper settings-helper-text">
+                      Enter the code and choose a new password.
                     </p>
                   </div>
                 </div>
                 <div className="form-group settings-password-code-group">
-                  <label>Verification code</label>
+                  <label className="settings-label">Verification code</label>
                   <input
                     ref={passwordCodeInputRef}
                     type="text"
@@ -1040,7 +1016,7 @@
                     }}
                     disabled={!passwordCodeSent}
                   />
-                  <p className="field-helper settings-password-step-copy">
+                  <p className="field-helper settings-helper-text">
                     {passwordCodeSent
                       ? "The code expires after 10 minutes."
                       : "Send a code first to unlock this step."}
@@ -1065,28 +1041,18 @@
                         : "Verify code"}
                   </button>
                 </div>
-              </section>
 
-              <section
-                className={
-                  "settings-password-step" +
-                  (passwordCodeVerified ? "" : " is-muted")
-                }
-              >
-                <div className="settings-password-step-header">
-                  <span className="settings-password-step-badge">3</span>
-                  <div>
-                    <div className="settings-password-step-title">
-                      Set your new password
-                    </div>
-                    <p className="field-helper settings-password-step-copy">
-                      These fields remain locked until your code is verified.
-                    </p>
-                  </div>
-                </div>
-                <div className="form-grid settings-password-grid">
+                <div
+                  className={
+                    "form-grid settings-password-grid" +
+                    (passwordCodeVerified ? "" : " is-muted")
+                  }
+                  style={{ marginTop: 20 }}
+                >
                   <div className="form-group">
-                    <label htmlFor="settings-new-password">New password</label>
+                    <label htmlFor="settings-new-password" className="settings-label">
+                      New password
+                    </label>
                     <div className="settings-password-input">
                       <input
                         id="settings-new-password"
@@ -1115,7 +1081,7 @@
                     </div>
                   </div>
                   <div className="form-group">
-                    <label htmlFor="settings-confirm-password">
+                    <label htmlFor="settings-confirm-password" className="settings-label">
                       Confirm new password
                     </label>
                     <div className="settings-password-input">
@@ -1211,11 +1177,11 @@
                 <div className="settings-password-actions settings-password-actions--primary">
                   <button
                     type="button"
-                    className="btn"
+                    className="settings-btn-upload"
                     onClick={handleChangePasswordWithCode}
                     disabled={!canUpdatePassword}
                   >
-                    {passwordChanging ? "Updating..." : "Update password"}
+                    {passwordChanging ? "Saving..." : "Save new password"}
                   </button>
                 </div>
               </section>
@@ -1233,199 +1199,154 @@
                 </p>
               )}
             </div>
-          </SettingsAccordionCard>
+          </div>
+        )}
 
-          <BioAndInterestsCard
-            bio={settingsForm.bio || ""}
-            tags={Array.isArray(settingsForm.tags) ? settingsForm.tags : []}
-            onBioSave={handleBioSave}
-            onTagsSave={handleTagsSave}
-            isOpen={openSection === "bio"}
-            onToggle={() => toggleSection("bio")}
-            onDirtyChange={setBioDirty}
-            registerActions={(actions) => {
-              bioActionsRef.current = actions;
-            }}
-          />
-
-          {user.role === "mentee" && (
-            <SettingsAccordionCard
-              id="settings-general"
-              title="General information"
-              subtitle="Some fields are managed by the school and shown for reference only."
-              icon={<DashboardIcon name="clipboardList" size={20} />}
-              isOpen={openSection === "general"}
-              onToggle={() => toggleSection("general")}
-              className="settings-card--general"
-              meta={
-                generalMissingCount > 0
-                  ? `${generalMissingCount} field${generalMissingCount === 1 ? "" : "s"} missing`
-                  : "Complete"
-              }
-              metaTone={generalMissingCount > 0 ? "warn" : "ok"}
-            >
-              <div className="settings-section-label">Identity</div>
-              <div className="form-grid">
-                <div className="form-group">
-                  <label htmlFor="settings-campus">Campus *</label>
-                  <select
-                    id="settings-campus"
-                    value={menteeProfile.campus || ""}
-                    onChange={(e) =>
-                      updateMenteeProfile({ campus: e.target.value })
-                    }
-                  >
-                    <option value="">---------</option>
-                    {(
-                      (window.DashboardApp &&
-                        window.DashboardApp.CAMPUS_OPTIONS) ||
-                      []
-                    ).map((campus) => (
-                      <option key={campus} value={campus}>
-                        {campus}
-                      </option>
-                    ))}
-                    {menteeProfile.campus &&
-                      !(
-                        (window.DashboardApp &&
-                          window.DashboardApp.CAMPUS_OPTIONS) ||
-                        []
-                      ).includes(menteeProfile.campus) && (
-                        <option value={menteeProfile.campus}>
-                          {menteeProfile.campus}
-                        </option>
-                      )}
-                  </select>
+        {activeTab === "academic" && isMentee && (
+          <div className="settings-tab-panel">
+            <h2 className="settings-tab-panel-title">
+              Academic &amp; Personal Info
+            </h2>
+            <p className="settings-tab-panel-subtitle">
+              Review institution-managed records and update your contact details.
+            </p>
+            <div className="settings-academic-grid">
+              <div className="settings-info-card">
+                <span className="settings-institution-badge">
+                  🔒 Managed by Institution
+                </span>
+                <h3 className="settings-info-card-title">Academic record</h3>
+                <div className="form-grid">
+                  <div className="form-group">
+                    <label className="settings-label">Campus</label>
+                    <input
+                      className="readonly-field-input"
+                      value={menteeProfile.campus || "—"}
+                      readOnly
+                      disabled
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label className="settings-label">Student ID No.</label>
+                    <input
+                      className="readonly-field-input"
+                      value={menteeProfile.student_id_no || "—"}
+                      readOnly
+                      disabled
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label className="settings-label">Course / Program</label>
+                    <input
+                      className="readonly-field-input"
+                      value={menteeProfile.program || "—"}
+                      readOnly
+                      disabled
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label className="settings-label">Year level</label>
+                    <input
+                      className="readonly-field-input"
+                      value={formatYearLevel(menteeProfile.year_level)}
+                      readOnly
+                      disabled
+                    />
+                  </div>
                 </div>
-                <div className="form-group">
-                  <label>Student ID No. *</label>
-                  <input
-                    value={menteeProfile.student_id_no}
-                    onChange={(e) =>
-                      updateMenteeProfile({
-                        student_id_no: e.target.value
-                          .replace(/\D/g, "")
-                          .slice(0, 10),
-                      })
-                    }
-                    placeholder="10 digits only"
-                    inputMode="numeric"
-                    pattern="[0-9]*"
-                    maxLength={10}
-                  />
-                </div>
+                <p className="field-helper settings-helper-text settings-helper-text--bright">
+                  These fields come from your enrolment record. Contact an
+                  administrator if anything looks incorrect.
+                </p>
               </div>
 
-              <div className="settings-section-label">Program details</div>
-              <div className="form-grid">
-                <div className="form-group">
-                  <label>Course / Program (read only)</label>
-                  <input value="BSIT" readOnly disabled placeholder="BSIT" />
-                  <p className="field-helper">
-                    Set by your school. Contact an administrator if this is
-                    incorrect.
-                  </p>
-                </div>
-                <div className="form-group">
-                  <label>Year level (read only)</label>
-                  <input
-                    type="text"
-                    value="1st Year"
-                    readOnly
-                    disabled
-                    placeholder="1st Year"
-                  />
-                  <p className="field-helper">
-                    Set by your school. Contact an administrator if this is
-                    incorrect.
-                  </p>
-                </div>
-              </div>
-
-              <div className="settings-section-label">Contact</div>
-              <div className="form-grid">
-                <div className="form-group">
-                  <label>Contact No. *</label>
-                  <input
-                    value={menteeProfile.contact_no}
-                    onChange={(e) =>
-                      updateMenteeProfile({
-                        contact_no: e.target.value
-                          .replace(/\D/g, "")
-                          .slice(0, 11),
-                      })
-                    }
-                    placeholder="11 digits only"
-                    inputMode="numeric"
-                    pattern="[0-9]*"
-                    maxLength={11}
-                  />
-                </div>
-                <div className="form-group">
-                  <label>Admission Type *</label>
-                  <select
-                    value={menteeProfile.admission_type || ""}
-                    onChange={(e) =>
-                      updateMenteeProfile({ admission_type: e.target.value })
-                    }
-                  >
-                    <option value="">Select admission type</option>
-                    <option value="regular">Regular</option>
-                    <option value="transferee">Transferee</option>
-                    <option value="shiftee">Shiftee</option>
-                    <option value="returnee">Returnee</option>
-                    <option value="irregular">Irregular</option>
-                    {menteeProfile.admission_type &&
-                      ![
-                        "regular",
-                        "transferee",
-                        "shiftee",
-                        "returnee",
-                        "irregular",
-                      ].includes(
-                        String(menteeProfile.admission_type).toLowerCase(),
-                      ) && (
-                        <option value={menteeProfile.admission_type}>
-                          {menteeProfile.admission_type}
-                        </option>
-                      )}
-                  </select>
+              <div className="settings-info-card">
+                <h3 className="settings-info-card-title">
+                  Personal &amp; contact information
+                </h3>
+                <div className="form-grid">
+                  <div className="form-group">
+                    <label className="settings-label">Contact No. *</label>
+                    <input
+                      value={menteeProfile.contact_no}
+                      onChange={(e) =>
+                        updateMenteeProfile({
+                          contact_no: e.target.value
+                            .replace(/\D/g, "")
+                            .slice(0, 11),
+                        })
+                      }
+                      placeholder="11 digits only"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      maxLength={11}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label className="settings-label">Admission type *</label>
+                    <select
+                      value={menteeProfile.admission_type || ""}
+                      onChange={(e) =>
+                        updateMenteeProfile({ admission_type: e.target.value })
+                      }
+                    >
+                      <option value="">Select admission type</option>
+                      <option value="regular">Regular</option>
+                      <option value="transferee">Transferee</option>
+                      <option value="shiftee">Shiftee</option>
+                      <option value="returnee">Returnee</option>
+                      <option value="irregular">Irregular</option>
+                      {menteeProfile.admission_type &&
+                        ![
+                          "regular",
+                          "transferee",
+                          "shiftee",
+                          "returnee",
+                          "irregular",
+                        ].includes(
+                          String(menteeProfile.admission_type).toLowerCase(),
+                        ) && (
+                          <option value={menteeProfile.admission_type}>
+                            {menteeProfile.admission_type}
+                          </option>
+                        )}
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label className="settings-label">Biological sex *</label>
+                    <select
+                      value={menteeProfile.sex || ""}
+                      onChange={(e) =>
+                        updateMenteeProfile({ sex: e.target.value })
+                      }
+                    >
+                      <option value="">Select biological sex</option>
+                      <option value="male">Male</option>
+                      <option value="female">Female</option>
+                    </select>
+                  </div>
                 </div>
               </div>
-
-              <div className="settings-section-label">Personal</div>
-              <div className="form-grid">
-                <div className="form-group">
-                  <label>Biological sex *</label>
-                  <select
-                    value={menteeProfile.sex || ""}
-                    onChange={(e) =>
-                      updateMenteeProfile({ sex: e.target.value })
-                    }
-                  >
-                    <option value="">Select biological sex</option>
-                    <option value="male">Male</option>
-                    <option value="female">Female</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="btn-row" style={{ marginTop: "16px" }}>
+            </div>
+            {generalChanged && (
+              <div className="settings-tab-footer">
                 <button
                   className="btn"
                   onClick={handleGeneralSave}
-                  disabled={menteeProfileSaving || !generalChanged}
+                  disabled={menteeProfileSaving}
                 >
-                  {menteeProfileSaving
-                    ? "Saving..."
-                    : generalChanged
-                      ? "Save general information"
-                      : "No changes"}
+                  {menteeProfileSaving ? "Saving..." : "Save changes"}
                 </button>
+                {generalMissingCount > 0 && (
+                  <p className="field-helper settings-helper-text" role="status">
+                    {generalMissingCount} required field
+                    {generalMissingCount === 1 ? "" : "s"} still missing.
+                  </p>
+                )}
               </div>
-            </SettingsAccordionCard>
-          )}
-        </div>
+            )}
+          </div>
+        )}
 
         {(isDirty || justSaved) && (
           <div

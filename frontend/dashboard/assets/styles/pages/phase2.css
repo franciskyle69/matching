@@ -44,8 +44,6 @@
 }
 
 .approvals-section,
-.announcement-post-card,
-.announcement-card,
 .notification-item,
 .subject-card,
 .activity-logs-filters,
@@ -57,7 +55,6 @@
 }
 
 .approval-row,
-.announcement-card,
 .notification-item,
 .activity-logs-table tr,
 .backup-table tr {
@@ -68,7 +65,6 @@
 }
 
 .approval-row:hover,
-.announcement-card:hover,
 .notification-item:hover,
 .subject-card:hover {
   border-color: color-mix(in srgb, var(--primary) 42%, var(--border));
@@ -89,9 +85,7 @@
 .users-filter-select,
 .activity-logs-search,
 .activity-logs-date,
-.page-size-select,
-.announcement-post-input,
-.comment-input {
+.page-size-select {
   min-height: 44px;
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
@@ -102,9 +96,7 @@
 .users-filter-select:focus,
 .activity-logs-search:focus,
 .activity-logs-date:focus,
-.page-size-select:focus,
-.announcement-post-input:focus,
-.comment-input:focus {
+.page-size-select:focus {
   outline: none;
   border-color: var(--primary);
   box-shadow: 0 0 0 3px var(--focus-ring);
@@ -113,7 +105,6 @@
 .users-filter-info,
 .activity-logs-summary,
 .backup-id,
-.announcement-date,
 .notification-time {
   color: var(--text-muted);
   font-size: var(--text-sm);
@@ -1181,10 +1172,8 @@
   .users-filter-select,
   .activity-logs-search,
   .activity-logs-date,
-  .page-size-select,
-  .announcement-post-input,
-  .comment-input,
-  .btn,
+.page-size-select,
+.btn,
   .btn.small,
   .btn.secondary,
   .btn.btn-primary,

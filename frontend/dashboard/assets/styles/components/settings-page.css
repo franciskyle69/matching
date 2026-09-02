@@ -1,0 +1,345 @@
+/* Settings — tabbed layout & dark-mode contrast */
+.settings-page-shell .settings-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 20px;
+  padding: 4px;
+  border-radius: 12px;
+  background: var(--subcard-bg);
+  border: var(--subcard-border);
+}
+
+.settings-page-shell .settings-tab-btn {
+  flex: 1 1 auto;
+  min-height: 42px;
+  padding: 0 16px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-family: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.settings-page-shell .settings-tab-btn:hover {
+  color: var(--text-primary);
+  background: rgba(124, 58, 237, 0.08);
+}
+
+.settings-page-shell .settings-tab-btn.is-active {
+  background: #7c3aed;
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(124, 58, 237, 0.35);
+}
+
+.settings-tab-panel {
+  background: var(--card-bg);
+  border: var(--card-border);
+  border-radius: 16px;
+  padding: 28px;
+}
+
+.settings-tab-panel-title {
+  margin: 0 0 6px;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.settings-tab-panel-subtitle {
+  margin: 0 0 20px;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
+[data-theme="dark"] .settings-tab-panel-title {
+  color: #ffffff;
+}
+
+[data-theme="dark"] .settings-tab-panel-subtitle {
+  color: #94a3b8;
+}
+
+/* Labels & helpers */
+.settings-page-shell .settings-label,
+.settings-page-shell .form-group > label.settings-label {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+[data-theme="dark"] .settings-page-shell .settings-label,
+[data-theme="dark"] .settings-page-shell .form-group > label.settings-label {
+  color: #e2e8f0 !important;
+}
+
+.settings-page-shell .settings-helper-text,
+.settings-page-shell .field-helper.settings-helper-text {
+  margin: 6px 0 0;
+  font-size: 0.8rem;
+  line-height: 1.45;
+  color: var(--text-muted);
+}
+
+[data-theme="dark"] .settings-page-shell .settings-helper-text,
+[data-theme="dark"] .settings-page-shell .field-helper.settings-helper-text {
+  color: #94a3b8 !important;
+}
+
+[data-theme="dark"] .settings-page-shell .settings-helper-text--bright {
+  color: #cbd5e1 !important;
+}
+
+/* Inputs — dark mode contrast */
+[data-theme="dark"] .settings-page-shell input:not([type="file"]),
+[data-theme="dark"] .settings-page-shell select,
+[data-theme="dark"] .settings-page-shell textarea {
+  background-color: rgba(30, 20, 50, 0.6) !important;
+  color: #f8fafc !important;
+  border-color: rgba(255, 255, 255, 0.18) !important;
+}
+
+[data-theme="dark"] .settings-page-shell select option {
+  background-color: #1e1432;
+  color: #f8fafc;
+}
+
+[data-theme="dark"] .settings-page-shell .MuiOutlinedInput-root {
+  background-color: rgba(30, 20, 50, 0.6) !important;
+  color: #f8fafc !important;
+}
+
+[data-theme="dark"] .settings-page-shell .MuiOutlinedInput-notchedOutline {
+  border-color: rgba(255, 255, 255, 0.18) !important;
+}
+
+.settings-page-shell .readonly-field-input,
+.settings-page-shell input.readonly-field-input:disabled,
+.settings-page-shell select.readonly-field-input:disabled {
+  background-color: rgba(255, 255, 255, 0.04) !important;
+  cursor: not-allowed;
+  opacity: 0.85;
+}
+
+[data-theme="dark"] .settings-page-shell .readonly-field-input,
+[data-theme="dark"] .settings-page-shell input.readonly-field-input:disabled {
+  background-color: rgba(255, 255, 255, 0.05) !important;
+}
+
+.settings-readonly-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 8px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.15);
+  color: var(--text-muted);
+  font-size: 0.7rem;
+  font-weight: 600;
+  vertical-align: middle;
+}
+
+[data-theme="dark"] .settings-readonly-badge {
+  background: rgba(255, 255, 255, 0.08);
+  color: #cbd5e1;
+}
+
+/* Profile picture */
+.settings-avatar-block {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 20px;
+}
+
+.settings-page-shell .settings-avatar-preview {
+  width: 100px;
+  height: 100px;
+}
+
+.settings-avatar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.settings-btn-upload {
+  min-height: 38px;
+  padding: 0 16px;
+  border: none;
+  border-radius: 10px;
+  background: #6d28d9;
+  color: #fff;
+  font-family: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.settings-btn-upload:hover:not(:disabled) {
+  background: #7c3aed;
+}
+
+.settings-btn-upload:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.settings-btn-text {
+  min-height: 38px;
+  padding: 0 12px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-family: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.settings-btn-text:hover:not(:disabled) {
+  color: #dc2626;
+  background: rgba(220, 38, 38, 0.08);
+}
+
+.settings-btn-text:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* Academic cards */
+.settings-academic-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 20px;
+}
+
+@media (min-width: 768px) {
+  .settings-academic-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.settings-info-card {
+  padding: 20px;
+  border-radius: 14px;
+  border: var(--card-border);
+  background: var(--subcard-bg);
+}
+
+.settings-info-card-title {
+  margin: 0 0 14px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+[data-theme="dark"] .settings-info-card-title {
+  color: #ffffff;
+}
+
+.settings-institution-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 16px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: rgba(124, 58, 237, 0.12);
+  border: 1px solid rgba(124, 58, 237, 0.25);
+  color: #7c3aed;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+[data-theme="dark"] .settings-institution-badge {
+  color: #ddd6fe;
+  background: rgba(124, 58, 237, 0.2);
+}
+
+.settings-info-card .form-grid {
+  gap: 14px;
+}
+
+.settings-tab-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: var(--subcard-border);
+}
+
+.settings-bio-panel {
+  margin-top: 28px;
+  padding-top: 24px;
+  border-top: var(--subcard-border);
+}
+
+.settings-bio-panel-title {
+  margin: 0 0 6px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+[data-theme="dark"] .settings-bio-panel-title {
+  color: #ffffff;
+}
+
+/* Password 2-step flow */
+.settings-password-flow-v2 {
+  display: grid;
+  gap: 24px;
+}
+
+.settings-password-step-v2 {
+  padding: 20px;
+  border-radius: 14px;
+  border: var(--card-border);
+  background: var(--subcard-bg);
+}
+
+.settings-password-step-v2.is-muted {
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+.settings-password-step-v2 .settings-password-step-title {
+  margin: 0 0 4px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+[data-theme="dark"] .settings-password-step-v2 .settings-password-step-title {
+  color: #ffffff;
+}
+
+@media (max-width: 640px) {
+  .settings-tab-panel {
+    padding: 20px 16px;
+  }
+
+  .settings-page-shell .settings-tabs {
+    flex-direction: column;
+  }
+
+  .settings-page-shell .settings-tab-btn {
+    width: 100%;
+    text-align: left;
+  }
+}

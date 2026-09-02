@@ -22,6 +22,7 @@ from .controllers.account_controller import (
     update_mentee_profile,
     update_mentee_matching_profile,
     update_mentor_profile,
+    complete_profile,
 )
 from .controllers.matching_controller import (
     run_matching,
@@ -121,6 +122,8 @@ urlpatterns = [
     path('me/update/', update_account, name='api-me-update'),
     path('me/avatar/', upload_avatar, name='api-me-avatar'),
     path('me/cover/', upload_cover, name='api-me-cover'),
+    path('me/complete-profile/', complete_profile, name='api-me-complete-profile'),
+    path('me/complete_profile/', complete_profile, name='api-me-complete-profile-alias'),
     path('me/mentee-profile/', update_mentee_profile, name='api-me-mentee-profile'),
     path('me/mentee-matching/', update_mentee_matching_profile, name='api-me-mentee-matching'),
     path('me/mentor-profile/', update_mentor_profile, name='api-me-mentor-profile'),

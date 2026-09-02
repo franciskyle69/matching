@@ -1,0 +1,621 @@
+/* Announcements view: composer, feed, side rail and comment threads.
+   Every surface, control and colour below resolves from the tokens declared in
+   styles/base/tokens.css so light and dark themes stay in step. */
+
+.announcements-page,
+.announcements-page input,
+.announcements-page textarea,
+.announcements-page select,
+.announcements-page button {
+  font-family: var(--font-sans);
+}
+
+/* ── Page header ─────────────────────────────────────────────── */
+
+.announcements-page-head {
+  align-items: flex-start;
+  margin-bottom: 0;
+}
+
+.announcements-page-subtitle {
+  margin: 0;
+  max-width: 60ch;
+  color: var(--text-secondary);
+}
+
+/* ── Two column layout ───────────────────────────────────────── */
+
+.announcements-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 70fr) minmax(0, 30fr);
+  align-items: start;
+  gap: var(--space-6);
+}
+
+.announcements-main,
+.announcements-rail {
+  display: grid;
+  align-content: start;
+  gap: var(--space-6);
+  min-width: 0;
+}
+
+.announcements-rail {
+  position: sticky;
+  top: var(--space-6);
+}
+
+@media (max-width: 1100px) {
+  .announcements-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .announcements-rail {
+    position: static;
+  }
+}
+
+/* ── Shared card surface ─────────────────────────────────────── */
+
+.announcement-card {
+  padding: var(--space-5);
+  border: var(--card-border);
+  border-radius: var(--card-radius);
+  background: var(--card-bg);
+  box-shadow: var(--card-shadow);
+  backdrop-filter: var(--card-blur);
+  -webkit-backdrop-filter: var(--card-blur);
+  color: var(--text-primary);
+  transition:
+    border-color var(--motion-base) var(--ease-standard),
+    box-shadow var(--motion-base) var(--ease-standard);
+}
+
+.announcement-card--post:hover {
+  border-color: color-mix(in srgb, var(--accent-primary) 45%, transparent);
+}
+
+/* ── Section headings ────────────────────────────────────────── */
+
+.announcement-section-title {
+  margin: 0;
+  font-size: var(--text-2xl);
+  font-weight: 700;
+  line-height: var(--line-tight);
+  letter-spacing: -0.01em;
+  color: var(--text-primary);
+}
+
+.announcement-card-title {
+  margin: 0;
+  font-size: var(--text-md);
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.announcement-card-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-3);
+}
+
+/* ── Composer ────────────────────────────────────────────────── */
+
+.announcement-card--composer {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.announcement-field {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.announcement-field-label {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.announcement-input {
+  width: 100%;
+  padding: var(--input-padding);
+  border: var(--input-border);
+  border-radius: var(--input-radius);
+  background: var(--input-bg);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  line-height: var(--line-relaxed);
+  resize: vertical;
+  transition:
+    border-color var(--motion-fast) var(--ease-standard),
+    box-shadow var(--motion-fast) var(--ease-standard);
+}
+
+.announcement-input::placeholder {
+  color: var(--text-secondary);
+  font-family: var(--font-sans);
+  opacity: 0.85;
+}
+
+.announcement-input:focus {
+  outline: none;
+  border-color: var(--input-border-focus);
+  box-shadow: 0 0 0 3px
+    color-mix(in srgb, var(--input-border-focus) 28%, transparent);
+}
+
+.announcement-textarea {
+  min-height: 128px;
+}
+
+.announcement-composer-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.announcement-composer-hint {
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+}
+
+/* ── Segmented pill control (replaces radio inputs) ──────────── */
+
+.segmented-control {
+  display: inline-flex;
+  padding: 4px;
+  gap: 4px;
+  border: var(--input-border);
+  border-radius: 999px;
+  background: var(--input-bg);
+}
+
+.segmented-option {
+  appearance: none;
+  border: none;
+  padding: 8px 18px;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  line-height: 1.2;
+  cursor: pointer;
+  transition:
+    background-color var(--motion-fast) var(--ease-standard),
+    color var(--motion-fast) var(--ease-standard);
+}
+
+.segmented-option:hover:not(.is-active) {
+  color: var(--text-primary);
+  background: color-mix(in srgb, var(--accent-primary) 16%, transparent);
+}
+
+.segmented-option:focus-visible {
+  outline: 2px solid var(--input-border-focus);
+  outline-offset: 2px;
+}
+
+.segmented-option.is-active {
+  background: var(--accent-primary);
+  color: #ffffff;
+}
+
+/* ── Recipient chips (replaces checkbox inputs) ──────────────── */
+
+.announcement-recipients {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border: var(--card-border);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--input-bg) 70%, transparent);
+}
+
+.announcement-recipients-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.announcement-recipients-title {
+  margin: 0;
+  font-size: var(--text-sm);
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.announcement-recipients-meta {
+  margin: 0;
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+}
+
+.announcement-chip-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.announcement-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 7px 14px;
+  border: var(--input-border);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    background-color var(--motion-fast) var(--ease-standard),
+    border-color var(--motion-fast) var(--ease-standard);
+}
+
+.announcement-chip:hover {
+  border-color: color-mix(in srgb, var(--accent-primary) 55%, transparent);
+}
+
+.announcement-chip:focus-visible {
+  outline: 2px solid var(--input-border-focus);
+  outline-offset: 2px;
+}
+
+.announcement-chip.is-selected {
+  border-color: var(--accent-primary);
+  background: color-mix(in srgb, var(--accent-primary) 24%, transparent);
+}
+
+.announcement-chip-check {
+  font-size: var(--text-xs);
+  line-height: 1;
+  opacity: 0;
+}
+
+.announcement-chip.is-selected .announcement-chip-check {
+  opacity: 1;
+}
+
+.announcement-empty-note {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+/* ── Buttons ─────────────────────────────────────────────────── */
+
+.announcements-page .btn.announcement-post-submit {
+  background: var(--accent-primary);
+  border: 1px solid var(--accent-primary);
+  color: #ffffff;
+  font-weight: 700;
+  box-shadow: none;
+}
+
+.announcements-page .btn.announcement-post-submit:hover:not(:disabled) {
+  background: var(--accent-primary-hover);
+  border-color: var(--accent-primary-hover);
+  color: #ffffff;
+  filter: none;
+}
+
+.announcements-page .btn.announcement-post-submit:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.announcements-page .btn.secondary {
+  background: color-mix(in srgb, var(--card-bg) 70%, transparent);
+  border: var(--card-border);
+  color: var(--text-primary);
+  box-shadow: none;
+  backdrop-filter: var(--card-blur);
+  -webkit-backdrop-filter: var(--card-blur);
+}
+
+.announcements-page .btn.secondary:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--accent-primary) 55%, transparent);
+  background: color-mix(in srgb, var(--accent-primary) 14%, transparent);
+  filter: none;
+}
+
+.announcements-page .btn.danger {
+  background: transparent;
+  border: 1px solid color-mix(in srgb, var(--danger) 55%, transparent);
+  color: var(--danger);
+  box-shadow: none;
+}
+
+.announcements-page .btn.danger:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--danger) 16%, transparent);
+  filter: none;
+}
+
+/* ── Feed ────────────────────────────────────────────────────── */
+
+.announcements-feed {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.announcements-feed-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.announcements-feed-count {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.announcement-card--post {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.announcement-header {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-bottom: 0;
+}
+
+.announcement-author {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.announcement-date,
+.announcement-to {
+  margin: 0;
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+}
+
+.announcement-message {
+  margin: 0;
+  font-size: var(--text-sm);
+  line-height: var(--line-relaxed);
+  color: var(--text-primary);
+  white-space: pre-wrap;
+}
+
+.announcements-page .announcements-empty {
+  padding: var(--space-8) var(--space-6);
+  border: 1px dashed
+    color-mix(in srgb, var(--text-secondary) 45%, transparent);
+  border-radius: var(--card-radius);
+  background: var(--card-bg);
+  box-shadow: none;
+  color: var(--text-secondary);
+}
+
+.announcements-empty-actions {
+  margin-top: var(--space-3);
+  justify-content: center;
+}
+
+/* ── Side rail ───────────────────────────────────────────────── */
+
+.announcement-card--rail {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.announcement-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: var(--space-3);
+}
+
+.announcement-stat {
+  display: grid;
+  gap: 2px;
+  padding: var(--space-3);
+  border: var(--card-border);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--input-bg) 60%, transparent);
+}
+
+.announcement-stat-value {
+  font-size: var(--text-xl);
+  font-weight: 700;
+  line-height: var(--line-tight);
+  color: var(--text-primary);
+}
+
+.announcement-stat-label {
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+}
+
+.announcement-rail-note {
+  margin: 0;
+  font-size: var(--text-xs);
+  line-height: var(--line-normal);
+  color: var(--text-secondary);
+}
+
+.announcement-roster {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.announcement-roster-item {
+  padding: 5px 12px;
+  border: var(--card-border);
+  border-radius: 999px;
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+}
+
+.announcement-roster-item.is-selected {
+  border-color: var(--accent-primary);
+  color: var(--text-primary);
+  background: color-mix(in srgb, var(--accent-primary) 20%, transparent);
+}
+
+/* ── Loading skeletons ───────────────────────────────────────── */
+
+.announcements-page .announcement-card-skeleton {
+  padding: var(--space-5);
+  border: var(--card-border);
+  border-radius: var(--card-radius);
+  background: var(--card-bg);
+  box-shadow: var(--card-shadow);
+}
+
+/* ── Comment threads ─────────────────────────────────────────── */
+
+.comment-thread {
+  padding-top: var(--space-3);
+  border-top: var(--card-border);
+}
+
+.comment-thread-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 6px 12px;
+  border: var(--card-border);
+  border-radius: var(--radius-xs);
+  background: color-mix(in srgb, var(--input-bg) 60%, transparent);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background-color var(--motion-fast) var(--ease-standard),
+    border-color var(--motion-fast) var(--ease-standard);
+}
+
+.comment-thread-toggle:hover {
+  border-color: color-mix(in srgb, var(--accent-primary) 55%, transparent);
+  background: color-mix(in srgb, var(--accent-primary) 14%, transparent);
+}
+
+.comment-count {
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.comment-thread-body {
+  margin-top: var(--space-3);
+}
+
+.comment-list {
+  margin: 0 0 var(--space-3) 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: var(--space-2);
+}
+
+.comment-item {
+  padding: var(--space-3);
+  border: var(--card-border);
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--input-bg) 60%, transparent);
+  font-size: var(--text-sm);
+}
+
+.comment-item.muted {
+  color: var(--text-secondary);
+}
+
+.comment-author {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.comment-meta {
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+}
+
+.comment-content {
+  margin: var(--space-1) 0 0 0;
+  line-height: var(--line-normal);
+  color: var(--text-primary);
+  white-space: pre-wrap;
+}
+
+.comment-input-row {
+  display: grid;
+  gap: var(--space-2);
+  justify-items: start;
+}
+
+.comment-input {
+  width: 100%;
+  min-height: 72px;
+  padding: var(--input-padding);
+  border: var(--input-border);
+  border-radius: var(--input-radius);
+  background: var(--input-bg);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  line-height: var(--line-normal);
+  resize: vertical;
+  transition:
+    border-color var(--motion-fast) var(--ease-standard),
+    box-shadow var(--motion-fast) var(--ease-standard);
+}
+
+.comment-input::placeholder {
+  color: var(--text-secondary);
+  opacity: 0.85;
+}
+
+.comment-input:focus {
+  outline: none;
+  border-color: var(--input-border-focus);
+  box-shadow: 0 0 0 3px
+    color-mix(in srgb, var(--input-border-focus) 28%, transparent);
+}
+
+@media (max-width: 768px) {
+  .announcement-card {
+    padding: var(--space-4);
+  }
+
+  .announcement-section-title {
+    font-size: var(--text-xl);
+  }
+
+  .segmented-control {
+    width: 100%;
+  }
+
+  .segmented-option {
+    flex: 1;
+    padding: 10px 12px;
+  }
+
+  .announcement-composer-actions .btn {
+    width: 100%;
+  }
+}
