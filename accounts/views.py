@@ -19,7 +19,6 @@ from .forms import RegisterForm, AccountSettingsForm, PasswordChangeWithCodeForm
 from .models import must_change_password, set_must_change_password
 from .oauth_gate import INTENT_SESSION_KEY, SIGNUP_INTENT, normalize_oauth_intent
 from profiles.models import MentorProfile, MenteeProfile, save_verification_documents
-from urllib.parse import quote
 ROLE_SESSION_KEY = "selected_role"
 GOOGLE_OAUTH_ROLE_SESSION_KEY = "google_oauth_selected_role"
 PASSWORD_CHANGE_CODE_SESSION_KEY = "password_change_verification_code"
@@ -100,11 +99,16 @@ def select_google_role(request, role: str):
     request.session[ROLE_SESSION_KEY] = role
     request.session[GOOGLE_OAUTH_ROLE_SESSION_KEY] = role
     request.session[INTENT_SESSION_KEY] = SIGNUP_INTENT
-    return redirect("/accounts/google/login/?process=login&next=/app/signin%3Foauth%3Dgoogle")
+    request.session.save()
+    return render(
+        request,
+        "account/google_oauth_continue.html",
+        {"process": "login", "next_url": "/app/signin?oauth=google"},
+    )
 
 
 def start_google_oauth(request, intent: str):
-    """Store login vs signup intent, then send the user to Google."""
+    """Store login vs signup intent, then POST the user to Google (allauth)."""
     normalized = normalize_oauth_intent(intent)
     request.session[INTENT_SESSION_KEY] = normalized
     if normalized == SIGNUP_INTENT:
@@ -118,8 +122,11 @@ def start_google_oauth(request, intent: str):
         next_url = "/app/complete-profile?oauth=google"
     else:
         next_url = "/app/?oauth=google"
-    return redirect(
-        "/accounts/google/login/?process=login&next=" + quote(next_url, safe="")
+    request.session.save()
+    return render(
+        request,
+        "account/google_oauth_continue.html",
+        {"process": "login", "next_url": next_url},
     )
 
 

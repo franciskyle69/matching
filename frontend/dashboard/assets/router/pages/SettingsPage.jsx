@@ -68,7 +68,7 @@
   function getPasswordChecks(password) {
     const value = String(password || "");
     return [
-      { id: "length", label: "At least 8 characters", ok: value.length >= 8 },
+      { id: "length", label: "At least 10 characters", ok: value.length >= 10 },
       { id: "lower", label: "One lowercase letter", ok: /[a-z]/.test(value) },
       { id: "upper", label: "One uppercase letter", ok: /[A-Z]/.test(value) },
       { id: "number", label: "One number", ok: /\d/.test(value) },

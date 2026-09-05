@@ -101,7 +101,7 @@ def backup_list(request):
             })
         except Exception:
             continue
-    return JsonResponse({"backups": result, "backup_dir": str(_backup_dir())})
+    return JsonResponse({"backups": result})
 
 
 @login_required

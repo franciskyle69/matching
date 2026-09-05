@@ -36,10 +36,11 @@ class GoogleOAuthGateTests(TestCase):
 
 
 class GoogleOAuthStartViewTests(TestCase):
-    def test_login_start_stores_intent_and_redirects_to_google(self):
+    def test_login_start_stores_intent_and_posts_to_google(self):
         response = self.client.get(reverse("start_google_oauth", args=["login"]))
-        self.assertEqual(response.status_code, 302)
-        self.assertIn("/accounts/google/login/", response["Location"])
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'action="/accounts/google/login/"')
+        self.assertContains(response, 'method="post"')
         self.assertEqual(self.client.session.get("google_oauth_intent"), "login")
 
     def test_signup_without_role_goes_to_portal(self):
@@ -51,9 +52,9 @@ class GoogleOAuthStartViewTests(TestCase):
         response = self.client.get(
             reverse("start_google_oauth", args=["signup"]) + "?role=mentee"
         )
-        self.assertEqual(response.status_code, 302)
-        self.assertIn("/accounts/google/login/", response["Location"])
-        self.assertIn("complete-profile", response["Location"])
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'action="/accounts/google/login/"')
+        self.assertIn("complete-profile", response.content.decode())
         session = self.client.session
         self.assertEqual(session.get("google_oauth_intent"), "signup")
         self.assertEqual(session.get("google_oauth_selected_role"), "mentee")

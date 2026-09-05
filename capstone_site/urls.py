@@ -21,7 +21,7 @@ urlpatterns = [
     path('', landing_page, name='home'),
     path('portal/', portal_page, name='portal'),
     path('landing/', public_landing_page, name='public_landing'),
-    path('admin/', admin.site.urls),
+    path(getattr(settings, "ADMIN_URL", "admin/"), admin.site.urls),
     path('accounts/', include('accounts.urls')),
     path('accounts/', include('django.contrib.auth.urls')),
     path('accounts/', include('allauth.urls')),

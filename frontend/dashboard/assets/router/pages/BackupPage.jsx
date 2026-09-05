@@ -31,7 +31,6 @@
 
     const {
       backups,
-      backupDir,
       backupsLoading,
       backupCreateLoading,
       backupRestoreLoading,
@@ -117,7 +116,7 @@
           <p className="backup-card-desc">
             Creates a complete backup of all collections as a database backup file: users,
             mentors, mentees, subjects, announcements, and more.
-            Stored in <code>{backupDir || "backups/"}</code>.
+            Stored in a protected server backup folder.
           </p>
           <div className="backup-card-actions">
             <button

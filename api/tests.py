@@ -35,6 +35,24 @@ class ApiAuthTests(TestCase):
         )
         self.assertEqual(res.status_code, 200)
 
+    def test_login_sets_httponly_refresh_cookie_not_json_tokens(self):
+        res = self.client.post(
+            "/api/auth/login/",
+            data=json.dumps(
+                {
+                    "email": "mentor1@student.buksu.edu.ph",
+                    "password": self.password,
+                }
+            ),
+            content_type="application/json",
+        )
+        self.assertEqual(res.status_code, 200)
+        payload = res.json()
+        self.assertNotIn("access_token", payload)
+        self.assertNotIn("refresh_token", payload)
+        self.assertIn("pl_refresh", res.cookies)
+        self.assertTrue(res.cookies["pl_refresh"]["httponly"])
+
     def test_login_does_not_require_portal_role(self):
         mentee_user = User.objects.create_user(
             username="mentee1",
@@ -79,6 +97,22 @@ class ApiAuthTests(TestCase):
             content_type="application/json",
         )
         self.assertEqual(res.status_code, 429)
+
+
+class ApiSecurityTests(TestCase):
+    def test_unauthenticated_api_returns_json_401(self):
+        res = self.client.get("/api/me/")
+        self.assertEqual(res.status_code, 401)
+        self.assertEqual(res.json().get("error"), "Authentication required.")
+
+    def test_security_headers_on_html(self):
+        res = self.client.get("/landing/")
+        self.assertEqual(res.status_code, 200)
+        csp = res.get("Content-Security-Policy", "")
+        self.assertIn("script-src", csp)
+        self.assertIn("frame-ancestors 'none'", csp)
+        self.assertEqual(res.get("X-Content-Type-Options"), "nosniff")
+        self.assertEqual(res.get("Referrer-Policy"), "strict-origin-when-cross-origin")
 
 
 class ApiNotificationsTests(TestCase):

@@ -4,6 +4,19 @@ from django.http import HttpResponse, HttpResponseNotFound, HttpResponseRedirect
 
 from accounts.models import must_change_password
 
+CSP_NONCE_PLACEHOLDER = "__CSP_NONCE__"
+
+
+def _html_file_response(path: Path, request, extra_headers=None) -> HttpResponse:
+    html = path.read_text(encoding="utf-8")
+    nonce = getattr(request, "csp_nonce", "")
+    html = html.replace(CSP_NONCE_PLACEHOLDER, nonce)
+    response = HttpResponse(html)
+    if extra_headers:
+        for key, value in extra_headers.items():
+            response[key] = value
+    return response
+
 
 def _matching_redirect(request, default_tab="matching"):
     """Redirect old /matching/* Django pages to React app with appropriate hash."""
@@ -27,19 +40,22 @@ def react_app(request):
         return HttpResponseNotFound(
             "React build not found. Run `npm install` and `npm run build:client` in material-shadcn-1.0.0."
         )
-    response = HttpResponse(index_path.read_text(encoding="utf-8"))
-    # Avoid restoring sensitive authenticated SPA state from browser history cache.
-    response["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0, private"
-    response["Pragma"] = "no-cache"
-    response["Expires"] = "0"
-    return response
+    return _html_file_response(
+        index_path,
+        request,
+        extra_headers={
+            "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0, private",
+            "Pragma": "no-cache",
+            "Expires": "0",
+        },
+    )
 
 
-def _read_landing_html(filename: str) -> HttpResponse:
+def _read_landing_html(request, filename: str) -> HttpResponse:
     index_path = Path(__file__).resolve().parent.parent / "frontend" / "landing" / filename
     if not index_path.exists():
         return HttpResponseNotFound(f"Landing page not found: {filename}")
-    return HttpResponse(index_path.read_text(encoding="utf-8"))
+    return _html_file_response(index_path, request)
 
 
 def landing_page(request):
@@ -47,12 +63,12 @@ def landing_page(request):
         if must_change_password(request.user):
             return HttpResponseRedirect("/accounts/settings/?must_change_password=1")
         return HttpResponseRedirect("/app/")
-    return _read_landing_html("index.html")
+    return _read_landing_html(request, "index.html")
 
 
 def portal_page(request):
-    return _read_landing_html("portal.html")
+    return _read_landing_html(request, "portal.html")
 
 
 def public_landing_page(request):
-    return _read_landing_html("index.html")
+    return _read_landing_html(request, "index.html")

@@ -1116,7 +1116,7 @@ import { Alert as MuiAlert } from "@mui/material";
                     }
                     required
                     aria-required="true"
-                    minLength={8}
+                    minLength={10}
                   />
                   <button
                     type="button"
@@ -1173,7 +1173,7 @@ import { Alert as MuiAlert } from "@mui/material";
                     }
                     required
                     aria-required="true"
-                    minLength={8}
+                    minLength={10}
                   />
                   <button
                     type="button"

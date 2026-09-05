@@ -83,12 +83,23 @@
     </table>
   </div>
 </div>
-<script>
+<script nonce="{{ csp_nonce }}">
   const btn = document.getElementById("run-matching-btn");
   const statusEl = document.getElementById("status-text");
   const bodyEl = document.getElementById("results-body");
   const emptyEl = document.getElementById("results-empty");
   const tableContainer = document.getElementById("results-container");
+
+  function addRoleCell(tr, name, label, chipClass) {
+    const td = document.createElement("td");
+    td.appendChild(document.createTextNode(name || "—"));
+    td.appendChild(document.createTextNode(" "));
+    const chip = document.createElement("span");
+    chip.className = chipClass || "chip";
+    chip.textContent = label;
+    td.appendChild(chip);
+    tr.appendChild(td);
+  }
 
   async function runMatching() {
     btn.disabled = true;
@@ -101,14 +112,17 @@
       }
       const data = await resp.json();
       const results = data.results || [];
-      bodyEl.innerHTML = "";
+      bodyEl.replaceChildren();
       for (const row of results) {
         const tr = document.createElement("tr");
-        tr.innerHTML = `
-          <td>${row.mentor_username || "—"} <span class="chip">Mentor</span></td>
-          <td>${row.mentee_username || "—"} <span class="chip" style="background:#eff6ff;color:#1d4ed8;">Mentee</span></td>
-          <td><span class="score-pill">${row.score.toFixed(3)}</span></td>
-        `;
+        addRoleCell(tr, row.mentor_username, "Mentor", "chip");
+        addRoleCell(tr, row.mentee_username, "Mentee", "chip");
+        const scoreTd = document.createElement("td");
+        const pill = document.createElement("span");
+        pill.className = "score-pill";
+        pill.textContent = Number(row.score).toFixed(3);
+        scoreTd.appendChild(pill);
+        tr.appendChild(scoreTd);
         bodyEl.appendChild(tr);
       }
       if (results.length === 0) {

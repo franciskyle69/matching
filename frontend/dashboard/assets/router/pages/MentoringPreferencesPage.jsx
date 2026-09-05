@@ -3,6 +3,7 @@ import CalendarTodayIcon from "@mui/icons-material/CalendarToday";
 import DeleteIcon from "@mui/icons-material/Delete";
 import Button from "@mui/material/Button";
 import IconButton from "@mui/material/IconButton";
+import MenuItem from "@mui/material/MenuItem";
 import Slider from "@mui/material/Slider";
 import TextField from "@mui/material/TextField";
 
@@ -32,50 +33,32 @@ import TextField from "@mui/material/TextField";
     MIN_AVAILABLE_TIME,
     MAX_AVAILABLE_TIME,
     parseSlot,
-    buildSlot,
     formatSlotLabel,
     buildAvailabilityUpdate,
   } = Availability;
 
   const CAMPUS_TZ_LABEL = "UTC+08:00 (Manila / Singapore)";
+  const WEEKDAYS = [
+    "Monday",
+    "Tuesday",
+    "Wednesday",
+    "Thursday",
+    "Friday",
+    "Saturday",
+  ];
+  const WEEKDAY_TO_TOKEN = WEEKDAYS.reduce((acc, label) => {
+    const token = DAY_ORDER.find((day) => DAY_LABELS[day] === label);
+    if (token) acc[label] = token;
+    return acc;
+  }, {});
 
-  function isoDateToDayToken(isoDate) {
-    const parts = String(isoDate || "").trim().split("-");
-    if (parts.length !== 3) return "";
-    const year = Number(parts[0]);
-    const month = Number(parts[1]);
-    const day = Number(parts[2]);
-    if (!Number.isFinite(year) || !Number.isFinite(month) || !Number.isFinite(day)) {
-      return "";
-    }
-    return DAY_ORDER[(new Date(year, month - 1, day).getDay() + 6) % 7];
-  }
-
-  function formatIsoDateLabel(isoDate) {
-    const parts = String(isoDate || "").trim().split("-");
-    if (parts.length !== 3) return "";
-    const year = Number(parts[0]);
-    const month = Number(parts[1]);
-    const day = Number(parts[2]);
-    if (!Number.isFinite(year) || !Number.isFinite(month) || !Number.isFinite(day)) {
-      return "";
-    }
-    return new Date(year, month - 1, day).toLocaleDateString(undefined, {
-      weekday: "short",
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    });
-  }
-
-  function slotDateLabel(slot, pickedIso) {
-    if (pickedIso) return formatIsoDateLabel(pickedIso);
+  function slotDateLabel(slot) {
     const parsed = parseSlot(slot);
     if (!parsed || !parsed.days.length) return "Every day";
     if (parsed.days.length === 1) {
       return `${DAY_LABELS[parsed.days[0]] || parsed.days[0]} (weekly)`;
     }
-    return `${parsed.days.join(", ")} (weekly)`;
+    return `${parsed.days.map((day) => DAY_LABELS[day] || day).join(", ")} (weekly)`;
   }
 
   function slotTimeLabel(slot) {
@@ -86,12 +69,11 @@ import TextField from "@mui/material/TextField";
 
   function AvailabilitySection({
     slots,
-    slotDateByWire,
-    pickDate,
+    selectedDay,
     startTime,
     endTime,
     error,
-    onPickDateChange,
+    onSelectedDayChange,
     onStartTimeChange,
     onEndTimeChange,
     onAddSlot,
@@ -104,15 +86,27 @@ import TextField from "@mui/material/TextField";
         </span>
         <div className="pref-avail-builder">
           <TextField
-            label="Select date"
-            type="date"
-            value={pickDate}
-            onChange={(event) => onPickDateChange(event.target.value)}
+            select
+            label="Select day"
+            value={selectedDay}
+            onChange={(event) => onSelectedDayChange(event.target.value)}
             fullWidth
             size="small"
-            className="pref-date-field"
-            slotProps={{ inputLabel: { shrink: true } }}
-          />
+            className="pref-day-field"
+            slotProps={{
+              select: { displayEmpty: true },
+              inputLabel: { shrink: true },
+            }}
+          >
+            <MenuItem value="">
+              Select day
+            </MenuItem>
+            {WEEKDAYS.map((day) => (
+              <MenuItem key={day} value={day}>
+                {day}
+              </MenuItem>
+            ))}
+          </TextField>
           {TimePickerField ? (
             <>
               <TimePickerField
@@ -160,7 +154,7 @@ import TextField from "@mui/material/TextField";
             variant="contained"
             className="pref-add-slot-btn"
             onClick={onAddSlot}
-            disabled={!pickDate || !startTime || !endTime}
+            disabled={!selectedDay || !startTime || !endTime}
           >
             Add slot
           </Button>
@@ -173,7 +167,7 @@ import TextField from "@mui/material/TextField";
         <div className="pref-avail-slot-list" aria-live="polite">
           {!Array.isArray(slots) || slots.length === 0 ? (
             <p className="pref-slot-empty">
-              No availability added yet. Pick a date and time range above.
+              No availability added yet. Select a weekday and time range above.
             </p>
           ) : (
             slots.map((slot, index) => (
@@ -181,7 +175,7 @@ import TextField from "@mui/material/TextField";
                 <div className="availability-slot-main">
                   <span className="availability-slot-date">
                     <CalendarTodayIcon className="availability-slot-icon" aria-hidden="true" />
-                    {slotDateLabel(slot, slotDateByWire[slot])}
+                    {slotDateLabel(slot)}
                   </span>
                   <span className="availability-slot-time">
                     <AccessTimeIcon className="availability-slot-icon" aria-hidden="true" />
@@ -287,10 +281,9 @@ import TextField from "@mui/material/TextField";
     const [savedAt, setSavedAt] = useState(0);
     const [submitAttempted, setSubmitAttempted] = useState(false);
     const [availabilityError, setAvailabilityError] = useState("");
-    const [availPickDate, setAvailPickDate] = useState("");
+    const [selectedDay, setSelectedDay] = useState("");
     const [availStartTime, setAvailStartTime] = useState("09:00");
     const [availEndTime, setAvailEndTime] = useState("10:00");
-    const [slotDateByWire, setSlotDateByWire] = useState({});
 
     const serializedPrefs = serializePreferences(menteeMatching);
     if (!hasUserEditedRef.current) {
@@ -597,42 +590,33 @@ import TextField from "@mui/material/TextField";
 
     function handleAddAvailabilitySlot() {
       markDirty();
-      const day = isoDateToDayToken(availPickDate);
-      if (!day || !availStartTime || !availEndTime) {
-        setAvailabilityError("Select a date, start time, and end time.");
+      if (!selectedDay || !availStartTime || !availEndTime) {
+        setAvailabilityError("Select a day, start time, and end time.");
+        return;
+      }
+      const dayToken = WEEKDAY_TO_TOKEN[selectedDay];
+      if (!dayToken) {
+        setAvailabilityError("Select a valid weekday.");
         return;
       }
       const update = buildAvailabilityUpdate(
         selectedSlots,
-        { days: [day], start: availStartTime, end: availEndTime },
+        { days: [dayToken], start: availStartTime, end: availEndTime },
         null,
       );
       if (!update.next) {
         setAvailabilityError(update.error || "Unable to add that slot.");
         return;
       }
-      const wireSlot = buildSlot([day], availStartTime, availEndTime);
       setAvailabilityError("");
-      setSlotDateByWire((prev) => ({
-        ...prev,
-        [wireSlot]: availPickDate,
-      }));
       setMenteeMatching({ ...menteeMatching, availability: update.next });
-      setAvailPickDate("");
+      setSelectedDay("");
     }
 
     function removeAvailabilitySlot(index) {
       markDirty();
-      const removed = selectedSlots[index];
       const next = selectedSlots.filter((_, itemIndex) => itemIndex !== index);
       setMenteeMatching({ ...menteeMatching, availability: next });
-      if (removed) {
-        setSlotDateByWire((prev) => {
-          const copy = { ...prev };
-          delete copy[removed];
-          return copy;
-        });
-      }
     }
 
     async function handleSave() {
@@ -687,10 +671,9 @@ import TextField from "@mui/material/TextField";
         setSelectedTopicIds(Array.from(nextTopicIds));
         setSelectedCompetencyIds(competencyIds);
         hydrateSelectionRef.current = true;
-        setAvailPickDate("");
+        setSelectedDay("");
         setAvailStartTime("09:00");
         setAvailEndTime("10:00");
-        setSlotDateByWire({});
         setAvailabilityError("");
         setSubmitAttempted(false);
         hasUserEditedRef.current = false;
@@ -977,16 +960,15 @@ import TextField from "@mui/material/TextField";
 
           <SectionCard
             title="Availability"
-            description="Choose your exact dates and set your custom available time range."
+            description="Set your recurring weekly availability for mentoring sessions."
           >
             <AvailabilitySection
               slots={selectedSlots}
-              slotDateByWire={slotDateByWire}
-              pickDate={availPickDate}
+              selectedDay={selectedDay}
               startTime={availStartTime}
               endTime={availEndTime}
               error={availabilityError}
-              onPickDateChange={setAvailPickDate}
+              onSelectedDayChange={setSelectedDay}
               onStartTimeChange={setAvailStartTime}
               onEndTimeChange={setAvailEndTime}
               onAddSlot={handleAddAvailabilitySlot}

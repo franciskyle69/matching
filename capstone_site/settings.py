@@ -58,10 +58,20 @@ if not DEBUG:
 # SECURITY WARNING: don't run with debug turned on in production!
 ALLOWED_HOSTS = _env_csv("DJANGO_ALLOWED_HOSTS")
 CSRF_TRUSTED_ORIGINS = _env_csv("DJANGO_CSRF_TRUSTED_ORIGINS")
+_render_host = (os.environ.get("RENDER_EXTERNAL_HOSTNAME") or "").strip()
+if _render_host and _render_host not in ALLOWED_HOSTS:
+    ALLOWED_HOSTS.append(_render_host)
+if _render_host:
+    _render_origin = f"https://{_render_host}"
+    if _render_origin not in CSRF_TRUSTED_ORIGINS:
+        CSRF_TRUSTED_ORIGINS.append(_render_origin)
 
 if not DEBUG:
     if not ALLOWED_HOSTS:
-        raise RuntimeError('DJANGO_ALLOWED_HOSTS must be set when DJANGO_DEBUG is False.')
+        if os.environ.get("RENDER"):
+            ALLOWED_HOSTS = [".onrender.com"]
+        else:
+            raise RuntimeError('DJANGO_ALLOWED_HOSTS must be set when DJANGO_DEBUG is False.')
     SESSION_COOKIE_SECURE = True
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = 'Lax'
@@ -75,6 +85,7 @@ if not DEBUG:
     SECURE_HSTS_PRELOAD = True
     SECURE_CONTENT_TYPE_NOSNIFF = True
     SECURE_REFERRER_POLICY = 'strict-origin-when-cross-origin'
+    SECURE_CROSS_ORIGIN_OPENER_POLICY = 'same-origin'
     X_FRAME_OPTIONS = 'DENY'
 
 
@@ -103,12 +114,14 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'capstone_site.security.SecurityHeadersMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',  # For serving static files in production
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'accounts.jwt_middleware.JWTAuthenticationMiddleware',
+    'capstone_site.security.ApiAuthenticationMiddleware',
     'axes.middleware.AxesMiddleware',  # Must be after AuthenticationMiddleware
     'allauth.account.middleware.AccountMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
@@ -130,6 +143,7 @@ TEMPLATES = [
                 'django.contrib.messages.context_processors.messages',
                 'matching.context_processors.notification_counts',
                 'matching.context_processors.sidebar_user',
+                'capstone_site.security.csp_nonce_context',
             ],
         },
     },
@@ -184,6 +198,7 @@ AUTH_PASSWORD_VALIDATORS = [
     },
     {
         'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
+        'OPTIONS': {'min_length': 10},
     },
     {
         'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
@@ -228,7 +243,7 @@ ENABLE_GOOGLE_DRIVE_API = _env_bool("ENABLE_GOOGLE_DRIVE_API", default=False)
 # Default file storage: Cloudinary (if set) else filesystem.
 STORAGES = {
     "staticfiles": {
-        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+        "BACKEND": "capstone_site.storage.WhiteNoiseStaticFilesStorage",
     },
 }
 if os.environ.get("CLOUDINARY_CLOUD_NAME"):
@@ -267,7 +282,7 @@ ACCOUNT_EMAIL_VERIFICATION = 'mandatory'
 ACCOUNT_UNIQUE_EMAIL = True
 ACCOUNT_LOGIN_METHODS = {'email'}
 ACCOUNT_SIGNUP_FIELDS = ['email*', 'password1*', 'password2*']
-SOCIALACCOUNT_LOGIN_ON_GET = True
+SOCIALACCOUNT_LOGIN_ON_GET = False
 SOCIALACCOUNT_AUTO_SIGNUP = True
 # Allow linking Google accounts to existing email/password accounts
 SOCIALACCOUNT_EMAIL_AUTHENTICATION_AUTO_CONNECT = True
@@ -289,15 +304,20 @@ SOCIALACCOUNT_PROVIDERS = {
 
 SOCIALACCOUNT_ADAPTER = "accounts.adapters.RoleAwareSocialAccountAdapter"
 
-# REST framework: Django session auth for API (use IsAuthenticated on views that need it)
+# REST framework: Django session auth for API (public views must opt out explicitly)
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework.authentication.SessionAuthentication',
     ],
     'DEFAULT_PERMISSION_CLASSES': [
-        'rest_framework.permissions.AllowAny',
+        'rest_framework.permissions.IsAuthenticated',
     ],
 }
+
+# Upload ceilings (verification docs are capped at 5 MB in forms)
+DATA_UPLOAD_MAX_MEMORY_SIZE = 6 * 1024 * 1024
+FILE_UPLOAD_MAX_MEMORY_SIZE = 6 * 1024 * 1024
+DATA_UPLOAD_MAX_NUMBER_FIELDS = 200
 
 # Email (Gmail SMTP with app password)
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
@@ -368,6 +388,15 @@ AXES_COOLOFF_TIME = timedelta(minutes=15)  # Lockout duration: 15 minutes
 AXES_LOCKOUT_TEMPLATE = None  # Use DRF response for API lockouts
 AXES_VERBOSE = True  # Log detailed information about attempts
 AXES_RESET_ON_SUCCESS = True  # Reset counter on successful login
+AXES_LOCKOUT_BY_COMBINATION_USER_AND_IP = True
+AXES_LOCKOUT_PARAMETERS = [["username", "ip_address"]]
+_behind_proxy = _env_bool("TRUST_X_FORWARDED_PROTO", default=not DEBUG)
+if _behind_proxy:
+    AXES_IPWARE_PROXY_COUNT = 1
+    AXES_IPWARE_META_PRECEDENCE_ORDER = ("HTTP_X_FORWARDED_FOR", "REMOTE_ADDR")
+else:
+    AXES_IPWARE_PROXY_COUNT = 0
+    AXES_IPWARE_META_PRECEDENCE_ORDER = ("REMOTE_ADDR",)
 
 # Authentication/session performance tuning
 SESSION_SAVE_EVERY_REQUEST = False
@@ -398,11 +427,25 @@ else:
 JWT_SECRET_KEY = os.environ.get("JWT_SECRET_KEY", SECRET_KEY)
 JWT_ACCESS_TTL_SECONDS = int(os.environ.get("JWT_ACCESS_TTL_SECONDS", "1800"))
 JWT_REFRESH_TTL_SECONDS = int(os.environ.get("JWT_REFRESH_TTL_SECONDS", str(60 * 60 * 24 * 14)))
-JWT_ROTATE_REFRESH_TOKENS = _env_bool("JWT_ROTATE_REFRESH_TOKENS", default=False)
+JWT_ROTATE_REFRESH_TOKENS = _env_bool("JWT_ROTATE_REFRESH_TOKENS", default=True)
+JWT_REFRESH_COOKIE_NAME = os.environ.get("JWT_REFRESH_COOKIE_NAME", "pl_refresh")
+JWT_REFRESH_COOKIE_PATH = "/api/auth/"
+
+_admin_url = (os.environ.get("DJANGO_ADMIN_URL") or "").strip().strip("/")
+if _admin_url:
+    ADMIN_URL = f"{_admin_url}/"
+elif DEBUG:
+    ADMIN_URL = "admin/"
+else:
+    ADMIN_URL = "manage/"
 
 # django-dbbackup
 BACKUP_DIR = Path(os.environ.get("BACKUP_DIR", BASE_DIR / "backups"))
-BACKUP_DIR.mkdir(parents=True, exist_ok=True)
+try:
+    BACKUP_DIR.mkdir(parents=True, exist_ok=True)
+except OSError:
+    BACKUP_DIR = Path("/tmp/backups")
+    BACKUP_DIR.mkdir(parents=True, exist_ok=True)
 
 # django-dbbackup v5 reads storage configuration from STORAGES["dbbackup"].
 STORAGES["dbbackup"] = {

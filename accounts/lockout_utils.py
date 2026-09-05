@@ -188,8 +188,6 @@ def create_lockout_response(username, ip_address=None):
         {
             "error": "Account locked",
             "detail": lockout_info["message"],
-            "attempts": lockout_info["attempts"],
-            "failure_limit": lockout_info["failure_limit"],
             "locked_until": lockout_info["locked_until"],
             "remaining_minutes": lockout_info["remaining_minutes"],
             "penalty_minutes": lockout_info["penalty_minutes"],

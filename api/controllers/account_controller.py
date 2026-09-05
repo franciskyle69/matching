@@ -59,9 +59,12 @@ from accounts.views import (
 )
 from accounts.auth_backends import EmailOrUsernameModelBackend
 from accounts.jwt_utils import (
-    issue_access_token,
     issue_refresh_token,
     decode_refresh_token,
+    revoke_refresh_payload,
+    set_refresh_cookie,
+    clear_refresh_cookie,
+    read_refresh_token,
 )
 from accounts.lockout_utils import (
     get_lockout_info,
@@ -397,11 +400,7 @@ def auth_login(request):
 
         logger.warning("auth_login_failed", extra={"identifier": identifier})
         return JsonResponse(
-            {
-                "error": "Invalid credentials.",
-                "attempts": lockout_info.get("attempts", 0),
-                "failure_limit": lockout_info.get("failure_limit", 5),
-            },
+            {"error": "Invalid credentials."},
             status=401,
         )
 
@@ -465,66 +464,62 @@ def auth_login(request):
 
     logger.info("auth_login_success", extra={"user_id": user.id})
     _clear_me_cache(user.id)
-    access_token = issue_access_token(user)
     refresh_token = issue_refresh_token(user)
     audit_log(user, "login", "auth")
-    return JsonResponse(
+    response = JsonResponse(
         {
             "status": "ok",
-            "access_token": access_token,
-            "refresh_token": refresh_token,
-            "token_type": "Bearer",
-            "expires_in": int(getattr(settings, "JWT_ACCESS_TTL_SECONDS", 1800)),
             "must_change_password": False,
         }
     )
+    set_refresh_cookie(response, refresh_token)
+    return response
 
 
 @require_http_methods(["POST"])
 def auth_refresh(request):
     payload = _get_payload(request)
-    refresh_token = _get_str(payload, "refresh_token")
+    refresh_token = read_refresh_token(request, _get_str(payload, "refresh_token"))
     if not refresh_token:
         return JsonResponse({"error": "Refresh token is required."}, status=400)
 
     decoded = decode_refresh_token(refresh_token)
     if not decoded:
-        return JsonResponse({"error": "Invalid or expired refresh token."}, status=401)
+        response = JsonResponse({"error": "Invalid or expired refresh token."}, status=401)
+        clear_refresh_cookie(response)
+        return response
 
     user_id = decoded.get("uid")
     try:
-        user = request.user if getattr(request.user, "is_authenticated", False) else None
-        if not user or user.id != user_id:
-            from django.contrib.auth.models import User
+        from django.contrib.auth.models import User
 
-            user = User.objects.get(id=user_id)
+        user = User.objects.get(id=user_id)
     except User.DoesNotExist:
         return JsonResponse({"error": "User not found."}, status=404)
 
     if not user.is_active:
         return JsonResponse({"error": "User account is inactive."}, status=401)
 
-    access_token = issue_access_token(user)
-    rotate_refresh = bool(getattr(settings, "JWT_ROTATE_REFRESH_TOKENS", False))
-    response = {
-        "status": "ok",
-        "access_token": access_token,
-        "token_type": "Bearer",
-        "expires_in": int(getattr(settings, "JWT_ACCESS_TTL_SECONDS", 1800)),
-    }
+    login(request, user, backend="accounts.auth_backends.EmailOrUsernameModelBackend")
+    rotate_refresh = bool(getattr(settings, "JWT_ROTATE_REFRESH_TOKENS", True))
+    response = JsonResponse({"status": "ok"})
     if rotate_refresh:
-        response["refresh_token"] = issue_refresh_token(user)
-    return JsonResponse(response)
+        revoke_refresh_payload(decoded)
+        set_refresh_cookie(response, issue_refresh_token(user))
+    return response
 
 
-@login_required
 @require_http_methods(["POST"])
 def auth_logout(request):
-    user = request.user
-    _clear_me_cache(user.id)
-    logout(request)
-    audit_log(user, "logout", "auth")
-    return JsonResponse({"status": "ok"})
+    user = request.user if getattr(request.user, "is_authenticated", False) else None
+    if user:
+        _clear_me_cache(user.id)
+        audit_log(user, "logout", "auth")
+        logout(request)
+    revoke_refresh_payload(decode_refresh_token(read_refresh_token(request)))
+    response = JsonResponse({"status": "ok"})
+    clear_refresh_cookie(response)
+    return response
 
 
 @require_http_methods(["POST"])
@@ -545,14 +540,14 @@ def check_lockout(request):
         identifier,
         ip_address=request.META.get("REMOTE_ADDR"),
     )
-    return JsonResponse({
-        "is_locked": lockout_info["is_locked"],
-        "remaining_minutes": lockout_info.get("remaining_minutes"),
-        "locked_until": lockout_info.get("locked_until"),
-        "penalty_minutes": lockout_info.get("penalty_minutes"),
-        "attempts": lockout_info.get("attempts", 0),
-        "failure_limit": lockout_info.get("failure_limit", 5),
-    })
+    if lockout_info["is_locked"]:
+        return JsonResponse({
+            "is_locked": True,
+            "remaining_minutes": lockout_info.get("remaining_minutes"),
+            "locked_until": lockout_info.get("locked_until"),
+            "penalty_minutes": lockout_info.get("penalty_minutes"),
+        })
+    return JsonResponse({"is_locked": False})
 
 
 @require_http_methods(["POST"])

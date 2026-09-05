@@ -7,9 +7,6 @@
   const {
     getCookie,
     fetchJSON,
-    setAuthToken,
-    setRefreshToken,
-    clearAuthTokens,
   } = (window.DashboardApp && window.DashboardApp.Utils) || {};
   const AppContext =
     (window.DashboardApp && window.DashboardApp.AppContext) ||
@@ -811,7 +808,6 @@
       meInFlightRef.current = null;
       if (!result.ok) {
         if (result.status === 401 || result.status === 403) {
-          clearAuthTokens();
         }
         setAuthRequired(true);
         setActiveTab((prev) => (prev === "signup" ? "signup" : "signin"));
@@ -1303,12 +1299,6 @@
         }
         clearLockoutCountdown();
         setAuthAlert(null);
-        if (result.data?.access_token) {
-          setAuthToken(result.data.access_token);
-        }
-        if (result.data?.refresh_token) {
-          setRefreshToken(result.data.refresh_token);
-        }
         const profile = await loadMe({ force: true });
         if (!profile) return;
         setActiveTab("home");
@@ -1554,7 +1544,6 @@
           },
         }).catch(() => {});
       } finally {
-        clearAuthTokens();
         replaceAppUrl("signin");
         window.location.replace("/");
       }

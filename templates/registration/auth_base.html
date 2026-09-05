@@ -212,11 +212,9 @@
       {% block content %}{% endblock %}
     </div>
   </div>
-  <script>
-    (function() {
-      function evaluatePassword(value) {
+  <script nonce="{{ csp_nonce }}">
         return {
-          length: value.length >= 8,
+          length: value.length >= 10,
           number: /[0-9]/.test(value),
           special: /[^A-Za-z0-9]/.test(value),
         };

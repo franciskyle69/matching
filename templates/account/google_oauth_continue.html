@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Continue to Google</title>
+</head>
+<body>
+  <p>Continuing to Google&hellip;</p>
+  <form id="google-oauth-form" method="post" action="/accounts/google/login/">
+    {% csrf_token %}
+    <input type="hidden" name="process" value="{{ process }}">
+    <input type="hidden" name="next" value="{{ next_url }}">
+    <noscript>
+      <button type="submit">Continue to Google</button>
+    </noscript>
+  </form>
+  <script nonce="{{ csp_nonce }}">
+    document.getElementById("google-oauth-form").submit();
+  </script>
+</body>
+</html>

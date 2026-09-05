@@ -36,62 +36,21 @@
     return "";
   }
 
-  function getAuthToken() {
+  function purgeLegacyAuthTokens() {
     try {
-      return window.localStorage.getItem("auth_access_token") || "";
-    } catch {
-      return "";
-    }
-  }
-
-  function getRefreshToken() {
-    try {
-      return window.localStorage.getItem("auth_refresh_token") || "";
-    } catch {
-      return "";
-    }
-  }
-
-  function setAuthToken(token) {
-    try {
-      if (!token) {
-        window.localStorage.removeItem("auth_access_token");
-        return;
-      }
-      window.localStorage.setItem("auth_access_token", token);
+      window.localStorage.removeItem("auth_access_token");
+      window.localStorage.removeItem("auth_refresh_token");
     } catch {
       // Ignore storage failures in privacy-restricted browsers.
     }
   }
 
-  function setRefreshToken(token) {
-    try {
-      if (!token) {
-        window.localStorage.removeItem("auth_refresh_token");
-        return;
-      }
-      window.localStorage.setItem("auth_refresh_token", token);
-    } catch {
-      // Ignore storage failures in privacy-restricted browsers.
-    }
-  }
-
-  function clearAuthToken() {
-    setAuthToken("");
-  }
-
-  function clearAuthTokens() {
-    clearAuthToken();
-    setRefreshToken("");
-  }
+  purgeLegacyAuthTokens();
 
   let refreshInFlight = null;
 
-  async function refreshAccessToken() {
+  async function refreshSession() {
     if (refreshInFlight) return refreshInFlight;
-    const refreshToken = getRefreshToken();
-    if (!refreshToken) return null;
-
     refreshInFlight = (async () => {
       try {
         const response = await fetch("/api/auth/refresh/", {
@@ -99,22 +58,17 @@
           credentials: "include",
           headers: {
             "Content-Type": "application/json",
+            "X-CSRFToken": getCookie("csrftoken"),
           },
-          body: JSON.stringify({ refresh_token: refreshToken }),
+          body: "{}",
         });
-        if (!response.ok) return null;
-        const data = await response.json().catch(() => null);
-        if (!data || !data.access_token) return null;
-        setAuthToken(data.access_token);
-        if (data.refresh_token) setRefreshToken(data.refresh_token);
-        return data.access_token;
+        return response.ok;
       } catch {
-        return null;
+        return false;
       } finally {
         refreshInFlight = null;
       }
     })();
-
     return refreshInFlight;
   }
 
@@ -180,16 +134,11 @@
   async function fetchJSON(url, options = {}) {
     try {
       const isRaw = options.raw;
-      const token = getAuthToken();
       const isApiPath = typeof url === "string" && url.startsWith("/api/");
-      const isCookieAuthPath =
+      const isPublicAuthPath =
         typeof url === "string" &&
         (/^\/api\/csrf\/?$/.test(url) ||
           /^\/api\/auth\/(login|register|check-lockout|refresh|logout)\/?$/.test(url));
-      const useToken = !!(token && isApiPath && !isCookieAuthPath);
-      // Always send cookies: Google/allauth sign-in only establishes a Django
-      // session, so it must stay usable as a fallback when the stored bearer
-      // token is missing, stale, or belongs to an expired login.
       const fetchOpts = { credentials: "include", ...options };
       delete fetchOpts.raw;
       if (isRaw) {
@@ -197,35 +146,16 @@
       } else {
         fetchOpts.headers = { "Content-Type": "application/json", ...(options.headers || {}) };
       }
-      if (useToken && !fetchOpts.headers.Authorization) {
-        fetchOpts.headers.Authorization = `Bearer ${token}`;
-      }
       let response = await fetch(url, fetchOpts);
-      // A stale token makes Django's login_required redirect to the HTML login
-      // page instead of returning 401, so treat that as an auth failure too.
-      const tokenRejected =
-        useToken &&
+      const sessionRejected =
+        isApiPath &&
+        !isPublicAuthPath &&
         (response.status === 401 ||
           (response.redirected && /\/accounts\/login\//.test(response.url || "")));
-      if (tokenRejected) {
-        const newAccessToken = await refreshAccessToken();
-        if (newAccessToken) {
-          const retryOpts = {
-            ...fetchOpts,
-            headers: {
-              ...(fetchOpts.headers || {}),
-              Authorization: `Bearer ${newAccessToken}`,
-            },
-          };
-          response = await fetch(url, retryOpts);
-        } else {
-          clearAuthTokens();
-          const retryOpts = {
-            ...fetchOpts,
-            headers: { ...(fetchOpts.headers || {}) },
-          };
-          delete retryOpts.headers.Authorization;
-          response = await fetch(url, retryOpts);
+      if (sessionRejected) {
+        const refreshed = await refreshSession();
+        if (refreshed) {
+          response = await fetch(url, fetchOpts);
         }
       }
       const contentType = response.headers.get("content-type") || "";
@@ -578,13 +508,6 @@
   window.DashboardApp.Utils = {
     formatMatchScore,
     getCookie,
-    getAuthToken,
-    getRefreshToken,
-    setAuthToken,
-    setRefreshToken,
-    clearAuthToken,
-    clearAuthTokens,
-    refreshAccessToken,
     fetchJSON,
     formatDate,
     formatRelativeTime,

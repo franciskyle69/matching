@@ -68,9 +68,12 @@
     </p>
     {% else %}
     <div>
-      <a href="{% provider_login_url 'google' %}" class="btn-primary secondary" style="margin-top:0; margin-bottom:.75rem;">
-        Continue with Google
-      </a>
+      <form method="post" action="{% provider_login_url 'google' %}" style="margin-top:0; margin-bottom:.75rem;">
+        {% csrf_token %}
+        <button type="submit" class="btn-primary secondary" style="margin:0; width:100%;">
+          Continue with Google
+        </button>
+      </form>
       <p class="divider" style="margin:.5rem 0 1.25rem;">or continue with email</p>
     </div>
     <form method="post" action="{% url 'login' %}" class="auth-panel-form">
