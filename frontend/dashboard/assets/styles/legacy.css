@@ -12645,84 +12645,11 @@ textarea {
 
 /* Announcements + comment thread styles: styles/components/announcements.css */
 
-/* Responsive layout: phone = drawer + hamburger; tablet and up = sidebar (collapsible) */
-@media (max-width: 768px) {
-  .sidebar-mobile-toggle {
-    display: flex;
-  }
-
+/* Compact nav chrome lives in styles/layout/mobile-shell.css (MUI Drawer <900px) */
+@media (max-width: 899.98px) {
+  .sidebar-mobile-toggle,
   .sidebar-backdrop {
-    display: block;
-  }
-
-  .sidebar {
-    position: fixed;
-    top: 0;
-    left: 0;
-    bottom: 0;
-    z-index: 1000;
-    width: 280px;
-    min-width: 280px;
-    max-width: 85vw;
-    transform: translateX(-100%);
-    transition: transform 0.25s ease;
-    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.15);
-    overflow-x: hidden;
-  }
-
-  .sidebar.mobile-open {
-    transform: translateX(0);
-  }
-
-  .sidebar.collapsed {
-    width: 280px;
-    min-width: 280px;
-  }
-
-  .sidebar.collapsed .sidebar-header-title,
-  .sidebar.collapsed .sidebar-profile-text,
-  .sidebar.collapsed .sidebar-title,
-  .sidebar.collapsed .sidebar-link-text,
-  .sidebar.collapsed .theme-toggle-label,
-  .sidebar.collapsed .sidebar-logout-text {
-    opacity: 1;
-    width: auto;
-    position: static;
-    overflow: visible;
-    padding: inherit;
-    margin: inherit;
-    pointer-events: auto;
-  }
-
-  .sidebar.collapsed .sidebar-header {
-    justify-content: center;
-    padding: 8px 4px 14px;
-    position: relative;
-  }
-
-  .sidebar.collapsed .sidebar-collapse-btn {
-    position: absolute;
-    left: 4px;
-    top: 50%;
-    transform: translateY(-50%);
-  }
-  .sidebar.collapsed .sidebar-profile {
-    justify-content: flex-start;
-    padding: 8px 12px 4px 12px;
-  }
-  .sidebar.collapsed .sidebar-profile-actions {
-    position: static;
-    margin-left: auto;
-  }
-  .sidebar.collapsed .sidebar-link {
-    justify-content: flex-start;
-    padding: 10px 12px;
-  }
-  .sidebar.collapsed .theme-toggle {
-    justify-content: flex-start;
-  }
-  .sidebar.collapsed .sidebar-logout-btn {
-    justify-content: flex-start;
+    display: none;
   }
 
   .app-shell {
@@ -12739,13 +12666,9 @@ textarea {
     overflow-x: hidden;
     box-sizing: border-box;
   }
-
-  .app-content.with-sidebar {
-    padding-top: 60px;
-  }
 }
 
-@media (min-width: 769px) {
+@media (min-width: 900px) {
   .app-content.sidebar-collapsed {
     /* more space when sidebar is collapsed */
   }
@@ -12754,10 +12677,6 @@ textarea {
 @media (max-width: 900px) {
   .app-content {
     padding: 16px;
-  }
-
-  .app-content.with-sidebar {
-    padding-top: 16px;
   }
 
   .page-title {

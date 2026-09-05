@@ -8,16 +8,20 @@ const dashboardTheme = createTheme({
 		fontFamily:
 			"'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
 		h1: {
-			fontSize: "1.75rem",
+			fontSize: "1.25rem",
 			fontWeight: 700,
 			letterSpacing: "-0.025em",
 			lineHeight: 1.2,
+			"@media (min-width:600px)": { fontSize: "1.5rem" },
+			"@media (min-width:900px)": { fontSize: "1.75rem" },
 		},
 		h2: {
-			fontSize: "1.35rem",
+			fontSize: "1.25rem",
 			fontWeight: 700,
 			letterSpacing: "-0.02em",
 			lineHeight: 1.25,
+			"@media (min-width:600px)": { fontSize: "1.5rem" },
+			"@media (min-width:900px)": { fontSize: "1.75rem" },
 		},
 		h3: {
 			fontSize: "1.10rem",
@@ -29,6 +33,39 @@ const dashboardTheme = createTheme({
 		body2: { fontSize: "0.80rem", lineHeight: 1.4 },
 		button: { textTransform: "none", fontWeight: 600, fontSize: "0.875rem" },
 		caption: { fontSize: "0.725rem", fontWeight: 500, letterSpacing: "0.01em" },
+	},
+	components: {
+		MuiButton: {
+			styleOverrides: {
+				root: {
+					minHeight: 44,
+					textTransform: "none",
+				},
+			},
+		},
+		MuiIconButton: {
+			styleOverrides: {
+				root: {
+					minWidth: 44,
+					minHeight: 44,
+				},
+			},
+		},
+		MuiOutlinedInput: {
+			styleOverrides: {
+				root: {
+					minHeight: 44,
+				},
+			},
+		},
+		MuiTab: {
+			styleOverrides: {
+				root: {
+					minHeight: 44,
+					textTransform: "none",
+				},
+			},
+		},
 	},
 });
 
@@ -71,6 +108,7 @@ async function loadDashboardModules() {
 	await import("./router/routes.jsx");
 	await import("./ErrorBoundary.jsx");
 	await import("./MainContent.jsx");
+	await import("./components/Sidebar.jsx");
 	await import("./Layout.jsx");
 	await import("./AppProviders.jsx");
 	await import("./AppRoot.jsx");

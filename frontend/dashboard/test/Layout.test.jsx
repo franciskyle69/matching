@@ -1,11 +1,13 @@
-import { describe, it, expect, afterAll } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { describe, it, expect, afterAll, beforeEach, afterEach } from "vitest";
+import { render, screen, fireEvent, within, waitFor } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import React from "react";
+import { ThemeProvider, createTheme } from "@mui/material/styles";
 import "../assets/Layout.jsx";
 
 const AppContext = globalThis.window.DashboardApp.AppContext;
 const Layout = globalThis.window.DashboardApp.Layout;
+const theme = createTheme();
 
 afterAll(() => {
   globalThis.window.DashboardApp.Layout = function LayoutStub() {
@@ -49,11 +51,23 @@ function renderLayout(overrides = {}) {
     ...overrides,
   };
   return render(
-    React.createElement(AppContext.Provider, { value: ctx }, React.createElement(Layout)),
+    React.createElement(
+      ThemeProvider,
+      { theme },
+      React.createElement(
+        AppContext.Provider,
+        { value: ctx },
+        React.createElement(Layout),
+      ),
+    ),
   );
 }
 
 describe("Dashboard topbar", () => {
+  beforeEach(() => {
+    window.innerWidth = 1280;
+  });
+
   it("renders search placeholder, shortcut pill, and live profile", () => {
     renderLayout();
 
@@ -71,6 +85,7 @@ describe("Dashboard topbar", () => {
       screen.getByRole("button", { name: /Notifications, 3 unread/i }),
     ).toBeInTheDocument();
     expect(document.querySelector(".app-topbar-bell-dot.is-active")).not.toBeNull();
+    expect(screen.queryByRole("button", { name: "Open menu" })).not.toBeInTheDocument();
   });
 
   it("shows coordinator role for staff without match chip or approvals CTA", () => {
@@ -101,5 +116,37 @@ describe("Dashboard topbar", () => {
     );
     expect(screen.getByRole("menuitem", { name: "View profile" })).toBeInTheDocument();
     expect(screen.getByRole("menuitem", { name: "Settings" })).toBeInTheDocument();
+  });
+});
+
+describe("Dashboard mobile navigation", () => {
+  const previousWidth = window.innerWidth;
+
+  beforeEach(() => {
+    window.innerWidth = 375;
+  });
+
+  afterEach(() => {
+    window.innerWidth = previousWidth;
+  });
+
+  it("renders a sticky header and opens a slide-out drawer", async () => {
+    renderLayout();
+
+    expect(document.querySelector(".mobile-app-header")).not.toBeNull();
+    expect(screen.queryByText("Alex Smith")).not.toBeInTheDocument();
+    const menuButton = screen.getByRole("button", { name: "Open menu" });
+
+    fireEvent.click(menuButton);
+    expect(menuButton).toHaveAttribute("aria-label", "Close menu");
+    expect(menuButton).toHaveAttribute("aria-expanded", "true");
+
+    const drawer = await screen.findByTestId("mobile-nav-drawer-paper");
+    fireEvent.click(within(drawer).getByRole("button", { name: /Matching/i }));
+
+    await waitFor(() => {
+      expect(menuButton).toHaveAttribute("aria-label", "Open menu");
+      expect(menuButton).toHaveAttribute("aria-expanded", "false");
+    });
   });
 });

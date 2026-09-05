@@ -1,0 +1,355 @@
+/* Root horizontal scroll prevention */
+html,
+body,
+#root {
+  overflow-x: hidden !important;
+  max-width: 100vw;
+  box-sizing: border-box;
+}
+
+.mobile-app-header {
+  display: none;
+}
+
+.mobile-nav-drawer .MuiDrawer-paper,
+.sidebar.mobile-drawer-paper {
+  width: min(280px, 85vw) !important;
+  min-width: min(280px, 85vw);
+  max-width: 85vw;
+  height: 100% !important;
+  max-height: 100%;
+  box-sizing: border-box;
+  border-radius: 0;
+}
+
+.mobile-drawer-paper .sidebar-collapse-btn {
+  display: none;
+}
+
+.mobile-drawer-paper .sidebar-drawer-close {
+  display: flex;
+  position: absolute;
+  right: 8px;
+  left: auto;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
+}
+
+.mobile-header-icon-btn.MuiIconButton-root {
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0;
+  color: inherit;
+}
+
+.mobile-header-avatar-btn .sidebar-avatar-wrapper,
+.mobile-header-avatar-btn .sidebar-avatar {
+  width: 32px;
+  height: 32px;
+}
+
+.mobile-app-header-brand {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-width: 0;
+  flex: 1 1 auto;
+  pointer-events: none;
+}
+
+.mobile-app-header-logo {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.mobile-app-header-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mobile-app-header-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 2px;
+  flex: 0 0 auto;
+  justify-self: end;
+  position: relative;
+}
+
+.mobile-app-header .app-topbar-profile {
+  position: relative;
+}
+
+.mobile-app-header .app-topbar-profile-menu {
+  z-index: 100;
+}
+
+.mobile-app-header .app-topbar-profile-menu button {
+  min-height: 44px;
+}
+
+/* Fluid headings: 1.25rem on phones → 1.75rem on desktop */
+@media (max-width: 599.98px) {
+  h1,
+  .h1,
+  .page-title,
+  .app-topbar-meta-title,
+  .cp-onboard-title {
+    font-size: 1.25rem;
+    line-height: 1.25;
+  }
+
+  h2,
+  .h2,
+  .section-title,
+  .settings-tab-panel-title,
+  .preferences-card-title {
+    font-size: 1.25rem;
+    line-height: 1.3;
+  }
+}
+
+@media (min-width: 600px) and (max-width: 899.98px) {
+  h1,
+  .h1,
+  .page-title {
+    font-size: 1.5rem;
+  }
+
+  h2,
+  .h2,
+  .section-title {
+    font-size: 1.35rem;
+  }
+}
+
+@media (min-width: 900px) {
+  h1,
+  .h1,
+  .page-title {
+    font-size: 1.75rem;
+  }
+}
+
+/* Compact navigation (<900px / md) */
+@media (max-width: 899.98px) {
+  .mobile-app-header {
+    display: grid;
+    grid-template-columns: minmax(44px, 1fr) auto minmax(44px, 1fr);
+    align-items: center;
+    gap: 8px;
+    position: sticky;
+    top: 0;
+    z-index: 90;
+    min-height: 56px;
+    padding: 6px 10px;
+    background: var(--card, rgba(24, 21, 46, 0.92));
+    border-bottom: 1px solid var(--border, rgba(88, 28, 135, 0.3));
+    color: var(--text);
+  }
+
+  [data-theme="dark"] .mobile-app-header {
+    background: rgba(24, 21, 46, 0.94);
+    color: #f8faff;
+  }
+
+  .sidebar--desktop,
+  .sidebar-mobile-toggle,
+  .sidebar-backdrop {
+    display: none !important;
+  }
+
+  .app-shell.is-compact-nav {
+    flex-direction: column;
+  }
+
+  .app-topbar {
+    position: relative;
+    top: auto;
+    min-height: 56px;
+    padding: 8px 12px;
+  }
+
+  .app-content.with-sidebar,
+  .app-content.sidebar-collapsed {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    margin-left: 0;
+    overflow-x: hidden;
+    box-sizing: border-box;
+    padding-top: 12px;
+  }
+
+  .sidebar-collapse-btn,
+  .sidebar-icon-btn,
+  .app-topbar-bell,
+  .app-topbar-profile-btn {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .app-topbar-bell {
+    width: 44px;
+    height: 44px;
+  }
+
+  .sidebar-link.nav-item {
+    min-height: 44px;
+  }
+
+  .sidebar-logout-btn {
+    min-height: 44px;
+    width: 100%;
+  }
+}
+
+/* Mobile & Portrait Adjustments (<768px) */
+@media (max-width: 767px) {
+  /* Container Padding */
+  .dashboard-main-content,
+  .app-content.dashboard-main-content {
+    padding: 16px 12px !important;
+  }
+
+  .settings-tab-panel,
+  .preferences-card,
+  .pref-section-card,
+  .card,
+  .matching-card,
+  .settings-info-card {
+    padding: 16px 14px !important;
+    border-radius: 12px !important;
+  }
+
+  /* Force Horizontal Groups to Stack Vertically */
+  .responsive-form-row,
+  .form-grid,
+  .settings-academic-grid,
+  .settings-password-grid,
+  .complete-profile-mentee-grid,
+  .session-form-grid,
+  .session-reschedule-grid,
+  .matching-modal-grid,
+  .matching-modal-grid.form-grid,
+  .time-range-row,
+  .pref-avail-builder,
+  .mp-availability-actions,
+  .settings-avatar-block,
+  .settings-tab-footer,
+  .btn-row,
+  .match-filter-bar,
+  .users-toolbar,
+  .mp-competency-grid {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+
+  .responsive-form-row .MuiFormControl-root,
+  .responsive-form-row .MuiButton-root,
+  .pref-avail-builder .MuiFormControl-root,
+  .pref-avail-builder .MuiButton-root,
+  .pref-avail-builder .time-field,
+  .time-range-row .time-field {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  /* Anchored Popover / Card Fits Screen */
+  .logout-popover-card,
+  .modal-paper-container,
+  .app-topbar-profile-menu,
+  .unsaved-leave-modal {
+    width: calc(100vw - 32px) !important;
+    max-width: 340px !important;
+    margin: 0 auto;
+  }
+
+  /* Full Width Buttons for Mobile Forms */
+  .mobile-full-width,
+  .pref-add-slot-btn,
+  .settings-tab-footer .btn,
+  .complete-profile-actions .btn,
+  .mp-availability-actions .btn {
+    width: 100% !important;
+  }
+
+  .approval-modal-image {
+    min-width: 0;
+  }
+
+  .app-shell,
+  .app-main-shell,
+  .app-content,
+  .page-shell,
+  .card,
+  .home-dashboard-space {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .unsaved-leave-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .unsaved-leave-actions .btn {
+    width: 100%;
+    min-height: 44px;
+  }
+}
+
+/* 44px touch targets */
+.btn,
+.btn.small,
+.btn.secondary,
+.auth-primary,
+.auth-social-btn,
+.portal-btn,
+.settings-btn-upload,
+.settings-btn-text,
+.settings-tab-btn,
+.pref-add-slot-btn {
+  min-height: 44px;
+}
+
+input:not(.app-topbar-search-input):not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="color"]),
+select,
+textarea,
+.form-input,
+.users-search-input,
+.users-filter-select,
+.page-size-select,
+.users-edit-input,
+.users-edit-select,
+.time-input-wrapper,
+.MuiInputBase-root:not(.MuiInputBase-multiline),
+.MuiButton-root,
+.MuiIconButton-root,
+.MuiSelect-select {
+  min-height: 44px;
+}
+
+.MuiIconButton-root {
+  min-width: 44px;
+}
+
+.app-topbar-search-input {
+  min-height: 44px;
+}

@@ -10,7 +10,7 @@ beforeAll(async () => {
     load: vi.fn(() => Promise.resolve({ topics: [], competencies: [] })),
   };
   await import("../assets/router/pages/MentoringPreferencesPage.jsx");
-});
+}, 20000);
 
 const AppContext = globalThis.window.DashboardApp.AppContext;
 

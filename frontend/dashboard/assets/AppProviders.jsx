@@ -2720,7 +2720,7 @@
             role="presentation"
           >
             <div
-              className="unsaved-leave-modal"
+              className="unsaved-leave-modal modal-paper-container"
               role="dialog"
               aria-modal="true"
               aria-labelledby="unsaved-leave-title"

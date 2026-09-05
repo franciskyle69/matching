@@ -1,39 +1,45 @@
 /* Settings — tabbed layout & dark-mode contrast */
+.settings-page-shell .settings-tabs.MuiTabs-root,
 .settings-page-shell .settings-tabs {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
   margin-bottom: 20px;
+  min-height: 44px;
   padding: 4px;
   border-radius: 12px;
   background: var(--subcard-bg);
   border: var(--subcard-border);
 }
 
-.settings-page-shell .settings-tab-btn {
-  flex: 1 1 auto;
-  min-height: 42px;
+.settings-page-shell .settings-tabs .MuiTabs-flexContainer {
+  gap: 4px;
+}
+
+.settings-page-shell .settings-tabs .MuiTab-root {
+  flex: 0 0 auto;
+  min-height: 44px;
+  min-width: 44px;
   padding: 0 16px;
-  border: none;
   border-radius: 8px;
-  background: transparent;
   color: var(--text-secondary);
   font-family: inherit;
   font-size: 0.85rem;
   font-weight: 600;
-  cursor: pointer;
-  transition: background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+  text-transform: none;
 }
 
-.settings-page-shell .settings-tab-btn:hover {
-  color: var(--text-primary);
-  background: rgba(124, 58, 237, 0.08);
-}
-
-.settings-page-shell .settings-tab-btn.is-active {
+.settings-page-shell .settings-tabs .MuiTab-root.Mui-selected {
   background: #7c3aed;
   color: #ffffff;
   box-shadow: 0 4px 12px rgba(124, 58, 237, 0.35);
+}
+
+.settings-page-shell .settings-tabs .MuiTabs-indicator {
+  display: none;
+}
+
+.settings-page-shell .settings-tabs .MuiTabs-scrollButtons {
+  min-width: 44px;
+  min-height: 44px;
+  color: var(--text-secondary);
 }
 
 .settings-tab-panel {

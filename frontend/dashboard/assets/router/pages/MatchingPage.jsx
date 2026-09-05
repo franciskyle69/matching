@@ -830,7 +830,7 @@
             aria-label="More mentor matches"
           >
             <div
-              className="card mentee-info-modal"
+              className="card mentee-info-modal modal-paper-container"
               onClick={(e) => e.stopPropagation()}
             >
               <h2 className="page-title">More mentor matches</h2>
@@ -888,7 +888,7 @@
             aria-label="Mentor profile"
           >
             <div
-              className="card mentee-info-modal mentor-info-modal"
+              className="card mentee-info-modal mentor-info-modal modal-paper-container"
               onClick={(e) => e.stopPropagation()}
             >
               {(() => {

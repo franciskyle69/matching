@@ -417,7 +417,7 @@
   margin-top: 8px;
 }
 
-@media (min-width: 640px) {
+@media (min-width: 768px) {
   .pref-avail-builder {
     grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) minmax(0, 1fr) auto;
     align-items: end;
@@ -430,7 +430,7 @@
 
 .mentoring-preferences-page .pref-add-slot-btn {
   min-width: 120px;
-  min-height: 40px;
+  min-height: 44px;
   border-radius: 10px;
   text-transform: none;
   font-weight: 600;
@@ -458,6 +458,17 @@
   border-radius: 12px;
   background: var(--subcard-bg);
   border: 1px solid var(--card-border);
+}
+
+@media (max-width: 767px) {
+  .availability-slot-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .availability-slot-main {
+    width: 100%;
+  }
 }
 
 .availability-slot-main {
@@ -586,7 +597,7 @@
 @media (max-width: 800px) {
   .pref-section-card,
   .preferences-card {
-    padding: 18px;
+    padding: 16px;
   }
 
   .pref-avail-grid {

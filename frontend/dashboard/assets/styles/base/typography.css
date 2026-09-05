@@ -18,18 +18,46 @@ button,
 /* Headings */
 h1,
 .h1 {
-  font-size: var(--text-3xl);
+  font-size: 1.25rem;
   font-weight: 700;
   letter-spacing: -0.025em;
   line-height: 1.2;
 }
 
+@media (min-width: 600px) {
+  h1,
+  .h1 {
+    font-size: 1.5rem;
+  }
+}
+
+@media (min-width: 900px) {
+  h1,
+  .h1 {
+    font-size: 1.75rem;
+  }
+}
+
 h2,
 .h2 {
-  font-size: var(--text-xl);
+  font-size: 1.25rem;
   font-weight: 700;
   letter-spacing: -0.02em;
   line-height: 1.25;
+}
+
+@media (min-width: 600px) {
+  h2,
+  .h2 {
+    font-size: 1.35rem;
+  }
+}
+
+@media (min-width: 900px) {
+  h2,
+  .h2 {
+    font-size: 1.75rem;
+  }
 }
 
 h3,

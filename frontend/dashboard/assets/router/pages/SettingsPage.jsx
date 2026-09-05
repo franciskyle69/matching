@@ -1,3 +1,6 @@
+import Tab from "@mui/material/Tab";
+import Tabs from "@mui/material/Tabs";
+
 (function () {
   "use strict";
   const React = window.React;
@@ -46,22 +49,23 @@
   }
 
   function SettingsTabNav({ tabs, activeTab, onChange }) {
+    const handleTabChange = (_event, value) => {
+      onChange(value);
+    };
     return (
-      <nav className="settings-tabs" aria-label="Settings sections">
+      <Tabs
+        allowScrollButtonsMobile
+        aria-label="Settings sections"
+        className="settings-tabs"
+        onChange={handleTabChange}
+        scrollButtons="auto"
+        value={activeTab}
+        variant="scrollable"
+      >
         {tabs.map((tab) => (
-          <button
-            key={tab.id}
-            type="button"
-            className={
-              "settings-tab-btn" + (activeTab === tab.id ? " is-active" : "")
-            }
-            aria-selected={activeTab === tab.id}
-            onClick={() => onChange(tab.id)}
-          >
-            {tab.label}
-          </button>
+          <Tab key={tab.id} label={tab.label} value={tab.id} />
         ))}
-      </nav>
+      </Tabs>
     );
   }
 
@@ -786,7 +790,7 @@
             <p className="settings-tab-panel-subtitle">
               Update the email and photo used across the dashboard.
             </p>
-            <div className="form-grid">
+            <div className="form-grid responsive-form-row">
               <div className="form-group">
                 <label htmlFor="settings-display-name" className="settings-label">
                   Display name
@@ -1044,7 +1048,7 @@
 
                 <div
                   className={
-                    "form-grid settings-password-grid" +
+                    "form-grid settings-password-grid responsive-form-row" +
                     (passwordCodeVerified ? "" : " is-muted")
                   }
                   style={{ marginTop: 20 }}
@@ -1216,7 +1220,7 @@
                   🔒 Managed by Institution
                 </span>
                 <h3 className="settings-info-card-title">Academic record</h3>
-                <div className="form-grid">
+                <div className="form-grid responsive-form-row">
                   <div className="form-group">
                     <label className="settings-label">Campus</label>
                     <input
@@ -1264,7 +1268,7 @@
                 <h3 className="settings-info-card-title">
                   Personal &amp; contact information
                 </h3>
-                <div className="form-grid">
+                <div className="form-grid responsive-form-row">
                   <div className="form-group">
                     <label className="settings-label">Contact No. *</label>
                     <input

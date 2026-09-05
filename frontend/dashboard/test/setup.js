@@ -14,6 +14,7 @@ if (typeof globalThis.window !== "undefined") {
     removeEventListener: () => {},
     dispatchEvent: () => true,
   });
+  globalThis.window.scrollTo = () => {};
   globalThis.window.React = React;
   globalThis.window.ReactDOM = ReactDOM;
   const AppContext = React.createContext(null);

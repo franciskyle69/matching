@@ -1,22 +1,10 @@
-import BackupOutlinedIcon from "@mui/icons-material/BackupOutlined";
-import CampaignOutlinedIcon from "@mui/icons-material/CampaignOutlined";
-import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
 import DarkModeOutlinedIcon from "@mui/icons-material/DarkModeOutlined";
-import DashboardOutlinedIcon from "@mui/icons-material/DashboardOutlined";
-import DescriptionOutlinedIcon from "@mui/icons-material/DescriptionOutlined";
-import DynamicFeedOutlinedIcon from "@mui/icons-material/DynamicFeedOutlined";
-import GroupsOutlinedIcon from "@mui/icons-material/GroupsOutlined";
-import HandshakeOutlinedIcon from "@mui/icons-material/HandshakeOutlined";
 import KeyboardArrowDownOutlinedIcon from "@mui/icons-material/KeyboardArrowDownOutlined";
 import LightModeOutlinedIcon from "@mui/icons-material/LightModeOutlined";
-import LogoutOutlinedIcon from "@mui/icons-material/LogoutOutlined";
-import NotificationsOutlinedIcon from "@mui/icons-material/NotificationsOutlined";
-import PeopleOutlineIcon from "@mui/icons-material/PeopleOutline";
-import PersonOutlineIcon from "@mui/icons-material/PersonOutline";
-import SchoolOutlinedIcon from "@mui/icons-material/SchoolOutlined";
-import SettingsOutlinedIcon from "@mui/icons-material/SettingsOutlined";
-import TuneOutlinedIcon from "@mui/icons-material/TuneOutlined";
-import VerifiedOutlinedIcon from "@mui/icons-material/VerifiedOutlined";
+import MenuOutlinedIcon from "@mui/icons-material/MenuOutlined";
+import Drawer from "@mui/material/Drawer";
+import IconButton from "@mui/material/IconButton";
+import "./components/Sidebar.jsx";
 
 (function () {
   "use strict";
@@ -24,36 +12,12 @@ import VerifiedOutlinedIcon from "@mui/icons-material/VerifiedOutlined";
   const { useContext, useState, useEffect, useRef } = React;
   const AppContext = window.DashboardApp.AppContext;
   const MainContent = window.DashboardApp.MainContent;
+  const Sidebar = window.DashboardApp.Sidebar;
   const MAIN_TABS =
     (window.DashboardApp && window.DashboardApp.MAIN_TABS) || [];
-  const PLACEHOLDER_AVATAR = window.DashboardApp.PLACEHOLDER_AVATAR || "";
   const LOGO_URL = window.DashboardApp.LOGO_URL || "/static/assets/logo.png";
   const LOGO_ALT = window.DashboardApp.LOGO_ALT || "AMU Mentoring";
-
-  function SidebarNavIcon({ IconComponent }) {
-    return (
-      <IconComponent className="sidebar-mui-icon" fontSize="inherit" aria-hidden="true" />
-    );
-  }
-
-  const TAB_ICONS = {
-    home: <SidebarNavIcon IconComponent={DashboardOutlinedIcon} />,
-    newsfeed: <SidebarNavIcon IconComponent={DynamicFeedOutlinedIcon} />,
-    profile: <SidebarNavIcon IconComponent={PersonOutlineIcon} />,
-    "complete-profile": <SidebarNavIcon IconComponent={VerifiedOutlinedIcon} />,
-    onboarding: <SidebarNavIcon IconComponent={SchoolOutlinedIcon} />,
-    "mentoring-preferences": <SidebarNavIcon IconComponent={TuneOutlinedIcon} />,
-    "mentor-matching-profile": <SidebarNavIcon IconComponent={TuneOutlinedIcon} />,
-    matching: <SidebarNavIcon IconComponent={HandshakeOutlinedIcon} />,
-    mentees: <SidebarNavIcon IconComponent={GroupsOutlinedIcon} />,
-    announcements: <SidebarNavIcon IconComponent={CampaignOutlinedIcon} />,
-    notifications: <SidebarNavIcon IconComponent={NotificationsOutlinedIcon} />,
-    approvals: <SidebarNavIcon IconComponent={CheckCircleOutlineIcon} />,
-    users: <SidebarNavIcon IconComponent={PeopleOutlineIcon} />,
-    "activity-logs": <SidebarNavIcon IconComponent={DescriptionOutlinedIcon} />,
-    backup: <SidebarNavIcon IconComponent={BackupOutlinedIcon} />,
-    settings: <SidebarNavIcon IconComponent={SettingsOutlinedIcon} />,
-  };
+  const COMPACT_NAV_MAX_WIDTH = 899;
 
   function getTopbarDisplayName(user) {
     return (
@@ -150,7 +114,9 @@ import VerifiedOutlinedIcon from "@mui/icons-material/VerifiedOutlined";
     });
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const [isMobileView, setIsMobileView] = useState(() =>
-      typeof window !== "undefined" ? window.innerWidth <= 768 : false,
+      typeof window !== "undefined"
+        ? window.innerWidth <= COMPACT_NAV_MAX_WIDTH
+        : false,
     );
 
     useEffect(() => {
@@ -164,7 +130,7 @@ import VerifiedOutlinedIcon from "@mui/icons-material/VerifiedOutlined";
 
     useEffect(() => {
       const onResize = () => {
-        const mobile = window.innerWidth <= 768;
+        const mobile = window.innerWidth <= COMPACT_NAV_MAX_WIDTH;
         setIsMobileView(mobile);
         if (!mobile && mobileMenuOpen) setMobileMenuOpen(false);
       };
@@ -174,22 +140,19 @@ import VerifiedOutlinedIcon from "@mui/icons-material/VerifiedOutlined";
     }, [mobileMenuOpen]);
 
     useEffect(() => {
-      const body = document.body;
-      if (mobileMenuOpen) {
-        const prev = body.style.overflow;
-        body.dataset.sidebarPrevOverflow = prev;
-        body.style.overflow = "hidden";
-        return () => {
-          body.style.overflow = body.dataset.sidebarPrevOverflow || "";
-          delete body.dataset.sidebarPrevOverflow;
-        };
-      }
+      if (!mobileMenuOpen) return undefined;
+      const { body } = document;
+      const previousOverflow = body.style.overflow;
+      body.style.overflow = "hidden";
+      return () => {
+        body.style.overflow = previousOverflow;
+      };
     }, [mobileMenuOpen]);
 
     const toggleSidebar = () => setSidebarCollapsed((c) => !c);
     const closeMobileMenu = () => setMobileMenuOpen(false);
     const handleHeaderCollapseClick = () => {
-      if (typeof window !== "undefined" && window.innerWidth <= 768) {
+      if (isMobileView) {
         closeMobileMenu();
       } else {
         toggleSidebar();
@@ -197,11 +160,18 @@ import VerifiedOutlinedIcon from "@mui/icons-material/VerifiedOutlined";
     };
     const goTo = (tabId) => {
       const changeTab = ctx.requestTabChange || setActiveTab;
+      const finishNavigation = (nextTab) => {
+        changeTab(nextTab);
+        closeMobileMenu();
+        try {
+          window.scrollTo(0, 0);
+        } catch (_) {
+          /* jsdom does not implement scrollTo */
+        }
+      };
       if (user && user.is_profile_complete === false && !isStaff) {
         if (tabId !== "complete-profile") {
-          changeTab("complete-profile");
-          window.scrollTo(0, 0);
-          closeMobileMenu();
+          finishNavigation("complete-profile");
           return;
         }
       }
@@ -214,15 +184,11 @@ import VerifiedOutlinedIcon from "@mui/icons-material/VerifiedOutlined";
           "settings",
         ]);
         if (!allowedPendingTabs.has(tabId)) {
-          changeTab(getPendingApprovalLandingTab(user));
-          window.scrollTo(0, 0);
-          closeMobileMenu();
+          finishNavigation(getPendingApprovalLandingTab(user));
           return;
         }
       }
-      changeTab(tabId);
-      window.scrollTo(0, 0);
-      closeMobileMenu();
+      finishNavigation(tabId);
     };
 
     const [searchQuery, setSearchQuery] = useState("");
@@ -528,180 +494,107 @@ import VerifiedOutlinedIcon from "@mui/icons-material/VerifiedOutlined";
       }
     };
 
+    const sidebarNav = Sidebar ? (
+      <Sidebar
+        collapsed={isMobileView ? false : sidebarCollapsed}
+        isDrawer={isMobileView}
+        dashboardTab={dashboardTab}
+        activityTabs={activityTabs}
+        accountTabs={accountTabs}
+        activeTab={activeTab}
+        onNavigate={goTo}
+        onHeaderButtonClick={handleHeaderCollapseClick}
+        theme={theme}
+        toggleTheme={toggleTheme}
+        handleLogout={handleLogout}
+        logoutLoading={logoutLoading}
+        logoUrl={LOGO_URL}
+        logoAlt={LOGO_ALT}
+      />
+    ) : null;
+
+    const profileMenu = profileMenuOpen ? (
+      <div
+        className="app-topbar-profile-menu logout-popover-card"
+        role="menu"
+      >
+        {!isStaff && (
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => {
+              setProfileMenuOpen(false);
+              goTo("profile");
+            }}
+          >
+            View profile
+          </button>
+        )}
+        <button
+          type="button"
+          role="menuitem"
+          onClick={() => {
+            setProfileMenuOpen(false);
+            goTo("settings");
+          }}
+        >
+          Settings
+        </button>
+      </div>
+    ) : null;
+
     return (
-      <div className="app-shell">
-        {isAuthenticated && (
-          <>
-            <button
-              type="button"
-              className="sidebar-mobile-toggle"
-              onClick={() => setMobileMenuOpen(true)}
-              aria-label="Open menu"
+      <div className={"app-shell" + (isMobileView ? " is-compact-nav" : "")}>
+        {isAuthenticated &&
+          (isMobileView ? (
+            <Drawer
+              anchor="left"
+              id="mobile-nav-drawer"
+              className="mobile-nav-drawer"
+              open={mobileMenuOpen}
+              onClose={closeMobileMenu}
+              variant="temporary"
+              transitionDuration={{ enter: 240, exit: 180 }}
+              ModalProps={{ keepMounted: true, disableScrollLock: true }}
+              slotProps={{
+                paper: {
+                  className: "sidebar mobile-drawer-paper",
+                  "data-testid": "mobile-nav-drawer-paper",
+                },
+              }}
             >
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                aria-hidden="true"
-              >
-                <line x1="3" y1="6" x2="21" y2="6" />
-                <line x1="3" y1="12" x2="21" y2="12" />
-                <line x1="3" y1="18" x2="21" y2="18" />
-              </svg>
-            </button>
-            <div
-              className={
-                "sidebar-backdrop " + (mobileMenuOpen ? "visible" : "")
-              }
-              onClick={closeMobileMenu}
-              onKeyDown={(e) => e.key === "Escape" && closeMobileMenu()}
-              role="button"
-              tabIndex={-1}
-              aria-hidden="true"
-            />
+              {sidebarNav}
+            </Drawer>
+          ) : (
             <aside
               className={
-                "sidebar " +
-                (sidebarCollapsed ? "collapsed" : "") +
-                (mobileMenuOpen ? " mobile-open" : "")
+                "sidebar sidebar--desktop" +
+                (sidebarCollapsed ? " collapsed" : "")
               }
             >
-              <div className="sidebar-header">
-                <button
-                  type="button"
-                  className="sidebar-collapse-btn"
-                  onClick={handleHeaderCollapseClick}
-                  aria-label={
-                    isMobileView
-                      ? "Close menu"
-                      : sidebarCollapsed
-                        ? "Expand sidebar"
-                        : "Collapse sidebar"
-                  }
-                  title={
-                    isMobileView
-                      ? "Close menu"
-                      : sidebarCollapsed
-                        ? "Expand sidebar"
-                        : "Collapse sidebar"
-                  }
-                >
-                  {sidebarCollapsed ? (
-                    <svg
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      aria-hidden="true"
-                    >
-                      <polyline points="9 18 15 12 9 6" />
-                    </svg>
-                  ) : (
-                    <svg
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      aria-hidden="true"
-                    >
-                      <polyline points="15 18 9 12 15 6" />
-                    </svg>
-                  )}
-                </button>
-                <span className="sidebar-header-title">
-                  <img src={LOGO_URL} alt={LOGO_ALT} className="sidebar-logo" />
-                </span>
-              </div>
-              <div className="sidebar-section">
-                {dashboardTab && (
-                  <>
-                    <div className="sidebar-title nav-section-label">Main</div>
-                    <div className="sidebar-links">
-                    <button
-                      key={dashboardTab.id}
-                      type="button"
-                      className={
-                        "sidebar-link nav-item " +
-                        (activeTab === dashboardTab.id ? "active" : "")
-                      }
-                      onClick={() => goTo(dashboardTab.id)}
-                      title={dashboardTab.label}
-                    >
-                      <span className="sidebar-link-icon">
-                        {TAB_ICONS[dashboardTab.id] || TAB_ICONS.home}
-                      </span>
-                      <span className="sidebar-link-text nav-item-label">
-                        {dashboardTab.label}
-                      </span>
-                    </button>
-                  </div>
-                  </>
-                )}
+              {sidebarNav}
+            </aside>
+          ))}
 
-                {activityTabs.length > 0 && (
-                  <>
-                    <div className="sidebar-title nav-section-label">My Activities</div>
-                    <div className="sidebar-links">
-                      {activityTabs.map((tab) => (
-                        <button
-                          key={tab.id}
-                          type="button"
-                          className={
-                            "sidebar-link nav-item " +
-                            (activeTab === tab.id ? "active" : "")
-                          }
-                          onClick={() => goTo(tab.id)}
-                          title={tab.label}
-                        >
-                          <span className="sidebar-link-icon">
-                            {TAB_ICONS[tab.id] || TAB_ICONS.home}
-                          </span>
-                          <span className="sidebar-link-text nav-item-label">{tab.label}</span>
-                        </button>
-                      ))}
-                    </div>
-                  </>
-                )}
-
-                {accountTabs.length > 0 && (
-                  <>
-                    <div className="sidebar-title nav-section-label">Account Pages</div>
-                    <div className="sidebar-links">
-                      {accountTabs.map((tab) => (
-                        <button
-                          key={tab.id}
-                          type="button"
-                          className={
-                            "sidebar-link nav-item " +
-                            (activeTab === tab.id ? "active" : "")
-                          }
-                          onClick={() => goTo(tab.id)}
-                          title={tab.label}
-                        >
-                          <span className="sidebar-link-icon">
-                            {TAB_ICONS[tab.id] || TAB_ICONS.home}
-                          </span>
-                          <span className="sidebar-link-text nav-item-label">{tab.label}</span>
-                        </button>
-                      ))}
-                    </div>
-                  </>
-                )}
+        <div className="app-main-shell">
+          {isAuthenticated && isMobileView && (
+            <header className="mobile-app-header">
+              <IconButton
+                className="mobile-header-icon-btn"
+                onClick={() => setMobileMenuOpen((open) => !open)}
+                aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}
+                aria-expanded={mobileMenuOpen ? "true" : "false"}
+                aria-controls="mobile-nav-drawer"
+              >
+                <MenuOutlinedIcon />
+              </IconButton>
+              <div className="mobile-app-header-brand">
+                <img src={LOGO_URL} alt="" className="mobile-app-header-logo" />
+                <span className="mobile-app-header-title">PeerLink</span>
               </div>
-              <div className="sidebar-section sidebar-footer">
-                <button
-                  type="button"
-                  className={
-                    "theme-toggle theme-toggle--switch" +
-                    (theme === "light" ? " is-light" : "")
-                  }
+              <div className="mobile-app-header-actions">
+                <IconButton
+                  className="mobile-header-icon-btn"
                   onClick={toggleTheme}
                   aria-label={
                     theme === "dark"
@@ -709,71 +602,56 @@ import VerifiedOutlinedIcon from "@mui/icons-material/VerifiedOutlined";
                       : "Switch to dark mode"
                   }
                   aria-pressed={theme === "light"}
-                  title={theme === "dark" ? "Light mode" : "Dark mode"}
                 >
-                  <span className="theme-toggle-copy">
-                    <span className="theme-toggle-label">
-                      {theme === "dark" ? "Dark mode" : "Light mode"}
-                    </span>
-                    <span className="theme-toggle-hint">Appearance</span>
-                  </span>
-                  <span className="theme-toggle-track" aria-hidden="true">
-                    <span className="theme-toggle-thumb">
-                      {theme === "dark" ? (
-                        <DarkModeOutlinedIcon
-                          className="sidebar-mui-icon sidebar-mui-icon--toggle"
-                          fontSize="inherit"
-                          aria-hidden="true"
+                  {theme === "dark" ? (
+                    <DarkModeOutlinedIcon />
+                  ) : (
+                    <LightModeOutlinedIcon />
+                  )}
+                </IconButton>
+                <div className="app-topbar-profile" ref={profileMenuRef}>
+                  <IconButton
+                    className={
+                      "mobile-header-icon-btn mobile-header-avatar-btn" +
+                      (profileMenuOpen ? " is-open" : "")
+                    }
+                    onClick={() => setProfileMenuOpen((open) => !open)}
+                    aria-label={"Account menu for " + topbarDisplayName}
+                    aria-haspopup="menu"
+                    aria-expanded={profileMenuOpen ? "true" : "false"}
+                    title={topbarDisplayName}
+                  >
+                    <span className="sidebar-avatar-wrapper">
+                      {user && user.avatar_url ? (
+                        <img
+                          src={user.avatar_url}
+                          alt=""
+                          className="sidebar-avatar"
                         />
                       ) : (
-                        <LightModeOutlinedIcon
-                          className="sidebar-mui-icon sidebar-mui-icon--toggle"
-                          fontSize="inherit"
-                          aria-hidden="true"
-                        />
+                        <span className="sidebar-avatar fallback">
+                          {topbarDisplayName.slice(0, 1).toUpperCase()}
+                        </span>
                       )}
                     </span>
-                  </span>
-                </button>
-                <button
-                  type="button"
-                  className="btn secondary sidebar-logout-btn"
-                  onClick={handleLogout}
-                  disabled={logoutLoading}
-                  aria-busy={logoutLoading ? "true" : "false"}
-                >
-                  {logoutLoading ? (
-                    <span
-                      className="sidebar-logout-spinner"
-                      aria-hidden="true"
-                    />
-                  ) : (
-                    <LogoutOutlinedIcon
-                      className="sidebar-mui-icon sidebar-logout-icon"
-                      fontSize="inherit"
-                      aria-hidden="true"
-                    />
-                  )}
-                  <span className="sidebar-logout-text">
-                    {logoutLoading ? "Logging out..." : "Log out"}
-                  </span>
-                </button>
-              </div>
-            </aside>
-          </>
-        )}
-
-        <div className="app-main-shell">
-          {isAuthenticated && (
-            <header className="app-topbar">
-              <div className="app-topbar-left">
-                <div className="app-topbar-meta">
-                  <div className="app-topbar-meta-label">{LOGO_ALT}</div>
-                  <div className="app-topbar-title-row">
-                    <h1 className="app-topbar-meta-title">PeerLink</h1>
-                  </div>
+                  </IconButton>
+                  {profileMenu}
                 </div>
               </div>
+            </header>
+          )}
+          {isAuthenticated && (
+            <header className="app-topbar">
+              {!isMobileView && (
+                <div className="app-topbar-left">
+                  <div className="app-topbar-meta">
+                    <div className="app-topbar-meta-label">{LOGO_ALT}</div>
+                    <div className="app-topbar-title-row">
+                      <h1 className="app-topbar-meta-title">PeerLink</h1>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {!isPendingApproval ? (
                 <div className="app-topbar-right">
@@ -987,6 +865,7 @@ import VerifiedOutlinedIcon from "@mui/icons-material/VerifiedOutlined";
                         </span>
                       )}
                     </button>
+                    {!isMobileView && (
                     <div className="app-topbar-profile" ref={profileMenuRef}>
                       <button
                         type="button"
@@ -1029,33 +908,9 @@ import VerifiedOutlinedIcon from "@mui/icons-material/VerifiedOutlined";
                           aria-hidden="true"
                         />
                       </button>
-                      {profileMenuOpen && (
-                        <div className="app-topbar-profile-menu" role="menu">
-                          {!isStaff && (
-                            <button
-                              type="button"
-                              role="menuitem"
-                              onClick={() => {
-                                setProfileMenuOpen(false);
-                                goTo("profile");
-                              }}
-                            >
-                              View profile
-                            </button>
-                          )}
-                          <button
-                            type="button"
-                            role="menuitem"
-                            onClick={() => {
-                              setProfileMenuOpen(false);
-                              goTo("settings");
-                            }}
-                          >
-                            Settings
-                          </button>
-                        </div>
-                      )}
+                      {profileMenu}
                     </div>
+                    )}
                   </div>
                 </div>
               ) : (
@@ -1083,9 +938,11 @@ import VerifiedOutlinedIcon from "@mui/icons-material/VerifiedOutlined";
 
           <main
             className={
-              "app-content " +
+              "app-content dashboard-main-content " +
               (isAuthenticated ? "with-sidebar" : "") +
-              (sidebarCollapsed && isAuthenticated ? " sidebar-collapsed" : "")
+              (sidebarCollapsed && isAuthenticated && !isMobileView
+                ? " sidebar-collapsed"
+                : "")
             }
           >
             <MainContent />

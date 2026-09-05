@@ -1028,7 +1028,7 @@
                 });
               }}
             />
-            <div className="time-range-row">
+            <div className="time-range-row responsive-form-row">
               <TimePickerField
                 id="mentor-matching-start"
                 label="Start time"

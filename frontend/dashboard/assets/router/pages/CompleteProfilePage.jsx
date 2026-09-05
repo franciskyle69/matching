@@ -735,7 +735,7 @@
             title="General Information"
             description="Provide complete student details for coordinator review."
           >
-            <div className="form-grid complete-profile-mentee-grid">
+            <div className="form-grid complete-profile-mentee-grid responsive-form-row">
               <div className="form-group">
                 <label htmlFor="complete-profile-campus">Campus *</label>
                 <select

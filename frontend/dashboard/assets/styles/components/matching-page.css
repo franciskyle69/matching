@@ -459,7 +459,7 @@
   }
 }
 
-@media (max-width: 640px) {
+@media (max-width: 767px) {
   .matching-page--mentee .match-filter-bar {
     grid-template-columns: minmax(0, 1fr);
   }

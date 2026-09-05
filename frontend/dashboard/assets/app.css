@@ -35,6 +35,7 @@
 @import "./styles/components/topbar.css";
 @import "./styles/components/avatars.css";
 @import "./styles/components/complete-profile-onboarding.css";
+@import "./styles/layout/mobile-shell.css";
 
 /* Global font rendering — loaded after tokens so --font-sans is available */
 *,

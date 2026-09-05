@@ -84,7 +84,7 @@ import TextField from "@mui/material/TextField";
         <span className="pref-timezone pref-timezone--inline">
           🌐 Local timezone: {CAMPUS_TZ_LABEL}
         </span>
-        <div className="pref-avail-builder">
+        <div className="pref-avail-builder responsive-form-row">
           <TextField
             select
             label="Select day"
@@ -152,7 +152,7 @@ import TextField from "@mui/material/TextField";
           )}
           <Button
             variant="contained"
-            className="pref-add-slot-btn"
+            className="pref-add-slot-btn mobile-full-width"
             onClick={onAddSlot}
             disabled={!selectedDay || !startTime || !endTime}
           >
