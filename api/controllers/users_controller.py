@@ -2,12 +2,13 @@ import secrets
 
 from django.contrib.auth.models import User
 from django.core.mail import EmailMultiAlternatives
-from django.contrib.sites.shortcuts import get_current_site
 from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods, require_GET
 from django.contrib.auth.decorators import login_required
 from django.db.models import Q
 from django.template.loader import render_to_string
+
+from capstone_site.site_utils import public_host, public_protocol
 
 from ..views import (
     _get_payload,
@@ -262,11 +263,10 @@ def user_create(request):
 
         set_must_change_password(user, True)
 
-        current_site = get_current_site(request)
         context = {
             "user": user,
-            "domain": current_site.domain,
-            "protocol": "https" if request.is_secure() else "http",
+            "domain": public_host(request),
+            "protocol": public_protocol(request),
             "password": temp_password,
             "role": role,
         }

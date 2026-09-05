@@ -7,6 +7,7 @@
   const {
     getCookie,
     fetchJSON,
+    ensureCsrfToken,
   } = (window.DashboardApp && window.DashboardApp.Utils) || {};
   const AppContext =
     (window.DashboardApp && window.DashboardApp.AppContext) ||
@@ -368,7 +369,11 @@
     }, [theme]);
 
     useEffect(() => {
-      fetchJSON("/api/csrf/");
+      if (typeof ensureCsrfToken === "function") {
+        ensureCsrfToken();
+      } else {
+        fetchJSON("/api/csrf/");
+      }
       loadMe({ force: false });
     }, []);
 

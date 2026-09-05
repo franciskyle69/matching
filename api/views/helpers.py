@@ -186,6 +186,14 @@ def _validate_role(role):
     return role in ("mentor", "mentee")
 
 
+def _client_ip(request):
+    """Best-effort client IP, honoring the first X-Forwarded-For hop on Render."""
+    forwarded = (request.META.get("HTTP_X_FORWARDED_FOR") or "").split(",")[0].strip()
+    if forwarded:
+        return forwarded
+    return (request.META.get("REMOTE_ADDR") or "unknown").strip() or "unknown"
+
+
 def _rate_limit(key, limit, window_seconds):
     """Implement bucket-based rate limiting using cache.
     

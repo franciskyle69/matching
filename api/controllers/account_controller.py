@@ -2,18 +2,13 @@ from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth import update_session_auth_hash
 from django.contrib.auth.models import User
 from django.conf import settings
-from django.contrib.auth.tokens import default_token_generator
-from django.contrib.sites.shortcuts import get_current_site
 from django.contrib.auth.decorators import login_required
 from django.core.mail import EmailMultiAlternatives
 from django.http import JsonResponse
 from django.core.cache import cache
 from django.db import transaction
 from django.views.decorators.http import require_GET, require_http_methods
-from django.template.loader import render_to_string
 from django.utils.crypto import constant_time_compare
-from django.utils.encoding import force_bytes
-from django.utils.http import urlsafe_base64_encode
 import secrets
 import time
 
@@ -38,6 +33,7 @@ from profiles.profile_completion import (
     mentor_account_fields_complete,
 )
 
+from accounts.email_utils import email_backend_can_send, send_activation_email
 from accounts.forms import (
     AccountSettingsForm,
     RegisterForm,
@@ -78,6 +74,7 @@ from ..views import (
     _get_str,
     _get_role_flags,
     _resolve_account_role,
+    _client_ip,
     _rate_limit,
     audit_log,
     _require_role,
@@ -558,7 +555,7 @@ def auth_register(request):
             payload = request.POST
         else:
             payload = _get_payload(request)
-        if not _rate_limit(f"register:{request.META.get('REMOTE_ADDR')}", 5, 300):
+        if not _rate_limit(f"register:{_client_ip(request)}", 5, 300):
             return JsonResponse(
                 {"error": "Too many signups. Try again later."}, status=429
             )
@@ -584,6 +581,16 @@ def auth_register(request):
         form = RegisterForm(payload, request.FILES)
         if not form.is_valid():
             return JsonResponse({"errors": form.errors}, status=400)
+        if not email_backend_can_send():
+            return JsonResponse(
+                {
+                    "error": (
+                        "Account could not be created because the server cannot send "
+                        "the activation email. Please try again later."
+                    ),
+                },
+                status=503,
+            )
 
         cleaned = form.cleaned_data
         first_name = (cleaned.get("first_name") or "").strip()
@@ -718,31 +725,7 @@ def auth_register(request):
             )
 
         try:
-            current_site = get_current_site(request)
-            subject = "Activate your account"
-            text_message = render_to_string(
-                "registration/activation_email.txt",
-                {
-                    "user": user,
-                    "domain": current_site.domain,
-                    "uid": urlsafe_base64_encode(force_bytes(user.pk)),
-                    "token": default_token_generator.make_token(user),
-                    "protocol": "https" if request.is_secure() else "http",
-                },
-            )
-            html_message = render_to_string(
-                "registration/activation_email.html",
-                {
-                    "user": user,
-                    "domain": current_site.domain,
-                    "uid": urlsafe_base64_encode(force_bytes(user.pk)),
-                    "token": default_token_generator.make_token(user),
-                    "protocol": "https" if request.is_secure() else "http",
-                },
-            )
-            email_message = EmailMultiAlternatives(subject, text_message, to=[user.email])
-            email_message.attach_alternative(html_message, "text/html")
-            email_message.send()
+            send_activation_email(request, user)
         except Exception as exc:
             logger.exception("auth_register_email_phase_failed", extra={"user_id": user.id, "email": user.email})
             user.delete()
@@ -751,7 +734,7 @@ def auth_register(request):
                     "error": "Account could not be created because activation email could not be sent. Please try again.",
                     "detail": str(exc),
                 },
-                status=400,
+                status=503,
             )
 
         audit_log(user, "register", "auth", user.id)

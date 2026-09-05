@@ -131,6 +131,39 @@
     return <LoadingSpinner title="Running matching…" subtitle="Finding mentor–mentee pairs" />;
   }
 
+  let csrfTokenCache = "";
+  let csrfTokenInFlight = null;
+
+  async function ensureCsrfToken(force = false) {
+    if (!force) {
+      const fromCookie = getCookie("csrftoken");
+      if (fromCookie) {
+        csrfTokenCache = fromCookie;
+        return fromCookie;
+      }
+      if (csrfTokenCache) return csrfTokenCache;
+    }
+    if (csrfTokenInFlight) return csrfTokenInFlight;
+    csrfTokenInFlight = (async () => {
+      try {
+        const response = await fetch("/api/csrf/", { credentials: "include" });
+        const contentType = response.headers.get("content-type") || "";
+        if (contentType.includes("application/json")) {
+          const data = await response.json();
+          csrfTokenCache = data.csrfToken || getCookie("csrftoken") || csrfTokenCache;
+        } else {
+          csrfTokenCache = getCookie("csrftoken") || csrfTokenCache;
+        }
+      } catch {
+        csrfTokenCache = getCookie("csrftoken") || csrfTokenCache;
+      } finally {
+        csrfTokenInFlight = null;
+      }
+      return csrfTokenCache;
+    })();
+    return csrfTokenInFlight;
+  }
+
   async function fetchJSON(url, options = {}) {
     try {
       const isRaw = options.raw;
@@ -146,7 +179,22 @@
       } else {
         fetchOpts.headers = { "Content-Type": "application/json", ...(options.headers || {}) };
       }
+      const method = String(fetchOpts.method || "GET").toUpperCase();
+      const isCsrfUrl = typeof url === "string" && /^\/api\/csrf\/?$/.test(url);
+      if (!isCsrfUrl && method !== "GET" && method !== "HEAD") {
+        const token = await ensureCsrfToken();
+        if (token && !fetchOpts.headers["X-CSRFToken"]) {
+          fetchOpts.headers["X-CSRFToken"] = token;
+        }
+      }
       let response = await fetch(url, fetchOpts);
+      if (response.status === 403 && !isCsrfUrl && method !== "GET" && method !== "HEAD") {
+        const retryToken = await ensureCsrfToken(true);
+        if (retryToken) {
+          fetchOpts.headers["X-CSRFToken"] = retryToken;
+          response = await fetch(url, fetchOpts);
+        }
+      }
       const sessionRejected =
         isApiPath &&
         !isPublicAuthPath &&
@@ -160,6 +208,13 @@
       }
       const contentType = response.headers.get("content-type") || "";
       if (!contentType.includes("application/json")) {
+        if (response.status === 403) {
+          return {
+            ok: false,
+            status: 403,
+            data: { error: "Your session expired. Refresh the page and try again." },
+          };
+        }
         return { ok: false, status: response.status, data: null };
       }
       try {
@@ -509,6 +564,7 @@
     formatMatchScore,
     getCookie,
     fetchJSON,
+    ensureCsrfToken,
     formatDate,
     formatRelativeTime,
     formatBiologicalSex,

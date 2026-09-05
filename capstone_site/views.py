@@ -1,6 +1,7 @@
 from pathlib import Path
 
 from django.http import HttpResponse, HttpResponseNotFound, HttpResponseRedirect
+from django.views.decorators.csrf import ensure_csrf_cookie
 
 from accounts.models import must_change_password
 
@@ -32,6 +33,7 @@ def _matching_redirect(request, default_tab="matching"):
     return HttpResponseRedirect(f"/app/#{tab}")
 
 
+@ensure_csrf_cookie
 def react_app(request):
     if request.user.is_authenticated and must_change_password(request.user):
         return HttpResponseRedirect("/accounts/settings/?must_change_password=1")
@@ -58,6 +60,7 @@ def _read_landing_html(request, filename: str) -> HttpResponse:
     return _html_file_response(index_path, request)
 
 
+@ensure_csrf_cookie
 def landing_page(request):
     if request.user.is_authenticated:
         if must_change_password(request.user):
@@ -66,9 +69,11 @@ def landing_page(request):
     return _read_landing_html(request, "index.html")
 
 
+@ensure_csrf_cookie
 def portal_page(request):
     return _read_landing_html(request, "portal.html")
 
 
+@ensure_csrf_cookie
 def public_landing_page(request):
     return _read_landing_html(request, "index.html")

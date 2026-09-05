@@ -58,6 +58,7 @@ if not DEBUG:
 # SECURITY WARNING: don't run with debug turned on in production!
 ALLOWED_HOSTS = _env_csv("DJANGO_ALLOWED_HOSTS")
 CSRF_TRUSTED_ORIGINS = _env_csv("DJANGO_CSRF_TRUSTED_ORIGINS")
+CSRF_FAILURE_VIEW = 'capstone_site.security.csrf_failure'
 _render_host = (os.environ.get("RENDER_EXTERNAL_HOSTNAME") or "").strip()
 if _render_host and _render_host not in ALLOWED_HOSTS:
     ALLOWED_HOSTS.append(_render_host)
@@ -76,8 +77,10 @@ if not DEBUG:
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = 'Lax'
     CSRF_COOKIE_SECURE = True
+    CSRF_COOKIE_HTTPONLY = False
     CSRF_COOKIE_SAMESITE = 'Lax'
     SECURE_SSL_REDIRECT = True
+    ACCOUNT_DEFAULT_HTTP_PROTOCOL = 'https'
     if _env_bool('TRUST_X_FORWARDED_PROTO', default=True):
         SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
     SECURE_HSTS_SECONDS = 31536000
@@ -101,7 +104,7 @@ INSTALLED_APPS = [
     'django.contrib.sites',
     'axes',  # Login attempt rate limiting
     'rest_framework',
-    'accounts',
+    'accounts.apps.AccountsConfig',
     'profiles',
     'matching',
     'api',
@@ -321,17 +324,22 @@ DATA_UPLOAD_MAX_NUMBER_FIELDS = 200
 
 # Email (Gmail SMTP with app password)
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = 'smtp.gmail.com'   
+EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
+EMAIL_TIMEOUT = int(os.environ.get('EMAIL_TIMEOUT', '20'))
 
 # Set these environment variables on your system:
 #   EMAIL_HOST_USER      -> your full Gmail address
 #   EMAIL_HOST_PASSWORD  -> your 16‑character app password (NOT your login password)
-EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER')
-EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD')
+EMAIL_HOST_USER = (os.environ.get('EMAIL_HOST_USER') or '').strip()
+EMAIL_HOST_PASSWORD = (os.environ.get('EMAIL_HOST_PASSWORD') or '').strip()
 
-DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', EMAIL_HOST_USER)
+_from_email = (os.environ.get('DEFAULT_FROM_EMAIL') or '').strip()
+if EMAIL_HOST_USER and (not _from_email or EMAIL_HOST_USER.lower() not in _from_email.lower()):
+    DEFAULT_FROM_EMAIL = f'PeerLink <{EMAIL_HOST_USER}>'
+else:
+    DEFAULT_FROM_EMAIL = _from_email or EMAIL_HOST_USER
 
 # Institutional email domains restriction (optional, comma-separated)
 # Set in .env as ALLOWED_EMAIL_DOMAINS=@domain1.edu,@domain2.edu

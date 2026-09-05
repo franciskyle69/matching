@@ -1,7 +1,11 @@
 import json
+import os
+from unittest.mock import patch
 
 from django.contrib.auth.models import User
-from django.test import TestCase
+from django.core import mail
+from django.core.files.uploadedfile import SimpleUploadedFile
+from django.test import Client, TestCase, override_settings
 
 from profiles.models import (
     MentorProfile,
@@ -97,6 +101,66 @@ class ApiAuthTests(TestCase):
             content_type="application/json",
         )
         self.assertEqual(res.status_code, 429)
+
+
+@override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")
+@patch.dict(os.environ, {"CLOUDINARY_CLOUD_NAME": ""}, clear=False)
+class ApiRegisterTests(TestCase):
+    def _pdf(self, name="form.pdf"):
+        return SimpleUploadedFile(name, b"%PDF-1.4 test", content_type="application/pdf")
+
+    def test_register_mentee_sends_activation_email_with_request_host(self):
+        res = self.client.post(
+            "/api/auth/register/",
+            {
+                "role": "mentee",
+                "first_name": "Ada",
+                "last_name": "Lovelace",
+                "email": "ada.lovelace@student.buksu.edu.ph",
+                "password1": "TestPass123!",
+                "password2": "TestPass123!",
+                "student_verification_document": self._pdf(),
+            },
+            HTTP_HOST="peerlink-test.onrender.com",
+        )
+        self.assertEqual(res.status_code, 200, res.content)
+        user = User.objects.get(email="ada.lovelace@student.buksu.edu.ph")
+        self.assertFalse(user.is_active)
+        self.assertEqual(len(mail.outbox), 1)
+        body = mail.outbox[0].body
+        self.assertIn("peerlink-test.onrender.com", body)
+        self.assertNotIn("example.com", body)
+
+    def test_register_without_smtp_credentials_fails_cleanly(self):
+        with override_settings(
+            EMAIL_BACKEND="django.core.mail.backends.smtp.EmailBackend",
+            EMAIL_HOST_USER="",
+            EMAIL_HOST_PASSWORD="",
+        ):
+            res = self.client.post(
+                "/api/auth/register/",
+                {
+                    "role": "mentee",
+                    "first_name": "Ada",
+                    "last_name": "Lovelace",
+                    "email": "ada.missing-smtp@student.buksu.edu.ph",
+                    "password1": "TestPass123!",
+                    "password2": "TestPass123!",
+                    "student_verification_document": self._pdf(),
+                },
+            )
+        self.assertEqual(res.status_code, 503)
+        self.assertFalse(
+            User.objects.filter(email="ada.missing-smtp@student.buksu.edu.ph").exists()
+        )
+
+    def test_api_csrf_failure_returns_json(self):
+        csrf_client = Client(enforce_csrf_checks=True)
+        res = csrf_client.post("/api/auth/register/", {"role": "mentee"})
+        self.assertEqual(res.status_code, 403)
+        payload = res.json()
+        self.assertEqual(payload.get("code"), "csrf")
+        self.assertIn("Refresh the page", payload.get("error", ""))
 
 
 class ApiSecurityTests(TestCase):

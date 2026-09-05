@@ -5,17 +5,15 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth import update_session_auth_hash
 from django.contrib.auth.forms import AuthenticationForm
 from django.contrib.auth.tokens import default_token_generator
-from django.contrib.sites.shortcuts import get_current_site
 from django.core.mail import EmailMultiAlternatives
-from django.template.loader import render_to_string
 from django.utils.crypto import constant_time_compare
-from django.utils.encoding import force_bytes
-from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
+from django.utils.http import urlsafe_base64_decode
 from django.contrib.auth import get_user_model
 import secrets
 import time
 
 from .forms import RegisterForm, AccountSettingsForm, PasswordChangeWithCodeForm
+from .email_utils import email_backend_can_send, send_activation_email
 from .models import must_change_password, set_must_change_password
 from .oauth_gate import INTENT_SESSION_KEY, SIGNUP_INTENT, normalize_oauth_intent
 from profiles.models import MentorProfile, MenteeProfile, save_verification_documents
@@ -211,57 +209,47 @@ def register(request):
     if request.method == "POST":
         form = RegisterForm(request.POST, request.FILES)
         if form.is_valid():
+            if not email_backend_can_send():
+                messages.error(
+                    request,
+                    "Account could not be created because email is not configured on the server.",
+                )
+                return render(request, "registration/register.html", {"form": form})
             user = form.save(commit=True)
             role = form.cleaned_data.get("role")
             files_by_kind = form.cleaned_data.get("verification_files_by_kind") or {}
-            if role == "mentor":
-                mentor = MentorProfile.objects.create(
-                    user=user,
-                    program="BSIT",
-                    year_level=form.cleaned_data.get("year_level") or 4,
-                    role=form.cleaned_data.get("mentor_role") or "",
-                    approved=False,
+            try:
+                if role == "mentor":
+                    mentor = MentorProfile.objects.create(
+                        user=user,
+                        program="BSIT",
+                        year_level=form.cleaned_data.get("year_level") or 4,
+                        role=form.cleaned_data.get("mentor_role") or "",
+                        approved=False,
+                    )
+                    save_verification_documents(
+                        mentor=mentor,
+                        files_by_kind=files_by_kind,
+                    )
+                else:
+                    mentee = MenteeProfile.objects.create(
+                        user=user,
+                        program="BSIT",
+                        year_level=1,
+                        approved=False,
+                    )
+                    save_verification_documents(
+                        mentee=mentee,
+                        files_by_kind=files_by_kind,
+                    )
+                send_activation_email(request, user)
+            except Exception:
+                user.delete()
+                messages.error(
+                    request,
+                    "Account could not be created because activation email could not be sent. Please try again.",
                 )
-                save_verification_documents(
-                    mentor=mentor,
-                    files_by_kind=files_by_kind,
-                )
-            else:
-                mentee = MenteeProfile.objects.create(
-                    user=user,
-                    program="BSIT",
-                    year_level=1,
-                    approved=False,
-                )
-                save_verification_documents(
-                    mentee=mentee,
-                    files_by_kind=files_by_kind,
-                )
-            current_site = get_current_site(request)
-            subject = "Activate your account"
-            text_message = render_to_string(
-                "registration/activation_email.txt",
-                {
-                    "user": user,
-                    "domain": current_site.domain,
-                    "uid": urlsafe_base64_encode(force_bytes(user.pk)),
-                    "token": default_token_generator.make_token(user),
-                    "protocol": "https" if request.is_secure() else "http",
-                },
-            )
-            html_message = render_to_string(
-                "registration/activation_email.html",
-                {
-                    "user": user,
-                    "domain": current_site.domain,
-                    "uid": urlsafe_base64_encode(force_bytes(user.pk)),
-                    "token": default_token_generator.make_token(user),
-                    "protocol": "https" if request.is_secure() else "http",
-                },
-            )
-            email = EmailMultiAlternatives(subject, text_message, to=[user.email])
-            email.attach_alternative(html_message, "text/html")
-            email.send()
+                return render(request, "registration/register.html", {"form": form})
             messages.success(request, "Check your email to activate your account.")
             return redirect("login")
     else:
