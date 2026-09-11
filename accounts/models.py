@@ -5,6 +5,7 @@ from django.db import models
 class UserSecurityState(models.Model):
 	user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="security_state")
 	must_change_password = models.BooleanField(default=False, db_column="force_password_change")
+	is_onboarded = models.BooleanField(default=False)
 
 	def __str__(self):
 		return f"UserSecurityState<{self.user_id}>"

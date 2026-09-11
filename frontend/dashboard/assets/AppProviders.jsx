@@ -23,7 +23,7 @@
   function getPendingApprovalLandingTab(userData) {
     if (!userData) return "settings";
     if (userData.must_change_password) return "settings";
-    if (needsCompleteProfile(userData)) return "complete-profile";
+    if (needsCompleteProfile(userData)) return "onboarding";
     if (userData.role === "mentee" || userData.role === "mentor") {
       return "onboarding";
     }
@@ -31,11 +31,7 @@
   }
 
   function needsCompleteProfile(userData) {
-    return !!(
-      userData &&
-      userData.is_profile_complete === false &&
-      (userData.role === "mentor" || userData.role === "mentee")
-    );
+    return !!userData && userData.is_onboarded === false;
   }
 
   function isPendingApprovalMessage(message) {
@@ -126,6 +122,13 @@
       return "home";
     });
     const [user, setUser] = useState(null);
+    const [accessToken, setAccessToken] = useState(() => {
+      try {
+        return window.sessionStorage.getItem("peerlink_access_token") || "";
+      } catch (_) {
+        return "";
+      }
+    });
     const [stats, setStats] = useState(null);
     const [unreadCount, setUnreadCount] = useState(0);
     const [authRequired, setAuthRequired] = useState(false);
@@ -167,6 +170,7 @@
     });
     const [menteeProfileSaving, setMenteeProfileSaving] = useState(false);
     const [completeProfileSaving, setCompleteProfileSaving] = useState(false);
+    const [onboardingSaving, setOnboardingSaving] = useState(false);
     const [signInLoading, setSignInLoading] = useState(false);
     const [signUpLoading, setSignUpLoading] = useState(false);
     const [logoutLoading, setLogoutLoading] = useState(false);
@@ -175,6 +179,9 @@
       password: "",
     });
     const emptySignUpForm = {
+      display_name: "",
+      password: "",
+      confirm_password: "",
       role: "mentor",
       mentor_role: "",
       gender: "",
@@ -534,7 +541,7 @@
       }
 
       if (needsCompleteProfile(user)) {
-        replaceAppUrl("complete-profile");
+        replaceAppUrl("onboarding");
         return;
       }
 
@@ -660,9 +667,13 @@
 
     useEffect(() => {
       if (!authCheckDone || !user) return;
+      if (user.is_onboarded === true && activeTab === "onboarding") {
+        setActiveTab("home");
+        return;
+      }
       if (needsCompleteProfile(user)) {
-        if (activeTab !== "complete-profile") {
-          setActiveTab("complete-profile");
+        if (activeTab !== "onboarding") {
+          setActiveTab("onboarding");
         }
         return;
       }
@@ -820,6 +831,12 @@
         return null;
       }
       meLastFetchTsRef.current = Date.now();
+      if (result.data.access_token) {
+        setAccessToken(result.data.access_token);
+        try {
+          window.sessionStorage.setItem("peerlink_access_token", result.data.access_token);
+        } catch (_) {}
+      }
       await loadQuestionnaireOptions();
       const unapproved = getIsPendingApproval(result.data);
       setUser(result.data);
@@ -919,7 +936,7 @@
       setShowMentorInfoModal(false);
       setAuthRequired(false);
       if (needsCompleteProfile(result.data)) {
-        setActiveTab("complete-profile");
+        setActiveTab("onboarding");
         setAuthCheckDone(true);
         return result.data;
       }
@@ -1318,6 +1335,47 @@
       setAuthAlert(null);
       setSignUpLoading(true);
       try {
+        if (signUpForm.display_name !== undefined) {
+          const displayName = String(signUpForm.display_name || "").trim();
+          const email = String(signUpForm.email || "").trim().toLowerCase();
+          const password = String(signUpForm.password || "");
+          const confirmPassword = String(signUpForm.confirm_password || "");
+          const institutionalEmail = /^[^\s@]+@(student\.)?buksu\.edu\.ph$/i;
+          if (!displayName || !institutionalEmail.test(email) || !password || password !== confirmPassword) {
+            setAuthAlert({
+              severity: "error",
+              title: "Check your details",
+              message: "Enter your name, institutional email, and matching passwords.",
+            });
+            return;
+          }
+          const body = new FormData();
+          body.append("display_name", displayName);
+          body.append("email", email);
+          body.append("password", password);
+          body.append("confirm_password", confirmPassword);
+          const portalRole = getPortalAuthRole();
+          if (portalRole === "mentor" || portalRole === "mentee") body.append("role", portalRole);
+          const result = await fetchJSON("/api/auth/register/", {
+            method: "POST",
+            raw: true,
+            headers: { "X-CSRFToken": getCookie("csrftoken") },
+            body,
+          });
+          if (!result.ok) {
+            const message = result.data?.error || Object.values(result.data?.errors || {})?.[0]?.[0] || "Unable to create your account.";
+            setAuthAlert({ severity: "error", title: "Sign up failed", message });
+            return;
+          }
+          const token = result.data?.access_token || "";
+          setAccessToken(token);
+          try {
+            window.sessionStorage.setItem("peerlink_access_token", token);
+          } catch (_) {}
+          const profile = await loadMe({ force: true });
+          if (profile) setActiveTab("onboarding");
+          return;
+        }
         const portalRole = getPortalAuthRole();
         if (portalRole === "staff") {
           setAuthAlert({
@@ -2100,6 +2158,28 @@
       return { ok: true, data: result.data };
     }
 
+    async function handleOnboardingComplete(formData) {
+      setOnboardingSaving(true);
+      setError("");
+      const result = await fetchJSON("/api/user/complete-onboarding/", {
+        method: "POST",
+        raw: true,
+        headers: { "X-CSRFToken": getCookie("csrftoken") },
+        body: formData,
+      });
+      if (!result.ok) {
+        const message = result.data?.error || "Unable to complete onboarding.";
+        setError(message);
+        addToast(message, "warning");
+        setOnboardingSaving(false);
+        return { ok: false, message };
+      }
+      setUser((previous) => ({ ...(previous || {}), ...(result.data.user || {}), is_onboarded: true }));
+      setOnboardingSaving(false);
+      setActiveTab("home");
+      return { ok: true, data: result.data.user };
+    }
+
     async function handleMentorProfileSave(overrides) {
       if (!user || user.role !== "mentor") return;
       const profile = { ...mentorProfile, ...(overrides || {}) };
@@ -2569,6 +2649,7 @@
       setAuthRequired,
       authCheckDone,
       setAuthCheckDone,
+      accessToken,
       activeTab,
       setActiveTab,
       requestTabChange,
@@ -2624,6 +2705,8 @@
       menteeProfileSaving,
       completeProfileSaving,
       handleCompleteProfileSave,
+      onboardingSaving,
+      handleOnboardingComplete,
       handleMenteeProfileSave,
       mentorProfile,
       setMentorProfile,

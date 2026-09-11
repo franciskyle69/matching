@@ -1,5 +1,6 @@
 import json
 import os
+from io import BytesIO
 from unittest.mock import patch
 
 from django.contrib.auth.models import User
@@ -13,6 +14,8 @@ from profiles.models import (
     MentorCompetency,
     MenteeCompetencyNeed,
 )
+from accounts.jwt_utils import decode_access_token
+from accounts.models import UserSecurityState
 from matching.models import Notification, Competency, Topic, Subject
 
 
@@ -39,7 +42,7 @@ class ApiAuthTests(TestCase):
         )
         self.assertEqual(res.status_code, 200)
 
-    def test_login_sets_httponly_refresh_cookie_not_json_tokens(self):
+    def test_login_returns_access_token_and_httponly_refresh_cookie(self):
         res = self.client.post(
             "/api/auth/login/",
             data=json.dumps(
@@ -52,7 +55,8 @@ class ApiAuthTests(TestCase):
         )
         self.assertEqual(res.status_code, 200)
         payload = res.json()
-        self.assertNotIn("access_token", payload)
+        self.assertIn("access_token", payload)
+        self.assertFalse(payload["user"]["is_onboarded"])
         self.assertNotIn("refresh_token", payload)
         self.assertIn("pl_refresh", res.cookies)
         self.assertTrue(res.cookies["pl_refresh"]["httponly"])
@@ -109,29 +113,23 @@ class ApiRegisterTests(TestCase):
     def _pdf(self, name="form.pdf"):
         return SimpleUploadedFile(name, b"%PDF-1.4 test", content_type="application/pdf")
 
-    def test_register_mentee_sends_activation_email_with_request_host(self):
+    def test_register_creates_minimal_onboarding_account(self):
         res = self.client.post(
             "/api/auth/register/",
             {
                 "role": "mentee",
-                "first_name": "Ada",
-                "last_name": "Lovelace",
+                "display_name": "Ada Lovelace",
                 "email": "ada.lovelace@student.buksu.edu.ph",
-                "password1": "TestPass123!",
-                "password2": "TestPass123!",
-                "student_verification_document": self._pdf(),
+                "password": "TestPass123!",
+                "confirm_password": "TestPass123!",
             },
-            HTTP_HOST="peerlink-test.onrender.com",
         )
         self.assertEqual(res.status_code, 200, res.content)
         user = User.objects.get(email="ada.lovelace@student.buksu.edu.ph")
-        self.assertFalse(user.is_active)
-        self.assertEqual(len(mail.outbox), 1)
-        body = mail.outbox[0].body
-        self.assertIn("peerlink-test.onrender.com", body)
-        self.assertNotIn("example.com", body)
+        self.assertTrue(user.is_active)
+        self.assertFalse(UserSecurityState.objects.get(user=user).is_onboarded)
 
-    def test_register_without_smtp_credentials_fails_cleanly(self):
+    def test_register_does_not_require_smtp_credentials(self):
         with override_settings(
             EMAIL_BACKEND="django.core.mail.backends.smtp.EmailBackend",
             EMAIL_HOST_USER="",
@@ -141,18 +139,14 @@ class ApiRegisterTests(TestCase):
                 "/api/auth/register/",
                 {
                     "role": "mentee",
-                    "first_name": "Ada",
-                    "last_name": "Lovelace",
+                    "display_name": "Ada Missing",
                     "email": "ada.missing-smtp@student.buksu.edu.ph",
-                    "password1": "TestPass123!",
-                    "password2": "TestPass123!",
-                    "student_verification_document": self._pdf(),
+                    "password": "TestPass123!",
+                    "confirm_password": "TestPass123!",
                 },
             )
-        self.assertEqual(res.status_code, 503)
-        self.assertFalse(
-            User.objects.filter(email="ada.missing-smtp@student.buksu.edu.ph").exists()
-        )
+        self.assertEqual(res.status_code, 200)
+        self.assertTrue(User.objects.filter(email="ada.missing-smtp@student.buksu.edu.ph").exists())
 
     def test_api_csrf_failure_returns_json(self):
         csrf_client = Client(enforce_csrf_checks=True)
@@ -161,6 +155,53 @@ class ApiRegisterTests(TestCase):
         payload = res.json()
         self.assertEqual(payload.get("code"), "csrf")
         self.assertIn("Refresh the page", payload.get("error", ""))
+
+    def test_unified_registration_and_onboarding(self):
+        registration = self.client.post(
+            "/api/auth/register/",
+            {
+                "display_name": "Ada Lovelace",
+                "email": "ada.unified@student.buksu.edu.ph",
+                "password": "TestPass123!",
+                "confirm_password": "TestPass123!",
+                "role": "mentee",
+            },
+        )
+        self.assertEqual(registration.status_code, 200, registration.content)
+        payload = registration.json()
+        self.assertFalse(payload["user"]["is_onboarded"])
+        claims = decode_access_token(payload["access_token"])
+        self.assertEqual(claims["email"], "ada.unified@student.buksu.edu.ph")
+        self.assertFalse(claims["is_onboarded"])
+        self.assertFalse(UserSecurityState.objects.get(user__email=claims["email"]).is_onboarded)
+
+        from PIL import Image
+        image = BytesIO()
+        Image.new("RGB", (8, 8), "white").save(image, format="PNG")
+        image.seek(0)
+        onboarding = self.client.post(
+            "/api/user/complete-onboarding/",
+            {
+                "profile_photo": SimpleUploadedFile("id.png", image.read(), content_type="image/png"),
+                "metadata": json.dumps({"campus": "Main", "contact_no": "09171234567", "subjects": ["Python"]}),
+            },
+        )
+        self.assertEqual(onboarding.status_code, 200, onboarding.content)
+        self.assertTrue(onboarding.json()["user"]["is_onboarded"])
+        self.assertTrue(UserSecurityState.objects.get(user__email=claims["email"]).is_onboarded)
+
+    def test_unified_registration_rejects_non_institutional_email(self):
+        response = self.client.post(
+            "/api/auth/register/",
+            {
+                "display_name": "Ada Lovelace",
+                "email": "ada@example.com",
+                "password": "TestPass123!",
+                "confirm_password": "TestPass123!",
+            },
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("email", response.json()["errors"])
 
 
 class ApiSecurityTests(TestCase):

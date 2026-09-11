@@ -21,6 +21,7 @@ from accounts.oauth_gate import (
     normalize_oauth_intent,
     resolve_google_oauth_gate,
 )
+from accounts.models import UserSecurityState
 
 User = get_user_model()
 ROLE_SESSION_KEY = "selected_role"
@@ -188,6 +189,7 @@ class RoleAwareSocialAccountAdapter(DefaultSocialAccountAdapter):
 
     def save_user(self, request, sociallogin, form=None):
         user = super().save_user(request, sociallogin, form)
+        UserSecurityState.objects.get_or_create(user=user, defaults={"is_onboarded": False})
         selected_role = request.session.get(ROLE_SESSION_KEY)
 
         picture = social_picture_url(sociallogin)
@@ -231,6 +233,9 @@ class RoleAwareSocialAccountAdapter(DefaultSocialAccountAdapter):
         user = getattr(request, "user", None)
         if user and getattr(user, "is_authenticated", False):
             if not compute_is_profile_complete(user):
-                return "/app/complete-profile?oauth=google"
+                state, _ = UserSecurityState.objects.get_or_create(user=user)
+                state.is_onboarded = False
+                state.save(update_fields=["is_onboarded"])
+                return "/app/?oauth=google#onboarding"
             return "/app/?oauth=google"
-        return "/app/complete-profile?oauth=google"
+        return "/app/?oauth=google#onboarding"

@@ -28,10 +28,18 @@ def _refresh_cookie_path() -> str:
 def issue_access_token(user) -> str:
     now = timezone.now()
     ttl = int(getattr(settings, "JWT_ACCESS_TTL_SECONDS", 1800))
+    mentor = getattr(user, "mentor_profile", None)
+    mentee = getattr(user, "mentee_profile", None)
+    role = "mentor" if mentor else "mentee" if mentee else "staff" if user.is_staff else None
+    state = getattr(user, "security_state", None)
     payload = {
         "typ": "access",
+        "id": user.id,
         "uid": user.id,
+        "email": user.email,
         "username": user.username,
+        "role": role,
+        "is_onboarded": bool(state and state.is_onboarded),
         "iat": int(now.timestamp()),
         "exp": int((now + datetime.timedelta(seconds=ttl)).timestamp()),
     }
