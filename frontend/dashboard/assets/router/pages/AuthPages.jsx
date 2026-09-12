@@ -18,13 +18,17 @@ import {
   const { LoadingSpinner } = Utils;
 
   function getPortalAuthRole() {
-    const fromUrl = new URLSearchParams(window.location.search || "").get("role");
+    const fromUrl = new URLSearchParams(window.location.search || "").get(
+      "role",
+    );
     const fromStore =
       typeof sessionStorage !== "undefined"
         ? sessionStorage.getItem("portalRole")
         : null;
     const role = fromUrl || fromStore;
-    return role === "mentor" || role === "mentee" || role === "staff" ? role : null;
+    return role === "mentor" || role === "mentee" || role === "staff"
+      ? role
+      : null;
   }
 
   function getPortalRoleLabel() {
@@ -95,7 +99,8 @@ import {
           }}
         />
         <small className="auth-field-helper">
-          You can select multiple files at once. PDF, JPG, or PNG. Max 5 MB each.
+          You can select multiple files at once. PDF, JPG, or PNG. Max 5 MB
+          each.
         </small>
         {selected.length > 0 && (
           <ul className="auth-file-list">
@@ -106,7 +111,9 @@ import {
                   type="button"
                   className="auth-file-remove"
                   onClick={() =>
-                    onChange(selected.filter((_, itemIndex) => itemIndex !== index))
+                    onChange(
+                      selected.filter((_, itemIndex) => itemIndex !== index),
+                    )
                   }
                 >
                   Remove
@@ -126,9 +133,7 @@ import {
   function getGoogleSignupUrl() {
     const role = getPortalAuthRole();
     if (role !== "mentor" && role !== "mentee") return "/portal/";
-    return (
-      "/accounts/google/start/signup/?role=" + encodeURIComponent(role)
-    );
+    return "/accounts/google/start/signup/?role=" + encodeURIComponent(role);
   }
 
   function GoogleMark() {
@@ -328,7 +333,11 @@ import {
       </div>
     );
 
-    if (ReactDOM && typeof ReactDOM.createPortal === "function" && document.body) {
+    if (
+      ReactDOM &&
+      typeof ReactDOM.createPortal === "function" &&
+      document.body
+    ) {
       return ReactDOM.createPortal(overlay, document.body);
     }
     return overlay;
@@ -338,9 +347,7 @@ import {
     if (!authAlert || isOauthMismatchAlert(authAlert)) return null;
     const body = (
       <div className="auth-alert-content">
-        <p className="auth-alert-title">
-          {authAlert.title || defaultTitle}
-        </p>
+        <p className="auth-alert-title">{authAlert.title || defaultTitle}</p>
         <p className="auth-alert-message">{authAlert.message}</p>
         {authAlert.detail && (
           <p className="auth-alert-detail">{authAlert.detail}</p>
@@ -505,7 +512,9 @@ import {
                     setSignInForm({ ...signInForm, identifier: e.target.value })
                   }
                 />
-                <p className="auth-field-helper">Use your institutional email or username.</p>
+                <p className="auth-field-helper">
+                  Use your institutional email or username.
+                </p>
               </div>
               <div className="auth-field auth-password-wrap">
                 <label htmlFor="signin-password">Password</label>
@@ -577,11 +586,7 @@ import {
                 className="auth-primary"
                 disabled={signInLoading}
               >
-                {signInLoading ? (
-                  <LoadingSpinner inline />
-                ) : (
-                  "Sign In"
-                )}
+                {signInLoading ? <LoadingSpinner inline /> : "Sign In"}
               </button>
               <div className="auth-divider">
                 <span>Or continue with</span>
@@ -589,7 +594,10 @@ import {
               <div className="auth-social">
                 {roleRequired ? (
                   <div className="auth-social" style={{ width: "100%" }}>
-                    <p className="auth-subtitle" style={{ marginBottom: "0.75rem" }}>
+                    <p
+                      className="auth-subtitle"
+                      style={{ marginBottom: "0.75rem" }}
+                    >
                       Choose your role first to continue with Google.
                     </p>
                     <a className="auth-social-btn" href="/portal/">
@@ -598,7 +606,10 @@ import {
                   </div>
                 ) : pendingApproval ? (
                   <div className="auth-social" style={{ width: "100%" }}>
-                    <p className="auth-subtitle" style={{ marginBottom: "0.75rem" }}>
+                    <p
+                      className="auth-subtitle"
+                      style={{ marginBottom: "0.75rem" }}
+                    >
                       Your account is pending coordinator approval.
                     </p>
                     <button
@@ -847,9 +858,7 @@ import {
                   "auth-step-dot" + (signupStep === 2 ? " is-active" : "")
                 }
               />
-              <span className="auth-step-label">
-                Step {signupStep} of 2
-              </span>
+              <span className="auth-step-label">Step {signupStep} of 2</span>
             </div>
             <form
               className="auth-form"
@@ -869,205 +878,216 @@ import {
               />
               {signupStep === 2 && (
                 <>
-              <div className="auth-field">
-                <p className="auth-field-label">Role</p>
-                <p
-                  className="auth-role-locked"
-                  style={{
-                    margin: 0,
-                    padding: "0.65rem 0.85rem",
-                    borderRadius: "8px",
-                    background: "rgba(99, 102, 241, 0.12)",
-                    color: "rgba(255, 255, 255, 0.95)",
-                    border: "1px solid rgba(255, 255, 255, 0.12)",
-                    fontWeight: 600,
-                  }}
-                >
-                  {portalRoleLabel ||
-                    (signUpForm.role === "mentee" ? "Mentee" : "Mentor")}
-                </p>
-                <small className="auth-field-helper">
-                  This role was selected when you started creating your account.
-                </small>
-              </div>
-              {isMentorSignup && (
-                <div className="auth-field">
-                  <label id="signup-mentor-type-label">Mentor type *</label>
-                  <p className="muted" style={{ margin: "0 0 8px" }}>
-                    Student mentor or instructor.
-                  </p>
-                  <div
-                    className="auth-mentor-type-picker"
-                    role="radiogroup"
-                    aria-labelledby="signup-mentor-type-label"
-                  >
-                    {MENTOR_TYPE_OPTIONS.map((option) => {
-                      const active = signUpForm.mentor_role === option.value;
-                      return (
-                        <button
-                          key={option.value}
-                          type="button"
-                          role="radio"
-                          aria-checked={active}
-                          className={
-                            "auth-mentor-type-option" +
-                            (active ? " is-active" : "")
-                          }
-                          onClick={() =>
-                            setSignUpForm({
-                              ...signUpForm,
-                              mentor_role: option.value,
-                              year_level:
-                                option.value === "Senior IT Student"
-                                  ? signUpForm.year_level
-                                  : "",
-                            })
-                          }
-                        >
-                          <span className="auth-mentor-type-option-title">
-                            {option.title}
-                          </span>
-                          <span className="auth-mentor-type-option-desc">
-                            {option.description}
-                          </span>
-                        </button>
-                      );
-                    })}
+                  <div className="auth-field">
+                    <p className="auth-field-label">Role</p>
+                    <p
+                      className="auth-role-locked"
+                      style={{
+                        margin: 0,
+                        padding: "0.65rem 0.85rem",
+                        borderRadius: "8px",
+                        background: "rgba(99, 102, 241, 0.12)",
+                        color: "rgba(255, 255, 255, 0.95)",
+                        border: "1px solid rgba(255, 255, 255, 0.12)",
+                        fontWeight: 600,
+                      }}
+                    >
+                      {portalRoleLabel ||
+                        (signUpForm.role === "mentee" ? "Mentee" : "Mentor")}
+                    </p>
+                    <small className="auth-field-helper">
+                      This role was selected when you started creating your
+                      account.
+                    </small>
                   </div>
-                </div>
-              )}
-              {isMentorSignup &&
-                signUpForm.mentor_role === "Senior IT Student" && (
-                <div className="auth-field">
-                  <label id="signup-year-level-label">Year level *</label>
-                  <p className="muted" style={{ margin: "0 0 8px" }}>
-                    Locked after coordinator approval.
-                  </p>
-                  <div
-                    className="auth-mentor-type-picker"
-                    role="radiogroup"
-                    aria-labelledby="signup-year-level-label"
-                  >
-                    {[
-                      { value: 3, title: "3rd year" },
-                      { value: 4, title: "4th year" },
-                    ].map((option) => {
-                      const active =
-                        Number(signUpForm.year_level) === option.value;
-                      return (
-                        <button
-                          key={option.value}
-                          type="button"
-                          role="radio"
-                          aria-checked={active}
-                          className={
-                            "auth-mentor-type-option" +
-                            (active ? " is-active" : "")
-                          }
-                          onClick={() =>
-                            setSignUpForm({
-                              ...signUpForm,
-                              year_level: option.value,
-                            })
-                          }
+                  {isMentorSignup && (
+                    <div className="auth-field">
+                      <label id="signup-mentor-type-label">Mentor type *</label>
+                      <p className="muted" style={{ margin: "0 0 8px" }}>
+                        Student mentor or instructor.
+                      </p>
+                      <div
+                        className="auth-mentor-type-picker"
+                        role="radiogroup"
+                        aria-labelledby="signup-mentor-type-label"
+                      >
+                        {MENTOR_TYPE_OPTIONS.map((option) => {
+                          const active =
+                            signUpForm.mentor_role === option.value;
+                          return (
+                            <button
+                              key={option.value}
+                              type="button"
+                              role="radio"
+                              aria-checked={active}
+                              className={
+                                "auth-mentor-type-option" +
+                                (active ? " is-active" : "")
+                              }
+                              onClick={() =>
+                                setSignUpForm({
+                                  ...signUpForm,
+                                  mentor_role: option.value,
+                                  year_level:
+                                    option.value === "Senior IT Student"
+                                      ? signUpForm.year_level
+                                      : "",
+                                })
+                              }
+                            >
+                              <span className="auth-mentor-type-option-title">
+                                {option.title}
+                              </span>
+                              <span className="auth-mentor-type-option-desc">
+                                {option.description}
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                  {isMentorSignup &&
+                    signUpForm.mentor_role === "Senior IT Student" && (
+                      <div className="auth-field">
+                        <label id="signup-year-level-label">Year level *</label>
+                        <p className="muted" style={{ margin: "0 0 8px" }}>
+                          Locked after coordinator approval.
+                        </p>
+                        <div
+                          className="auth-mentor-type-picker"
+                          role="radiogroup"
+                          aria-labelledby="signup-year-level-label"
                         >
-                          <span className="auth-mentor-type-option-title">
-                            {option.title}
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-              {isMentorSignup && (
-                <div className="auth-field">
-                  <label htmlFor="signup-gender">Biological sex *</label>
-                  <p className="muted" style={{ margin: "0 0 8px" }}>
-                    Locked after coordinator approval.
-                  </p>
-                  <select
-                    id="signup-gender"
-                    value={signUpForm.gender || ""}
-                    onChange={(e) =>
-                      setSignUpForm({
-                        ...signUpForm,
-                        gender: e.target.value,
-                      })
-                    }
-                    required
-                  >
-                    <option value="">Select biological sex</option>
-                    <option value="male">Male</option>
-                    <option value="female">Female</option>
-                  </select>
-                </div>
-              )}
+                          {[
+                            { value: 3, title: "3rd year" },
+                            { value: 4, title: "4th year" },
+                          ].map((option) => {
+                            const active =
+                              Number(signUpForm.year_level) === option.value;
+                            return (
+                              <button
+                                key={option.value}
+                                type="button"
+                                role="radio"
+                                aria-checked={active}
+                                className={
+                                  "auth-mentor-type-option" +
+                                  (active ? " is-active" : "")
+                                }
+                                onClick={() =>
+                                  setSignUpForm({
+                                    ...signUpForm,
+                                    year_level: option.value,
+                                  })
+                                }
+                              >
+                                <span className="auth-mentor-type-option-title">
+                                  {option.title}
+                                </span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  {isMentorSignup && (
+                    <div className="auth-field">
+                      <label htmlFor="signup-gender">Biological sex *</label>
+                      <p className="muted" style={{ margin: "0 0 8px" }}>
+                        Locked after coordinator approval.
+                      </p>
+                      <select
+                        id="signup-gender"
+                        value={signUpForm.gender || ""}
+                        onChange={(e) =>
+                          setSignUpForm({
+                            ...signUpForm,
+                            gender: e.target.value,
+                          })
+                        }
+                        required
+                      >
+                        <option value="">Select biological sex</option>
+                        <option value="male">Male</option>
+                        <option value="female">Female</option>
+                      </select>
+                    </div>
+                  )}
                 </>
               )}
               {signupStep === 1 && (
                 <>
-              <div className="auth-name-row">
-              <div className="auth-field">
-                <label htmlFor="signup-first-name">First name *</label>
-                <input
-                  id="signup-first-name"
-                  autoComplete="given-name"
-                  placeholder="First name"
-                  value={signUpForm.first_name}
-                  onChange={(e) =>
-                    setSignUpForm({ ...signUpForm, first_name: e.target.value })
-                  }
-                  required
-                  aria-required="true"
-                />
-              </div>
-              <div className="auth-field">
-                <label htmlFor="signup-last-name">Last name *</label>
-                <input
-                  id="signup-last-name"
-                  autoComplete="family-name"
-                  placeholder="Last name"
-                  value={signUpForm.last_name}
-                  onChange={(e) =>
-                    setSignUpForm({ ...signUpForm, last_name: e.target.value })
-                  }
-                  required
-                  aria-required="true"
-                />
-              </div>
-              </div>
-              <div className="auth-field">
-                <label htmlFor="signup-middle-name">Middle name</label>
-                <input
-                  id="signup-middle-name"
-                  autoComplete="additional-name"
-                  placeholder="Middle name (optional)"
-                  value={signUpForm.middle_name}
-                  onChange={(e) =>
-                    setSignUpForm({ ...signUpForm, middle_name: e.target.value })
-                  }
-                />
-              </div>
-              <div className="auth-field">
-                <label htmlFor="signup-email">Email *</label>
-                <input
-                  id="signup-email"
-                  type="email"
-                  autoComplete="email"
-                  placeholder="your@email.com"
-                  value={signUpForm.email}
-                  onChange={(e) =>
-                    setSignUpForm({ ...signUpForm, email: e.target.value })
-                  }
-                  required
-                  aria-required="true"
-                />
-              </div>
+                  <div className="auth-name-row">
+                    <div className="auth-field">
+                      <label htmlFor="signup-first-name">First name *</label>
+                      <input
+                        id="signup-first-name"
+                        autoComplete="given-name"
+                        placeholder="First name"
+                        value={signUpForm.first_name}
+                        onChange={(e) =>
+                          setSignUpForm({
+                            ...signUpForm,
+                            first_name: e.target.value,
+                          })
+                        }
+                        required
+                        aria-required="true"
+                      />
+                    </div>
+                    <div className="auth-field">
+                      <label htmlFor="signup-last-name">Last name *</label>
+                      <input
+                        id="signup-last-name"
+                        autoComplete="family-name"
+                        placeholder="Last name"
+                        value={signUpForm.last_name}
+                        onChange={(e) =>
+                          setSignUpForm({
+                            ...signUpForm,
+                            last_name: e.target.value,
+                          })
+                        }
+                        required
+                        aria-required="true"
+                      />
+                    </div>
+                  </div>
+                  <div className="auth-field">
+                    <label htmlFor="signup-middle-name">Middle name</label>
+                    <input
+                      id="signup-middle-name"
+                      autoComplete="additional-name"
+                      placeholder="Middle name (optional)"
+                      value={signUpForm.middle_name}
+                      onChange={(e) =>
+                        setSignUpForm({
+                          ...signUpForm,
+                          middle_name: e.target.value,
+                        })
+                      }
+                    />
+                  </div>
+                  <div className="auth-field">
+                    <label htmlFor="signup-email">Email *</label>
+                    <input
+                      id="signup-email"
+                      type="email"
+                      autoComplete="email"
+                      placeholder="your@email.com"
+                      value={signUpForm.email}
+                      onChange={(e) =>
+                        setSignUpForm({ ...signUpForm, email: e.target.value })
+                      }
+                      required
+                      aria-required="true"
+                    />
+                  </div>
                 </>
               )}
-              {signupStep === 2 && (
-                isMentorSignup &&
+              {signupStep === 2 &&
+                (isMentorSignup &&
                 signUpForm.mentor_role === "Senior IT Student" ? (
                   <>
                     <p className="auth-field-label">Required documents *</p>
@@ -1104,127 +1124,138 @@ import {
                       })
                     }
                   />
-                )
-              )}
+                ))}
               {signupStep === 1 && (
                 <>
-              <div className="auth-field auth-password-wrap">
-                <label htmlFor="signup-password">Password *</label>
-                <div className="auth-password-input-wrap">
-                  <input
-                    id="signup-password"
-                    type={showPassword1 ? "text" : "password"}
-                    autoComplete="new-password"
-                    value={signUpForm.password1}
-                    onChange={(e) =>
-                      setSignUpForm({
-                        ...signUpForm,
-                        password1: e.target.value,
-                      })
-                    }
-                    required
-                    aria-required="true"
-                    minLength={10}
-                  />
-                  <button
-                    type="button"
-                    className="auth-password-toggle"
-                    onClick={() => setShowPassword1((v) => !v)}
-                    title={showPassword1 ? "Hide password" : "Show password"}
-                    aria-label={
-                      showPassword1 ? "Hide password" : "Show password"
-                    }
-                  >
-                    {showPassword1 ? (
-                      <svg
-                        className="auth-password-icon"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
+                  <div className="auth-field auth-password-wrap">
+                    <label htmlFor="signup-password">Password *</label>
+                    <div className="auth-password-input-wrap">
+                      <input
+                        id="signup-password"
+                        type={showPassword1 ? "text" : "password"}
+                        autoComplete="new-password"
+                        value={signUpForm.password1}
+                        onChange={(e) =>
+                          setSignUpForm({
+                            ...signUpForm,
+                            password1: e.target.value,
+                          })
+                        }
+                        required
+                        aria-required="true"
+                        minLength={10}
+                      />
+                      <button
+                        type="button"
+                        className="auth-password-toggle"
+                        onClick={() => setShowPassword1((v) => !v)}
+                        title={
+                          showPassword1 ? "Hide password" : "Show password"
+                        }
+                        aria-label={
+                          showPassword1 ? "Hide password" : "Show password"
+                        }
                       >
-                        <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
-                        <line x1="1" y1="1" x2="23" y2="23" />
-                      </svg>
-                    ) : (
-                      <svg
-                        className="auth-password-icon"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
+                        {showPassword1 ? (
+                          <svg
+                            className="auth-password-icon"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          >
+                            <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
+                            <line x1="1" y1="1" x2="23" y2="23" />
+                          </svg>
+                        ) : (
+                          <svg
+                            className="auth-password-icon"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          >
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                            <circle cx="12" cy="12" r="3" />
+                          </svg>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                  <div className="auth-field auth-password-wrap">
+                    <label htmlFor="signup-confirm-password">
+                      Confirm password *
+                    </label>
+                    <div className="auth-password-input-wrap">
+                      <input
+                        id="signup-confirm-password"
+                        type={showPassword2 ? "text" : "password"}
+                        autoComplete="new-password"
+                        value={signUpForm.password2}
+                        onChange={(e) =>
+                          setSignUpForm({
+                            ...signUpForm,
+                            password2: e.target.value,
+                          })
+                        }
+                        required
+                        aria-required="true"
+                        minLength={10}
+                      />
+                      <button
+                        type="button"
+                        className="auth-password-toggle"
+                        onClick={() => setShowPassword2((v) => !v)}
+                        title={
+                          showPassword2 ? "Hide password" : "Show password"
+                        }
+                        aria-label={
+                          showPassword2 ? "Hide password" : "Show password"
+                        }
                       >
-                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                        <circle cx="12" cy="12" r="3" />
-                      </svg>
-                    )}
-                  </button>
-                </div>
-              </div>
-              <div className="auth-field auth-password-wrap">
-                <label htmlFor="signup-confirm-password">Confirm password *</label>
-                <div className="auth-password-input-wrap">
-                  <input
-                    id="signup-confirm-password"
-                    type={showPassword2 ? "text" : "password"}
-                    autoComplete="new-password"
-                    value={signUpForm.password2}
-                    onChange={(e) =>
-                      setSignUpForm({
-                        ...signUpForm,
-                        password2: e.target.value,
-                      })
-                    }
-                    required
-                    aria-required="true"
-                    minLength={10}
-                  />
-                  <button
-                    type="button"
-                    className="auth-password-toggle"
-                    onClick={() => setShowPassword2((v) => !v)}
-                    title={showPassword2 ? "Hide password" : "Show password"}
-                    aria-label={
-                      showPassword2 ? "Hide password" : "Show password"
-                    }
-                  >
-                    {showPassword2 ? (
-                      <svg
-                        className="auth-password-icon"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      >
-                        <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
-                        <line x1="1" y1="1" x2="23" y2="23" />
-                      </svg>
-                    ) : (
-                      <svg
-                        className="auth-password-icon"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      >
-                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                        <circle cx="12" cy="12" r="3" />
-                      </svg>
-                    )}
-                  </button>
-                </div>
-              </div>
+                        {showPassword2 ? (
+                          <svg
+                            className="auth-password-icon"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          >
+                            <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
+                            <line x1="1" y1="1" x2="23" y2="23" />
+                          </svg>
+                        ) : (
+                          <svg
+                            className="auth-password-icon"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          >
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                            <circle cx="12" cy="12" r="3" />
+                          </svg>
+                        )}
+                      </button>
+                    </div>
+                  </div>
                 </>
               )}
-              <div className={signupStep === 2 ? "auth-step-actions is-split" : "auth-step-actions"}>
+              <div
+                className={
+                  signupStep === 2
+                    ? "auth-step-actions is-split"
+                    : "auth-step-actions"
+                }
+              >
                 {signupStep === 2 && (
                   <button
                     type="button"
@@ -1308,21 +1339,127 @@ import {
       signUpForm.email || "",
     );
     return (
-      <Box sx={{ minHeight: "100vh", display: "grid", placeItems: "center", p: 2, bgcolor: "#101827" }}>
-        <Paper component="form" onSubmit={(event) => { event.preventDefault(); handleSignUp(); }} sx={{ width: "min(100%, 520px)", p: { xs: 3, sm: 5 }, borderRadius: 3 }}>
+      <Box
+        sx={{
+          minHeight: "100vh",
+          display: "grid",
+          placeItems: "center",
+          p: 2,
+          bgcolor: "#101827",
+        }}
+      >
+        <Paper
+          component="form"
+          onSubmit={(event) => {
+            event.preventDefault();
+            handleSignUp();
+          }}
+          sx={{
+            width: "min(100%, 520px)",
+            p: { xs: 3, sm: 5 },
+            borderRadius: 3,
+          }}
+        >
           <Stack spacing={2.25}>
             <Box>
-              <Typography variant="overline" color="primary">PeerLink</Typography>
-              <Typography variant="h4" fontWeight={700}>Create your account</Typography>
-              <Typography color="text.secondary" sx={{ mt: 1 }}>Start with your institutional account. We&apos;ll finish your mentorship profile next.</Typography>
+              <Typography variant="overline" color="primary">
+                PeerLink
+              </Typography>
+              <Typography variant="h4" fontWeight={700} color="text.primary">
+                Create your account
+              </Typography>
+              <Typography color="text.secondary" sx={{ mt: 1 }}>
+                Start with your institutional account. We&apos;ll finish your
+                mentorship profile next.
+              </Typography>
             </Box>
-            {authAlert && <MuiAlert severity={authAlert.severity || "error"} onClose={() => setAuthAlert(null)}>{authAlert.message}</MuiAlert>}
-            <TextField label="Full name" value={signUpForm.display_name || ""} onChange={update("display_name")} required fullWidth autoComplete="name" />
-            <TextField label="Institutional email" type="email" value={signUpForm.email || ""} onChange={update("email")} required fullWidth error={Boolean(signUpForm.email) && !emailIsValid} helperText={signUpForm.email && !emailIsValid ? "Use @student.buksu.edu.ph or @buksu.edu.ph" : ""} autoComplete="email" />
-            <TextField label="Password" type="password" value={signUpForm.password || ""} onChange={update("password")} required fullWidth autoComplete="new-password" />
-            <TextField label="Confirm password" type="password" value={signUpForm.confirm_password || ""} onChange={update("confirm_password")} required fullWidth error={Boolean(signUpForm.confirm_password) && signUpForm.password !== signUpForm.confirm_password} autoComplete="new-password" />
-            <Button type="submit" variant="contained" size="large" disabled={signUpLoading}>{signUpLoading ? "Creating account..." : "Continue to onboarding"}</Button>
-            <Button type="button" onClick={() => { window.location.hash = "signin"; }}>Already have an account? Sign in</Button>
+            {authAlert && (
+              <MuiAlert
+                severity={authAlert.severity || "error"}
+                onClose={() => setAuthAlert(null)}
+              >
+                {authAlert.message}
+              </MuiAlert>
+            )}
+            <TextField
+              label="Full name"
+              value={signUpForm.display_name || ""}
+              onChange={update("display_name")}
+              required
+              fullWidth
+              autoComplete="name"
+            />
+            <TextField
+              label="Institutional email"
+              type="email"
+              value={signUpForm.email || ""}
+              onChange={update("email")}
+              required
+              fullWidth
+              error={Boolean(signUpForm.email) && !emailIsValid}
+              helperText={
+                signUpForm.email && !emailIsValid
+                  ? "Use @student.buksu.edu.ph or @buksu.edu.ph"
+                  : ""
+              }
+              autoComplete="email"
+            />
+            <TextField
+              label="Password"
+              type="password"
+              value={signUpForm.password || ""}
+              onChange={update("password")}
+              required
+              fullWidth
+              autoComplete="new-password"
+            />
+            <TextField
+              label="Confirm password"
+              type="password"
+              value={signUpForm.confirm_password || ""}
+              onChange={update("confirm_password")}
+              required
+              fullWidth
+              error={
+                Boolean(signUpForm.confirm_password) &&
+                signUpForm.password !== signUpForm.confirm_password
+              }
+              autoComplete="new-password"
+            />
+            <Button
+              type="submit"
+              variant="contained"
+              size="large"
+              disabled={signUpLoading}
+            >
+              {signUpLoading ? "Creating account..." : "Continue to onboarding"}
+            </Button>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+              <Box sx={{ flex: 1, height: "1px", bgcolor: "divider" }} />
+              <Typography variant="body2" color="text.secondary">
+                Or continue with
+              </Typography>
+              <Box sx={{ flex: 1, height: "1px", bgcolor: "divider" }} />
+            </Box>
+            <Button
+              type="button"
+              variant="outlined"
+              size="large"
+              startIcon={<GoogleMark />}
+              onClick={() => {
+                window.location.href = getGoogleSignupUrl();
+              }}
+            >
+              Sign up with Google
+            </Button>
+            <Button
+              type="button"
+              onClick={() => {
+                window.location.hash = "signin";
+              }}
+            >
+              Already have an account? Sign in
+            </Button>
           </Stack>
         </Paper>
       </Box>

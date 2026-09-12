@@ -410,13 +410,11 @@ def auth_login(request):
             {"error": "Email/username and password are required."}, status=400
         )
 
-    # Allow valid credentials to sign in and reset limits immediately.
-    backend = EmailOrUsernameModelBackend()
-    user = backend.authenticate(request, identifier=identifier, password=password)
+    # Run django-axes before the email/username backend so locked accounts are
+    # rejected even when the submitted password is correct.
+    user = authenticate(request, username=identifier, password=password)
 
     if not user:
-        # Trigger axes tracking/backoff path for failed credentials.
-        authenticate(request, identifier=identifier, password=password)
         lockout_info = get_lockout_info(identifier, ip_address=client_ip)
         if lockout_info["is_locked"]:
             return create_lockout_response(identifier, ip_address=client_ip)

@@ -394,6 +394,7 @@ from datetime import timedelta
 AXES_FAILURE_LIMIT = 5  # Lock account after 5 failed attempts
 AXES_COOLOFF_TIME = timedelta(minutes=15)  # Lockout duration: 15 minutes
 AXES_LOCKOUT_TEMPLATE = None  # Use DRF response for API lockouts
+AXES_LOCKOUT_CALLABLE = "accounts.lockout_utils.axes_lockout_response"
 AXES_VERBOSE = True  # Log detailed information about attempts
 AXES_RESET_ON_SUCCESS = True  # Reset counter on successful login
 AXES_LOCKOUT_BY_COMBINATION_USER_AND_IP = True

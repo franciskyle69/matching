@@ -62,6 +62,31 @@
       --white: #ffffff;
       --green-600: #22c55e;
     }
+    .auth-page {
+      --bg: #f1f5f9;
+      --surface: #ffffff;
+      --border: #e2e8f0;
+      --text: #1e293b;
+      --text-muted: #64748b;
+      --accent: #352c90;
+      --accent-hover: #22177A;
+      --accent-light: #eeedf7;
+      --error: #dc2626;
+      --error-bg: #fef2f2;
+      --shadow: 0 1px 3px rgba(0,0,0,.08);
+      --shadow-lg: 0 10px 40px -15px rgba(0,0,0,.15);
+      --slate-200: #e2e8f0;
+      --slate-300: #cbd5e1;
+      --slate-500: #64748b;
+      --slate-600: #475569;
+      --slate-800: #1e293b;
+      --slate-900: #0f172a;
+      --indigo-200: #b8b6d3;
+      --indigo-400: #605EA1;
+      --indigo-600: #352c90;
+      --green-600: #16a34a;
+      color-scheme: light;
+    }
     * { box-sizing: border-box; }
     body {
       font-family: 'DM Sans', system-ui, sans-serif;
@@ -491,7 +516,7 @@
     {% block extra_css %}{% endblock %}
   </style>
 </head>
-<body>
+<body class="{% if not user.is_authenticated %}auth-page{% endif %}">
   {% if user.is_authenticated %}
   <div class="app-shell">
     <aside class="sidebar">

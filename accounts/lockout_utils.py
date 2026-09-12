@@ -194,3 +194,13 @@ def create_lockout_response(username, ip_address=None):
         },
         status=429,
     )
+
+
+def axes_lockout_response(request, original_response=None, credentials=None):
+    """Return a stable JSON response when Axes middleware intercepts a request."""
+    credentials = credentials or getattr(request, "axes_credentials", {}) or {}
+    username = credentials.get("username") or credentials.get("identifier") or ""
+    return create_lockout_response(
+        username,
+        ip_address=request.META.get("REMOTE_ADDR"),
+    )

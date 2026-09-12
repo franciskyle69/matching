@@ -106,6 +106,32 @@ class ApiAuthTests(TestCase):
         )
         self.assertEqual(res.status_code, 429)
 
+    def test_login_rate_limit_blocks_correct_password_after_failures(self):
+        for _ in range(5):
+            self.client.post(
+                "/api/auth/login/",
+                data=json.dumps(
+                    {
+                        "identifier": self.user.email,
+                        "password": "wrong-password",
+                    }
+                ),
+                content_type="application/json",
+            )
+
+        response = self.client.post(
+            "/api/auth/login/",
+            data=json.dumps(
+                {
+                    "identifier": self.user.email,
+                    "password": self.password,
+                }
+            ),
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 429)
+        self.assertEqual(response.json().get("error"), "Account locked")
+
 
 @override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")
 @patch.dict(os.environ, {"CLOUDINARY_CLOUD_NAME": ""}, clear=False)

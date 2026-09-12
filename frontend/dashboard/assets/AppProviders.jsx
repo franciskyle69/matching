@@ -4,11 +4,8 @@
   const { useEffect, useMemo, useState, useRef } = React;
   const MAIN_TABS =
     (window.DashboardApp && window.DashboardApp.MAIN_TABS) || [];
-  const {
-    getCookie,
-    fetchJSON,
-    ensureCsrfToken,
-  } = (window.DashboardApp && window.DashboardApp.Utils) || {};
+  const { getCookie, fetchJSON, ensureCsrfToken } =
+    (window.DashboardApp && window.DashboardApp.Utils) || {};
   const AppContext =
     (window.DashboardApp && window.DashboardApp.AppContext) ||
     React.createContext(null);
@@ -834,7 +831,10 @@
       if (result.data.access_token) {
         setAccessToken(result.data.access_token);
         try {
-          window.sessionStorage.setItem("peerlink_access_token", result.data.access_token);
+          window.sessionStorage.setItem(
+            "peerlink_access_token",
+            result.data.access_token,
+          );
         } catch (_) {}
       }
       await loadQuestionnaireOptions();
@@ -880,7 +880,9 @@
           expertise_level:
             info.expertise_level != null ? info.expertise_level : null,
           years_experience:
-            info.years_experience != null ? Number(info.years_experience) : null,
+            info.years_experience != null
+              ? Number(info.years_experience)
+              : null,
           teaching_experience_years:
             info.teaching_experience_years != null
               ? Number(info.teaching_experience_years)
@@ -1337,15 +1339,23 @@
       try {
         if (signUpForm.display_name !== undefined) {
           const displayName = String(signUpForm.display_name || "").trim();
-          const email = String(signUpForm.email || "").trim().toLowerCase();
+          const email = String(signUpForm.email || "")
+            .trim()
+            .toLowerCase();
           const password = String(signUpForm.password || "");
           const confirmPassword = String(signUpForm.confirm_password || "");
           const institutionalEmail = /^[^\s@]+@(student\.)?buksu\.edu\.ph$/i;
-          if (!displayName || !institutionalEmail.test(email) || !password || password !== confirmPassword) {
+          if (
+            !displayName ||
+            !institutionalEmail.test(email) ||
+            !password ||
+            password !== confirmPassword
+          ) {
             setAuthAlert({
               severity: "error",
               title: "Check your details",
-              message: "Enter your name, institutional email, and matching passwords.",
+              message:
+                "Enter your name, institutional email, and matching passwords.",
             });
             return;
           }
@@ -1355,7 +1365,8 @@
           body.append("password", password);
           body.append("confirm_password", confirmPassword);
           const portalRole = getPortalAuthRole();
-          if (portalRole === "mentor" || portalRole === "mentee") body.append("role", portalRole);
+          if (portalRole === "mentor" || portalRole === "mentee")
+            body.append("role", portalRole);
           const result = await fetchJSON("/api/auth/register/", {
             method: "POST",
             raw: true,
@@ -1363,8 +1374,15 @@
             body,
           });
           if (!result.ok) {
-            const message = result.data?.error || Object.values(result.data?.errors || {})?.[0]?.[0] || "Unable to create your account.";
-            setAuthAlert({ severity: "error", title: "Sign up failed", message });
+            const message =
+              result.data?.error ||
+              Object.values(result.data?.errors || {})?.[0]?.[0] ||
+              "Unable to create your account.";
+            setAuthAlert({
+              severity: "error",
+              title: "Sign up failed",
+              message,
+            });
             return;
           }
           const token = result.data?.access_token || "";
@@ -1475,7 +1493,11 @@
             });
             return;
           }
-          if (!["male", "female"].includes(String(signUpForm.gender || "").toLowerCase())) {
+          if (
+            !["male", "female"].includes(
+              String(signUpForm.gender || "").toLowerCase(),
+            )
+          ) {
             setAuthAlert({
               severity: "error",
               title: "Biological sex required",
@@ -1991,12 +2013,7 @@
     async function handleMenteeProfileSave() {
       if (!user || user.role !== "mentee") return false;
       setError("");
-      const requiredFields = [
-        "campus",
-        "student_id_no",
-        "contact_no",
-        "sex",
-      ];
+      const requiredFields = ["campus", "student_id_no", "contact_no", "sex"];
       const missing = requiredFields.filter(
         (field) => !String(menteeProfile[field] || "").trim(),
       );
@@ -2053,10 +2070,7 @@
             program: data.program,
             student_id_no: data.student_id_no,
             year_level: data.year_level,
-            role:
-              data.track === "faculty"
-                ? "Instructor"
-                : "Senior IT Student",
+            role: data.track === "faculty" ? "Instructor" : "Senior IT Student",
           }),
         });
         if (!mentorRes.ok) return mentorRes;
@@ -2095,9 +2109,7 @@
                 year_level: data.year_level,
                 student_id_no: data.student_id_no,
                 role:
-                  data.track === "faculty"
-                    ? "Instructor"
-                    : "Senior IT Student",
+                  data.track === "faculty" ? "Instructor" : "Senior IT Student",
               }
             : undefined,
         },
@@ -2124,7 +2136,11 @@
             : "Please complete the required fields.");
         setError(message);
         addToast(message, "warning");
-        return { ok: false, errors: (result.data && result.data.errors) || {}, message };
+        return {
+          ok: false,
+          errors: (result.data && result.data.errors) || {},
+          message,
+        };
       }
       if (result.data.mentee_info) {
         setMenteeProfile((prev) => ({ ...prev, ...result.data.mentee_info }));
@@ -2174,7 +2190,11 @@
         setOnboardingSaving(false);
         return { ok: false, message };
       }
-      setUser((previous) => ({ ...(previous || {}), ...(result.data.user || {}), is_onboarded: true }));
+      setUser((previous) => ({
+        ...(previous || {}),
+        ...(result.data.user || {}),
+        is_onboarded: true,
+      }));
       setOnboardingSaving(false);
       setActiveTab("home");
       return { ok: true, data: result.data.user };
@@ -2214,7 +2234,8 @@
             ? [...profile.competency_ids]
             : [],
           competency_levels: Object.entries(
-            profile.competency_levels && typeof profile.competency_levels === "object"
+            profile.competency_levels &&
+              typeof profile.competency_levels === "object"
               ? profile.competency_levels
               : {},
           ).map(([competencyId, proficiencyLevel]) => ({
@@ -2265,9 +2286,7 @@
         setActiveTab((prev) => {
           if (prev === "onboarding") return "onboarding";
           const pending = user && user.mentor_approved === false;
-          const incomplete = !(
-            user && user.mentor_questionnaire_completed
-          );
+          const incomplete = !(user && user.mentor_questionnaire_completed);
           if (pending || incomplete) return "onboarding";
           return prev;
         });
@@ -2311,7 +2330,8 @@
             ? [...matching.competency_ids]
             : [],
           competency_needs: Object.entries(
-            matching.competency_needs && typeof matching.competency_needs === "object"
+            matching.competency_needs &&
+              typeof matching.competency_needs === "object"
               ? matching.competency_needs
               : {},
           ).map(([competencyId, needLevel]) => ({
@@ -2799,8 +2819,8 @@
       window.Mui && window.Mui.ThemeProvider ? window.Mui.ThemeProvider : null;
     const muiTheme = window.DashboardApp && window.DashboardApp.theme;
     const appTree = (
-        <AppContext.Provider value={contextValue}>
-          <LayoutComponent />
+      <AppContext.Provider value={contextValue}>
+        <LayoutComponent />
         {leaveGuard ? (
           <div
             className="unsaved-leave-backdrop"
@@ -2843,7 +2863,7 @@
             </div>
           ))}
         </div>
-        </AppContext.Provider>
+      </AppContext.Provider>
     );
     if (ThemeProvider && muiTheme) {
       return <ThemeProvider theme={muiTheme}>{appTree}</ThemeProvider>;
