@@ -1,14 +1,9 @@
 from django.db import migrations
 
 
-class Migration(migrations.Migration):
-    dependencies = [
-        ("profiles", "0017_profile_completion_and_mentor_student_id"),
-    ]
-
-    operations = [
-        migrations.RunSQL(
-            sql="""
+def add_difficulty_level(apps, schema_editor):
+    if schema_editor.connection.vendor == "postgresql":
+        schema_editor.execute("""
             DO $$
             BEGIN
                 IF NOT EXISTS (
@@ -22,10 +17,19 @@ class Migration(migrations.Migration):
                     ADD COLUMN difficulty_level SMALLINT;
                 END IF;
             END $$;
-            """,
-            reverse_sql="""
-            ALTER TABLE profiles_menteeprofile
-            DROP COLUMN IF EXISTS difficulty_level;
-            """,
-        ),
+        """)
+
+
+def reverse_difficulty_level(apps, schema_editor):
+    if schema_editor.connection.vendor == "postgresql":
+        schema_editor.execute("ALTER TABLE profiles_menteeprofile DROP COLUMN IF EXISTS difficulty_level;")
+
+
+class Migration(migrations.Migration):
+    dependencies = [
+        ("profiles", "0017_profile_completion_and_mentor_student_id"),
+    ]
+
+    operations = [
+        migrations.RunPython(add_difficulty_level, reverse_difficulty_level),
     ]

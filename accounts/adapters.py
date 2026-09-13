@@ -80,9 +80,26 @@ class RoleAwareSocialAccountAdapter(DefaultSocialAccountAdapter):
         intent = normalize_oauth_intent(request.session.get(INTENT_SESSION_KEY))
         gate = resolve_google_oauth_gate(intent, account_exists)
         if gate == NO_ACCOUNT:
-            messages.warning(request, LOGIN_MISSING_MESSAGE)
+            from urllib.parse import urlencode
+            account = getattr(sociallogin, "account", None)
+            extra = getattr(account, "extra_data", None) or {}
+            google_name = extra.get("name") or getattr(user, "first_name", "") or ""
+            if request.headers.get("x-requested-with") == "XMLHttpRequest" or "application/json" in request.headers.get("accept", ""):
+                from django.http import JsonResponse
+                raise ImmediateHttpResponse(
+                    JsonResponse({
+                        "is_registered": False,
+                        "google_email": email,
+                        "google_name": google_name,
+                    })
+                )
+            params = {
+                "is_registered": "false",
+                "google_email": email,
+                "google_name": google_name,
+            }
             raise ImmediateHttpResponse(
-                redirect("/app/signin?oauth_error=no_account")
+                redirect(f"/app/?{urlencode(params)}#signup")
             )
         if gate == ACCOUNT_EXISTS:
             messages.warning(request, SIGNUP_EXISTS_MESSAGE)

@@ -69,12 +69,18 @@ const dashboardTheme = createTheme({
 	},
 });
 
+import Register from "../src/components/Register.jsx";
+import Onboarding from "../src/components/Onboarding.jsx";
+
 window.React = React;
 window.ReactDOM = ReactDOM;
 window.Mui = Mui;
 window.MaterialUI = Mui;
 window.DashboardApp = window.DashboardApp || {};
 window.DashboardApp.theme = dashboardTheme;
+window.DashboardApp.Components = window.DashboardApp.Components || {};
+window.DashboardApp.Components.Register = Register;
+window.DashboardApp.Components.Onboarding = Onboarding;
 
 async function loadDashboardModules() {
 	await import("./lib/constants.jsx");

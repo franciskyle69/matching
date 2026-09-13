@@ -42,6 +42,11 @@ from .controllers.approvals_controller import (
     approve_mentee,
     reject_mentee,
 )
+from .controllers.coordinator_controller import (
+    pending_mentors as coordinator_pending_mentors,
+    approve_mentor as coordinator_approve_mentor,
+    reject_mentor as coordinator_reject_mentor,
+)
 from .controllers.announcements_controller import (
     announcements_list,
     announcement_create,
@@ -142,6 +147,9 @@ urlpatterns = [
     path('approvals/reject-mentor/', reject_mentor, name='api-approvals-reject-mentor'),
     path('approvals/approve-mentee/', approve_mentee, name='api-approvals-approve-mentee'),
     path('approvals/reject-mentee/', reject_mentee, name='api-approvals-reject-mentee'),
+    path('coordinator/pending-mentors/', coordinator_pending_mentors, name='api-coordinator-pending-mentors'),
+    path('coordinator/approve-mentor/<int:user_id>/', coordinator_approve_mentor, name='api-coordinator-approve-mentor'),
+    path('coordinator/reject-mentor/<int:user_id>/', coordinator_reject_mentor, name='api-coordinator-reject-mentor'),
     path('notifications/', notifications_list, name='api-notifications-list'),
     path('notifications/unread-count/', notifications_unread_count, name='api-notifications-unread-count'),
     path('notifications/mark-all-read/', notifications_mark_all_read, name='api-notifications-mark-all-read'),

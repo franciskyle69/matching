@@ -28,18 +28,21 @@ def _refresh_cookie_path() -> str:
 def issue_access_token(user) -> str:
     now = timezone.now()
     ttl = int(getattr(settings, "JWT_ACCESS_TTL_SECONDS", 1800))
-    mentor = getattr(user, "mentor_profile", None)
-    mentee = getattr(user, "mentee_profile", None)
-    role = "mentor" if mentor else "mentee" if mentee else "staff" if user.is_staff else None
-    state = getattr(user, "security_state", None)
+    from accounts.models import get_user_profile
+    profile = get_user_profile(user)
+    role = profile.role if profile else ("COORDINATOR" if user.is_staff else "MENTEE")
+    approval_status = profile.approval_status if profile else ("ACTIVE" if user.is_staff else "ACTIVE")
+    is_onboarded = bool(profile.is_onboarded if profile else False)
     payload = {
         "typ": "access",
         "id": user.id,
+        "user_id": user.id,
         "uid": user.id,
         "email": user.email,
         "username": user.username,
         "role": role,
-        "is_onboarded": bool(state and state.is_onboarded),
+        "is_onboarded": is_onboarded,
+        "approval_status": approval_status,
         "iat": int(now.timestamp()),
         "exp": int((now + datetime.timedelta(seconds=ttl)).timestamp()),
     }
@@ -49,9 +52,19 @@ def issue_access_token(user) -> str:
 def issue_refresh_token(user) -> str:
     now = timezone.now()
     ttl = _refresh_ttl()
+    from accounts.models import get_user_profile
+    profile = get_user_profile(user)
+    role = profile.role if profile else ("COORDINATOR" if user.is_staff else "MENTEE")
+    approval_status = profile.approval_status if profile else ("ACTIVE" if user.is_staff else "ACTIVE")
+    is_onboarded = bool(profile.is_onboarded if profile else False)
     payload = {
         "typ": "refresh",
+        "user_id": user.id,
         "uid": user.id,
+        "email": user.email,
+        "role": role,
+        "is_onboarded": is_onboarded,
+        "approval_status": approval_status,
         "jti": secrets.token_urlsafe(24),
         "iat": int(now.timestamp()),
         "exp": int((now + datetime.timedelta(seconds=ttl)).timestamp()),

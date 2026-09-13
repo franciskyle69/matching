@@ -653,3 +653,184 @@ class CompleteProfileApiTests(TestCase):
         mentee = self.user.mentee_profile
         self.assertTrue(mentee.is_profile_complete)
         self.assertEqual(mentee.student_id_no, "2023-0001")
+
+
+class ApiCoordinatorAndMentorRegistrationTests(TestCase):
+    def setUp(self):
+        from accounts.jwt_utils import issue_access_token
+        from accounts.models import UserProfile, get_user_profile
+
+        # Create Coordinator
+        self.coord_user = User.objects.create_user(
+            username="coordinator1",
+            email="coordinator1@buksu.edu.ph",
+            password="CoordPassword123!",
+            is_staff=True,
+        )
+        coord_profile = get_user_profile(self.coord_user)
+        coord_profile.role = UserProfile.ROLE_COORDINATOR
+        coord_profile.approval_status = UserProfile.STATUS_ACTIVE
+        coord_profile.save()
+        self.coord_token = issue_access_token(self.coord_user)
+
+    def test_student_mentor_registration_and_documents(self):
+        from accounts.models import UserProfile, MentorDocument
+        from accounts.jwt_utils import decode_access_token
+
+        file1 = SimpleUploadedFile("intent.pdf", b"%PDF-1.4 dummy intent content", content_type="application/pdf")
+        file2 = SimpleUploadedFile("study_load.pdf", b"%PDF-1.4 dummy study load content", content_type="application/pdf")
+        file3 = SimpleUploadedFile("grades.pdf", b"%PDF-1.4 dummy grades content", content_type="application/pdf")
+
+        res = self.client.post(
+            "/api/auth/register/",
+            data={
+                "first_name": "Senior",
+                "last_name": "Tutor",
+                "email": "seniortutor@student.buksu.edu.ph",
+                "password": "TestPassword123!",
+                "role": "STUDENT_MENTOR",
+                "campus": "Main Campus",
+                "program": "BSIT",
+                "year_level": 3,
+                "letter_of_intent": file1,
+                "study_load": file2,
+                "grades": file3,
+            },
+        )
+        self.assertIn(res.status_code, [200, 201], res.content)
+        data = res.json()
+        self.assertEqual(data["user"]["role"], "STUDENT_MENTOR")
+        self.assertEqual(data["user"]["approval_status"], "PENDING_APPROVAL")
+
+        # Verify PyJWT claims
+        claims = decode_access_token(data["access_token"])
+        self.assertEqual(claims["role"], "STUDENT_MENTOR")
+        self.assertEqual(claims["approval_status"], "PENDING_APPROVAL")
+        self.assertFalse(claims["is_onboarded"])
+
+        # Verify MentorDocument records created
+        user = User.objects.get(email="seniortutor@student.buksu.edu.ph")
+        docs = list(MentorDocument.objects.filter(user=user))
+        self.assertEqual(len(docs), 3)
+        doc_types = {d.document_type for d in docs}
+        self.assertEqual(doc_types, {"LETTER_OF_INTENT", "STUDY_LOAD", "GRADES"})
+        for d in docs:
+            self.assertTrue(d.cloudinary_url)
+            self.assertTrue(d.cloudinary_public_id)
+
+    def test_instructor_mentor_registration_and_document(self):
+        from accounts.models import UserProfile, MentorDocument
+
+        file = SimpleUploadedFile("faculty_id.png", b"fake png content", content_type="image/png")
+        res = self.client.post(
+            "/api/auth/register/",
+            data={
+                "first_name": "Prof",
+                "last_name": "Instructor",
+                "email": "prof.mentor@buksu.edu.ph",
+                "password": "TestPassword123!",
+                "role": "INSTRUCTOR_MENTOR",
+                "campus": "Main Campus",
+                "program": "BSIT",
+                "year_level": 4,
+                "faculty_verification": file,
+            },
+        )
+        self.assertIn(res.status_code, [200, 201], res.content)
+        data = res.json()
+        self.assertEqual(data["user"]["role"], "INSTRUCTOR_MENTOR")
+        self.assertEqual(data["user"]["approval_status"], "PENDING_APPROVAL")
+
+        user = User.objects.get(email="prof.mentor@buksu.edu.ph")
+        docs = list(MentorDocument.objects.filter(user=user))
+        self.assertEqual(len(docs), 1)
+        self.assertEqual(docs[0].document_type, "FACULTY_VERIFICATION")
+        self.assertTrue(docs[0].cloudinary_url)
+
+    def test_coordinator_pending_mentors_and_approval_actions(self):
+        from accounts.models import UserProfile, get_user_profile
+
+        # Create a pending student mentor
+        mentor_user = User.objects.create_user(
+            username="pending_mentor",
+            email="pending_mentor@student.buksu.edu.ph",
+            password="Password123!",
+        )
+        m_profile = get_user_profile(mentor_user)
+        m_profile.role = UserProfile.ROLE_STUDENT_MENTOR
+        m_profile.approval_status = UserProfile.STATUS_PENDING_APPROVAL
+        m_profile.save()
+
+        # 1. Fetch pending list as coordinator
+        res = self.client.get(
+            "/api/coordinator/pending-mentors/",
+            HTTP_AUTHORIZATION=f"Bearer {self.coord_token}",
+        )
+        self.assertEqual(res.status_code, 200)
+        data = res.json()
+        self.assertGreaterEqual(data["count"], 1)
+        mentor_entry = next((m for m in data["results"] if m["id"] == mentor_user.id), None)
+        self.assertIsNotNone(mentor_entry)
+        self.assertEqual(mentor_entry["role"], "STUDENT_MENTOR")
+
+        # 2. Approve mentor
+        approve_res = self.client.post(
+            f"/api/coordinator/approve-mentor/{mentor_user.id}/",
+            HTTP_AUTHORIZATION=f"Bearer {self.coord_token}",
+        )
+        self.assertEqual(approve_res.status_code, 200)
+        m_profile.refresh_from_db()
+        self.assertEqual(m_profile.approval_status, UserProfile.STATUS_ACTIVE)
+
+        # 3. Reject mentor
+        reject_res = self.client.post(
+            f"/api/coordinator/reject-mentor/{mentor_user.id}/",
+            HTTP_AUTHORIZATION=f"Bearer {self.coord_token}",
+        )
+        self.assertEqual(reject_res.status_code, 200)
+        m_profile.refresh_from_db()
+        self.assertEqual(m_profile.approval_status, UserProfile.STATUS_REJECTED)
+
+    def test_simplified_onboarding_without_image(self):
+        from accounts.models import UserProfile, get_user_profile
+        from accounts.jwt_utils import issue_access_token
+
+        student_user = User.objects.create_user(
+            username="onboarding_student",
+            email="onboarding.student@student.buksu.edu.ph",
+            password="Password123!",
+        )
+        s_profile = get_user_profile(student_user)
+        s_profile.role = UserProfile.ROLE_MENTEE
+        s_profile.approval_status = UserProfile.STATUS_ACTIVE
+        s_profile.save()
+        token = issue_access_token(student_user)
+
+        res = self.client.post(
+            "/api/user/complete-onboarding/",
+            data=json.dumps({
+                "subjects": ["IT 111", "IT 112"],
+                "skills": ["Loop Control", "Flexbox & Grid"],
+                "support_need": 4,
+                "availability": [
+                    {"day": "Monday", "start_time": "09:00", "end_time": "11:00"},
+                    {"day": "Wednesday", "start_time": "14:00", "end_time": "16:00"},
+                ],
+            }),
+            content_type="application/json",
+            HTTP_AUTHORIZATION=f"Bearer {token}",
+        )
+        self.assertEqual(res.status_code, 200, res.content)
+        data = res.json()
+        self.assertTrue(data["user"]["is_onboarded"])
+
+        s_profile.refresh_from_db()
+        self.assertTrue(s_profile.is_onboarded)
+
+        student_user.refresh_from_db()
+        mentee = getattr(student_user, "mentee_profile", None) or MenteeProfile.objects.filter(user=student_user).first()
+        self.assertIsNotNone(mentee)
+        self.assertEqual(mentee.subjects, ["IT 111", "IT 112"])
+        self.assertEqual(mentee.skills, ["Loop Control", "Flexbox & Grid"])
+        self.assertEqual(mentee.difficulty_level, 4)
+        self.assertEqual(len(mentee.availability), 2)

@@ -42,8 +42,15 @@ from accounts.forms import (
     PasswordChangeCodeVerifyForm,
     PasswordChangeUpdateForm,
 )
-from accounts.models import get_user_display_name
-from accounts.models import must_change_password, set_must_change_password
+from accounts.models import (
+    get_user_display_name,
+    must_change_password,
+    set_must_change_password,
+    UserProfile,
+    MentorDocument,
+    get_user_profile,
+)
+from ..serializers import upload_to_cloudinary
 from accounts.views import (
     ROLE_SESSION_KEY,
     PASSWORD_CHANGE_CODE_SESSION_KEY,
@@ -800,17 +807,44 @@ def auth_register(request):
 
 @require_http_methods(["POST"])
 def unified_auth_register(request):
-    if not _rate_limit(f"register:{_client_ip(request)}", 5, 300):
+    if not _rate_limit(f"register:{_client_ip(request)}", 10, 300):
         return JsonResponse({"error": "Too many signups. Try again later."}, status=429)
 
-    payload = request.POST if "multipart/form-data" in (request.content_type or "").lower() else _get_payload(request)
-    display_name = (_get_str(payload, "display_name") or "").strip()
+    is_multipart = "multipart/form-data" in (request.content_type or "").lower()
+    payload = request.POST if is_multipart else _get_payload(request)
+    files = getattr(request, "FILES", {})
+
+    display_name = (_get_str(payload, "display_name") or _get_str(payload, "full_name") or "").strip()
+    first_name_input = (_get_str(payload, "first_name") or "").strip()
+    last_name_input = (_get_str(payload, "last_name") or "").strip()
+    if not display_name and (first_name_input or last_name_input):
+        display_name = f"{first_name_input} {last_name_input}".strip()
+
     email = (_get_str(payload, "email") or "").strip().lower()
     password = _get_str(payload, "password") or _get_str(payload, "password1")
     confirm_password = _get_str(payload, "confirm_password") or _get_str(payload, "password2")
-    role = (_get_str(payload, "role") or "mentee").lower()
-    if role not in ("mentor", "mentee"):
-        role = "mentee"
+
+    # Role normalization
+    raw_role = (_get_str(payload, "role") or "MENTEE").strip().upper()
+    mentor_type = (_get_str(payload, "mentor_role") or _get_str(payload, "mentor_type") or "").strip()
+
+    if raw_role in ("STUDENT_MENTOR", "INSTRUCTOR_MENTOR", "COORDINATOR", "MENTEE"):
+        role = raw_role
+    elif raw_role == "MENTOR":
+        if "INSTRUCTOR" in mentor_type.upper() or (email.endswith("@buksu.edu.ph") and not email.endswith("@student.buksu.edu.ph")):
+            role = UserProfile.ROLE_INSTRUCTOR_MENTOR
+        else:
+            role = UserProfile.ROLE_STUDENT_MENTOR
+    else:
+        role = UserProfile.ROLE_MENTEE
+
+    campus = (_get_str(payload, "campus") or "Main").strip()
+    program = (_get_str(payload, "program") or "BSIT").strip()
+    raw_year = _get_int(payload, "year_level")
+    if raw_year is None:
+        year_level = 1 if role == UserProfile.ROLE_MENTEE else (4 if role == UserProfile.ROLE_INSTRUCTOR_MENTOR else 3)
+    else:
+        year_level = raw_year
 
     errors = {}
     if not display_name:
@@ -818,16 +852,21 @@ def unified_auth_register(request):
     if not email:
         errors["email"] = ["Institutional email is required."]
     else:
-        try:
-            from accounts.forms import validate_institutional_email
-            validate_institutional_email(email)
-        except Exception as exc:
-            errors["email"] = [str(exc)]
+        student_domain = "@student.buksu.edu.ph"
+        faculty_domain = "@buksu.edu.ph"
+        if role in (UserProfile.ROLE_MENTEE, UserProfile.ROLE_STUDENT_MENTOR):
+            if not email.endswith(student_domain):
+                errors["email"] = [f"Students must use an institutional email ending with {student_domain}."]
+        elif role in (UserProfile.ROLE_INSTRUCTOR_MENTOR, UserProfile.ROLE_COORDINATOR):
+            if not email.endswith(faculty_domain) or email.endswith(student_domain):
+                errors["email"] = [f"Instructors and Coordinators must use an institutional email ending with {faculty_domain}."]
+
         if User.objects.filter(email__iexact=email).exists():
-            errors["email"] = ["This email is already in use."]
+            errors["email"] = ["An account with this email already exists."]
+
     if not password:
         errors["password"] = ["Password is required."]
-    elif password != confirm_password:
+    elif confirm_password and password != confirm_password:
         errors["confirm_password"] = ["Passwords do not match."]
     if password:
         from django.contrib.auth.password_validation import validate_password
@@ -835,12 +874,28 @@ def unified_auth_register(request):
             validate_password(password)
         except Exception as exc:
             errors["password"] = list(getattr(exc, "messages", [str(exc)]))
+
+    # Required files verification
+    if role == UserProfile.ROLE_STUDENT_MENTOR:
+        missing_docs = []
+        if not files.get("letter_of_intent"):
+            missing_docs.append("Letter of Intent")
+        if not files.get("study_load"):
+            missing_docs.append("Study Load")
+        if not files.get("grades") and not files.get("grade"):
+            missing_docs.append("Grades")
+        if missing_docs:
+            errors["documents"] = [f"Student Mentors must upload: {', '.join(missing_docs)}."]
+    elif role == UserProfile.ROLE_INSTRUCTOR_MENTOR:
+        if not files.get("faculty_verification") and not files.get("verification_document") and not files.get("student_verification_document"):
+            errors["documents"] = ["Faculty Verification document is required for Instructor Mentors."]
+
     if errors:
-        return JsonResponse({"errors": errors}, status=400)
+        return JsonResponse({"errors": errors, "error": next(iter(errors.values()))[0]}, status=400)
 
     name_parts = display_name.split()
-    first_name = name_parts[0]
-    last_name = " ".join(name_parts[1:])
+    first_name = first_name_input or (name_parts[0] if name_parts else "")
+    last_name = last_name_input or (" ".join(name_parts[1:]) if len(name_parts) > 1 else "")
     base_username = "".join(ch for ch in display_name.lower() if ch.isalnum()) or email.split("@", 1)[0]
     username = base_username[:150]
     suffix = 1
@@ -857,44 +912,99 @@ def unified_auth_register(request):
                 first_name=first_name,
                 last_name=last_name,
                 is_active=True,
+                is_staff=(role == UserProfile.ROLE_COORDINATOR),
             )
-            if email.endswith("@buksu.edu.ph"):
-                role = "mentor"
-            if role == "mentor":
+
+            # Determine initial approval status
+            if role in (UserProfile.ROLE_STUDENT_MENTOR, UserProfile.ROLE_INSTRUCTOR_MENTOR):
+                approval_status = UserProfile.STATUS_PENDING_APPROVAL
+            else:
+                approval_status = UserProfile.STATUS_ACTIVE
+
+            user_profile = UserProfile.objects.create(
+                user=user,
+                role=role,
+                approval_status=approval_status,
+                is_onboarded=False,
+                campus=campus,
+                program=program,
+                year_level=year_level,
+            )
+
+            # Create legacy MentorProfile / MenteeProfile for matching compatibility
+            is_mentor = role in (UserProfile.ROLE_STUDENT_MENTOR, UserProfile.ROLE_INSTRUCTOR_MENTOR)
+            if is_mentor:
                 MentorProfile.objects.create(
                     user=user,
-                    program="BSIT",
-                    year_level=4,
-                    role="Instructor" if email.endswith("@buksu.edu.ph") else "Senior IT Student",
+                    program=program,
+                    year_level=year_level,
+                    role="Instructor" if role == UserProfile.ROLE_INSTRUCTOR_MENTOR else "Senior IT Student",
                     approved=False,
                     is_profile_complete=False,
                 )
-            else:
+            elif role == UserProfile.ROLE_MENTEE:
                 MenteeProfile.objects.create(
                     user=user,
-                    program="BSIT",
+                    program=program,
                     year_level=1,
-                    approved=False,
+                    campus=campus,
+                    approved=True,  # Mentees are ACTIVE immediately
                     is_profile_complete=False,
                 )
+
             _ensure_onboarding_state(user, False)
+
+            # Cloudinary Document Uploads
+            uploaded_docs = []
+            doc_mapping = {
+                "letter_of_intent": MentorDocument.DOC_LETTER_OF_INTENT,
+                "study_load": MentorDocument.DOC_STUDY_LOAD,
+                "grades": MentorDocument.DOC_GRADES,
+                "grade": MentorDocument.DOC_GRADES,
+                "faculty_verification": MentorDocument.DOC_FACULTY_VERIFICATION,
+                "verification_document": MentorDocument.DOC_FACULTY_VERIFICATION if role == UserProfile.ROLE_INSTRUCTOR_MENTOR else MentorDocument.DOC_STUDY_LOAD,
+                "student_verification_document": MentorDocument.DOC_FACULTY_VERIFICATION if role == UserProfile.ROLE_INSTRUCTOR_MENTOR else MentorDocument.DOC_STUDY_LOAD,
+            }
+
+            for file_key, doc_type in doc_mapping.items():
+                uploaded_file = files.get(file_key)
+                if uploaded_file:
+                    upload_res = upload_to_cloudinary(uploaded_file, folder=f"peerlink/mentor_documents/{user.id}")
+                    doc = MentorDocument.objects.create(
+                        user=user,
+                        document_type=doc_type,
+                        cloudinary_url=upload_res.get("url", ""),
+                        cloudinary_public_id=upload_res.get("public_id", ""),
+                    )
+                    uploaded_docs.append(doc)
+
     except Exception:
         logger.exception("unified_auth_register_failed", extra={"email": email})
-        return JsonResponse({"error": "Unable to create your account right now."}, status=400)
+        return JsonResponse({"error": "Unable to create your account right now. Please try again."}, status=400)
 
     login(request, user, backend="accounts.auth_backends.EmailOrUsernameModelBackend")
     audit_log(user, "register", "auth", user.id)
+
+    access_token = issue_access_token(user)
+    refresh_token = issue_refresh_token(user)
+
     response = JsonResponse({
         "status": "ok",
-        "access_token": issue_access_token(user),
+        "access_token": access_token,
+        "refresh_token": refresh_token,
         "user": {
             "id": user.id,
+            "user_id": user.id,
             "email": user.email,
-            "role": _user_role(user),
+            "role": user_profile.role,
+            "approval_status": user_profile.approval_status,
             "is_onboarded": False,
+            "full_name": get_user_display_name(user),
         },
-    })
-    set_refresh_cookie(response, issue_refresh_token(user))
+        "approval_status": user_profile.approval_status,
+        "documents_uploaded": len(uploaded_docs),
+    }, status=201)
+    set_refresh_cookie(response, refresh_token)
     return response
 
 
@@ -1574,62 +1684,96 @@ def _set_interest_tags(profile, names):
 @login_required
 @require_http_methods(["POST"])
 def complete_onboarding(request):
+    payload = _get_payload(request)
+    metadata = payload.get("metadata") if isinstance(payload.get("metadata"), dict) else {}
+    if not metadata and isinstance(payload.get("metadata"), str):
+        try:
+            metadata = json.loads(payload.get("metadata"))
+        except Exception:
+            metadata = {}
+
+    subjects = payload.get("subjects") or metadata.get("subjects") or []
+    skills = payload.get("skills") or payload.get("topics") or metadata.get("skills") or metadata.get("topics") or []
+    availability = payload.get("availability") or metadata.get("availability") or []
+    support_need = payload.get("support_need") or metadata.get("support_need") or payload.get("difficulty_level") or metadata.get("difficulty_level")
+    try:
+        support_need = int(support_need) if support_need is not None else 3
+    except (ValueError, TypeError):
+        support_need = 3
+
+    if not isinstance(subjects, list):
+        subjects = [s.strip() for s in str(subjects).split(",") if s.strip()]
+    if not isinstance(skills, list):
+        skills = [s.strip() for s in str(skills).split(",") if s.strip()]
+    if not isinstance(availability, list):
+        availability = []
+
+    # Optional avatar/photo upload handling
+    image_url = ""
     upload = request.FILES.get("profile_photo") or request.FILES.get("institutional_id")
-    if not upload:
-        return JsonResponse({"error": "A profile photo or institutional ID image is required."}, status=400)
-    if upload.size > 5 * 1024 * 1024:
-        return JsonResponse({"error": "The image must be 5 MB or smaller."}, status=400)
-    extension = (upload.name.rsplit(".", 1)[-1] if "." in upload.name else "").lower()
-    if extension not in {"png", "jpg", "jpeg"}:
-        return JsonResponse({"error": "Upload a PNG, JPG, or JPEG image."}, status=400)
+    if upload and upload.size <= 5 * 1024 * 1024:
+        extension = (upload.name.rsplit(".", 1)[-1] if "." in upload.name else "").lower()
+        if extension in {"png", "jpg", "jpeg"}:
+            try:
+                from django.core.files.storage import default_storage
+                from django.core.files.base import ContentFile
+                import uuid
+                path = default_storage.save(
+                    f"avatars/onboarding_{request.user.id}_{uuid.uuid4().hex}.{extension}",
+                    ContentFile(upload.read()),
+                )
+                image_url = default_storage.url(path)
+            except Exception:
+                pass
 
-    try:
-        from PIL import Image
-        image = Image.open(upload)
-        image.verify()
-        upload.seek(0)
-    except Exception:
-        return JsonResponse({"error": "The uploaded file is not a valid image."}, status=400)
-
-    metadata_raw = request.POST.get("metadata", "{}")
-    try:
-        metadata = json.loads(metadata_raw) if isinstance(metadata_raw, str) else {}
-    except (TypeError, ValueError):
-        return JsonResponse({"error": "Invalid onboarding metadata."}, status=400)
-
+    user_profile = get_user_profile(request.user)
     profile = getattr(request.user, "mentor_profile", None) or getattr(request.user, "mentee_profile", None)
+    
     if profile is None:
-        return JsonResponse({"error": "No profile found."}, status=404)
+        is_mentor = user_profile.role in ("STUDENT_MENTOR", "INSTRUCTOR_MENTOR")
+        if is_mentor:
+            profile = MentorProfile.objects.create(
+                user=request.user,
+                program=user_profile.program or "BSIT",
+                year_level=user_profile.year_level or 3,
+                role="Instructor" if user_profile.role == "INSTRUCTOR_MENTOR" else "Senior IT Student",
+            )
+        else:
+            profile = MenteeProfile.objects.create(
+                user=request.user,
+                program=user_profile.program or "BSIT",
+                year_level=user_profile.year_level or 1,
+                campus=user_profile.campus or "Main",
+            )
 
-    from django.core.files.storage import default_storage
-    from django.core.files.base import ContentFile
-    import uuid
+    year_level = int(metadata.get("year_level") or payload.get("year_level") or user_profile.year_level or 1)
+    is_faculty = request.user.email.lower().endswith("@buksu.edu.ph") or user_profile.role == "INSTRUCTOR_MENTOR"
 
-    path = default_storage.save(
-        f"avatars/onboarding_{request.user.id}_{uuid.uuid4().hex}.{extension}",
-        ContentFile(upload.read()),
-    )
-    image_url = default_storage.url(path)
-    year_level = int(metadata.get("year_level") or 1)
-    is_faculty = request.user.email.lower().endswith("@buksu.edu.ph")
     if isinstance(profile, MentorProfile):
-        profile.year_level = 4 if is_faculty else year_level if year_level in (3, 4) else 3
+        profile.year_level = 4 if is_faculty else (year_level if year_level in (3, 4) else 3)
         profile.role = "Instructor" if is_faculty else "Senior IT Student"
-        profile.avatar_url = image_url
-        profile.availability = metadata.get("availability") if isinstance(metadata.get("availability"), list) else []
-        profile.subjects = metadata.get("subjects") if isinstance(metadata.get("subjects"), list) else []
-        profile.topics = metadata.get("topics") if isinstance(metadata.get("topics"), list) else []
-        profile.save(update_fields=["year_level", "role", "avatar_url", "availability", "subjects", "topics"])
+        if image_url:
+            profile.avatar_url = image_url
+        profile.availability = availability
+        profile.subjects = subjects
+        profile.skills = skills
+        profile.topics = skills
+        profile.expertise_level = support_need
+        profile.save()
     else:
-        profile.year_level = 1
-        profile.campus = str(metadata.get("campus") or "Main").strip()[:100]
-        profile.contact_no = "".join(ch for ch in str(metadata.get("contact_no") or "") if ch.isdigit())[:11]
-        profile.avatar_url = image_url
-        profile.availability = metadata.get("availability") if isinstance(metadata.get("availability"), list) else []
-        profile.subjects = metadata.get("subjects") if isinstance(metadata.get("subjects"), list) else []
-        profile.topics = metadata.get("topics") if isinstance(metadata.get("topics"), list) else []
-        profile.save(update_fields=["year_level", "campus", "contact_no", "avatar_url", "availability", "subjects", "topics"])
+        profile.year_level = year_level
+        profile.campus = str(metadata.get("campus") or payload.get("campus") or user_profile.campus or "Main").strip()[:100]
+        if image_url:
+            profile.avatar_url = image_url
+        profile.availability = availability
+        profile.subjects = subjects
+        profile.skills = skills
+        profile.topics = skills
+        profile.difficulty_level = support_need
+        profile.save()
 
+    user_profile.is_onboarded = True
+    user_profile.save(update_fields=["is_onboarded"])
     mark_profile_complete(profile, True)
     _ensure_onboarding_state(request.user, True)
     _clear_me_cache(request.user.id)
@@ -1639,9 +1783,10 @@ def complete_onboarding(request):
         "user": {
             "id": request.user.id,
             "email": request.user.email,
-            "role": _user_role(request.user),
+            "role": user_profile.role,
             "is_onboarded": True,
-            "avatar_url": image_url,
+            "approval_status": user_profile.approval_status,
+            "avatar_url": image_url or getattr(profile, "avatar_url", ""),
         },
     })
 

@@ -40,6 +40,7 @@ capstone-489112-919fe6d12123.json
 # OS
 .DS_Store
 Thumbs.db
+_schema_preview_*.png
 
 # Build outputs
 dist/

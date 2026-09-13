@@ -7,6 +7,7 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
+import Register from "../../../src/components/Register.jsx";
 
 (function () {
   "use strict";
@@ -1326,7 +1327,8 @@ import {
   window.DashboardApp.Pages = window.DashboardApp.Pages || {};
   window.DashboardApp.Pages.signin = SignInPage;
   window.DashboardApp.Pages.signup = SignUpPage;
+  window.DashboardApp.Pages.register = Register;
   if (typeof module !== "undefined" && module.exports)
-    module.exports = { SignInPage, SignUpPage };
+    module.exports = { SignInPage, SignUpPage, Register };
 })();
 

@@ -243,13 +243,25 @@ MEDIA_ROOT = BASE_DIR / 'media'
 ENABLE_GOOGLE_CALENDAR = _env_bool("ENABLE_GOOGLE_CALENDAR", default=False)
 ENABLE_GOOGLE_DRIVE_API = _env_bool("ENABLE_GOOGLE_DRIVE_API", default=False)
 
-# Default file storage: Cloudinary (if set) else filesystem.
+# Cloudinary media storage configuration
+CLOUDINARY_CLOUD_NAME = os.environ.get("CLOUDINARY_CLOUD_NAME", "").strip()
+CLOUDINARY_API_KEY = os.environ.get("CLOUDINARY_API_KEY", "").strip()
+CLOUDINARY_API_SECRET = os.environ.get("CLOUDINARY_API_SECRET", "").strip()
+if CLOUDINARY_CLOUD_NAME:
+    import cloudinary
+    cloudinary.config(
+        cloud_name=CLOUDINARY_CLOUD_NAME,
+        api_key=CLOUDINARY_API_KEY,
+        api_secret=CLOUDINARY_API_SECRET,
+        secure=True,
+    )
+
 STORAGES = {
     "staticfiles": {
         "BACKEND": "capstone_site.storage.WhiteNoiseStaticFilesStorage",
     },
 }
-if os.environ.get("CLOUDINARY_CLOUD_NAME"):
+if CLOUDINARY_CLOUD_NAME:
     STORAGES["default"] = {"BACKEND": "api.cloudinary_storage.CloudinaryStorage"}
 else:
     STORAGES["default"] = {

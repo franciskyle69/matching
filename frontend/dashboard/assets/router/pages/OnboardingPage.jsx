@@ -1,4 +1,5 @@
 import CloudUploadOutlinedIcon from "@mui/icons-material/CloudUploadOutlined";
+import Onboarding from "../../../src/components/Onboarding.jsx";
 
 (function () {
   "use strict";
@@ -332,209 +333,16 @@ import CloudUploadOutlinedIcon from "@mui/icons-material/CloudUploadOutlined";
 
   function UnifiedOnboardingPage() {
     const ctx = useContext(AppContext);
-    const user = ctx && ctx.user;
-    const [step, setStep] = useState(1);
-    const [file, setFile] = useState(null);
-    const [preview, setPreview] = useState("");
-    const [form, setForm] = useState({
-      year_level: user?.role === "mentee" ? 1 : 3,
-      campus: "Main",
-      contact_no: "",
-      subjects: [],
-      topics: [],
-      availability: [],
-    });
-    if (!ctx || !user) return null;
-    const faculty =
-      /@buksu\.edu\.ph$/i.test(user.email || "") &&
-      !/@student\.buksu\.edu\.ph$/i.test(user.email || "");
-    const MuiBox = Mui.Box || "div";
-    const MuiPaper = Mui.Paper || "div";
-    const MuiStack = Mui.Stack || "div";
-    const MuiButton = Mui.Button || "button";
-    const MuiTextField = Mui.TextField || "input";
-    const MuiTypography = Mui.Typography || "div";
-    function chooseFile(candidate) {
-      if (!candidate) return;
-      const validType = ["image/png", "image/jpeg"].includes(candidate.type);
-      if (!validType || candidate.size > 5 * 1024 * 1024) {
-        ctx.setError("Choose a PNG, JPG, or JPEG image up to 5 MB.");
-        return;
-      }
-      setFile(candidate);
-      setPreview(URL.createObjectURL(candidate));
-      ctx.setError("");
-    }
-    function submit() {
-      if (!file) {
-        ctx.setError("Upload a profile photo or institutional ID image first.");
-        setStep(1);
-        return;
-      }
-      const body = new FormData();
-      body.append("profile_photo", file);
-      body.append(
-        "metadata",
-        JSON.stringify({
-          ...form,
-          year_level: faculty ? 4 : Number(form.year_level),
-        }),
-      );
-      ctx.handleOnboardingComplete(body);
-    }
-    const setValue = (key) => (event) =>
-      setForm((previous) => ({ ...previous, [key]: event.target.value }));
     return (
-      <MuiBox
-        sx={{ minHeight: "100vh", bgcolor: "#f4f7fb", p: { xs: 2, md: 5 } }}
-      >
-        <MuiPaper
-          sx={{
-            maxWidth: 860,
-            mx: "auto",
-            p: { xs: 3, md: 5 },
-            borderRadius: 3,
-          }}
-        >
-          <MuiStack spacing={3}>
-            <div>
-              <MuiTypography variant="overline" color="primary">
-                PeerLink onboarding
-              </MuiTypography>
-              <MuiTypography variant="h4" fontWeight={700}>
-                Complete Your BukSU Mentorship Profile
-              </MuiTypography>
-            </div>
-            {ctx.error && <Mui.Alert severity="error">{ctx.error}</Mui.Alert>}
-            <MuiTypography color="text.secondary">
-              Step {step} of 2
-            </MuiTypography>
-            {step === 1 ? (
-              <MuiStack spacing={2}>
-                <MuiTypography variant="h6">
-                  Profile photo or institutional ID
-                </MuiTypography>
-                <MuiBox
-                  component="label"
-                  htmlFor="onboarding-photo"
-                  sx={{
-                    border: "2px dashed",
-                    borderColor: "primary.main",
-                    borderRadius: 2,
-                    p: 4,
-                    textAlign: "center",
-                    cursor: "pointer",
-                  }}
-                >
-                  {preview ? (
-                    <img
-                      src={preview}
-                      alt="Selected profile preview"
-                      style={{
-                        width: 160,
-                        height: 160,
-                        objectFit: "cover",
-                        borderRadius: "50%",
-                      }}
-                    />
-                  ) : (
-                    <>
-                      <CloudUploadOutlinedIcon />
-                      <MuiTypography>
-                        Drop an image here or choose a file
-                      </MuiTypography>
-                    </>
-                  )}
-                  <input
-                    id="onboarding-photo"
-                    hidden
-                    type="file"
-                    accept=".png,.jpg,.jpeg,image/png,image/jpeg"
-                    onChange={(event) => chooseFile(event.target.files?.[0])}
-                  />
-                </MuiBox>
-                <MuiButton
-                  variant="contained"
-                  onClick={() => setStep(2)}
-                  disabled={!file}
-                >
-                  Continue
-                </MuiButton>
-              </MuiStack>
-            ) : (
-              <MuiStack spacing={2}>
-                <MuiTypography variant="h6">
-                  Academic profile and preferences
-                </MuiTypography>
-                <MuiTextField
-                  label="Course program"
-                  value="BSIT"
-                  InputProps={{ readOnly: true }}
-                  fullWidth
-                />
-                <MuiTextField
-                  select
-                  label="Year level"
-                  value={faculty ? 4 : form.year_level}
-                  onChange={setValue("year_level")}
-                  disabled={faculty}
-                  SelectProps={{ native: true }}
-                  fullWidth
-                >
-                  {faculty ? (
-                    <option value={4}>Faculty / Staff</option>
-                  ) : (
-                    <>
-                      <option value={1}>1st Year</option>
-                      <option value={3}>3rd Year</option>
-                      <option value={4}>4th Year</option>
-                    </>
-                  )}
-                </MuiTextField>
-                <MuiTextField
-                  label="Campus location"
-                  value={faculty ? "Main" : form.campus}
-                  onChange={setValue("campus")}
-                  fullWidth
-                />
-                <MuiTextField
-                  label="Mobile contact number"
-                  value={form.contact_no}
-                  onChange={setValue("contact_no")}
-                  fullWidth
-                  inputProps={{ inputMode: "tel" }}
-                />
-                <MuiTextField
-                  label="Subjects of interest (comma separated)"
-                  value={form.subjects.join(", ")}
-                  onChange={(event) =>
-                    setForm((previous) => ({
-                      ...previous,
-                      subjects: event.target.value
-                        .split(",")
-                        .map((item) => item.trim())
-                        .filter(Boolean),
-                    }))
-                  }
-                  fullWidth
-                />
-                <MuiStack direction="row" spacing={2}>
-                  <MuiButton variant="outlined" onClick={() => setStep(1)}>
-                    Back
-                  </MuiButton>
-                  <MuiButton
-                    variant="contained"
-                    onClick={submit}
-                    disabled={ctx.onboardingSaving}
-                  >
-                    {ctx.onboardingSaving ? "Saving..." : "Complete onboarding"}
-                  </MuiButton>
-                </MuiStack>
-              </MuiStack>
-            )}
-          </MuiStack>
-        </MuiPaper>
-      </MuiBox>
+      <Onboarding
+        user={ctx?.user}
+        onComplete={(data) => {
+          if (ctx && ctx.setUser && data?.user) {
+            ctx.setUser(data.user);
+          }
+          window.location.hash = "#/dashboard";
+        }}
+      />
     );
   }
 
