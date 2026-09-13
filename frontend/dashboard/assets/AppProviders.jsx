@@ -176,9 +176,6 @@
       password: "",
     });
     const emptySignUpForm = {
-      display_name: "",
-      password: "",
-      confirm_password: "",
       role: "mentor",
       mentor_role: "",
       gender: "",
@@ -1337,63 +1334,6 @@
       setAuthAlert(null);
       setSignUpLoading(true);
       try {
-        if (signUpForm.display_name !== undefined) {
-          const displayName = String(signUpForm.display_name || "").trim();
-          const email = String(signUpForm.email || "")
-            .trim()
-            .toLowerCase();
-          const password = String(signUpForm.password || "");
-          const confirmPassword = String(signUpForm.confirm_password || "");
-          const institutionalEmail = /^[^\s@]+@(student\.)?buksu\.edu\.ph$/i;
-          if (
-            !displayName ||
-            !institutionalEmail.test(email) ||
-            !password ||
-            password !== confirmPassword
-          ) {
-            setAuthAlert({
-              severity: "error",
-              title: "Check your details",
-              message:
-                "Enter your name, institutional email, and matching passwords.",
-            });
-            return;
-          }
-          const body = new FormData();
-          body.append("display_name", displayName);
-          body.append("email", email);
-          body.append("password", password);
-          body.append("confirm_password", confirmPassword);
-          const portalRole = getPortalAuthRole();
-          if (portalRole === "mentor" || portalRole === "mentee")
-            body.append("role", portalRole);
-          const result = await fetchJSON("/api/auth/register/", {
-            method: "POST",
-            raw: true,
-            headers: { "X-CSRFToken": getCookie("csrftoken") },
-            body,
-          });
-          if (!result.ok) {
-            const message =
-              result.data?.error ||
-              Object.values(result.data?.errors || {})?.[0]?.[0] ||
-              "Unable to create your account.";
-            setAuthAlert({
-              severity: "error",
-              title: "Sign up failed",
-              message,
-            });
-            return;
-          }
-          const token = result.data?.access_token || "";
-          setAccessToken(token);
-          try {
-            window.sessionStorage.setItem("peerlink_access_token", token);
-          } catch (_) {}
-          const profile = await loadMe({ force: true });
-          if (profile) setActiveTab("onboarding");
-          return;
-        }
         const portalRole = getPortalAuthRole();
         if (portalRole === "staff") {
           setAuthAlert({
