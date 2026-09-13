@@ -14,7 +14,9 @@
     return !!(
       userData &&
       ((userData.role === "mentor" && userData.mentor_approved === false) ||
-        (userData.role === "mentee" && userData.mentee_approved === false))
+        (userData.role === "mentee" && userData.mentee_approved === false) ||
+        userData.approved === false ||
+        userData.is_active === false)
     );
   }
   function getPendingApprovalLandingTab(userData) {
@@ -370,6 +372,15 @@
     }, []);
 
     const loadMentorRequests = useCallback(async () => {
+      const currentUser = userRef.current;
+      if (!currentUser || currentUser.role !== "mentor") return null;
+      if (
+        !currentUser.is_staff &&
+        (getIsPendingApproval(currentUser) || currentUser.mentor_approved !== true)
+      ) {
+        return null;
+      }
+
       if (mentorRequestsInFlightRef.current) return;
       mentorRequestsInFlightRef.current = true;
       setMentorRequestsLoading(true);
@@ -384,9 +395,12 @@
     }, []);
 
     const loadMyMentor = useCallback(async (options = {}) => {
-      const currentUser = userRef.current;
+      const currentUser = options.user || userRef.current;
       const role = options.role || currentUser?.role;
       if (role !== "mentee") return null;
+      if (!currentUser || getIsPendingApproval(currentUser) || currentUser.mentee_approved !== true) {
+        return null;
+      }
 
       if (myMentorInFlightRef.current && !options.force) {
         return null;
@@ -442,8 +456,11 @@
     }, []);
 
     const loadMenteeRecommendations = useCallback(async (limit, options = {}) => {
-      const currentUser = userRef.current;
+      const currentUser = options.user || userRef.current;
       if (!currentUser || currentUser.role !== "mentee") return null;
+      if (getIsPendingApproval(currentUser) || currentUser.mentee_approved !== true) {
+        return null;
+      }
 
       if (menteeRecInFlightRef.current && !options.force) {
         return null;
@@ -824,7 +841,8 @@
 
     useEffect(() => {
       if (!authCheckDone || !user) return;
-      if (user.is_onboarded === true && activeTab === "onboarding") {
+      const isPending = getIsPendingApproval(user);
+      if (user.is_onboarded === true && activeTab === "onboarding" && !isPending) {
         setActiveTab("home");
         return;
       }
@@ -834,7 +852,7 @@
         }
         return;
       }
-      if (!getIsPendingApproval(user)) return;
+      if (!isPending) return;
       const allowedPendingTabs = new Set([
         "onboarding",
         "complete-profile",
@@ -901,22 +919,30 @@
         tabInitialLoadDoneRef.current = true;
       }
 
+      const isPending = getIsPendingApproval(user);
       if (
         (tabChanged || isInitial) &&
         (activeTab === "home" || activeTab === "mentees") &&
-        user.role === "mentor"
+        user.role === "mentor" &&
+        !isPending
       ) {
         loadMentorRequests();
       }
       if (
         (tabChanged || isInitial) &&
         (activeTab === "matching" || activeTab === "home") &&
-        user.role === "mentee"
+        user.role === "mentee" &&
+        !isPending
       ) {
-        loadMyMentor({ role: "mentee" });
+        loadMyMentor({ role: "mentee", user });
       }
-      if ((tabChanged || isInitial) && activeTab === "home" && user.role === "mentee") {
-        loadMenteeRecommendations();
+      if (
+        (tabChanged || isInitial) &&
+        activeTab === "home" &&
+        user.role === "mentee" &&
+        !isPending
+      ) {
+        loadMenteeRecommendations(undefined, { user });
       }
       if (activeTab === "announcements" && !announcementsLoaded)
         loadAnnouncements();
@@ -925,7 +951,7 @@
           prevActiveTabRef.current !== "matching" &&
           prevActiveTabRef.current !== "mentees"
         ) {
-          if (user.role === "mentor") loadMentorRequests();
+          if (user.role === "mentor" && !isPending) loadMentorRequests();
         }
       }
       prevActiveTabRef.current = activeTab;
@@ -1121,9 +1147,6 @@
             "Review or complete your information below, then wait for coordinator approval.",
         });
         setActiveTab(getPendingApprovalLandingTab(result.data));
-        if (result.data.role === "mentee") {
-          loadMyMentor({ role: "mentee" });
-        }
         setAuthCheckDone(true);
         return result.data;
       }
@@ -1142,8 +1165,8 @@
           ? requiredOnboardingTab || "home"
           : requiredOnboardingTab || prev,
       );
-      if (result.data.role === "mentee") {
-        loadMyMentor({ role: "mentee" });
+      if (result.data.role === "mentee" && !unapproved && result.data.mentee_approved === true) {
+        loadMyMentor({ role: "mentee", user: result.data });
       }
       setAuthCheckDone(true);
       return result.data;

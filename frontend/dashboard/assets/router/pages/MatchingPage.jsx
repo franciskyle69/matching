@@ -407,22 +407,24 @@
 
     useEffect(() => {
       if (!isMentee) return;
+      if (user?.mentee_approved === false) return;
       loadMyMentor();
-    }, [isMentee, loadMyMentor]);
+    }, [isMentee, loadMyMentor, user?.mentee_approved]);
 
     const lastAutoLoadUserKeyRef = useRef("");
 
     useEffect(() => {
-      const key = `${user?.id || ""}_${isMentee ? "1" : "0"}_${menteeQuestionnaireCompleted ? "1" : "0"}`;
+      const key = `${user?.id || ""}_${isMentee ? "1" : "0"}_${menteeQuestionnaireCompleted ? "1" : "0"}_${user?.mentee_approved ? "1" : "0"}`;
       if (lastAutoLoadUserKeyRef.current !== key) {
         lastAutoLoadUserKeyRef.current = key;
         didAutoLoadRecsRef.current = false;
       }
-    }, [user?.id, isMentee, menteeQuestionnaireCompleted]);
+    }, [user?.id, isMentee, menteeQuestionnaireCompleted, user?.mentee_approved]);
 
     useEffect(() => {
       if (!isMentee) return;
       if (!menteeQuestionnaireCompleted) return;
+      if (user?.mentee_approved === false) return;
       if (didAutoLoadRecsRef.current) return;
       didAutoLoadRecsRef.current = true;
       loadMenteeRecommendations();
@@ -430,6 +432,7 @@
       isMentee,
       menteeQuestionnaireCompleted,
       loadMenteeRecommendations,
+      user?.mentee_approved,
     ]);
 
     useEffect(() => {
