@@ -1,7 +1,7 @@
 (function () {
   "use strict";
   const React = window.React;
-  const { useContext, useEffect, useMemo, useRef, useState } = React;
+  const { useContext, useEffect, useMemo, useRef, useState, useCallback } = React;
   const AppContext = window.DashboardApp.AppContext;
   const Utils = window.DashboardApp.Utils || {};
   const PLACEHOLDER_AVATAR = window.DashboardApp.PLACEHOLDER_AVATAR || "";
@@ -410,23 +410,25 @@
       loadMyMentor();
     }, [isMentee, loadMyMentor]);
 
+    const lastAutoLoadUserKeyRef = useRef("");
+
     useEffect(() => {
-      // Reset auto-load guard when user/questionnaire context changes.
-      didAutoLoadRecsRef.current = false;
+      const key = `${user?.id || ""}_${isMentee ? "1" : "0"}_${menteeQuestionnaireCompleted ? "1" : "0"}`;
+      if (lastAutoLoadUserKeyRef.current !== key) {
+        lastAutoLoadUserKeyRef.current = key;
+        didAutoLoadRecsRef.current = false;
+      }
     }, [user?.id, isMentee, menteeQuestionnaireCompleted]);
 
     useEffect(() => {
       if (!isMentee) return;
       if (!menteeQuestionnaireCompleted) return;
-      if (menteeRecLoading || menteeRecUpdating) return;
       if (didAutoLoadRecsRef.current) return;
       didAutoLoadRecsRef.current = true;
       loadMenteeRecommendations();
     }, [
       isMentee,
       menteeQuestionnaireCompleted,
-      menteeRecLoading,
-      menteeRecUpdating,
       loadMenteeRecommendations,
     ]);
 
