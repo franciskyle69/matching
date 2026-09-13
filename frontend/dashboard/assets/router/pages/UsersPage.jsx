@@ -580,6 +580,8 @@
     onCancelEdit,
     onSave,
     onStartEdit,
+    onDelete,
+    deleteDisabled,
   }) {
     return (
       <div className="users-edit-footer">
@@ -596,6 +598,9 @@
           <>
             <button type="button" className="btn secondary" onClick={onClose}>
               Close
+            </button>
+            <button type="button" className="btn danger" onClick={onDelete} disabled={deleteDisabled}>
+              {deleteDisabled ? "Delete Disabled" : "Delete Account"}
             </button>
             <button type="button" className="btn" onClick={onStartEdit}>
               Edit User
@@ -911,6 +916,8 @@
             }}
             onSave={handleSave}
             onStartEdit={() => setEditMode(true)}
+            onDelete={() => handleDeleteUser(user.id)}
+            deleteDisabled={!!(user.id && ctx.user && Number(user.id) === Number(ctx.user.id)) || actionLoading === user.id}
           />
         </div>
       </div>
@@ -1216,11 +1223,15 @@
                 (row.role === "mentee" || row.role === "both") && row.mentee_approved === false
                   ? '<button class="btn btn-sm btn-success" data-action="approve-mentee">Approve Mentee</button>'
                   : "";
+              const deleteAction = row.id === ctx.user.id
+                ? ""
+                : '<button class="btn btn-sm btn-danger" data-action="delete">Delete</button>';
               return `
                 <div class="action-buttons users-action-buttons">
                   <button class="btn btn-sm btn-info" data-action="view">View</button>
                   ${mentorApprove}
                   ${menteeApprove}
+                  ${deleteAction}
                 </div>
               `;
             },
@@ -1241,6 +1252,10 @@
 
         if (action === "view") {
           await handleViewUser(userId, false);
+          return;
+        }
+        if (action === "delete") {
+          await handleDeleteUser(userId);
           return;
         }
         if (action === "approve-mentor") {
@@ -1277,6 +1292,42 @@
         if (requestTimerRef.current) clearTimeout(requestTimerRef.current);
       };
     }, [filters, tableReady]);
+
+    async function handleDeleteUser(userId) {
+      const targetUser = usersById[userId] || selectedUser;
+      if (!targetUser) return;
+      if (Number(targetUser.id) === Number(ctx.user.id)) {
+        notify("error", "Delete Blocked", "You cannot delete your own admin account.");
+        return;
+      }
+
+      const targetLabel = targetUser.full_name || targetUser.username || "this user";
+      const confirmed = window.confirm(
+        `Delete ${targetLabel}? This will deactivate their account and prevent login.`,
+      );
+      if (!confirmed) return;
+
+      setActionLoading(userId);
+      try {
+        const result = await fetchJSON(`/api/users/${userId}/delete/`, {
+          method: "POST",
+          headers: { "X-CSRFToken": getCookie("csrftoken") },
+        });
+        if (result.ok) {
+          clearUsersCache();
+          reloadTable();
+          if (selectedUser && Number(selectedUser.id) === Number(userId)) {
+            setSelectedUser(null);
+          }
+          notify("success", "Account Deleted", `${targetLabel} was deactivated.`);
+        } else {
+          notify("error", "Delete Failed", result.data?.error || "Unable to delete user.");
+        }
+      } catch (e) {
+        notify("error", "Delete Failed", e.message || "Unable to delete user.");
+      }
+      setActionLoading(null);
+    }
 
     async function handleActivate(userId) {
       setActionLoading(userId);

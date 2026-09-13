@@ -496,6 +496,38 @@ class ApiMatchingTests(TestCase):
         self.assertEqual(mentor_profile.year_level, 4)
 
 
+class AdminUserDeleteTests(TestCase):
+    def setUp(self):
+        self.admin = User.objects.create_user(
+            username="admin-delete",
+            email="admin-delete@test.com",
+            password="AdminPass123!",
+            is_staff=True,
+        )
+        self.target = User.objects.create_user(
+            username="to-delete-user",
+            email="delete-me@test.com",
+            password="Pass123!",
+        )
+        self.client.force_login(self.admin)
+
+    def test_admin_can_deactivate_user_account(self):
+        res = self.client.post(f"/api/users/{self.target.id}/delete/")
+
+        self.assertEqual(res.status_code, 200)
+        self.assertTrue(res.json()["ok"])
+        self.target.refresh_from_db()
+        self.assertFalse(self.target.is_active)
+
+    def test_admin_cannot_delete_own_account(self):
+        res = self.client.post(f"/api/users/{self.admin.id}/delete/")
+
+        self.assertEqual(res.status_code, 400)
+        self.assertIn("Cannot delete your own account", res.json()["error"])
+        self.admin.refresh_from_db()
+        self.assertTrue(self.admin.is_active)
+
+
 class AvailabilitySlotTests(TestCase):
     def test_normalise_keeps_day_prefix(self):
         from api.controllers.account_controller import _normalise_availability_slots
