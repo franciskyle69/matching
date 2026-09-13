@@ -1,8 +1,163 @@
 {% extends "registration/base.html" %}
+{% load static %}
 {% block title %}Create account{% endblock %}
 {% block public_header %}{% endblock %}
+{% block body_class %} auth-signup-page{% endblock %}
 {% block extra_css %}
   <style>
+    .auth-signup-page {
+      --signup-text: rgba(255, 255, 255, .94);
+      --signup-muted: rgba(255, 255, 255, .64);
+      --signup-border: rgba(255, 255, 255, .12);
+      --signup-input: rgba(2, 6, 23, .48);
+      background-color: #050218;
+      color-scheme: dark;
+    }
+    .auth-signup-page .main {
+      max-width: 980px;
+      padding: 2rem 1rem;
+    }
+    .auth-signup-page .auth-shell {
+      max-width: 920px;
+      margin: 1rem auto;
+      grid-template-columns: minmax(0, 1.1fr) minmax(0, 1.2fr);
+      background: rgba(8, 7, 31, .68);
+      border: 1px solid var(--signup-border);
+      border-radius: 18px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, .38), inset 0 1px 0 rgba(255, 255, 255, .06);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+    }
+    .auth-signup-page .auth-panel-left,
+    .auth-signup-page .auth-panel-right {
+      background: transparent;
+      border: 0;
+      color: var(--signup-text);
+    }
+    .auth-signup-page .auth-panel-left {
+      padding: 2.25rem 2rem;
+      justify-content: space-between;
+      gap: 2rem;
+      border-right: 1px solid var(--signup-border);
+    }
+    .auth-signup-page .auth-panel-left h1,
+    .auth-signup-page .auth-panel-right h2,
+    .auth-signup-page .form-group label {
+      color: var(--signup-text);
+    }
+    .auth-signup-page .auth-panel-left p,
+    .auth-signup-page .auth-panel-left ul,
+    .auth-signup-page .auth-panel-subtitle,
+    .auth-signup-page .helptext,
+    .auth-signup-page .divider {
+      color: var(--signup-muted);
+    }
+    .auth-signup-page .auth-panel-right {
+      padding: 2rem;
+      gap: 1rem;
+      min-width: 0;
+    }
+    .auth-signup-page .auth-panel-form {
+      margin-top: .25rem;
+    }
+    .auth-signup-page .form-group {
+      margin-bottom: .8rem;
+    }
+    .auth-signup-page .form-group input[type="text"],
+    .auth-signup-page .form-group input[type="email"],
+    .auth-signup-page .form-group input[type="password"],
+    .auth-signup-page .form-group input[type="file"] {
+      border-color: var(--signup-border);
+      background: var(--signup-input);
+      color: var(--signup-text);
+      border-radius: 8px;
+    }
+    .auth-signup-page .form-group input::placeholder {
+      color: rgba(255, 255, 255, .42);
+    }
+    .auth-signup-page .role-option {
+      border-color: var(--signup-border);
+      background: rgba(2, 6, 23, .3);
+      color: var(--signup-text);
+      border-radius: 8px;
+      padding: .65rem .75rem;
+    }
+    .auth-signup-page .role-option span {
+      color: var(--signup-text);
+    }
+    .auth-signup-page .role-option:hover,
+    .auth-signup-page .role-option:has(input:checked) {
+      border-color: rgba(129, 140, 248, .9);
+      background: rgba(99, 102, 241, .2);
+    }
+    .auth-signup-page .password-strength {
+      border-color: var(--signup-border);
+      background: rgba(2, 6, 23, .3);
+    }
+    .auth-signup-page .password-strength-item.is-invalid {
+      color: #fca5a5;
+    }
+    .auth-signup-page .password-strength-item.is-valid {
+      color: #86efac;
+    }
+    .auth-signup-page .btn-primary {
+      background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
+      color: #fff;
+      border: 0;
+      border-radius: 8px;
+    }
+    .auth-signup-page .btn-primary:hover {
+      background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+    }
+    .auth-signup-page .footer-links,
+    .auth-signup-page .footer-links a {
+      color: var(--signup-muted);
+    }
+    .auth-signup-page .footer-links a {
+      color: #c4b5fd;
+    }
+    .signup-back-button {
+      display: inline-flex;
+      width: 32px;
+      height: 32px;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid var(--signup-border);
+      border-radius: 50%;
+      color: var(--signup-text);
+      text-decoration: none;
+    }
+    .signup-brand-logo {
+      width: auto;
+      height: 54px;
+      object-fit: contain;
+      filter: brightness(1.08);
+    }
+    .signup-brand-footer {
+      color: rgba(255, 255, 255, .72);
+      font-size: .72rem;
+      line-height: 1.45;
+    }
+    .signup-brand-footer strong {
+      display: block;
+      color: var(--signup-text);
+      font-size: .8rem;
+    }
+    @media (max-width: 768px) {
+      .auth-signup-page .auth-shell {
+        grid-template-columns: minmax(0, 1fr);
+        margin: .5rem auto;
+      }
+      .auth-signup-page .auth-panel-left {
+        padding: 1.5rem;
+        gap: 1rem;
+        border-right: 0;
+        border-bottom: 1px solid var(--signup-border);
+      }
+      .auth-signup-page .auth-panel-right {
+        padding: 1.5rem;
+      }
+    }
     .role-picker {
       display: flex;
       gap: .75rem;
@@ -42,7 +197,8 @@
 <div class="auth-shell">
   <section class="auth-panel-left">
     <div>
-      <h1>Join the future of learning</h1>
+      <img src="{% static 'assets/logo.png' %}" alt="PeerLink" class="signup-brand-logo">
+      <h1>Join PeerLink</h1>
       <p>
         Get matched with expert mentors using our matching system designed for first‑year IT students.
       </p>
@@ -52,12 +208,17 @@
         <li>Smart session scheduling</li>
       </ul>
     </div>
+    <div class="signup-brand-footer">
+      <strong>Bukidnon State University — AMU</strong>
+      Facebook — @buksuAMU · amu@buksu.edu.ph
+    </div>
   </section>
 
   <section class="auth-panel-right">
+    <a href="{% url 'public_landing' %}" class="signup-back-button" aria-label="Back to landing page">&larr;</a>
     <div>
-      <h2>Create account</h2>
-      <p class="auth-panel-subtitle">Get started with your mentoring journey.</p>
+      <h2>Sign up</h2>
+      <p class="auth-panel-subtitle">Create your account to get started.</p>
     </div>
     {% if form.errors %}
     <p class="errornote">Please correct the errors below.</p>

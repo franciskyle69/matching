@@ -516,7 +516,7 @@
     {% block extra_css %}{% endblock %}
   </style>
 </head>
-<body class="{% if not user.is_authenticated %}auth-page{% endif %}">
+<body class="{% if not user.is_authenticated %}auth-page{% endif %}{% block body_class %}{% endblock %}">
   {% if user.is_authenticated %}
   <div class="app-shell">
     <aside class="sidebar">
