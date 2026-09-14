@@ -3,205 +3,431 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{% block title %}Capstone{% endblock %}</title>
+  <title>{% block title %}PeerLink — Academic Mentoring Unit{% endblock %}</title>
+  <link rel="icon" href="/static/assets/logo.png" type="image/png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
+    :root {
+      --neu-base: #ebf0f7;
+      --neu-light: #ffffff;
+      --neu-dark: rgba(166, 180, 200, 0.55);
+      --neu-dark-strong: rgba(150, 165, 185, 0.75);
+      --neu-primary: #0284c7;
+      --neu-primary-hover: #0ea5e9;
+      --text-main: #0f172a;
+      --text-sub: #475569;
+      --text-muted: #64748b;
+    }
+
     * { box-sizing: border-box; }
+
     body {
       margin: 0;
       min-height: 100vh;
-      font-family: 'DM Sans', 'Segoe UI', system-ui, sans-serif;
-      background: #000;
-      color: #fff;
+      font-family: 'Plus Jakarta Sans', 'DM Sans', -apple-system, system-ui, sans-serif;
+      background-color: var(--neu-base);
+      color: var(--text-main);
       line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+      color-scheme: light !important;
     }
+
     .auth-page-wrap {
       min-height: 100vh;
       display: flex;
       align-items: center;
       justify-content: center;
-      padding: 24px;
+      padding: 32px 20px;
       position: relative;
-      overflow: hidden;
+      overflow-x: hidden;
     }
+
     .auth-page-wrap::before {
       content: "";
-      position: absolute;
+      position: fixed;
       inset: 0;
-      background: url("/static/assets/auth-background.png?v=2") center / cover no-repeat;
+      background: radial-gradient(circle at 50% 30%, rgba(14, 165, 233, 0.08), transparent 60%);
       z-index: 0;
       pointer-events: none;
     }
-    .auth-page-wrap::after {
-      content: "";
-      position: absolute;
-      inset: 0;
-      background: rgba(0, 0, 0, 0.55);
-      z-index: 0;
-      pointer-events: none;
+
+    /* Neumorphic compact Back button positioned outside the auth card */
+    .auth-neu-back-btn {
+      position: fixed;
+      top: 20px;
+      left: 24px;
+      z-index: 1000;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      height: 34px;
+      padding: 0 14px;
+      border-radius: 999px;
+      background-color: #ebf0f7;
+      color: #334155;
+      border: 1px solid rgba(255, 255, 255, 0.95);
+      box-shadow: 3px 3px 8px rgba(166, 180, 200, 0.6), -3px -3px 8px #ffffff;
+      font-size: 12.5px;
+      font-weight: 600;
+      font-family: inherit;
+      cursor: pointer;
+      text-decoration: none;
+      line-height: 1;
+      transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+      user-select: none;
     }
+
+    .auth-neu-back-btn:hover {
+      color: #0f172a;
+      transform: translateY(-1px);
+      box-shadow: 5px 5px 12px rgba(166, 180, 200, 0.7), -5px -5px 12px #ffffff;
+    }
+
+    .auth-neu-back-btn:active {
+      transform: translateY(1px);
+      box-shadow: inset 2px 2px 5px rgba(166, 180, 200, 0.65), inset -2px -2px 5px #ffffff;
+    }
+
+    .auth-neu-back-btn:focus-visible {
+      outline: 2px solid rgba(56, 189, 248, 0.8);
+      outline-offset: 3px;
+    }
+
+    .auth-neu-back-icon {
+      width: 13px;
+      height: 13px;
+      stroke: currentColor;
+      stroke-width: 2.2;
+      transition: transform 0.18s ease;
+      flex-shrink: 0;
+    }
+
+    .auth-neu-back-btn:hover .auth-neu-back-icon {
+      transform: translateX(-2px);
+    }
+
+    @media (max-width: 640px) {
+      .auth-neu-back-btn {
+        top: 14px;
+        left: 14px;
+        height: 30px;
+        padding: 0 11px;
+        font-size: 11.5px;
+        gap: 5px;
+      }
+      .auth-neu-back-icon {
+        width: 12px;
+        height: 12px;
+      }
+    }
+
+    /* Main Extruded Neumorphic Card */
     .auth-card-standalone {
       position: relative;
       z-index: 10;
       width: 100%;
-      max-width: 420px;
-      background: rgba(15, 23, 42, 0.5);
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
-      border-radius: 20px;
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-      padding: 32px;
+      max-width: 440px;
+      background: #ebf0f7;
+      border-radius: 26px;
+      border: 1.5px solid rgba(255, 255, 255, 0.95);
+      box-shadow: 12px 12px 28px rgba(166, 180, 200, 0.65), -12px -12px 28px #ffffff;
+      padding: 36px 32px;
+      animation: auth-fade-in 0.28s cubic-bezier(0.16, 1, 0.3, 1) backwards;
     }
+
+    @keyframes auth-fade-in {
+      from {
+        opacity: 0;
+        transform: translateY(10px) scale(0.98);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+
+    /* PeerLink Brand Lockup inside Card */
+    .auth-brand-lockup {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .auth-brand-logo-icon {
+      width: 42px;
+      height: 42px;
+      object-fit: contain;
+      filter: drop-shadow(0 2px 8px rgba(14, 165, 233, 0.35));
+    }
+
+    .auth-brand-text {
+      display: flex;
+      flex-direction: column;
+      line-height: 1.15;
+    }
+
+    .auth-brand-title {
+      font-size: 1.4rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+    }
+
+    .auth-brand-title .brand-peer {
+      color: #0f172a;
+    }
+
+    .auth-brand-title .brand-link {
+      color: #0284c7;
+    }
+
+    .auth-brand-subtitle {
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: #0284c7;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      margin-top: 2px;
+    }
+
     .auth-card-standalone h1 {
       margin: 0 0 8px;
-      font-size: 24px;
+      font-size: 1.5rem;
       font-weight: 700;
-      color: #fff;
+      color: var(--text-main);
+      letter-spacing: -0.015em;
     }
+
     .auth-card-standalone .subtitle {
-      margin: 0 0 24px;
-      font-size: 14px;
-      color: rgba(255, 255, 255, 0.8);
+      margin: 0 0 22px;
+      font-size: 0.9rem;
+      color: var(--text-sub);
+      line-height: 1.55;
     }
+
     .auth-card-standalone label {
       display: block;
-      font-size: 13px;
-      font-weight: 500;
-      color: rgba(255, 255, 255, 0.95);
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #334155;
       margin-bottom: 8px;
     }
+
     .auth-card-standalone input[type="text"],
     .auth-card-standalone input[type="email"],
     .auth-card-standalone input[type="password"] {
       width: 100%;
       padding: 12px 16px;
-      font-size: 14px;
-      border-radius: 12px;
-      border: 1px solid rgba(255, 255, 255, 0.15);
-      background: rgba(15, 23, 42, 0.4);
-      color: #fff;
+      font-size: 14.5px;
+      border-radius: 14px;
+      border: 1px solid rgba(255, 255, 255, 0.85);
+      background: #ebf0f7;
+      color: var(--text-main);
+      box-shadow: inset 3px 3px 6px rgba(166, 180, 200, 0.55), inset -3px -3px 6px #ffffff;
+      font-family: inherit;
+      box-sizing: border-box;
       margin-bottom: 16px;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
     }
+
     .auth-card-standalone input::placeholder {
-      color: rgba(255, 255, 255, 0.5);
+      color: #94a3b8;
     }
+
     .auth-card-standalone input:focus {
       outline: none;
-      border-color: rgba(79, 70, 229, 0.6);
-      box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15);
+      border-color: var(--neu-primary);
+      box-shadow: inset 2px 2px 5px rgba(166, 180, 200, 0.5), inset -2px -2px 5px #ffffff, 0 0 0 3px rgba(2, 132, 199, 0.18);
     }
+
     .auth-card-standalone .btn-primary {
       width: 100%;
-      padding: 12px 16px;
-      font-size: 15px;
+      padding: 13px 20px;
+      font-size: 0.95rem;
       font-weight: 600;
-      color: #fff;
-      background: linear-gradient(135deg, #352c90 0%, #22177A 100%);
+      color: #ffffff;
+      background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
       border: none;
-      border-radius: 12px;
+      border-radius: 14px;
       cursor: pointer;
       margin-top: 8px;
+      box-shadow: 4px 4px 12px rgba(14, 165, 233, 0.35), -2px -2px 6px rgba(255, 255, 255, 0.6);
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      font-family: inherit;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      text-decoration: none;
+      line-height: 1.2;
     }
+
     .auth-card-standalone .btn-primary:hover {
-      background: linear-gradient(135deg, #22177A 0%, #120c55 100%);
+      background: linear-gradient(135deg, #38bdf8 0%, #0ea5e9 100%);
+      box-shadow: 6px 6px 16px rgba(14, 165, 233, 0.45);
+      transform: translateY(-1px);
     }
+
+    .auth-card-standalone .btn-primary:active {
+      transform: translateY(1px);
+      box-shadow: inset 2px 2px 5px rgba(2, 132, 199, 0.5);
+    }
+
     .auth-card-standalone .btn-primary:disabled {
-      background: rgba(255, 255, 255, 0.18);
-      color: rgba(255, 255, 255, 0.55);
+      background: #cbd5e1;
+      color: #94a3b8;
       cursor: not-allowed;
       box-shadow: none;
+      transform: none;
     }
+
     .auth-card-standalone .auth-link {
-      margin-top: 20px;
+      margin-top: 22px;
       text-align: center;
-      font-size: 13px;
+      font-size: 0.88rem;
     }
+
     .auth-card-standalone .auth-link a {
-      color: rgba(182, 171, 255, 1);
+      color: var(--neu-primary);
       text-decoration: none;
+      font-weight: 600;
+      transition: color 0.15s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
     }
+
     .auth-card-standalone .auth-link a:hover {
+      color: #0369a1;
       text-decoration: underline;
     }
+
     .auth-card-standalone .form-group {
       margin-bottom: 4px;
     }
+
     .auth-card-standalone .errornote {
-      font-size: 13px;
-      color: #fca5a5;
-      background: rgba(220, 38, 38, 0.2);
-      padding: 10px 12px;
-      border-radius: 10px;
-      margin-bottom: 16px;
-    }
-    .auth-card-standalone .password-strength {
-      margin-top: 8px;
-      padding: 12px 14px 14px;
+      font-size: 0.85rem;
+      color: #dc2626;
+      background: rgba(239, 68, 68, 0.08);
+      border: 1px solid rgba(239, 68, 68, 0.25);
+      padding: 12px 14px;
       border-radius: 12px;
-      border: 1px solid rgba(255, 255, 255, 0.12);
-      background: rgba(15, 23, 42, 0.42);
+      margin-bottom: 16px;
+      line-height: 1.45;
     }
+
+    .auth-card-standalone .success-note {
+      font-size: 0.85rem;
+      color: #059669;
+      background: rgba(16, 185, 129, 0.08);
+      border: 1px solid rgba(16, 185, 129, 0.25);
+      padding: 12px 14px;
+      border-radius: 12px;
+      margin-bottom: 16px;
+      line-height: 1.45;
+    }
+
+    .auth-card-standalone ul.errorlist {
+      margin: 0 0 14px;
+      padding: 10px 14px 10px 28px;
+      font-size: 0.82rem;
+      color: #dc2626;
+      background: rgba(239, 68, 68, 0.08);
+      border: 1px solid rgba(239, 68, 68, 0.25);
+      border-radius: 12px;
+    }
+
+    .auth-card-standalone .password-strength {
+      margin-top: 10px;
+      margin-bottom: 16px;
+      padding: 14px;
+      border-radius: 14px;
+      border: 1px solid rgba(255, 255, 255, 0.95);
+      background: #ebf0f7;
+      box-shadow: inset 2px 2px 5px rgba(166, 180, 200, 0.45), inset -2px -2px 5px #ffffff;
+    }
+
     .auth-card-standalone .password-strength-bar {
       height: 8px;
       border-radius: 999px;
-      background: rgba(255, 255, 255, 0.12);
+      background: #e2e8f0;
+      box-shadow: inset 1px 1px 2px rgba(0, 0, 0, 0.1);
       overflow: hidden;
       margin-bottom: 12px;
     }
+
     .auth-card-standalone .password-strength-fill {
       display: block;
       width: 0%;
       height: 100%;
       border-radius: inherit;
-      background: linear-gradient(90deg, #f59e0b 0%, #f97316 100%);
-      transition: width .2s ease;
+      background: linear-gradient(90deg, #f59e0b 0%, #10b981 100%);
+      transition: width 0.22s ease;
     }
+
     .auth-card-standalone .password-strength-list {
       list-style: none;
       padding: 0;
       margin: 0;
       display: grid;
       gap: 6px;
-      font-size: 13px;
+      font-size: 0.8rem;
     }
+
     .auth-card-standalone .password-strength-item {
       display: flex;
-      align-items: flex-start;
+      align-items: center;
       gap: 8px;
-      color: #fca5a5;
-      transition: color .15s ease;
+      color: #94a3b8;
+      transition: color 0.15s ease;
     }
+
     .auth-card-standalone .password-strength-item::before {
       content: "•";
       line-height: 1;
       font-size: 16px;
-      margin-top: -1px;
       color: currentColor;
     }
+
     .auth-card-standalone .password-strength-item.is-valid {
-      color: #86efac;
+      color: #059669;
+      font-weight: 500;
     }
+
     .auth-card-standalone .password-strength-item.is-invalid {
-      color: #fca5a5;
+      color: #94a3b8;
     }
-    .auth-card-standalone .success-note {
-      font-size: 13px;
-      color: #86efac;
-      background: rgba(34, 197, 94, 0.2);
-      padding: 10px 12px;
-      border-radius: 10px;
-      margin-bottom: 16px;
-    }
-    .auth-card-standalone ul.errorlist { margin: 0 0 12px; padding-left: 1.25rem; font-size: 13px; color: #fca5a5; }
+
     {% block extra_css %}{% endblock %}
   </style>
 </head>
 <body>
+  <a href="{% block back_url %}/app/#signin{% endblock %}" class="auth-neu-back-btn" aria-label="{% block back_label %}Back to Sign in{% endblock %}">
+    <svg class="auth-neu-back-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <line x1="19" y1="12" x2="5" y2="12"></line>
+      <polyline points="12 19 5 12 12 5"></polyline>
+    </svg>
+    <span>{% block back_text %}Back to Sign in{% endblock %}</span>
+  </a>
+
   <div class="auth-page-wrap">
     <div class="auth-card-standalone">
+      <div class="auth-brand-lockup">
+        <img
+          src="/static/assets/logo_icon.png"
+          alt="PeerLink Emblem"
+          class="auth-brand-logo-icon"
+        />
+        <div class="auth-brand-text">
+          <div class="auth-brand-title">
+            <span class="brand-peer">Peer</span><span class="brand-link">link</span>
+          </div>
+          <div class="auth-brand-subtitle">Academic Mentoring Unit</div>
+        </div>
+      </div>
+
       {% if messages %}
         {% for message in messages %}
           <div class="{% if message.tags == 'error' or message.tags == 'warning' %}errornote{% else %}success-note{% endif %}" style="margin-bottom:12px;">
@@ -212,7 +438,10 @@
       {% block content %}{% endblock %}
     </div>
   </div>
+
   <script nonce="{{ csp_nonce }}">
+    (function() {
+      function evaluatePassword(value) {
         return {
           length: value.length >= 10,
           number: /[0-9]/.test(value),

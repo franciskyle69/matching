@@ -607,18 +607,20 @@ div.relative.overflow-hidden > div[style*="background: rgba(0, 0, 0"] {
 /* CTA Card text safety */
 #footer-contact .site-brand-title,
 #footer-contact .site-brand-title .brand-peer {
-  color: #ffffff !important;
+  color: #0f172a !important;
 }
 
 #footer-contact .site-brand-title .brand-link,
 #footer-contact .site-brand-subtitle {
-  color: #38bdf8 !important;
+  color: #0284c7 !important;
 }
 
 #footer-contact h2 {
-  color: #ffffff !important;
+  color: #0f172a !important;
+  font-weight: 700 !important;
 }
 
 #footer-contact p {
-  color: #e2e8f0 !important;
+  color: #475569 !important;
+  font-weight: 500 !important;
 }

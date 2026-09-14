@@ -8,6 +8,77 @@
   box-shadow: var(--shadow-lg);
 }
 
+/* Neumorphic compact Back button positioned outside the auth card */
+.auth-neu-back-btn {
+  position: fixed;
+  top: 20px;
+  left: 24px;
+  z-index: 1000;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 13px;
+  border-radius: 999px;
+  background-color: var(--neu-base, #ebf0f7) !important;
+  color: #334155 !important;
+  border: 1px solid rgba(255, 255, 255, 0.95) !important;
+  box-shadow: 3px 3px 8px rgba(166, 180, 200, 0.6), -3px -3px 8px #ffffff !important;
+  font-size: 12.5px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  text-decoration: none;
+  line-height: 1;
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  user-select: none;
+}
+
+.auth-neu-back-btn:hover {
+  color: #0f172a !important;
+  transform: translateY(-1px);
+  box-shadow: 5px 5px 12px rgba(166, 180, 200, 0.7), -5px -5px 12px #ffffff !important;
+}
+
+.auth-neu-back-btn:active {
+  transform: translateY(1px);
+  box-shadow: inset 2px 2px 5px rgba(166, 180, 200, 0.65), inset -2px -2px 5px #ffffff !important;
+}
+
+.auth-neu-back-btn:focus-visible {
+  outline: 2px solid rgba(56, 189, 248, 0.8);
+  outline-offset: 3px;
+}
+
+.auth-neu-back-icon {
+  width: 13px;
+  height: 13px;
+  stroke: currentColor;
+  stroke-width: 2.2;
+  transition: transform 0.18s ease;
+  flex-shrink: 0;
+}
+
+.auth-neu-back-btn:hover .auth-neu-back-icon {
+  transform: translateX(-2px);
+}
+
+@media (max-width: 640px) {
+  .auth-neu-back-btn {
+    top: 14px;
+    left: 14px;
+    height: 28px;
+    padding: 0 10px;
+    font-size: 11.5px;
+    gap: 5px;
+  }
+
+  .auth-neu-back-icon {
+    width: 12px;
+    height: 12px;
+  }
+}
+
 .auth-left-logo {
   width: auto;
   max-height: 56px;

@@ -126,6 +126,82 @@ import {
     );
   }
 
+  function NeuBackButton({ onClick, label }) {
+    const [isHovered, setIsHovered] = useState(false);
+    const [isPressed, setIsPressed] = useState(false);
+    return (
+      <button
+        type="button"
+        className="auth-neu-back-btn"
+        onClick={onClick}
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => {
+          setIsHovered(false);
+          setIsPressed(false);
+        }}
+        onMouseDown={() => setIsPressed(true)}
+        onMouseUp={() => setIsPressed(false)}
+        aria-label={label}
+        title={label}
+        style={{
+          position: "fixed",
+          top: "20px",
+          left: "24px",
+          zIndex: 1000,
+          display: "inline-flex",
+          alignItems: "center",
+          gap: "8px",
+          height: "34px",
+          padding: "0 14px",
+          borderRadius: "999px",
+          backgroundColor: "#ebf0f7",
+          color: isHovered ? "#0f172a" : "#334155",
+          border: "1px solid rgba(255, 255, 255, 0.95)",
+          boxShadow: isPressed
+            ? "inset 2px 2px 5px rgba(166, 180, 200, 0.65), inset -2px -2px 5px #ffffff"
+            : isHovered
+              ? "5px 5px 12px rgba(166, 180, 200, 0.7), -5px -5px 12px #ffffff"
+              : "3px 3px 8px rgba(166, 180, 200, 0.6), -3px -3px 8px #ffffff",
+          transform: isPressed
+            ? "translateY(1px)"
+            : isHovered
+              ? "translateY(-1px)"
+              : "none",
+          fontSize: "12.5px",
+          fontWeight: 600,
+          cursor: "pointer",
+          textDecoration: "none",
+          lineHeight: 1,
+          outline: "none",
+          transition: "all 0.18s cubic-bezier(0.16, 1, 0.3, 1)",
+          userSelect: "none",
+        }}
+      >
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2.2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden="true"
+          style={{
+            width: "14px",
+            height: "14px",
+            flexShrink: 0,
+            display: "block",
+            transform: isHovered ? "translateX(-2px)" : "none",
+            transition: "transform 0.18s ease",
+          }}
+        >
+          <line x1="19" y1="12" x2="5" y2="12"></line>
+          <polyline points="12 19 5 12 12 5"></polyline>
+        </svg>
+        <span style={{ whiteSpace: "nowrap" }}>{label}</span>
+      </button>
+    );
+  }
+
   function getGoogleLoginUrl() {
     return "/accounts/google/start/login/";
   }
@@ -429,6 +505,7 @@ import {
             <LoadingSpinner inline />
           </div>
         )}
+        <NeuBackButton onClick={goBackToLanding} label="Back to Home" />
         <div className="auth-card">
           <div className="auth-card-left">
             <div className="auth-left-top">
@@ -473,26 +550,6 @@ import {
           </div>
           <div className="auth-card-divider"></div>
           <div className="auth-card-right">
-            <button
-              type="button"
-              className="auth-back-btn"
-              onClick={goBackToLanding}
-              aria-label="Back to landing page"
-              title="Back to landing page"
-            >
-              <svg
-                className="auth-back-icon"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                aria-hidden="true"
-              >
-                <path d="M15 18l-6-6 6-6" />
-              </svg>
-            </button>
             <h2 className="auth-title">Login</h2>
             <p className="auth-subtitle">
               Welcome back! Please sign in to your account
@@ -779,6 +836,16 @@ import {
             <LoadingSpinner inline />
           </div>
         )}
+        <NeuBackButton
+          onClick={() => {
+            if (signupStep === 2) {
+              goToSignupStep(1);
+              return;
+            }
+            goBackToLanding();
+          }}
+          label={signupStep === 2 ? "Back to Step 1" : "Back to Home"}
+        />
         <div className="auth-card">
           <div className="auth-card-left">
             <div className="auth-left-top">
@@ -823,40 +890,6 @@ import {
           </div>
           <div className="auth-card-divider"></div>
           <div className="auth-card-right">
-            <button
-              type="button"
-              className="auth-back-btn"
-              onClick={() => {
-                if (signupStep === 2) {
-                  goToSignupStep(1);
-                  return;
-                }
-                goBackToLanding();
-              }}
-              aria-label={
-                signupStep === 2
-                  ? "Back to account details"
-                  : "Back to landing page"
-              }
-              title={
-                signupStep === 2
-                  ? "Back to account details"
-                  : "Back to landing page"
-              }
-            >
-              <svg
-                className="auth-back-icon"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                aria-hidden="true"
-              >
-                <path d="M15 18l-6-6 6-6" />
-              </svg>
-            </button>
             <h2 className="auth-title">Sign Up</h2>
             <p className="auth-subtitle">
               {signupStep === 1
@@ -1291,7 +1324,7 @@ import {
                   {signUpLoading ? (
                     <LoadingSpinner inline />
                   ) : signupStep === 1 ? (
-                    "Continue"
+                    "Continue to Next Step"
                   ) : (
                     "Create account"
                   )}
@@ -1487,7 +1520,7 @@ import {
   window.DashboardApp = window.DashboardApp || {};
   window.DashboardApp.Pages = window.DashboardApp.Pages || {};
   window.DashboardApp.Pages.signin = SignInPage;
-  window.DashboardApp.Pages.signup = UnifiedSignUpPage;
+  window.DashboardApp.Pages.signup = SignUpPage;
   if (typeof module !== "undefined" && module.exports)
-    module.exports = { SignInPage, SignUpPage };
+    module.exports = { SignInPage, SignUpPage, UnifiedSignUpPage };
 })();

@@ -1330,7 +1330,7 @@
       setAuthAlert(null);
       setSignUpLoading(true);
       try {
-        if (signUpForm.display_name !== undefined) {
+        if (signUpForm.display_name && !signUpForm.first_name) {
           const displayName = String(signUpForm.display_name || "").trim();
           const email = String(signUpForm.email || "")
             .trim()
