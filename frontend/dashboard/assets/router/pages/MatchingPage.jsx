@@ -1,7 +1,7 @@
 (function () {
   "use strict";
   const React = window.React;
-  const { useContext, useEffect, useMemo, useRef, useState, useCallback } = React;
+  const { useContext, useEffect, useMemo, useRef, useState } = React;
   const AppContext = window.DashboardApp.AppContext;
   const Utils = window.DashboardApp.Utils || {};
   const PLACEHOLDER_AVATAR = window.DashboardApp.PLACEHOLDER_AVATAR || "";
@@ -407,32 +407,27 @@
 
     useEffect(() => {
       if (!isMentee) return;
-      if (user?.mentee_approved === false) return;
       loadMyMentor();
-    }, [isMentee, loadMyMentor, user?.mentee_approved]);
-
-    const lastAutoLoadUserKeyRef = useRef("");
+    }, [isMentee, loadMyMentor]);
 
     useEffect(() => {
-      const key = `${user?.id || ""}_${isMentee ? "1" : "0"}_${menteeQuestionnaireCompleted ? "1" : "0"}_${user?.mentee_approved ? "1" : "0"}`;
-      if (lastAutoLoadUserKeyRef.current !== key) {
-        lastAutoLoadUserKeyRef.current = key;
-        didAutoLoadRecsRef.current = false;
-      }
-    }, [user?.id, isMentee, menteeQuestionnaireCompleted, user?.mentee_approved]);
+      // Reset auto-load guard when user/questionnaire context changes.
+      didAutoLoadRecsRef.current = false;
+    }, [user?.id, isMentee, menteeQuestionnaireCompleted]);
 
     useEffect(() => {
       if (!isMentee) return;
       if (!menteeQuestionnaireCompleted) return;
-      if (user?.mentee_approved === false) return;
+      if (menteeRecLoading || menteeRecUpdating) return;
       if (didAutoLoadRecsRef.current) return;
       didAutoLoadRecsRef.current = true;
       loadMenteeRecommendations();
     }, [
       isMentee,
       menteeQuestionnaireCompleted,
+      menteeRecLoading,
+      menteeRecUpdating,
       loadMenteeRecommendations,
-      user?.mentee_approved,
     ]);
 
     useEffect(() => {
@@ -471,19 +466,23 @@
       <div
         className={
           isMentee
-            ? "home-dashboard-space matching-page matching-page--mentee page-shell"
-            : "home-dashboard-space matching-page matching-page--mentor page-shell"
+            ? "matching-page matching-page--mentee page-shell"
+            : "matching-page matching-page--mentor page-shell"
         }
       >
-        <div className="page-shell-head">
-          <div>
-            <h1 className="page-title">
+        <header className="kasandigan-header" style={{ marginBottom: "20px" }}>
+          <div className="kasandigan-header-content">
+            <div className="kasandigan-badge">
+              <span className="kasandigan-badge-dot" />
+              <span>AMU Mentorship • Matching</span>
+            </div>
+            <h1 className="page-title kasandigan-title" style={{ fontSize: "1.75rem" }}>
               Matching
               {isMentee && menteeRecUpdating && (
-                <span className="matching-updating-badge">Updating…</span>
+                <span className="matching-updating-badge" style={{ marginLeft: "10px", fontSize: "11px" }}>Updating…</span>
               )}
             </h1>
-            <p className="page-subtitle">
+            <p className="page-subtitle kasandigan-subtitle">
               {isMentee
                 ? "Personalized mentor recommendations based on your mentoring preferences. Choose a mentor to request a pairing—we match you by subjects and topics you care about."
                 : user.role === "mentor"
@@ -491,7 +490,7 @@
                   : "Run the model to get mentor–mentee pairs."}
             </p>
           </div>
-        </div>
+        </header>
         {user.role === "staff" && (
           <div className="matching-options">
             <div className="matching-options-row">

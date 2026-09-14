@@ -15,9 +15,9 @@
 .activity-logs-page,
 .notifications-page,
 .backup-page {
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--border);
-  box-shadow: var(--shadow-sm);
+  border: none;
+  background: transparent;
+  box-shadow: none;
 }
 
 .approvals-page-header,
@@ -43,10 +43,8 @@
   border-radius: var(--radius-md);
 }
 
-.approvals-section,
 .notification-item,
 .subject-card,
-.activity-logs-filters,
 .backup-card {
   border: 1px solid var(--border);
   border-radius: var(--radius-md);

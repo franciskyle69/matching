@@ -48,6 +48,13 @@ import Tabs from "@mui/material/Tabs";
     return `Year ${level}`;
   }
 
+  function getInitials(name) {
+    const parts = String(name || "").trim().split(/\s+/).filter(Boolean);
+    if (!parts.length) return "?";
+    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  }
+
   function SettingsTabNav({ tabs, activeTab, onChange }) {
     const handleTabChange = (_event, value) => {
       onChange(value);
@@ -94,6 +101,7 @@ import Tabs from "@mui/material/Tabs";
     onTagsSave,
     onDirtyChange,
     registerActions,
+    onDraftChange,
   }) {
     const [bioText, setBioText] = useState(bio);
     const [bioSaving, setBioSaving] = useState(false);
@@ -204,6 +212,12 @@ import Tabs from "@mui/material/Tabs";
     useEffect(() => {
       if (onDirtyChange) onDirtyChange(isDirty);
     }, [isDirty]);
+
+    useEffect(() => {
+      if (typeof onDraftChange === "function") {
+        onDraftChange({ bio: bioText, tags: localTags });
+      }
+    }, [bioText, localTags]);
 
     useEffect(() => {
       return () => {
@@ -397,6 +411,10 @@ import Tabs from "@mui/material/Tabs";
       }
     });
     const [bioDirty, setBioDirty] = useState(false);
+    const [bioDraft, setBioDraft] = useState({
+      bio: settingsForm.bio || "",
+      tags: Array.isArray(settingsForm.tags) ? settingsForm.tags : [],
+    });
     const [savingAll, setSavingAll] = useState(false);
     const [savedAt, setSavedAt] = useState(0);
     const [showNewPassword, setShowNewPassword] = useState(false);
@@ -629,7 +647,9 @@ import Tabs from "@mui/material/Tabs";
 
     const accountChanged =
       String(settingsForm.email || "").trim() !==
-      String(user.email || "").trim();
+        String(user.email || "").trim() ||
+      String(settingsForm.display_name || "").trim() !==
+        String(user.display_name || user.full_name || "").trim();
 
     const generalRequiredFields = [
       "campus",
@@ -687,6 +707,7 @@ import Tabs from "@mui/material/Tabs";
       accountChanged,
       generalChanged,
       email: user.email || "",
+      display_name: user.display_name || user.full_name || "",
       generalSnapshot: generalSavedRef.current,
     };
 
@@ -697,7 +718,11 @@ import Tabs from "@mui/material/Tabs";
         }
         const pending = revertRef.current || {};
         if (pending.accountChanged) {
-          setSettingsForm((prev) => ({ ...prev, email: pending.email }));
+          setSettingsForm((prev) => ({
+            ...prev,
+            email: pending.email,
+            display_name: pending.display_name,
+          }));
         }
         if (pending.generalChanged && pending.generalSnapshot) {
           try {
@@ -748,7 +773,11 @@ import Tabs from "@mui/material/Tabs";
     }
 
     function handleDiscardAll() {
-      setSettingsForm({ ...settingsForm, email: user.email || "" });
+      setSettingsForm({
+        ...settingsForm,
+        email: user.email || "",
+        display_name: user.display_name || user.full_name || "",
+      });
       if (bioActionsRef.current.discard) bioActionsRef.current.discard();
       if (generalChanged) {
         generalEditedRef.current = false;
@@ -760,10 +789,18 @@ import Tabs from "@mui/material/Tabs";
       }
     }
 
+    const displayBio = bioDraft.bio || settingsForm.bio || "";
+    const displayTags =
+      bioDraft.tags && bioDraft.tags.length
+        ? bioDraft.tags
+        : Array.isArray(settingsForm.tags)
+          ? settingsForm.tags
+          : [];
+
     return (
       <div
         className={
-          "home-dashboard-space settings-page-shell page-shell" +
+          "settings-page-shell page-shell" +
           (user.role === "mentee"
             ? " settings-page-shell--mentee"
             : user.role === "mentor"
@@ -771,11 +808,49 @@ import Tabs from "@mui/material/Tabs";
               : "")
         }
       >
-        <header className="settings-page-head">
-          <h1 className="page-title settings-page-title">Settings</h1>
-          <p className="page-subtitle settings-page-head-subtitle">
-            Manage your account, security, and profile information.
-          </p>
+        <header className="kasandigan-header">
+          <div className="kasandigan-header-content">
+            <div className="kasandigan-badge">
+              <span className="kasandigan-badge-dot" />
+              <span>Academic Mentoring Unit • Account Preferences</span>
+            </div>
+            <h1 className="kasandigan-title">Settings</h1>
+            <p className="kasandigan-subtitle">
+              Manage your account, security credentials, and academic preferences.
+            </p>
+          </div>
+          <div className="kasandigan-header-actions">
+            <span
+              className="kasandigan-badge"
+              style={{
+                textTransform: "capitalize",
+                background: "var(--subcard-bg, #f8fafc)",
+                border: "1px solid var(--border-color, #e2e8f0)",
+                color: "var(--text-secondary, #475569)",
+                fontWeight: 600,
+              }}
+            >
+              <span
+                className="kasandigan-badge-dot"
+                style={{
+                  background: user.is_staff
+                    ? "#0284c7"
+                    : user.role === "mentor"
+                      ? "#0ea5e9"
+                      : "#10b981",
+                }}
+              />
+              <span>
+                {user.is_staff
+                  ? "AMU Coordinator"
+                  : user.role === "mentor"
+                    ? "Peer Mentor"
+                    : user.role === "mentee"
+                      ? "Mentee"
+                      : "User Account"}
+              </span>
+            </span>
+          </div>
         </header>
 
         <SettingsTabNav
@@ -784,8 +859,10 @@ import Tabs from "@mui/material/Tabs";
           onChange={selectTab}
         />
 
-        {activeTab === "account" && (
-          <div className="settings-tab-panel">
+        <div className="settings-content-grid">
+          <div className="settings-main-column">
+            {activeTab === "account" && (
+              <div className="settings-tab-panel">
             <h2 className="settings-tab-panel-title">Account Profile</h2>
             <p className="settings-tab-panel-subtitle">
               Update the email and photo used across the dashboard.
@@ -794,21 +871,21 @@ import Tabs from "@mui/material/Tabs";
               <div className="form-group">
                 <label htmlFor="settings-display-name" className="settings-label">
                   Display name
-                  <ReadOnlyBadge />
                 </label>
                 <input
                   id="settings-display-name"
                   type="text"
-                  className="readonly-field-input"
-                  value={
-                    settingsForm.display_name || user.display_name || "—"
+                  value={settingsForm.display_name ?? ""}
+                  onChange={(e) =>
+                    setSettingsForm({
+                      ...settingsForm,
+                      display_name: e.target.value,
+                    })
                   }
-                  readOnly
-                  disabled
+                  placeholder="Your display name"
                 />
-                <p className="field-helper settings-helper-text settings-helper-text--bright">
-                  Taken from your enrolment record. Contact an administrator if
-                  it needs to change.
+                <p className="field-helper settings-helper-text">
+                  Your name as displayed to peers and coordinators across PeerLink.
                 </p>
               </div>
               <div className="form-group">
@@ -911,17 +988,49 @@ import Tabs from "@mui/material/Tabs";
                 </div>
               </div>
             </div>
-            {accountChanged && (
-              <div className="settings-tab-footer">
+            <div className="settings-tab-footer">
+              <button
+                type="button"
+                className="btn"
+                onClick={handleSettingsSave}
+                disabled={!accountChanged || settingsSaving}
+              >
+                {settingsSaving ? "Saving..." : "Save changes"}
+              </button>
+              {accountChanged && (
                 <button
-                  className="btn"
-                  onClick={handleSettingsSave}
+                  type="button"
+                  className="btn secondary"
+                  onClick={() => {
+                    setSettingsForm((prev) => ({
+                      ...prev,
+                      display_name: user.display_name || user.full_name || "",
+                      email: user.email || "",
+                    }));
+                  }}
                   disabled={settingsSaving}
                 >
-                  {settingsSaving ? "Saving..." : "Save email changes"}
+                  Discard
                 </button>
-              </div>
-            )}
+              )}
+              <span
+                className="settings-helper-text"
+                style={{
+                  marginLeft: "auto",
+                  fontSize: "13px",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  color: accountChanged
+                    ? "var(--primary, #0284c7)"
+                    : "var(--text-muted)",
+                  fontWeight: accountChanged ? 600 : 400,
+                }}
+              >
+                {accountChanged ? "● Unsaved changes" : "✓ All changes saved"}
+              </span>
+            </div>
+
 
             <BioAndInterestsCard
               bio={settingsForm.bio || ""}
@@ -929,6 +1038,7 @@ import Tabs from "@mui/material/Tabs";
               onBioSave={handleBioSave}
               onTagsSave={handleTagsSave}
               onDirtyChange={setBioDirty}
+              onDraftChange={setBioDraft}
               registerActions={(actions) => {
                 bioActionsRef.current = actions;
               }}
@@ -1332,25 +1442,251 @@ import Tabs from "@mui/material/Tabs";
                 </div>
               </div>
             </div>
-            {generalChanged && (
-              <div className="settings-tab-footer">
+            <div className="settings-tab-footer">
+              <button
+                type="button"
+                className="btn"
+                onClick={handleGeneralSave}
+                disabled={!generalChanged || menteeProfileSaving}
+              >
+                {menteeProfileSaving ? "Saving..." : "Save changes"}
+              </button>
+              {generalChanged && (
                 <button
-                  className="btn"
-                  onClick={handleGeneralSave}
+                  type="button"
+                  className="btn secondary"
+                  onClick={() => {
+                    try {
+                      if (generalSavedRef.current) {
+                        setMenteeProfile(JSON.parse(generalSavedRef.current));
+                        generalEditedRef.current = false;
+                      }
+                    } catch {
+                      /* ignore */
+                    }
+                  }}
                   disabled={menteeProfileSaving}
                 >
-                  {menteeProfileSaving ? "Saving..." : "Save changes"}
+                  Discard
                 </button>
-                {generalMissingCount > 0 && (
-                  <p className="field-helper settings-helper-text" role="status">
-                    {generalMissingCount} required field
-                    {generalMissingCount === 1 ? "" : "s"} still missing.
+              )}
+              {generalMissingCount > 0 ? (
+                <p
+                  className="field-helper settings-helper-text"
+                  role="status"
+                  style={{ marginLeft: "auto", color: "#e11d48", fontWeight: 500 }}
+                >
+                  {generalMissingCount} required field
+                  {generalMissingCount === 1 ? "" : "s"} still missing.
+                </p>
+              ) : (
+                <span
+                  className="settings-helper-text"
+                  style={{
+                    marginLeft: "auto",
+                    fontSize: "13px",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "6px",
+                    color: generalChanged
+                      ? "var(--primary, #0284c7)"
+                      : "var(--text-muted)",
+                    fontWeight: generalChanged ? 600 : 400,
+                  }}
+                >
+                  {generalChanged ? "● Unsaved changes" : "✓ All changes saved"}
+                </span>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className="settings-sidebar-column">
+            {/* Live Profile Directory Preview Card */}
+            <div className="settings-preview-card kasandigan-card">
+              <div className="settings-card-head">
+                <div className="kasandigan-card-head-title">
+                  <span className="settings-preview-icon-pill">
+                    <DashboardIcon name="userCircle" size={16} />
+                  </span>
+                  <div>
+                    <h3 className="settings-preview-title">Live Directory Preview</h3>
+                    <p className="settings-preview-subtitle">How peers see you on PeerLink</p>
+                  </div>
+                </div>
+                <span className="settings-preview-badge">Public Card</span>
+              </div>
+
+              <div className="settings-preview-body">
+                <div className="settings-preview-hero">
+                  <div className="settings-preview-avatar">
+                    {settingsForm.avatar_url ? (
+                      <img
+                        src={settingsForm.avatar_url}
+                        alt="Profile"
+                        className="settings-preview-avatar-img"
+                      />
+                    ) : (
+                      <div className="settings-preview-avatar-fallback">
+                        {getInitials(
+                          settingsForm.display_name ||
+                            user.display_name ||
+                            user.full_name ||
+                            "User",
+                        )}
+                      </div>
+                    )}
+                    <span className="settings-preview-status-dot" title="Active Account" />
+                  </div>
+                  <div className="settings-preview-info">
+                    <h4 className="settings-preview-name">
+                      {settingsForm.display_name ||
+                        user.display_name ||
+                        user.full_name ||
+                        "PeerLink User"}
+                    </h4>
+                    <p className="settings-preview-email">
+                      {settingsForm.email || user.email || "—"}
+                    </p>
+                    <div className="settings-preview-role-chip">
+                      <span className="settings-preview-role-dot" />
+                      <span>
+                        {user.is_staff
+                          ? "AMU Staff"
+                          : user.role === "mentor"
+                            ? "Mentor"
+                            : user.role === "mentee"
+                              ? "Mentee"
+                              : "User"}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="settings-preview-section">
+                  <span className="settings-preview-section-title">About</span>
+                  <p className="settings-preview-bio">
+                    {displayBio ? (
+                      displayBio
+                    ) : (
+                      <span className="settings-preview-placeholder">
+                        No bio added yet. Write a short introduction on the left to stand out.
+                      </span>
+                    )}
                   </p>
-                )}
+                </div>
+
+                <div className="settings-preview-section">
+                  <span className="settings-preview-section-title">Topics &amp; Interests</span>
+                  <div className="settings-preview-tags">
+                    {displayTags && displayTags.length > 0 ? (
+                      displayTags.map((tag, idx) => (
+                        <span key={tag + idx} className="settings-preview-tag-pill">
+                          {tag}
+                        </span>
+                      ))
+                    ) : (
+                      <span className="settings-preview-placeholder">
+                        No interests added yet.
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="settings-preview-footer">
+                <span className="settings-preview-footer-icon">✓</span>
+                <span>Updates made here directly sync across the AMU matching directory.</span>
+              </div>
+            </div>
+
+            {/* Contextual Card 2: Security Guidelines or Institutional Guidance */}
+            {activeTab === "password" ? (
+              <div className="settings-security-guide-card kasandigan-card">
+                <div className="settings-card-head">
+                  <div className="kasandigan-card-head-title">
+                    <span className="settings-preview-icon-pill">
+                      <DashboardIcon name="lock" size={16} />
+                    </span>
+                    <div>
+                      <h3 className="settings-preview-title">Security Guidelines</h3>
+                      <p className="settings-preview-subtitle">Protecting your account</p>
+                    </div>
+                  </div>
+                  <span className="settings-preview-badge">Protected</span>
+                </div>
+                <ul className="settings-security-tips-list">
+                  <li>
+                    <span className="settings-security-check">✓</span>
+                    <div>
+                      <strong>Two-Step Verification</strong>
+                      <p>A 6-digit confirmation code ensures credential changes are fully authorized.</p>
+                    </div>
+                  </li>
+                  <li>
+                    <span className="settings-security-check">✓</span>
+                    <div>
+                      <strong>Strong Password Criteria</strong>
+                      <p>Use at least 10 characters combining uppercase, lowercase, and numbers.</p>
+                    </div>
+                  </li>
+                  <li>
+                    <span className="settings-security-check">✓</span>
+                    <div>
+                      <strong>10-Minute Code Lifetime</strong>
+                      <p>Security verification codes expire automatically after 10 minutes.</p>
+                    </div>
+                  </li>
+                </ul>
+              </div>
+            ) : activeTab === "academic" ? (
+              <div className="settings-security-guide-card kasandigan-card">
+                <div className="settings-card-head">
+                  <div className="kasandigan-card-head-title">
+                    <span className="settings-preview-icon-pill">
+                      <DashboardIcon name="graduationCap" size={16} />
+                    </span>
+                    <div>
+                      <h3 className="settings-preview-title">Institutional Record</h3>
+                      <p className="settings-preview-subtitle">Official enrolment sync</p>
+                    </div>
+                  </div>
+                  <span className="settings-preview-badge">Official</span>
+                </div>
+                <p className="settings-security-guide-desc">
+                  Student IDs, enrolled program, and year levels are officially managed by the institution.
+                </p>
+                <div className="settings-security-guide-callout">
+                  <strong>Need to request an update?</strong>
+                  <p>Contact your AMU coordinator to verify and update official enrolment records.</p>
+                </div>
+              </div>
+            ) : (
+              <div className="settings-security-guide-card kasandigan-card">
+                <div className="settings-card-head">
+                  <div className="kasandigan-card-head-title">
+                    <span className="settings-preview-icon-pill">
+                      <DashboardIcon name="building" size={16} />
+                    </span>
+                    <div>
+                      <h3 className="settings-preview-title">Account Integrity</h3>
+                      <p className="settings-preview-subtitle">Institutional sync</p>
+                    </div>
+                  </div>
+                  <span className="settings-preview-badge">Verified</span>
+                </div>
+                <p className="settings-security-guide-desc">
+                  Your full name and student credentials are verified against AMU enrolment records.
+                </p>
+                <div className="settings-security-guide-callout">
+                  <strong>Need to update official info?</strong>
+                  <p>Contact the Academic Mentoring Unit office if your registered details require updates.</p>
+                </div>
               </div>
             )}
           </div>
-        )}
+        </div>
 
         {(isDirty || justSaved) && (
           <div

@@ -562,94 +562,193 @@ import ExpandLess from "@mui/icons-material/ExpandLess";
           </div>
         </header>
 
-        {showStats && (weeklyHrs || menteesValue || experience || expertise) ? (
-          <div className="pmc-stats" role="list">
-            <StatItem label="Weekly hours" value={weeklyHrs} />
-            <StatItem
-              label={kind === "mentee" ? "Year level" : "Capacity"}
-              value={
-                kind === "mentee"
-                  ? yearLabel(person.year_level)
-                  : person.capacity != null
-                    ? `${person.capacity} mentees`
-                    : menteesValue
-              }
-            />
-            <StatItem
-              label={kind === "mentee" ? "Support need" : "Experience"}
-              value={kind === "mentee" ? expertise : experience || expertise}
-            />
-          </div>
-        ) : null}
+        {isHero ? (
+          <div className="pmc-hero-layout">
+            <div className="pmc-hero-col-main">
+              {showStats && (weeklyHrs || menteesValue || experience || expertise) ? (
+                <div className="pmc-stats" role="list">
+                  <StatItem label="Weekly hours" value={weeklyHrs} />
+                  <StatItem
+                    label={kind === "mentee" ? "Year level" : "Capacity"}
+                    value={
+                      kind === "mentee"
+                        ? yearLabel(person.year_level)
+                        : person.capacity != null
+                          ? `${person.capacity} mentees`
+                          : menteesValue
+                    }
+                  />
+                  <StatItem
+                    label={kind === "mentee" ? "Support need" : "Experience"}
+                    value={kind === "mentee" ? expertise : experience || expertise}
+                  />
+                </div>
+              ) : null}
 
-        {showWhy ? (
-          <MatchWhySection kind={kind} chips={chips} />
-        ) : (
-          <p className="pmc-fallback">
-            Good overall fit based on your mentoring preferences
-          </p>
-        )}
+              {bio ? (
+                <section className="pmc-section">
+                  <p className="pmc-section-label">About & mentoring style</p>
+                  <p
+                    className={
+                      "pmc-bio" + (!bioOpen && bioNeedsClamp ? " pmc-bio--clamp" : "")
+                    }
+                  >
+                    {bio}
+                  </p>
+                  {bioNeedsClamp ? (
+                    <button
+                      type="button"
+                      className="pmc-bio-toggle"
+                      onClick={() => setBioOpen((open) => !open)}
+                    >
+                      {bioOpen ? "Show less" : "Read full bio"}
+                    </button>
+                  ) : null}
+                </section>
+              ) : null}
 
-        {showStory && bio ? (
-          <section className="pmc-section">
-            <p className="pmc-section-label">About & mentoring style</p>
-            <p
-              className={
-                "pmc-bio" + (!bioOpen && bioNeedsClamp ? " pmc-bio--clamp" : "")
-              }
-            >
-              {bio}
-            </p>
-            {bioNeedsClamp ? (
-              <button
-                type="button"
-                className="pmc-bio-toggle"
-                onClick={() => setBioOpen((open) => !open)}
-              >
-                {bioOpen ? "Show less" : "Read full bio"}
-              </button>
-            ) : null}
-          </section>
-        ) : null}
-
-        {showStory && helpItems.length > 0 && kind === "mentor" ? (
-          <section className="pmc-section">
-            <p className="pmc-section-label">What I can help with</p>
-            <ul className="pmc-help">
-              {helpItems.map((item) => (
-                <li key={item}>{item}</li>
-              ))}
-            </ul>
-          </section>
-        ) : null}
-
-        {showStory ? (
-          <section className="pmc-section">
-            <p className="pmc-section-label">Communication preferences</p>
-            <div className="pmc-chips">
-              {comms.map((item) => (
-                <span key={item} className="pmc-chip pmc-chip--comm">
-                  {item}
-                </span>
-              ))}
+              {helpItems.length > 0 && kind === "mentor" ? (
+                <section className="pmc-section">
+                  <p className="pmc-section-label">What I can help with</p>
+                  <ul className="pmc-help">
+                    {helpItems.map((item) => (
+                      <li key={item}>{item}</li>
+                    ))}
+                  </ul>
+                </section>
+              ) : null}
             </div>
-          </section>
-        ) : null}
 
-        {slotsLeft != null && slotsLeft >= 0 && !isOfficial && kind === "mentor" ? (
-          <p className="pmc-slots">
-            {slotsLeft} slot{slotsLeft === 1 ? "" : "s"} left
-          </p>
-        ) : null}
+            <div className="pmc-hero-col-side">
+              {showWhy ? (
+                <MatchWhySection kind={kind} chips={chips} />
+              ) : (
+                <p className="pmc-fallback">
+                  Good overall fit based on your mentoring preferences
+                </p>
+              )}
 
-        {nextWindow ? (
-          <div className="pmc-next">
-            <EventAvailableOutlined fontSize="inherit" />
-            <span>
-              Next available: {formatNextWindow(nextWindow)}
-            </span>
+              {showStory ? (
+                <section className="pmc-section">
+                  <p className="pmc-section-label">Communication preferences</p>
+                  <div className="pmc-chips">
+                    {comms.map((item) => (
+                      <span key={item} className="pmc-chip pmc-chip--comm">
+                        {item}
+                      </span>
+                    ))}
+                  </div>
+                </section>
+              ) : null}
+
+              {slotsLeft != null && slotsLeft >= 0 && !isOfficial && kind === "mentor" ? (
+                <p className="pmc-slots">
+                  {slotsLeft} slot{slotsLeft === 1 ? "" : "s"} left
+                </p>
+              ) : null}
+
+              {nextWindow ? (
+                <div className="pmc-next">
+                  <EventAvailableOutlined fontSize="inherit" />
+                  <span>
+                    Next available: {formatNextWindow(nextWindow)}
+                  </span>
+                </div>
+              ) : null}
+            </div>
           </div>
-        ) : null}
+        ) : (
+          <>
+            {showStats && (weeklyHrs || menteesValue || experience || expertise) ? (
+              <div className="pmc-stats" role="list">
+                <StatItem label="Weekly hours" value={weeklyHrs} />
+                <StatItem
+                  label={kind === "mentee" ? "Year level" : "Capacity"}
+                  value={
+                    kind === "mentee"
+                      ? yearLabel(person.year_level)
+                      : person.capacity != null
+                        ? `${person.capacity} mentees`
+                        : menteesValue
+                  }
+                />
+                <StatItem
+                  label={kind === "mentee" ? "Support need" : "Experience"}
+                  value={kind === "mentee" ? expertise : experience || expertise}
+                />
+              </div>
+            ) : null}
+
+            {showWhy ? (
+              <MatchWhySection kind={kind} chips={chips} />
+            ) : (
+              <p className="pmc-fallback">
+                Good overall fit based on your mentoring preferences
+              </p>
+            )}
+
+            {showStory && bio ? (
+              <section className="pmc-section">
+                <p className="pmc-section-label">About & mentoring style</p>
+                <p
+                  className={
+                    "pmc-bio" + (!bioOpen && bioNeedsClamp ? " pmc-bio--clamp" : "")
+                  }
+                >
+                  {bio}
+                </p>
+                {bioNeedsClamp ? (
+                  <button
+                    type="button"
+                    className="pmc-bio-toggle"
+                    onClick={() => setBioOpen((open) => !open)}
+                  >
+                    {bioOpen ? "Show less" : "Read full bio"}
+                  </button>
+                ) : null}
+              </section>
+            ) : null}
+
+            {showStory && helpItems.length > 0 && kind === "mentor" ? (
+              <section className="pmc-section">
+                <p className="pmc-section-label">What I can help with</p>
+                <ul className="pmc-help">
+                  {helpItems.map((item) => (
+                    <li key={item}>{item}</li>
+                  ))}
+                </ul>
+              </section>
+            ) : null}
+
+            {showStory ? (
+              <section className="pmc-section">
+                <p className="pmc-section-label">Communication preferences</p>
+                <div className="pmc-chips">
+                  {comms.map((item) => (
+                    <span key={item} className="pmc-chip pmc-chip--comm">
+                      {item}
+                    </span>
+                  ))}
+                </div>
+              </section>
+            ) : null}
+
+            {slotsLeft != null && slotsLeft >= 0 && !isOfficial && kind === "mentor" ? (
+              <p className="pmc-slots">
+                {slotsLeft} slot{slotsLeft === 1 ? "" : "s"} left
+              </p>
+            ) : null}
+
+            {nextWindow ? (
+              <div className="pmc-next">
+                <EventAvailableOutlined fontSize="inherit" />
+                <span>
+                  Next available: {formatNextWindow(nextWindow)}
+                </span>
+              </div>
+            ) : null}
+          </>
+        )}
 
         <footer className="pmc-actions">
           {showPrimary ? (

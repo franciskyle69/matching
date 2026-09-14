@@ -693,18 +693,36 @@
     return (
       <div
         className={
-          "card mentoring-preferences-page mentor-matching-profile-page page-shell" +
+          "mentoring-preferences-page mentor-matching-profile-page page-shell" +
           (embedded ? " is-embedded" : "")
         }
       >
         {!embedded && (
-          <header className="complete-profile-header">
-            <h1 className="page-title">Mentor matching profile</h1>
-            <p className="page-subtitle">
-              Keep your subjects, competencies, expertise, and
-              availability up to date so we can recommend the right mentees for
-              you.
-            </p>
+          <header className="kasandigan-header">
+            <div className="kasandigan-header-content">
+              <div className="kasandigan-badge">
+                <span className="kasandigan-badge-dot" />
+                <span>Academic Mentoring Unit • Mentor Profile</span>
+              </div>
+              <h1 className="kasandigan-title">Mentor Matching Profile</h1>
+              <p className="kasandigan-subtitle">
+                Keep your subjects, competencies, expertise, and availability up to date so we can recommend the right mentees for you.
+              </p>
+            </div>
+            <div className="kasandigan-header-actions">
+              <span
+                className="kasandigan-badge"
+                style={{
+                  background: "#ffffff",
+                  border: "1px solid #bae6fd",
+                  color: "#0284c7",
+                  fontWeight: 600,
+                }}
+              >
+                <span className="kasandigan-badge-dot" style={{ background: "#0ea5e9" }} />
+                <span>Peer Mentor</span>
+              </span>
+            </div>
           </header>
         )}
 

@@ -56,8 +56,8 @@
               src={LOGO_URL}
               alt={LOGO_ALT}
               className="amu-site-footer-logo"
-              width="72"
-              height="32"
+              width="36"
+              height="36"
             />
             <div>
               <p className="amu-site-footer-mini-title">

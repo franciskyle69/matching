@@ -2,7 +2,7 @@
   "use strict";
   window.DashboardApp = window.DashboardApp || {};
 
-  window.DashboardApp.LOGO_URL = "/static/assets/logo.png";
+  window.DashboardApp.LOGO_URL = "/static/assets/logo_icon.png";
   window.DashboardApp.LOGO_ALT = "AMU Mentoring";
 
   window.DashboardApp.FOOTER = {

@@ -10,8 +10,8 @@
 
 .auth-left-logo {
   width: auto;
-  max-height: 68px;
-  max-width: 140px;
+  max-height: 56px;
+  max-width: 220px;
   object-fit: contain;
 }
 
@@ -108,40 +108,40 @@
  * --text invert in dark mode and render near-black on the dark card).
  */
 .auth-page {
-  color-scheme: dark;
+  color-scheme: light;
 }
 
 .auth-page .auth-info-title,
 .auth-page .auth-title,
 .auth-page .auth-brand {
-  color: #fff;
+  color: #0f172a;
 }
 
 .auth-page .auth-subtitle,
 .auth-page .muted {
-  color: rgba(255, 255, 255, 0.72);
+  color: #475569;
 }
 
 .auth-page .auth-field label,
 .auth-page .auth-field-label {
-  color: rgba(255, 255, 255, 0.92);
+  color: #334155;
 }
 
 .auth-page .auth-field-helper {
-  color: rgba(255, 255, 255, 0.62);
+  color: #64748b;
 }
 
 .auth-page .auth-field input,
 .auth-page .auth-field select,
 .auth-page .auth-field textarea {
-  background: rgba(15, 23, 42, 0.45);
-  border-color: rgba(255, 255, 255, 0.14);
-  color: #fff;
+  background: #ebf0f7;
+  border-color: rgba(166, 180, 200, 0.5);
+  color: #0f172a;
 }
 
 .auth-page .auth-field input::placeholder,
 .auth-page .auth-field textarea::placeholder {
-  color: rgba(255, 255, 255, 0.5);
+  color: #94a3b8;
 }
 
 .auth-page .auth-field select option {
@@ -256,11 +256,11 @@
   width: min(100%, 420px);
   padding: 32px 28px 24px;
   border-radius: 20px;
-  background: rgba(25, 21, 55, 0.92);
+  background: rgba(15, 23, 42, 0.92);
   border: 1px solid rgba(245, 158, 11, 0.3);
   box-shadow:
     0 24px 64px rgba(0, 0, 0, 0.45),
-    0 0 0 1px rgba(124, 58, 237, 0.12),
+    0 0 0 1px rgba(14, 165, 233, 0.12),
     inset 0 1px 0 rgba(255, 255, 255, 0.06);
   backdrop-filter: blur(18px);
   -webkit-backdrop-filter: blur(18px);
@@ -308,7 +308,7 @@
 
 .auth-oauth-modal-close:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.45);
+  box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.45);
 }
 
 .auth-oauth-modal-badge {
@@ -369,13 +369,14 @@
 .auth-oauth-modal-primary {
   border: 0;
   color: #fff;
-  background: linear-gradient(135deg, #7c3aed 0%, #6366f1 100%);
-  box-shadow: 0 10px 24px rgba(124, 58, 237, 0.35);
+  background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
+  box-shadow: 0 10px 24px rgba(14, 165, 233, 0.35);
 }
 
 .auth-oauth-modal-primary:hover {
   transform: translateY(-1px);
-  box-shadow: 0 14px 28px rgba(124, 58, 237, 0.45);
+  background: linear-gradient(135deg, #38bdf8 0%, #0ea5e9 100%);
+  box-shadow: 0 14px 28px rgba(14, 165, 233, 0.45);
 }
 
 .auth-oauth-modal-primary .auth-social-icon {
@@ -397,7 +398,7 @@
 .auth-oauth-modal-primary:focus-visible,
 .auth-oauth-modal-secondary:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.45);
+  box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.45);
 }
 
 .auth-page .MuiAlert-outlinedError,

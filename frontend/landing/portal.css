@@ -1,16 +1,29 @@
-/* PeerLink role portal — matches dashboard auth-page glass aesthetic */
+/* ═══════════════════════════════════════════════════════════════════
+   PeerLink Role Portal — Neumorphism (Soft UI / Extruded Plastic)
+   Strict Light Mode: Dual-source lighting on porcelain canvas
+   ═══════════════════════════════════════════════════════════════════ */
 
 :root {
-  --portal-indigo-600: #352c90;
-  --portal-indigo-700: #22177a;
-  --portal-indigo-900: #120c55;
-  --portal-white: #ffffff;
-  --portal-text: rgba(255, 255, 255, 0.92);
-  --portal-text-muted: rgba(255, 255, 255, 0.62);
-  --portal-border: rgba(255, 255, 255, 0.12);
-  --portal-card-bg: rgba(15, 23, 42, 0.48);
-  --portal-radius: 24px;
-  --portal-font: "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  --neu-base: #ebf0f7;
+  --neu-light: #ffffff;
+  --neu-dark: rgba(166, 180, 200, 0.55);
+  --neu-dark-strong: rgba(150, 165, 185, 0.75);
+  --neu-primary: #0284c7;
+  --neu-primary-hover: #0ea5e9;
+
+  --neu-flat: 8px 8px 20px var(--neu-dark), -8px -8px 20px var(--neu-light);
+  --neu-flat-lg: 14px 14px 34px var(--neu-dark-strong), -14px -14px 34px var(--neu-light);
+  --neu-flat-sm: 5px 5px 12px var(--neu-dark), -5px -5px 12px var(--neu-light);
+  --neu-flat-xs: 3px 3px 8px var(--neu-dark), -3px -3px 8px var(--neu-light);
+  --neu-pressed: inset 3px 3px 7px var(--neu-dark), inset -3px -3px 7px var(--neu-light);
+  --neu-pressed-sm: inset 2px 2px 5px var(--neu-dark), inset -2px -2px 5px var(--neu-light);
+  --neu-rim: 1px solid rgba(255, 255, 255, 0.85);
+
+  --portal-text-main: #0f172a;
+  --portal-text-sub: #475569;
+  --portal-text-muted: #64748b;
+  --portal-radius: 28px;
+  --portal-font: "Plus Jakarta Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
 }
 
 *,
@@ -19,12 +32,14 @@
   box-sizing: border-box;
 }
 
+/* ── 1. Page Background ────────────────────────────────────────── */
+
 .portal-page {
   margin: 0;
   min-height: 100dvh;
   font-family: var(--portal-font);
-  color: var(--portal-text);
-  background: #000;
+  color: var(--portal-text-main);
+  background-color: var(--neu-base);
   -webkit-font-smoothing: antialiased;
   display: flex;
   flex-direction: column;
@@ -34,25 +49,63 @@
   padding: 24px;
   position: relative;
   overflow-x: hidden;
+  color-scheme: light !important;
 }
 
 .portal-page::before {
   content: "";
   position: fixed;
   inset: 0;
-  background: url("/static/assets/auth-background.png?v=2") center / cover no-repeat;
+  background: radial-gradient(circle at 50% 30%, rgba(14, 165, 233, 0.08), transparent 60%);
   z-index: 0;
   pointer-events: none;
 }
 
 .portal-page::after {
-  content: "";
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.55);
-  z-index: 0;
-  pointer-events: none;
+  display: none;
 }
+
+/* ── 2. Top Back Pill ──────────────────────────────────────────── */
+
+.portal-landing-back {
+  position: fixed;
+  top: 20px;
+  left: 20px;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px 10px 14px;
+  border-radius: 999px;
+  border: var(--neu-rim);
+  background: var(--neu-base);
+  color: #0f172a;
+  box-shadow: var(--neu-flat-xs);
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.portal-landing-back svg {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  color: var(--neu-primary);
+}
+
+.portal-landing-back:hover {
+  color: var(--neu-primary);
+  box-shadow: var(--neu-flat-sm);
+  transform: translateY(-1.5px);
+}
+
+.portal-landing-back:active {
+  box-shadow: var(--neu-pressed-sm);
+  transform: translateY(1px);
+}
+
+/* ── 3. Main Extruded Slab (Portal Card) ───────────────────────── */
 
 .portal-card {
   position: relative;
@@ -63,15 +116,10 @@
   flex-shrink: 0;
   display: grid;
   grid-template-columns: 1fr 1px 1fr;
-  background: var(--portal-card-bg);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
+  background: var(--neu-base);
   border-radius: var(--portal-radius);
-  border: 1px solid var(--portal-border);
-  box-shadow:
-    0 8px 32px rgba(0, 0, 0, 0.35),
-    0 0 0 1px rgba(255, 255, 255, 0.05),
-    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  border: 1.5px solid rgba(255, 255, 255, 0.9);
+  box-shadow: var(--neu-flat-lg);
   overflow: hidden;
   animation: portal-scale-in 0.34s cubic-bezier(0.16, 1, 0.3, 1) backwards;
 }
@@ -88,7 +136,8 @@
 }
 
 .portal-divider {
-  background: rgba(255, 255, 255, 0.1);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.8), rgba(166, 180, 200, 0.5), rgba(255, 255, 255, 0.8));
+  box-shadow: 1px 0 0 #ffffff;
   margin: 24px 0;
 }
 
@@ -97,11 +146,14 @@
   min-height: 100%;
 }
 
+/* ── 4. Brand Panel (Left) ─────────────────────────────────────── */
+
 .portal-panel--brand {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
   gap: 24px;
+  background: var(--neu-base);
 }
 
 .portal-brand-inner {
@@ -111,13 +163,50 @@
   gap: 16px;
 }
 
-.portal-brand-logo {
-  width: auto;
-  height: 72px;
-  max-width: 120px;
-  max-height: 72px;
+.portal-brand-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.portal-brand-icon {
+  width: 46px;
+  height: 46px;
   object-fit: contain;
-  filter: brightness(1.08);
+  filter: drop-shadow(0 2px 8px rgba(14, 165, 233, 0.4));
+}
+
+.portal-brand-text-block {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  line-height: 1.15;
+}
+
+.portal-brand-title-main {
+  font-size: 1.55rem;
+  font-weight: 800;
+  letter-spacing: -0.015em;
+  line-height: 1.15;
+}
+
+.portal-brand-title-main .brand-peer {
+  color: #0f172a;
+  font-weight: 800;
+}
+
+.portal-brand-title-main .brand-link {
+  color: #0284c7;
+  font-weight: 800;
+}
+
+.portal-brand-subtitle-main {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #0284c7;
+  letter-spacing: 0.01em;
+  margin-top: 2px;
+  line-height: 1.15;
 }
 
 .portal-brand-title {
@@ -126,14 +215,14 @@
   font-weight: 700;
   letter-spacing: -0.02em;
   line-height: 1.2;
-  color: var(--portal-white);
+  color: #0f172a;
 }
 
 .portal-brand-text {
   margin: 0;
   font-size: 0.95rem;
   line-height: 1.55;
-  color: var(--portal-text-muted);
+  color: var(--portal-text-sub);
   max-width: 28ch;
 }
 
@@ -145,7 +234,7 @@
   flex-direction: column;
   gap: 8px;
   font-size: 0.875rem;
-  color: rgba(255, 255, 255, 0.78);
+  color: #334155;
 }
 
 .portal-brand-points li {
@@ -156,24 +245,25 @@
 
 .portal-brand-points li::before {
   content: "";
-  width: 6px;
-  height: 6px;
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #6366f1, #a78bfa);
+  background: linear-gradient(135deg, #0ea5e9, #0284c7);
+  box-shadow: 1px 1px 3px rgba(14, 165, 233, 0.4);
   flex-shrink: 0;
 }
 
 .portal-brand-footer {
   margin: 0;
   font-size: 0.78rem;
-  color: rgba(255, 255, 255, 0.55);
+  color: var(--portal-text-muted);
   line-height: 1.5;
 }
 
 .portal-brand-footer-unit {
   margin: 0 0 6px;
   font-weight: 600;
-  color: rgba(255, 255, 255, 0.82);
+  color: #0f172a;
 }
 
 .portal-brand-footer-links {
@@ -181,12 +271,12 @@
 }
 
 .portal-brand-footer-links a {
-  color: rgba(255, 255, 255, 0.72);
+  color: var(--neu-primary);
   text-decoration: none;
+  font-weight: 600;
 }
 
 .portal-brand-footer-links a:hover {
-  color: #fff;
   text-decoration: underline;
 }
 
@@ -199,24 +289,28 @@
   padding: 0 12px 8px;
   text-align: center;
   font-size: 0.8rem;
-  color: rgba(255, 255, 255, 0.55);
+  color: var(--portal-text-muted);
   line-height: 1.6;
   flex-shrink: 0;
 }
 
 .portal-page-footer a {
-  color: rgba(255, 255, 255, 0.85);
+  color: var(--neu-primary);
   text-decoration: none;
+  font-weight: 600;
 }
 
 .portal-page-footer a:hover {
   text-decoration: underline;
 }
 
+/* ── 5. Actions Panel (Right) ──────────────────────────────────── */
+
 .portal-panel--actions {
   display: flex;
   flex-direction: column;
   justify-content: center;
+  background: var(--neu-base);
 }
 
 .portal-step {
@@ -248,10 +342,10 @@
 .portal-kicker {
   margin: 0 0 6px;
   font-size: 0.75rem;
-  font-weight: 600;
+  font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: rgba(167, 139, 250, 0.95);
+  color: var(--neu-primary);
 }
 
 .portal-step-title {
@@ -259,72 +353,78 @@
   font-size: 1.5rem;
   font-weight: 700;
   letter-spacing: -0.02em;
-  color: var(--portal-white);
+  color: #0f172a;
 }
 
 .portal-step-sub {
   margin: 0 0 24px;
   font-size: 0.9rem;
   line-height: 1.5;
-  color: var(--portal-text-muted);
+  color: var(--portal-text-sub);
 }
 
 .portal-selected-role {
-  color: #c4b5fd;
+  color: var(--neu-primary);
   font-weight: 600;
 }
 
 .portal-role-grid {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
   width: 100%;
 }
+
+/* ── 6. Extruded Role Selection Cards ──────────────────────────── */
 
 .portal-role-card {
   display: flex;
   align-items: center;
   gap: 14px;
   width: 100%;
-  padding: 14px 16px;
-  border-radius: 14px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(255, 255, 255, 0.04);
-  color: inherit;
+  padding: 16px 18px;
+  border-radius: 18px;
+  border: var(--neu-rim);
+  background: var(--neu-base);
+  color: #0f172a;
   font-family: inherit;
   text-align: left;
   cursor: pointer;
+  box-shadow: var(--neu-flat-xs);
   transition:
-    border-color 0.18s ease,
-    background 0.18s ease,
-    transform 0.18s ease,
-    box-shadow 0.18s ease;
+    box-shadow 0.22s ease,
+    transform 0.22s ease,
+    border-color 0.22s ease;
 }
 
 .portal-role-card:hover {
-  border-color: rgba(255, 255, 255, 0.22);
-  background: rgba(255, 255, 255, 0.08);
-  transform: translateY(-1px);
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+  border-color: rgba(14, 165, 233, 0.5);
+  transform: translateY(-2px);
+  box-shadow: var(--neu-flat-sm);
 }
 
 .portal-role-card:focus-visible {
-  outline: 2px solid #a78bfa;
+  outline: 2px solid var(--neu-primary);
   outline-offset: 2px;
 }
 
 .portal-role-card:active {
-  transform: translateY(0);
+  box-shadow: var(--neu-pressed-sm);
+  transform: translateY(1px);
 }
 
+/* Sunken Molded Icon Wells inside Role Cards */
 .portal-role-icon {
   flex-shrink: 0;
-  width: 44px;
-  height: 44px;
+  width: 46px;
+  height: 46px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 12px;
+  border-radius: 14px;
+  background: var(--neu-base);
+  box-shadow: var(--neu-pressed-sm);
+  border: 1px solid rgba(255, 255, 255, 0.7);
 }
 
 .portal-role-icon svg {
@@ -333,18 +433,15 @@
 }
 
 .portal-role-card--staff .portal-role-icon {
-  background: rgba(251, 191, 36, 0.15);
-  color: #fcd34d;
+  color: #d97706;
 }
 
 .portal-role-card--mentor .portal-role-icon {
-  background: rgba(99, 102, 241, 0.2);
-  color: #a5b4fc;
+  color: #0284c7;
 }
 
 .portal-role-card--mentee .portal-role-icon {
-  background: rgba(52, 211, 153, 0.15);
-  color: #6ee7b7;
+  color: #16a34a;
 }
 
 .portal-role-text {
@@ -356,99 +453,71 @@
 
 .portal-role-name {
   font-size: 1rem;
-  font-weight: 600;
-  color: var(--portal-white);
+  font-weight: 700;
+  color: #0f172a;
 }
 
 .portal-role-desc {
-  font-size: 0.8rem;
-  color: var(--portal-text-muted);
+  font-size: 0.82rem;
+  color: var(--portal-text-sub);
 }
 
 .portal-footnote {
   margin: 20px 0 0;
   font-size: 0.85rem;
   text-align: center;
+  color: var(--portal-text-muted);
 }
 
 .portal-footnote a {
-  color: rgba(255, 255, 255, 0.55);
+  color: var(--neu-primary);
   text-decoration: none;
-  transition: color 0.15s ease;
+  font-weight: 600;
 }
 
 .portal-footnote a:hover {
-  color: #c4b5fd;
+  text-decoration: underline;
 }
 
-.portal-landing-back {
-  position: fixed;
-  top: 20px;
-  left: 20px;
-  z-index: 2;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 14px 8px 10px;
-  border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  background: rgba(15, 23, 42, 0.55);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  color: rgba(255, 255, 255, 0.9);
-  font-size: 0.875rem;
-  font-weight: 600;
-  text-decoration: none;
-  transition:
-    background 0.15s ease,
-    border-color 0.15s ease,
-    color 0.15s ease;
-}
-
-.portal-landing-back svg {
-  width: 18px;
-  height: 18px;
-  flex-shrink: 0;
-}
-
-.portal-landing-back:hover {
-  color: #fff;
-  background: rgba(15, 23, 42, 0.72);
-  border-color: rgba(255, 255, 255, 0.28);
-}
+/* ── 7. Step 2 & Actions Buttons ───────────────────────────────── */
 
 .portal-back-btn {
   align-self: flex-start;
-  width: 36px;
-  height: 36px;
-  margin-bottom: 8px;
+  width: 38px;
+  height: 38px;
+  margin-bottom: 12px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  border: var(--neu-rim);
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.06);
-  color: rgba(255, 255, 255, 0.85);
+  background: var(--neu-base);
+  color: #0f172a;
+  box-shadow: var(--neu-flat-xs);
   cursor: pointer;
-  transition:
-    background 0.15s ease,
-    border-color 0.15s ease;
+  transition: all 0.2s ease;
 }
 
 .portal-back-btn svg {
   width: 18px;
   height: 18px;
+  color: var(--neu-primary);
 }
 
 .portal-back-btn:hover {
-  background: rgba(255, 255, 255, 0.12);
-  border-color: rgba(255, 255, 255, 0.28);
+  box-shadow: var(--neu-flat-sm);
+  transform: translateY(-1.5px);
+}
+
+.portal-back-btn:active {
+  box-shadow: var(--neu-pressed-sm);
+  transform: translateY(1px);
 }
 
 .portal-auth-actions {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
   width: 100%;
 }
 
@@ -457,61 +526,68 @@
   align-items: center;
   justify-content: center;
   width: 100%;
-  min-height: 46px;
-  padding: 12px 18px;
-  border-radius: 12px;
-  font-size: 0.9rem;
+  min-height: 48px;
+  padding: 13px 20px;
+  border-radius: 14px;
+  font-size: 0.95rem;
   font-weight: 600;
   font-family: inherit;
   text-decoration: none;
   cursor: pointer;
-  transition:
-    transform 0.15s ease,
-    box-shadow 0.15s ease,
-    background 0.15s ease,
-    border-color 0.15s ease;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
+/* Tactile Convex Primary Button */
 .portal-btn--primary {
-  border: none;
-  color: var(--portal-white);
-  background: linear-gradient(
-    135deg,
-    var(--portal-indigo-600) 0%,
-    var(--portal-indigo-700) 100%
-  );
-  box-shadow: 0 4px 14px rgba(34, 23, 122, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  color: #ffffff;
+  background: linear-gradient(145deg, #0ea5e9, #0284c7);
+  box-shadow:
+    4px 4px 14px rgba(14, 165, 233, 0.4),
+    3px 3px 8px var(--neu-dark),
+    -3px -3px 8px var(--neu-light);
 }
 
 .portal-btn--primary:hover {
-  background: linear-gradient(
-    135deg,
-    var(--portal-indigo-700) 0%,
-    var(--portal-indigo-900) 100%
-  );
-  transform: translateY(-1px);
-  box-shadow: 0 6px 18px rgba(34, 23, 122, 0.5);
+  background: linear-gradient(145deg, #38bdf8, #0284c7);
+  box-shadow:
+    6px 6px 18px rgba(14, 165, 233, 0.5),
+    -4px -4px 10px var(--neu-light);
+  transform: translateY(-1.5px);
+  color: #ffffff;
 }
 
+.portal-btn--primary:active {
+  box-shadow:
+    inset 2px 2px 6px rgba(2, 132, 199, 0.75),
+    inset -2px -2px 6px rgba(255, 255, 255, 0.35);
+  transform: translateY(1px);
+}
+
+/* Extruded Secondary Button */
 .portal-btn--secondary {
-  border: 1px solid rgba(255, 255, 255, 0.22);
-  color: var(--portal-white);
-  background: rgba(255, 255, 255, 0.06);
+  border: var(--neu-rim);
+  color: #0f172a;
+  background: var(--neu-base);
+  box-shadow: var(--neu-flat-xs);
 }
 
 .portal-btn--secondary:hover {
-  background: rgba(255, 255, 255, 0.12);
-  border-color: rgba(255, 255, 255, 0.35);
-  transform: translateY(-1px);
+  color: var(--neu-primary);
+  box-shadow: var(--neu-flat-sm);
+  transform: translateY(-1.5px);
 }
 
-.portal-btn:active {
-  transform: translateY(0);
+.portal-btn--secondary:active {
+  box-shadow: var(--neu-pressed-sm);
+  transform: translateY(1px);
 }
 
 .portal-btn[hidden] {
   display: none !important;
 }
+
+/* ── 8. Mobile Responsiveness ──────────────────────────────────── */
 
 @media (max-width: 768px) {
   .portal-page {
@@ -524,7 +600,7 @@
   .portal-landing-back {
     top: 12px;
     left: 12px;
-    padding: 8px 12px 8px 8px;
+    padding: 8px 14px 8px 10px;
     font-size: 0.8125rem;
   }
 
@@ -542,13 +618,8 @@
   }
 
   .portal-panel--brand {
-    padding-bottom: 8px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  }
-
-  .portal-brand-logo {
-    width: 72px;
-    height: 72px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid rgba(166, 180, 200, 0.4);
   }
 
   .portal-brand-title {
@@ -561,216 +632,5 @@
 
   .portal-brand-footer {
     display: none;
-  }
-}
-
-/* Phase 1 SaaS overrides */
-:root {
-  --portal-font: "Plus Jakarta Sans", "Inter", "Segoe UI", system-ui, sans-serif;
-  --portal-bg: #f8fafc;
-  --portal-card-bg: #ffffff;
-  --portal-card-border: #e2e8f0;
-  --portal-text-main: #0f172a;
-  --portal-text-sub: #64748b;
-  --portal-primary: #4f46e5;
-  --portal-primary-hover: #4338ca;
-  --portal-surface: #eef2ff;
-}
-
-.portal-page {
-  color: var(--portal-text-main);
-  background: linear-gradient(180deg, #f8fafc 0%, #eef2ff 100%);
-}
-
-.portal-page::after {
-  background: rgba(255, 255, 255, 0.4);
-}
-
-.portal-card {
-  background: color-mix(in srgb, var(--portal-card-bg) 94%, transparent);
-  border: 1px solid var(--portal-card-border);
-  box-shadow: 0 18px 48px rgba(15, 23, 42, 0.12);
-  backdrop-filter: blur(10px);
-}
-
-.portal-divider {
-  background: var(--portal-card-border);
-}
-
-.portal-brand-title,
-.portal-step-title,
-.portal-role-name {
-  color: var(--portal-text-main);
-}
-
-.portal-brand-text,
-.portal-role-desc,
-.portal-step-sub,
-.portal-page-footer {
-  color: var(--portal-text-sub);
-}
-
-.portal-brand-footer {
-  color: var(--portal-text-sub);
-}
-
-.portal-brand-footer-unit {
-  color: var(--portal-text-main);
-}
-
-.portal-brand-footer-links a,
-.portal-page-footer a,
-.portal-footnote a {
-  color: color-mix(in srgb, var(--portal-text-main) 82%, var(--portal-primary));
-}
-
-.portal-brand-footer-links a:hover,
-.portal-page-footer a:hover,
-.portal-footnote a:hover {
-  color: var(--portal-primary);
-}
-
-.portal-brand-points li::before {
-  background: var(--portal-primary);
-}
-
-.portal-role-card {
-  border-color: var(--portal-card-border);
-  background: #fff;
-}
-
-.portal-role-card:hover {
-  border-color: color-mix(in srgb, var(--portal-primary) 46%, #cbd5e1);
-  background: var(--portal-surface);
-  box-shadow: 0 8px 24px rgba(79, 70, 229, 0.14);
-}
-
-.portal-btn--primary {
-  background: var(--portal-primary);
-  box-shadow: 0 10px 24px rgba(79, 70, 229, 0.25);
-}
-
-.portal-btn--primary:hover {
-  background: var(--portal-primary-hover);
-}
-
-.portal-btn--secondary {
-  border-color: var(--portal-card-border);
-  color: var(--portal-text-main);
-  background: #fff;
-}
-
-.portal-btn--secondary:hover {
-  background: var(--portal-surface);
-  border-color: color-mix(in srgb, var(--portal-primary) 45%, #cbd5e1);
-}
-
-.portal-landing-back {
-  border-color: var(--portal-card-border);
-  background: #fff;
-  color: var(--portal-text-main);
-}
-
-.portal-landing-back:hover {
-  background: var(--portal-surface);
-  border-color: color-mix(in srgb, var(--portal-primary) 45%, #cbd5e1);
-  color: var(--portal-primary);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --portal-bg: #0b1120;
-    --portal-card-bg: #111827;
-    --portal-card-border: rgba(148, 163, 184, 0.25);
-    --portal-text-main: #e2e8f0;
-    --portal-text-sub: #94a3b8;
-    --portal-primary: #818cf8;
-    --portal-primary-hover: #6366f1;
-    --portal-surface: #1e293b;
-  }
-
-  .portal-page {
-    color: var(--portal-text-main);
-    background: linear-gradient(180deg, #0b1120 0%, #111827 100%);
-  }
-
-  .portal-page::after {
-    background: rgba(2, 6, 23, 0.55);
-  }
-
-  .portal-card {
-    background: color-mix(in srgb, var(--portal-card-bg) 82%, transparent);
-    border-color: var(--portal-card-border);
-    box-shadow: 0 18px 48px rgba(2, 6, 23, 0.55);
-  }
-
-  .portal-divider {
-    background: rgba(148, 163, 184, 0.2);
-  }
-
-  .portal-brand-title,
-  .portal-step-title,
-  .portal-role-name {
-    color: var(--portal-text-main);
-  }
-
-  .portal-brand-text,
-  .portal-role-desc,
-  .portal-step-sub,
-  .portal-page-footer,
-  .portal-brand-footer {
-    color: var(--portal-text-sub);
-  }
-
-  .portal-brand-footer-unit {
-    color: color-mix(in srgb, var(--portal-text-main) 90%, #ffffff);
-  }
-
-  .portal-role-card {
-    background: color-mix(in srgb, var(--portal-card-bg) 85%, #1f2937);
-    border-color: rgba(148, 163, 184, 0.28);
-  }
-
-  .portal-role-card:hover {
-    background: color-mix(in srgb, var(--portal-surface) 85%, #111827);
-    border-color: color-mix(in srgb, var(--portal-primary) 38%, #475569);
-    box-shadow: 0 10px 26px rgba(2, 6, 23, 0.42);
-  }
-
-  .portal-btn--secondary {
-    background: color-mix(in srgb, var(--portal-card-bg) 88%, #1f2937);
-    border-color: rgba(148, 163, 184, 0.3);
-    color: var(--portal-text-main);
-  }
-
-  .portal-btn--secondary:hover {
-    background: color-mix(in srgb, var(--portal-surface) 88%, #111827);
-    border-color: color-mix(in srgb, var(--portal-primary) 40%, #64748b);
-  }
-
-  .portal-landing-back,
-  .portal-back-btn {
-    background: color-mix(in srgb, var(--portal-card-bg) 86%, #0f172a);
-    border-color: rgba(148, 163, 184, 0.3);
-    color: var(--portal-text-main);
-  }
-
-  .portal-landing-back:hover,
-  .portal-back-btn:hover {
-    background: color-mix(in srgb, var(--portal-surface) 90%, #111827);
-    border-color: color-mix(in srgb, var(--portal-primary) 40%, #64748b);
-    color: var(--portal-primary);
-  }
-
-  .portal-brand-footer-links a,
-  .portal-page-footer a,
-  .portal-footnote a {
-    color: color-mix(in srgb, var(--portal-text-main) 84%, var(--portal-primary));
-  }
-
-  .portal-brand-footer-links a:hover,
-  .portal-page-footer a:hover,
-  .portal-footnote a:hover {
-    color: var(--portal-primary);
   }
 }

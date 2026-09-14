@@ -10,28 +10,163 @@
       href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="/static/output.css?v=landing-fx-5" />
+    <link rel="stylesheet" href="/static/output.css?v=landing-fx-15" />
     <link rel="icon" href="/static/assets/logo.png" type="image/png" />
     <style>
-      .site-nav img[src*="logo.png"] {
-        max-height: 72px;
-        max-width: 160px;
-        width: auto;
-        height: auto;
-        object-fit: contain;
+      .site-logo-icon {
+        width: 42px !important;
+        height: 42px !important;
+        max-width: 42px !important;
+        max-height: 42px !important;
+        object-fit: contain !important;
       }
-      #site-footer img[src*="logo.png"],
-      #footer-contact img[src*="logo.png"] {
-        max-height: 48px;
-        max-width: 110px;
-        width: auto;
-        height: auto;
-        object-fit: contain;
+      .site-nav {
+        min-height: auto !important;
+      }
+      .site-nav > div {
+        min-height: 70px !important;
+        max-height: 76px !important;
+        padding-top: 8px !important;
+        padding-bottom: 8px !important;
+      }
+      #site-footer img,
+      #footer-contact img,
+      .site-footer-logo {
+        max-height: 38px !important;
+        max-width: 38px !important;
+        width: 38px !important;
+        height: 38px !important;
+        min-width: 38px !important;
+        min-height: 38px !important;
+        object-fit: contain !important;
+      }
+      .site-footer-grid {
+        display: flex !important;
+        flex-direction: row !important;
+        justify-content: space-between !important;
+        align-items: flex-start !important;
+        gap: 40px !important;
+        width: 100% !important;
+        max-width: 1200px !important;
+        margin: 0 auto !important;
+        box-sizing: border-box !important;
+      }
+      .site-footer-col-brand {
+        flex: 1.3 1 0% !important;
+        min-width: 260px !important;
+        max-width: 440px !important;
+      }
+      .site-footer-col-contact {
+        flex: 1 1 0% !important;
+        min-width: 220px !important;
+      }
+      .site-footer-col-links {
+        flex: 0.9 1 0% !important;
+        min-width: 180px !important;
+      }
+      @media (max-width: 768px) {
+        .site-footer-grid {
+          flex-direction: column !important;
+          gap: 28px !important;
+        }
+        .site-footer-col-brand,
+        .site-footer-col-contact,
+        .site-footer-col-links {
+          width: 100% !important;
+          max-width: 100% !important;
+          min-width: 0 !important;
+        }
+      }
+      .site-brand-text {
+        display: flex !important;
+        flex-direction: column !important;
+        justify-content: center !important;
+        text-align: left !important;
+        user-select: none !important;
+        line-height: 1.15 !important;
+      }
+      .site-brand-title {
+        font-family: 'Plus Jakarta Sans', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif !important;
+        font-size: 21px !important;
+        font-weight: 800 !important;
+        letter-spacing: -0.015em !important;
+        line-height: 1.15 !important;
+        white-space: nowrap !important;
+        transition: opacity 0.2s ease !important;
+      }
+      .site-brand-title .brand-peer {
+        color: #0f172a !important;
+        font-weight: 800 !important;
+      }
+      .site-brand-title .brand-link {
+        color: #0284c7 !important;
+        font-weight: 800 !important;
+      }
+      .site-brand-subtitle {
+        font-family: 'Plus Jakarta Sans', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif !important;
+        font-size: 13.5px !important;
+        font-weight: 600 !important;
+        letter-spacing: 0.01em !important;
+        color: #0284c7 !important;
+        margin-top: 2px !important;
+        line-height: 1.15 !important;
+        white-space: nowrap !important;
+        transition: opacity 0.2s ease !important;
+      }
+      .group:hover .site-brand-title,
+      .group:hover .site-brand-subtitle {
+        opacity: 0.9 !important;
+      }
+      .nav-link-pill {
+        white-space: nowrap !important;
+        font-size: 14.5px !important;
+        font-weight: 600 !important;
+        color: #475569 !important;
+      }
+      .nav-link-pill:hover {
+        color: #0f172a !important;
+      }
+      .nav-link-pill.is-active {
+        color: #0284c7 !important;
+        background: #ebf0f7 !important;
+        box-shadow: 3px 3px 8px rgba(166, 180, 200, 0.55), -3px -3px 8px #ffffff !important;
+      }
+      .card-hover-lift {
+        background: #ebf0f7 !important;
+        border: 1px solid rgba(255, 255, 255, 0.85) !important;
+        box-shadow: 8px 8px 20px rgba(166, 180, 200, 0.55), -8px -8px 20px #ffffff !important;
+        transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.28s ease, box-shadow 0.28s ease !important;
+      }
+      .card-hover-lift:hover {
+        transform: translateY(-4px) !important;
+        border-color: rgba(56, 189, 248, 0.4) !important;
+        box-shadow: 12px 12px 28px rgba(166, 180, 200, 0.7), -12px -12px 28px #ffffff, 0 0 16px rgba(14, 165, 233, 0.15) !important;
+      }
+      .feature-card-body {
+        color: #334155 !important;
+        font-size: 15px !important;
+        line-height: 1.6 !important;
+      }
+      .feature-section-sub {
+        color: #475569 !important;
+      }
+      #footer-contact .site-brand-title .brand-peer {
+        color: #ffffff !important;
+      }
+      #footer-contact .site-brand-title .brand-link {
+        color: #38bdf8 !important;
+      }
+      #footer-contact .site-brand-subtitle {
+        color: #38bdf8 !important;
+      }
+      #footer-contact h2 {
+        color: #ffffff !important;
       }
     </style>
+    <link rel="stylesheet" href="/static/landing-neumorphism.css?v=5" />
   </head>
 
-  <body class="text-white">
+  <body class="text-slate-900 bg-[#ebf0f7]">
     <div id="page-intro" class="page-intro" aria-hidden="true">
       <div class="page-intro-inner">
         <svg
@@ -67,81 +202,71 @@
     <!-- Asset URLs from Figma MCP (re-export from file if expired): proto Mo47QplY3UXke35hkDChWd -->
     <nav id="site-nav" class="site-nav" role="navigation" aria-label="Primary">
       <div
-        class="mx-auto flex w-full max-w-[min(100%,92rem)] min-h-[96px] items-center justify-between gap-4 px-6 sm:px-10 md:px-14 lg:px-16 xl:px-20 2xl:px-28"
+        class="mx-auto flex w-full max-w-[min(100%,92rem)] min-h-[70px] h-[74px] items-center justify-between gap-4 px-6 sm:px-10 md:px-14 lg:px-16 xl:px-20 2xl:px-28 relative z-10"
       >
         <a
           href="#hero"
-          class="inline-flex shrink-0 items-center justify-center transition-transform duration-300 hover:scale-105 active:scale-95"
-          aria-label="PeerLink home"
+          class="inline-flex shrink-0 items-center gap-3 sm:gap-3.5 transition-transform duration-300 hover:scale-[1.02] active:scale-[0.98] group text-left focus:outline-none focus:ring-2 focus:ring-sky-400/50 rounded-xl"
+          aria-label="Peerlink — Academic Mentoring Unit"
         >
-          <img
-            class="site-logo-img block h-14 w-auto sm:h-16 md:h-[72px] max-h-[72px] max-w-[160px] object-contain object-left align-middle"
-            width="160"
-            height="72"
-            alt="AMU Mentoring"
-            src="/static/assets/logo.png"
-          />
+          <div class="relative flex items-center justify-center shrink-0">
+            <div class="absolute -inset-1 rounded-full bg-gradient-to-tr from-sky-500/30 to-cyan-400/20 blur-sm opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+            <img
+              class="site-logo-icon relative block h-10 w-10 sm:h-11 sm:w-11 object-contain align-middle drop-shadow-[0_0_14px_rgba(56,189,248,0.5)] transition-transform duration-300 group-hover:scale-105"
+              width="44"
+              height="44"
+              alt="BukSU AMU Emblem"
+              src="/static/assets/logo_icon.png?v=authentic"
+            />
+          </div>
+          <div class="site-brand-text">
+            <span class="site-brand-title"><span class="brand-peer">Peer</span><span class="brand-link">link</span></span>
+            <span class="site-brand-subtitle">Academic Mentoring Unit</span>
+          </div>
         </a>
         <div
-          class="hidden lg:flex flex-1 items-center justify-center gap-8 xl:gap-12 text-[23px] font-medium tracking-tight"
+          class="hidden lg:flex items-center gap-1.5 xl:gap-2 p-1.5 rounded-full bg-white/[0.02]"
         >
-          <a
-            href="#hero"
-            class="nav-link-animate text-white hover:text-[#c2b8ff] transition-colors duration-300"
-            >Home</a
-          >
-          <a
-            href="#features"
-            class="nav-link-animate text-white hover:text-[#c2b8ff] transition-colors duration-300"
-            >Features</a
-          >
-          <a
-            href="#how"
-            class="nav-link-animate text-white hover:text-[#c2b8ff] transition-colors duration-300"
-            >How it Works</a
-          >
-          <a
-            href="#footer-contact"
-            class="nav-link-animate text-white hover:text-[#c2b8ff] transition-colors duration-300"
-            >Contact Us</a
-          >
+          <a href="#hero" class="nav-link-pill is-active">Home</a>
+          <a href="#features" class="nav-link-pill">Features</a>
+          <a href="#how" class="nav-link-pill">How it Works</a>
+          <a href="#footer-contact" class="nav-link-pill">Contact Us</a>
         </div>
         <div class="hidden lg:flex shrink-0 items-center gap-3">
           <a
             href="/app/#signin"
-            class="btn-motion min-w-[140px] h-[47px] inline-flex items-center justify-center rounded-[5px] border border-white/35 bg-black/55 text-white text-base shadow-[0px_2px_30px_rgba(0,0,0,0.25)] hover:bg-black/70 hover:border-white/50 hover:shadow-[0px_8px_32px_rgba(99,79,200,0.2)] hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98]"
+            class="nav-btn-login"
           >
             Log In
           </a>
           <a
             href="/portal/"
-            class="btn-motion min-w-[140px] h-[47px] inline-flex items-center justify-center rounded-[5px] bg-white text-black text-base border border-[#1c1c1c] shadow-[0px_2px_30px_rgba(0,0,0,0.25)] hover:bg-[#f5f3ff] hover:shadow-[0px_10px_36px_rgba(255,255,255,0.15)] hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98]"
+            class="nav-btn-signup"
           >
             Sign Up
           </a>
         </div>
         <button
           type="button"
-          class="lg:hidden shrink-0 rounded-md p-2 transition active:scale-90"
+          class="lg:hidden shrink-0 flex items-center justify-center size-11 rounded-xl bg-white/[0.05] border border-white/10 text-slate-200 hover:text-white hover:bg-white/[0.1] hover:border-sky-400/40 transition-all active:scale-90"
           id="menu-button"
           aria-label="Open menu"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
-            width="24"
-            height="24"
+            width="22"
+            height="22"
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
             stroke-width="2"
             stroke-linecap="round"
             stroke-linejoin="round"
-            class="size-6"
             aria-hidden="true"
           >
-            <path d="M4 5h16"></path>
+            <path d="M4 6h16"></path>
             <path d="M4 12h16"></path>
-            <path d="M4 19h16"></path>
+            <path d="M4 18h16"></path>
           </svg>
         </button>
       </div>
@@ -155,7 +280,7 @@
       <a href="#features" class="text-xl">Features</a>
       <a href="#how" class="text-xl">How it Works</a>
       <a href="#footer-contact" class="text-xl">Contact Us</a>
-      <a href="/app/#signin" class="text-[#c2b8ff]">Log In</a>
+      <a href="/app/#signin" class="text-[#38bdf8]">Log In</a>
       <a href="/portal/" class="text-white font-medium">Sign Up</a>
       <button
         type="button"
@@ -186,7 +311,7 @@
     >
       <div class="hero-space-bg pointer-events-none" aria-hidden="true"></div>
       <div
-        class="pointer-events-none absolute inset-0 z-[1] bg-[radial-gradient(ellipse_120%_80%_at_50%_-20%,rgba(124,90,255,0.22),transparent_55%)]"
+        class="pointer-events-none absolute inset-0 z-[1] bg-[radial-gradient(ellipse_120%_80%_at_50%_-20%,rgba(14,165,233,0.25),transparent_55%)]"
         aria-hidden="true"
       ></div>
       <div
@@ -224,7 +349,7 @@
         </p>
         <a
           href="/portal/"
-          class="reveal btn-motion hero-cta-pulse mt-6 md:mt-8 inline-flex h-14 md:h-16 min-w-[260px] md:min-w-[280px] items-center justify-center rounded-full bg-white px-8 md:px-10 text-base font-bold text-black border border-[#1c1c1c] shadow-[0px_2px_30px_rgba(0,0,0,0.25)] hover:bg-[#f5f3ff] hover:shadow-[0px_12px_40px_rgba(194,184,255,0.25)] hover:-translate-y-1 hover:scale-[1.02] active:translate-y-0 active:scale-[0.98]"
+          class="reveal btn-motion hero-cta-pulse mt-6 md:mt-8 inline-flex h-14 md:h-16 min-w-[260px] md:min-w-[280px] items-center justify-center rounded-full bg-white px-8 md:px-10 text-base font-bold text-black border border-[#1c1c1c] shadow-[0px_2px_30px_rgba(0,0,0,0.25)] hover:bg-[#f0f9ff] hover:shadow-[0px_12px_40px_rgba(56,189,248,0.30)] hover:-translate-y-1 hover:scale-[1.02] active:translate-y-0 active:scale-[0.98]"
           data-reveal
         >
           Start Your Journey
@@ -282,7 +407,7 @@
               Powerful Features
             </p>
             <p
-              class="mt-4 max-w-sm text-[17px] sm:text-[19px] text-[#9a9a9a] leading-relaxed"
+              class="mt-4 max-w-sm text-[17px] sm:text-[19px] text-slate-300 leading-relaxed"
             >
               Everything you need for successful mentorship
             </p>
@@ -320,7 +445,7 @@
                 AI-Powered Matching
               </h3>
               <p
-                class="mt-3 text-[15px] md:text-base leading-relaxed text-[#626262]"
+                class="mt-3 text-[15px] md:text-base leading-relaxed text-slate-300"
               >
                 XGBoost algorithm intelligently pairs mentees with compatible
                 mentors based on expertise, learning style, and goals.
@@ -353,7 +478,7 @@
                 Scheduling
               </h3>
               <p
-                class="mt-3 text-[15px] md:text-base leading-relaxed text-[#626262]"
+                class="mt-3 text-[15px] md:text-base leading-relaxed text-slate-300"
               >
                 Connect mentors and mentees with smart matching and clear
                 detection and automated reminders.
@@ -388,7 +513,7 @@
                 Notifications
               </h3>
               <p
-                class="mt-3 text-[15px] md:text-base leading-relaxed text-[#626262]"
+                class="mt-3 text-[15px] md:text-base leading-relaxed text-slate-300"
               >
                 Stay updated with announcements and matching notifications,
                 messages, and important updates.
@@ -421,7 +546,7 @@
                 Role-Based Access
               </h3>
               <p
-                class="mt-3 text-[15px] md:text-base leading-relaxed text-[#626262]"
+                class="mt-3 text-[15px] md:text-base leading-relaxed text-slate-300"
               >
                 Customized dashboards for admins, mentors, and mentees with
                 appropriate permissions.
@@ -454,7 +579,7 @@
                 Secure &amp; Reliable
               </h3>
               <p
-                class="mt-3 text-[15px] md:text-base leading-relaxed text-[#626262]"
+                class="mt-3 text-[15px] md:text-base leading-relaxed text-slate-300"
               >
                 Enterprise-grade security with role-based access control and
                 data protection.
@@ -490,7 +615,7 @@
                 Subject Management
               </h3>
               <p
-                class="mt-3 text-[15px] md:text-base leading-relaxed text-[#626262]"
+                class="mt-3 text-[15px] md:text-base leading-relaxed text-slate-300"
               >
                 Organize mentoring by academic subjects and track progress
                 across different areas.
@@ -729,7 +854,7 @@
 
     <div class="relative overflow-hidden">
       <img
-        src="/static/assets/mentorship-journey-bg.png"
+        src="/static/assets/mentorship-journey-bg.png?v=blue-theme-2"
         alt=""
         class="absolute inset-0 size-full object-cover object-top z-0"
       />
@@ -744,10 +869,10 @@
           data-reveal
         >
           <div
-            class="relative mx-auto max-w-4xl overflow-hidden rounded-[60px] md:rounded-[94px] text-center px-6 py-12 md:py-16 transition-transform duration-500 hover:scale-[1.01] bg-black/35 border border-[1.5px] border-[#c2b8ff]/70 shadow-[0_0_45px_rgba(194,184,255,0.35)]"
+            class="relative mx-auto max-w-4xl overflow-hidden rounded-[60px] md:rounded-[94px] text-center px-6 py-12 md:py-16 transition-transform duration-500 hover:scale-[1.01] bg-black/35 border border-[1.5px] border-[#38bdf8]/70 shadow-[0_0_45px_rgba(56,189,248,0.35)] text-white"
           >
             <img
-              src="/static/assets/mentorship-journey-bg.png"
+              src="/static/assets/mentorship-journey-bg.png?v=blue-theme-2"
               alt=""
               class="absolute inset-0 size-full object-cover object-top -z-10"
             />
@@ -755,25 +880,30 @@
               class="absolute inset-0 -z-10"
               style="background: rgba(0, 0, 0, 0.55)"
             ></div>
-            <img
-              src="/static/assets/logo.png"
-              alt=""
-              class="mx-auto h-12 w-auto max-h-12 max-w-[100px] object-contain mb-6"
-              width="100"
-              height="48"
-            />
+            <div class="flex items-center justify-center gap-3 mb-6">
+              <img
+                src="/static/assets/logo_icon.png"
+                alt="Peerlink Emblem"
+                class="h-12 w-12 object-contain drop-shadow-[0_0_16px_rgba(56,189,248,0.5)]"
+              />
+              <div class="site-brand-text text-left">
+                <span class="site-brand-title text-2xl sm:text-3xl" style="color: #ffffff !important;"><span class="brand-peer" style="color: #ffffff !important;">Peer</span><span class="brand-link" style="color: #38bdf8 !important;">link</span></span>
+                <span class="site-brand-subtitle text-xs sm:text-sm" style="color: #38bdf8 !important;">Academic Mentoring Unit</span>
+              </div>
+            </div>
             <h2
-              class="font-display font-medium text-3xl sm:text-4xl md:text-[56px] md:leading-[1.1] tracking-[-0.02em]"
+              class="font-display font-medium text-3xl sm:text-4xl md:text-[56px] md:leading-[1.1] tracking-[-0.02em] text-white"
+              style="color: #ffffff !important;"
             >
               Ready to Start Your Mentorship Journey?
             </h2>
-            <p class="mt-4 text-[#9e9da4] text-base max-w-xl mx-auto">
+            <p class="mt-4 text-slate-200 text-base max-w-xl mx-auto" style="color: #e2e8f0 !important;">
               Join hundreds of first-year IT students already benefiting from
               personalized mentorship
             </p>
             <a
               href="/portal/"
-              class="btn-motion mt-8 inline-flex h-[72px] md:h-[88px] min-w-[260px] items-center justify-center rounded-full bg-white px-10 text-lg md:text-2xl font-bold text-black border border-[#1c1c1c] shadow-[0px_2px_30px_rgba(0,0,0,0.25)] hover:bg-[#f5f3ff] hover:shadow-[0px_14px_44px_rgba(194,184,255,0.3)] hover:-translate-y-1 hover:scale-[1.03] active:translate-y-0 active:scale-[0.98]"
+              class="btn-motion mt-8 inline-flex h-[72px] md:h-[88px] min-w-[260px] items-center justify-center rounded-full bg-gradient-to-r from-[#7dd3fc] via-[#38bdf8] to-[#0284c7] text-[#031326] px-10 text-lg md:text-2xl font-bold border border-white/30 shadow-[0_4px_30px_rgba(56,189,248,0.45)] hover:shadow-[0_8px_40px_rgba(56,189,248,0.65)] hover:-translate-y-1 hover:scale-[1.03] active:translate-y-0 active:scale-[0.98]"
             >
               Get Started Now
             </a>
@@ -781,67 +911,78 @@
         </section>
 
         <footer
-          class="reveal bg-transparent px-6 md:px-16 lg:px-24 py-10 md:py-12 lg:py-14"
+          class="reveal bg-transparent px-6 md:px-12 lg:px-16 py-8 md:py-10"
           data-reveal
           id="site-footer"
+          style="background: #ebf0f7 !important; border-top: 1px solid rgba(166, 180, 200, 0.45) !important;"
         >
           <div
-            class="max-w-7xl mx-auto flex flex-col lg:flex-row gap-12 lg:gap-10 lg:justify-between lg:items-start relative z-10"
+            id="site-footer-grid"
+            class="site-footer-grid relative z-10"
+            style="display: flex !important; flex-direction: row !important; justify-content: space-between !important; align-items: flex-start !important; gap: 40px !important; width: 100% !important; max-width: 1200px !important; margin: 0 auto !important; box-sizing: border-box !important;"
           >
-            <div class="shrink-0 self-start max-w-md">
-              <img
-                src="/static/assets/logo.png"
-                alt="Bukidnon State University — Academic Mentoring Unit"
-                class="site-footer-logo mb-4 h-12 w-auto max-h-12 max-w-[110px] object-contain object-top"
-                width="110"
-                height="48"
-              />
-              <p
-                class="text-white text-lg md:text-xl font-semibold leading-snug"
-              >
-                Bukidnon State University — Academic Mentoring Unit
-              </p>
-              <p class="mt-3 text-[#9e9da4] text-base leading-relaxed">
+            <div class="site-footer-col-brand" style="flex: 1.3 1 0% !important; min-width: 260px !important; max-width: 440px !important;">
+              <div class="site-footer-brand-lockup" style="display: flex !important; align-items: center !important; gap: 14px !important; margin-bottom: 12px !important;">
+                <img
+                  src="/static/assets/logo_icon.png"
+                  alt="PeerLink Emblem"
+                  width="44"
+                  height="44"
+                  style="width: 44px !important; height: 44px !important; min-width: 44px !important; min-height: 44px !important; object-fit: contain !important; flex-shrink: 0 !important;"
+                />
+                <div style="display: flex !important; flex-direction: column !important; justify-content: center !important; text-align: left !important;">
+                  <div style="font-family: 'Plus Jakarta Sans', system-ui, sans-serif !important; font-size: 20px !important; font-weight: 800 !important; letter-spacing: -0.015em !important; line-height: 1.15 !important;">
+                    <span style="color: #0f172a !important;">Peer</span><span style="color: #0284c7 !important;">link</span>
+                    <span style="font-size: 13px !important; font-weight: 700 !important; color: #0284c7 !important; margin-left: 4px !important;">· Academic Mentoring Unit</span>
+                  </div>
+                  <div style="font-size: 14px !important; font-weight: 700 !important; color: #0f172a !important; line-height: 1.25 !important; margin-top: 3px !important;">
+                    Bukidnon State University
+                  </div>
+                </div>
+              </div>
+              <p style="color: #334155 !important; font-size: 13.5px !important; line-height: 1.55 !important; margin: 0 !important; max-width: 380px !important;">
                 Helping students succeed through mentoring, peer support, and
                 faculty consultations.
               </p>
             </div>
-            <div>
+            <div class="site-footer-col-contact" style="flex: 1 1 0% !important; min-width: 220px !important;">
               <h2
-                class="font-extrabold text-white text-xl md:text-2xl mb-4 tracking-wide uppercase"
+                style="color: #0f172a !important; font-size: 13px !important; font-weight: 800 !important; text-transform: uppercase !important; letter-spacing: 0.08em !important; margin-bottom: 12px !important;"
               >
                 Contact
               </h2>
               <ul
-                class="space-y-2 text-[#9e9da4] text-base md:text-lg leading-relaxed"
+                style="list-style: none !important; padding: 0 !important; margin: 0 !important; display: flex !important; flex-direction: column !important; gap: 8px !important; color: #1e293b !important; font-size: 13.5px !important; line-height: 1.5 !important;"
               >
-                <li>Main Campus, Fortich Street, Malaybalay City, Bukidnon</li>
+                <li style="color: #1e293b !important;">Main Campus, Fortich Street, Malaybalay City, Bukidnon</li>
                 <li>
                   <a
                     href="mailto:amu@buksu.edu.ph"
-                    class="nav-link-animate hover:text-white transition-colors"
+                    style="color: #0284c7 !important; font-weight: 600 !important; text-decoration: none !important;"
+                    class="hover:underline"
                     >amu@buksu.edu.ph</a
                   >
                 </li>
-                <li>Tel (088) 813-5661 to 5663</li>
-                <li>TeleFax (088) 813-2717</li>
+                <li style="color: #1e293b !important;">Tel (088) 813-5661 to 5663</li>
+                <li style="color: #1e293b !important;">TeleFax (088) 813-2717</li>
               </ul>
             </div>
-            <div id="contact">
+            <div class="site-footer-col-links" id="contact" style="flex: 0.9 1 0% !important; min-width: 180px !important;">
               <h2
-                class="font-extrabold text-white text-xl md:text-2xl mb-4 tracking-wide uppercase"
+                style="color: #0f172a !important; font-size: 13px !important; font-weight: 800 !important; text-transform: uppercase !important; letter-spacing: 0.08em !important; margin-bottom: 12px !important;"
               >
                 Links
               </h2>
               <ul
-                class="space-y-3 text-[#9e9da4] text-base md:text-lg font-medium"
+                style="list-style: none !important; padding: 0 !important; margin: 0 !important; display: flex !important; flex-direction: column !important; gap: 10px !important; font-size: 13.5px !important;"
               >
                 <li>
                   <a
                     href="https://www.buksu.edu.ph"
                     target="_blank"
                     rel="noopener noreferrer"
-                    class="nav-link-animate inline-block hover:text-white transition-colors duration-300"
+                    style="color: #0284c7 !important; font-weight: 600 !important; text-decoration: none !important;"
+                    class="hover:underline"
                     >www.buksu.edu.ph</a
                   >
                 </li>
@@ -850,11 +991,12 @@
                     href="https://www.facebook.com/buksuAMU"
                     target="_blank"
                     rel="noopener noreferrer"
-                    class="nav-link-animate inline-flex items-center gap-3 hover:text-white transition-colors duration-300"
+                    style="color: #0284c7 !important; font-weight: 600 !important; text-decoration: none !important; display: inline-flex !important; align-items: center !important; gap: 8px !important;"
                     aria-label="Academic Mentoring Unit on Facebook"
+                    class="hover:underline"
                   >
                     <svg
-                      class="h-8 w-8 shrink-0"
+                      style="width: 16px; height: 16px; min-width: 16px; color: #0284c7 !important;"
                       viewBox="0 0 24 24"
                       fill="none"
                       stroke="currentColor"
@@ -874,7 +1016,8 @@
                 <li>
                   <a
                     href="/app/#signin"
-                    class="nav-link-animate inline-block hover:text-white transition-colors duration-300"
+                    style="color: #0284c7 !important; font-weight: 600 !important; text-decoration: none !important;"
+                    class="hover:underline"
                     >Sign in to the platform</a
                   >
                 </li>
@@ -882,7 +1025,7 @@
             </div>
           </div>
           <p
-            class="text-center text-slate-500 text-sm mt-14 pt-8 border-t border-white/10"
+            style="text-align: center !important; color: #475569 !important; font-size: 13px !important; font-weight: 500 !important; margin-top: 32px !important; padding-top: 20px !important; border-top: 1px solid rgba(166, 180, 200, 0.45) !important;"
           >
             © 2026 Bukidnon State University — Academic Mentoring Unit
           </p>
@@ -891,7 +1034,7 @@
     </div>
 
     <script
-      src="/static/script.js?v=landing-fx-3"
+      src="/static/script.js?v=landing-fx-5"
       nonce="__CSP_NONCE__"
     ></script>
   </body>

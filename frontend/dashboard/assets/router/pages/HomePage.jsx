@@ -393,112 +393,157 @@ import GroupsOutlined from "@mui/icons-material/GroupsOutlined";
       }
 
       return (
-        <div className="home-dashboard-space mentee-home page-shell">
-          <div className="mentee-home-grid">
-            <div className="mentee-home-main">
-              <section className="dashboard-card mentee-hero">
-                <span className="mentee-hero-mesh" aria-hidden="true" />
-                <div className="mentee-hero-body">
-                  <div className="mentee-hero-leading">
-                    <WelcomeHeroAvatar user={user} />
-                    <div className="mentee-hero-copy">
-                      <h1 className="mentee-hero-title">
-                        Welcome back{firstName ? `, ${firstName}` : ""}
-                      </h1>
-                      <p className="mentee-hero-subtitle">
-                        Your mentoring journey, matches, and next best actions
-                        in one place.
-                      </p>
-                    </div>
-                  </div>
-                  <span className="mentee-hero-pill">{heroPill}</span>
-                  <div className="mentee-hero-actions">
-                    <button
-                      type="button"
-                      className="btn mentee-cta-primary"
-                      onClick={() => setActiveTab("matching")}
-                    >
-                      Find a Mentor
-                    </button>
-                    <button
-                      type="button"
-                      className="btn mentee-cta-glass"
-                      onClick={() => setActiveTab("mentoring-preferences")}
-                    >
-                      Browse Subjects
-                    </button>
-                  </div>
-                </div>
-              </section>
-
-              <section
-                className="mentee-stat-grid"
-                aria-label="Your matching snapshot"
+        <div className="mentee-home page-shell">
+          {/* Kasandigan Open Native Header — Zero box container */}
+          <header className="kasandigan-header">
+            <div className="kasandigan-header-content">
+              <div className="kasandigan-badge">
+                <span className="kasandigan-badge-dot" />
+                <span>Academic Mentoring Unit • Mentee Portal</span>
+              </div>
+              <h1 className="mentee-hero-title kasandigan-title">
+                Welcome back{firstName ? `, ${firstName}` : user.username ? `, ${user.username}` : ""}
+              </h1>
+              <p className="mentee-hero-subtitle kasandigan-subtitle">
+                Your academic mentoring journey, pairings, and scheduled sessions in one place.
+              </p>
+            </div>
+            <div className="kasandigan-header-actions">
+              <button
+                type="button"
+                className="btn kasandigan-btn-primary"
+                onClick={() => setActiveTab("matching")}
               >
-                <StatCard
-                  icon={<EventAvailableOutlined fontSize="inherit" />}
-                  label="Upcoming sessions"
-                  value={
-                    upcoming.length
-                      ? `${upcoming.length} ${upcoming.length === 1 ? "window" : "windows"}`
-                      : "0"
-                  }
-                  hint={
-                    myMentor && sharedSlots.length
-                      ? "Shared times this month"
-                      : upcoming.length
-                        ? "From your availability"
-                        : "No windows set"
-                  }
-                />
-                <StatCard
-                  icon={<ScheduleOutlined fontSize="inherit" />}
-                  label="Mentoring hours"
-                  value={formatHoursValue(weeklyMinutes)}
-                  hint={
-                    myMentor && sharedSlots.length
-                      ? "Weekly overlap with your mentor"
-                      : menteeSlots.length
-                        ? "Weekly hours you are free"
-                        : "Add availability to start"
-                  }
-                />
-                <StatCard
-                  icon={<HandshakeOutlined fontSize="inherit" />}
-                  label="Completed pairings"
-                  value={myMentor ? 1 : 0}
-                  hint={
-                    myMentor
-                      ? `Paired with ${mentorName}`
-                      : "No official mentor yet"
-                  }
-                />
-                <StatCard
-                  icon={<FlagOutlined fontSize="inherit" />}
-                  label="Active learning goals"
-                  value={
-                    goalTotal
-                      ? `${goalDone} / ${goalTotal}`
-                      : "—"
-                  }
-                  hint={
-                    goalTotal
-                      ? goalDone
-                        ? "Subjects covered with your mentor"
-                        : "Subjects in your plan"
-                      : "Choose subjects to track"
-                  }
-                />
-              </section>
+                <ExploreOutlined fontSize="inherit" />
+                <span>Find Mentors</span>
+              </button>
+              <button
+                type="button"
+                className="btn kasandigan-btn-secondary"
+                onClick={() => setActiveTab("mentoring-preferences")}
+              >
+                <TuneOutlined fontSize="inherit" />
+                <span>Mentoring Preferences</span>
+              </button>
+            </div>
+          </header>
 
-              <section className="dashboard-card mentee-spotlight">
-                <div className="mentee-card-head">
-                  <h2>Your mentor</h2>
+          {/* Kasandigan Unified Metric Strip (4 Columns divided by subtle borders) */}
+          <section
+            className="mentee-stat-grid kasandigan-metric-strip"
+            aria-label="Your matching snapshot"
+          >
+            <div
+              className="kasandigan-metric-cell"
+              onClick={() => setActiveTab("mentoring-preferences")}
+              role="button"
+              tabIndex={0}
+            >
+              <div className="kasandigan-metric-cell-top">
+                <span className="kasandigan-metric-label">Upcoming sessions</span>
+                <span className="kasandigan-metric-icon">
+                  <EventAvailableOutlined fontSize="inherit" />
+                </span>
+              </div>
+              <div className="kasandigan-metric-value">
+                {upcoming.length
+                  ? `${upcoming.length} ${upcoming.length === 1 ? "window" : "windows"}`
+                  : "0"}
+              </div>
+              <span className="kasandigan-metric-link">
+                {myMentor && sharedSlots.length
+                  ? "Shared times this month →"
+                  : upcoming.length
+                    ? "From your availability →"
+                    : "Set availability →"}
+              </span>
+            </div>
+
+            <div
+              className="kasandigan-metric-cell"
+              onClick={() => setActiveTab("mentoring-preferences")}
+              role="button"
+              tabIndex={0}
+            >
+              <div className="kasandigan-metric-cell-top">
+                <span className="kasandigan-metric-label">Mentoring hours</span>
+                <span className="kasandigan-metric-icon">
+                  <ScheduleOutlined fontSize="inherit" />
+                </span>
+              </div>
+              <div className="kasandigan-metric-value">
+                {formatHoursValue(weeklyMinutes)}
+              </div>
+              <span className="kasandigan-metric-link">
+                {myMentor && sharedSlots.length
+                  ? "Weekly mentor overlap →"
+                  : menteeSlots.length
+                    ? "Weekly hours free →"
+                    : "Add schedule →"}
+              </span>
+            </div>
+
+            <div
+              className="kasandigan-metric-cell"
+              onClick={() =>
+                myMentor
+                  ? openMentorProfile(myMentor.user_id)
+                  : setActiveTab("matching")
+              }
+              role="button"
+              tabIndex={0}
+            >
+              <div className="kasandigan-metric-cell-top">
+                <span className="kasandigan-metric-label">Completed pairings</span>
+                <span className="kasandigan-metric-icon">
+                  <HandshakeOutlined fontSize="inherit" />
+                </span>
+              </div>
+              <div className="kasandigan-metric-value">
+                {myMentor ? 1 : 0}
+              </div>
+              <span className="kasandigan-metric-link">
+                {myMentor ? `Paired with ${mentorName} →` : "Find mentor →"}
+              </span>
+            </div>
+
+            <div
+              className="kasandigan-metric-cell"
+              onClick={() => setActiveTab("matching")}
+              role="button"
+              tabIndex={0}
+            >
+              <div className="kasandigan-metric-cell-top">
+                <span className="kasandigan-metric-label">Recommended mentors</span>
+                <span className="kasandigan-metric-icon">
+                  <AutoAwesomeOutlined fontSize="inherit" />
+                </span>
+              </div>
+              <div className="kasandigan-metric-value">
+                {matchCount}
+              </div>
+              <span className="kasandigan-metric-link">
+                Browse recommendations →
+              </span>
+            </div>
+          </section>
+
+          {/* Kasandigan Coordinated Grid */}
+          <div className="mentee-home-grid kasandigan-main-grid">
+            {/* Top Pair: Official Mentor Spotlight + Upcoming Sessions (Level Height) */}
+            <div className="mentee-home-row mentee-home-row--spotlight">
+              {/* Primary Focus: Official Mentor Spotlight */}
+              <section className="dashboard-card mentee-spotlight kasandigan-card">
+                <div className="kasandigan-card-head">
+                  <div className="kasandigan-card-head-title">
+                    <PersonOutline fontSize="inherit" className="kasandigan-head-icon" />
+                    <h2>Your mentor</h2>
+                  </div>
                   {myMentor ? <MatchBadge score={myMentor.score} /> : null}
                 </div>
 
                 {myMentor ? (
-                  <>
+                  <div className="mentee-spotlight-content">
                     <div className="mentee-spotlight-identity">
                       <div className="mentee-spotlight-avatar">
                         <MenteeAvatar
@@ -520,7 +565,21 @@ import GroupsOutlined from "@mui/icons-material/GroupsOutlined";
                         </div>
                         {myMentor.accepted_at && (
                           <p className="mentee-muted">
-                            Paired since {formatDate(myMentor.accepted_at)}
+                            Paired since{" "}
+                            {(() => {
+                              try {
+                                const d = new Date(myMentor.accepted_at);
+                                return Number.isNaN(d.getTime())
+                                  ? formatDate(myMentor.accepted_at)
+                                  : d.toLocaleDateString(undefined, {
+                                      month: "short",
+                                      day: "numeric",
+                                      year: "numeric",
+                                    });
+                              } catch (e) {
+                                return formatDate(myMentor.accepted_at);
+                              }
+                            })()}
                           </p>
                         )}
                         {mentorSubjects.length > 0 && (
@@ -553,7 +612,7 @@ import GroupsOutlined from "@mui/icons-material/GroupsOutlined";
                     <div className="mentee-spotlight-actions">
                       {myMentor.email ? (
                         <a
-                          className="btn mentee-cta-primary"
+                          className="btn kasandigan-btn-primary"
                           href={gmailComposeUrl(myMentor.email)}
                           target="_blank"
                           rel="noopener noreferrer"
@@ -564,20 +623,20 @@ import GroupsOutlined from "@mui/icons-material/GroupsOutlined";
                       ) : null}
                       <button
                         type="button"
-                        className="btn mentee-cta-glass"
+                        className="btn kasandigan-btn-secondary"
                         onClick={() => openMentorProfile(myMentor.user_id)}
                       >
                         <PersonOutline fontSize="inherit" />
                         <span>View Profile</span>
                       </button>
                     </div>
-                  </>
+                  </div>
                 ) : (
                   <div className="mentee-empty">
                     <p>You do not have an official mentor yet.</p>
                     <button
                       type="button"
-                      className="btn mentee-cta-primary"
+                      className="btn kasandigan-btn-primary"
                       onClick={() => setActiveTab("matching")}
                     >
                       Browse recommendations
@@ -603,111 +662,30 @@ import GroupsOutlined from "@mui/icons-material/GroupsOutlined";
                 )}
               </section>
 
-              <section className="dashboard-card mentee-activity">
-                <div className="mentee-card-head">
-                  <h2>Next steps</h2>
-                </div>
-                <ul className="mentee-timeline">
-                  {!hasQuestionnaire && (
-                    <li className="mentee-timeline-item">
-                      <span className="mentee-timeline-icon">
-                        <AutoAwesomeOutlined fontSize="inherit" />
-                      </span>
-                      <div>
-                        <p className="mentee-timeline-title">
-                          Finish your mentoring preferences
-                        </p>
-                        <p className="mentee-muted">
-                          Subjects and competencies drive every match we show
-                          you.
-                        </p>
-                      </div>
-                    </li>
-                  )}
-                  {menteeSlots.length === 0 && (
-                    <li className="mentee-timeline-item">
-                      <span className="mentee-timeline-icon">
-                        <ScheduleOutlined fontSize="inherit" />
-                      </span>
-                      <div>
-                        <p className="mentee-timeline-title">
-                          Add your availability
-                        </p>
-                        <p className="mentee-muted">
-                          Mentors are only matched when your days and times
-                          overlap.
-                        </p>
-                      </div>
-                    </li>
-                  )}
-                  {matchCount > 0 && (
-                    <li className="mentee-timeline-item">
-                      <span className="mentee-timeline-icon">
-                        <GroupsOutlined fontSize="inherit" />
-                      </span>
-                      <div>
-                        <p className="mentee-timeline-title">
-                          {matchCount} mentor recommendation
-                          {matchCount === 1 ? "" : "s"} waiting
-                        </p>
-                        <p className="mentee-muted">
-                          Review them and choose the mentor that fits you best.
-                        </p>
-                      </div>
-                    </li>
-                  )}
-                  {myMentor && (
-                    <li className="mentee-timeline-item">
-                      <span className="mentee-timeline-icon">
-                        <CheckCircleOutline fontSize="inherit" />
-                      </span>
-                      <div>
-                        <p className="mentee-timeline-title">
-                          You are paired with {mentorName}
-                        </p>
-                        <p className="mentee-muted">
-                          Reach out to agree on a regular meeting time.
-                        </p>
-                      </div>
-                    </li>
-                  )}
-                  {hasQuestionnaire &&
-                    menteeSlots.length > 0 &&
-                    !matchCount &&
-                    !myMentor && (
-                      <li className="mentee-empty">
-                        <p>
-                          No mentor recommendations yet. Try widening your
-                          availability or adding subjects.
-                        </p>
-                        <button
-                          type="button"
-                          className="btn secondary small"
-                          onClick={() => setActiveTab("mentoring-preferences")}
-                        >
-                          Adjust preferences
-                        </button>
-                      </li>
-                    )}
-                </ul>
-              </section>
-            </div>
-
-            <aside className="mentee-home-rail" aria-label="Dashboard sidebar">
-              <section className="dashboard-card mentee-rail-card">
-                <div className="mentee-card-head">
-                  <h2>Upcoming sessions</h2>
+              {/* Sessions Rail Card */}
+              <section className="dashboard-card kasandigan-card mentee-rail-card mentee-sessions-card">
+                <div className="kasandigan-card-head">
+                  <div className="kasandigan-card-head-title">
+                    <EventAvailableOutlined fontSize="inherit" className="kasandigan-head-icon" />
+                    <h2>Upcoming sessions</h2>
+                  </div>
+                  {upcoming.length > 0 ? (
+                    <span className="kasandigan-card-badge">{upcoming.length} scheduled</span>
+                  ) : null}
                 </div>
                 {upcoming.length > 0 ? (
-                  <>
-                    <p className="mentee-muted">
+                  <div className="mentee-sessions-card-body">
+                    <p className="mentee-muted mentee-sessions-desc">
                       {myMentor && sharedSlots.length
                         ? `Next overlapping windows with ${mentorName}.`
                         : "The next times you marked as free."}
                     </p>
                     <ul className="mentee-slot-list">
                       {upcoming.map((occ) => (
-                        <li key={`${occ.slot}-${occ.start.getTime()}`} className="mentee-slot mentee-slot--schedule">
+                        <li
+                          key={`${occ.slot}-${occ.start.getTime()}`}
+                          className="mentee-slot mentee-slot--schedule"
+                        >
                           <span className="mentee-slot-icon">
                             <EventAvailableOutlined fontSize="inherit" />
                           </span>
@@ -718,118 +696,264 @@ import GroupsOutlined from "@mui/icons-material/GroupsOutlined";
                           <button
                             type="button"
                             className="mentee-slot-action"
-                            onClick={() =>
-                              setActiveTab("mentoring-preferences")
-                            }
+                            onClick={() => setActiveTab("mentoring-preferences")}
                           >
                             Reschedule
                           </button>
                         </li>
                       ))}
                     </ul>
-                  </>
+                  </div>
                 ) : (
-                  <p className="mentee-muted">
+                  <p className="mentee-muted mentee-sessions-desc">
                     {myMentor
                       ? `You and ${mentorName} have no overlapping times yet.`
                       : "You have not set any availability yet."}
                   </p>
                 )}
-                <button
-                  type="button"
-                  className="btn mentee-cta-glass mentee-rail-action"
-                  onClick={() => setActiveTab("mentoring-preferences")}
-                >
-                  {upcoming.length ? "Reschedule" : "Edit availability"}
-                </button>
-              </section>
-
-              <section className="dashboard-card mentee-rail-card">
-                <div className="mentee-card-head">
-                  <h2>Recommended mentors</h2>
-                </div>
-                {matchCount > 0 ? (
-                  <ul className="mentee-rec-list">
-                    {recommendations.slice(0, 3).map((match) => {
-                      const mentor = match.mentor || {};
-                      const name =
-                        match.mentor_display_name ||
-                        mentor.display_name ||
-                        match.mentor_username ||
-                        "Mentor";
-                      return (
-                        <li key={match.mentor_id} className="mentee-rec-item">
-                          <MenteeAvatar name={name} url={mentor.avatar_url} />
-                          <div className="mentee-rec-meta">
-                            <p className="mentee-rec-name">{name}</p>
-                            <MatchBadge score={match.score} />
-                          </div>
-                          <button
-                            type="button"
-                            className="btn secondary small"
-                            onClick={() => setActiveTab("matching")}
-                          >
-                            Connect
-                          </button>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                ) : (
-                  <p className="mentee-muted">
-                    No recommendations yet. Complete your preferences to see
-                    matched mentors here.
-                  </p>
-                )}
-                <button
-                  type="button"
-                  className="btn mentee-cta-glass mentee-rail-action"
-                  onClick={() => setActiveTab("matching")}
-                >
-                  See all matches
-                </button>
-              </section>
-
-              <section className="dashboard-card mentee-rail-card">
-                <div className="mentee-card-head">
-                  <h2>Quick actions</h2>
-                </div>
-                <div className="mentee-quick-actions">
+                <div className="mentee-sessions-card-foot">
                   <button
                     type="button"
-                    className="mentee-quick-action"
-                    onClick={() => setActiveTab("matching")}
-                  >
-                    <ExploreOutlined fontSize="inherit" />
-                    <span>Find mentors</span>
-                  </button>
-                  <button
-                    type="button"
-                    className="mentee-quick-action"
+                    className="btn kasandigan-btn-secondary full-width"
                     onClick={() => setActiveTab("mentoring-preferences")}
                   >
-                    <TuneOutlined fontSize="inherit" />
-                    <span>Mentoring preferences</span>
-                  </button>
-                  <button
-                    type="button"
-                    className="mentee-quick-action"
-                    onClick={() => setActiveTab("announcements")}
-                  >
-                    <CampaignOutlined fontSize="inherit" />
-                    <span>Announcements</span>
-                  </button>
-                  <button
-                    type="button"
-                    className="mentee-quick-action"
-                    onClick={() => setActiveTab("notifications")}
-                  >
-                    <NotificationsNoneOutlined fontSize="inherit" />
-                    <span>Notifications</span>
+                    {upcoming.length ? "Manage schedule" : "Edit availability"}
                   </button>
                 </div>
               </section>
-            </aside>
+            </div>
+
+            {/* Middle Pair: Recommended Mentors + Quick Actions / Tip */}
+            <div className="mentee-home-row mentee-home-row--discovery">
+              {/* Primary Focus 2: Recommended Mentors */}
+              <section className="dashboard-card kasandigan-card mentee-recs-card">
+                <div className="kasandigan-card-head">
+                  <div className="kasandigan-card-head-title">
+                    <AutoAwesomeOutlined fontSize="inherit" className="kasandigan-head-icon" />
+                    <h2>Recommended mentors</h2>
+                  </div>
+                  <span className="kasandigan-card-badge">AI Matched</span>
+                </div>
+
+                {matchCount > 0 ? (
+                  <>
+                    <div className="kasandigan-recs-grid">
+                      {recommendations.slice(0, 3).map((match) => {
+                        const mentor = match.mentor || {};
+                        const name =
+                          match.mentor_display_name ||
+                          mentor.display_name ||
+                          match.mentor_username ||
+                          "Mentor";
+                        const matchDetails = match.match_details || {};
+                        const commonSubs = matchDetails.common_subjects || mentor.subjects || [];
+                        return (
+                          <div key={match.mentor_id} className="kasandigan-rec-item">
+                            <div className="kasandigan-rec-item-identity">
+                              <MenteeAvatar name={name} url={mentor.avatar_url} />
+                              <div className="kasandigan-rec-item-info">
+                                <h3 className="kasandigan-rec-item-name">{name}</h3>
+                                {commonSubs.length > 0 && (
+                                  <p className="kasandigan-rec-item-subs">
+                                    {commonSubs.slice(0, 2).join(", ")}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                            <div className="kasandigan-rec-item-actions">
+                              <MatchBadge score={match.score} />
+                              <button
+                                type="button"
+                                className="btn kasandigan-btn-primary small"
+                                onClick={() => setActiveTab("matching")}
+                              >
+                                Connect
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <div className="kasandigan-card-foot">
+                      <button
+                        type="button"
+                        className="kasandigan-foot-link"
+                        onClick={() => setActiveTab("matching")}
+                      >
+                        See all matches ({matchCount}) →
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <div className="mentee-empty">
+                    <p>
+                      No recommendations yet. Complete your preferences to see
+                      matched mentors here.
+                    </p>
+                    <button
+                      type="button"
+                      className="btn kasandigan-btn-secondary small"
+                      onClick={() => setActiveTab("mentoring-preferences")}
+                    >
+                      Set preferences
+                    </button>
+                  </div>
+                )}
+              </section>
+
+              {/* Side Stack: Quick Actions & Academic Study Tip */}
+              <div className="mentee-home-side-stack">
+                <section className="dashboard-card kasandigan-card mentee-rail-card mentee-quick-actions-card">
+                  <div className="kasandigan-card-head">
+                    <div className="kasandigan-card-head-title">
+                      <ExploreOutlined fontSize="inherit" className="kasandigan-head-icon" />
+                      <h2>Quick actions</h2>
+                    </div>
+                    <span className="kasandigan-card-badge">Shortcuts</span>
+                  </div>
+                  <div className="mentee-quick-actions">
+                    <button
+                      type="button"
+                      className="mentee-quick-action"
+                      onClick={() => setActiveTab("matching")}
+                    >
+                      <ExploreOutlined fontSize="inherit" />
+                      <span>Find mentors</span>
+                    </button>
+                    <button
+                      type="button"
+                      className="mentee-quick-action"
+                      onClick={() => setActiveTab("mentoring-preferences")}
+                    >
+                      <TuneOutlined fontSize="inherit" />
+                      <span>Preferences</span>
+                    </button>
+                    <button
+                      type="button"
+                      className="mentee-quick-action"
+                      onClick={() => setActiveTab("announcements")}
+                    >
+                      <CampaignOutlined fontSize="inherit" />
+                      <span>Announcements</span>
+                    </button>
+                    <button
+                      type="button"
+                      className="mentee-quick-action"
+                      onClick={() => setActiveTab("notifications")}
+                    >
+                      <NotificationsNoneOutlined fontSize="inherit" />
+                      <span>Notifications</span>
+                    </button>
+                  </div>
+                </section>
+
+                <section className="dashboard-card kasandigan-card kasandigan-tip-card">
+                  <div className="kasandigan-tip-icon">
+                    <AutoAwesomeOutlined fontSize="inherit" />
+                  </div>
+                  <div className="kasandigan-tip-copy">
+                    <h3>Academic Study Tip</h3>
+                    <p>
+                      Prepare 2-3 specific topics or code questions before your session with your mentor to maximize learning.
+                    </p>
+                  </div>
+                </section>
+              </div>
+            </div>
+
+            {/* Bottom Row: Next steps */}
+            <section className="dashboard-card mentee-activity kasandigan-card mentee-next-steps-card">
+              <div className="kasandigan-card-head">
+                <div className="kasandigan-card-head-title">
+                  <FlagOutlined fontSize="inherit" className="kasandigan-head-icon" />
+                  <h2>Next steps</h2>
+                </div>
+                <span className="kasandigan-card-badge">Action Plan</span>
+              </div>
+              <ul className="mentee-timeline">
+                {!hasQuestionnaire && (
+                  <li className="mentee-timeline-item">
+                    <span className="mentee-timeline-icon">
+                      <AutoAwesomeOutlined fontSize="inherit" />
+                    </span>
+                    <div>
+                      <p className="mentee-timeline-title">
+                        Finish your mentoring preferences
+                      </p>
+                      <p className="mentee-muted">
+                        Subjects and competencies drive every match we show
+                        you.
+                      </p>
+                    </div>
+                  </li>
+                )}
+                {menteeSlots.length === 0 && (
+                  <li className="mentee-timeline-item">
+                    <span className="mentee-timeline-icon">
+                      <ScheduleOutlined fontSize="inherit" />
+                    </span>
+                    <div>
+                      <p className="mentee-timeline-title">
+                        Add your availability
+                      </p>
+                      <p className="mentee-muted">
+                        Mentors are only matched when your days and times
+                        overlap.
+                      </p>
+                    </div>
+                  </li>
+                )}
+                {matchCount > 0 && (
+                  <li className="mentee-timeline-item">
+                    <span className="mentee-timeline-icon">
+                      <GroupsOutlined fontSize="inherit" />
+                    </span>
+                    <div>
+                      <p className="mentee-timeline-title">
+                        {matchCount} mentor recommendation
+                        {matchCount === 1 ? "" : "s"} available
+                      </p>
+                      <p className="mentee-muted">
+                        Compare shared topics and request an official pairing.
+                      </p>
+                    </div>
+                  </li>
+                )}
+                {myMentor && (
+                  <li className="mentee-timeline-item">
+                    <span className="mentee-timeline-icon">
+                      <CheckCircleOutline fontSize="inherit" />
+                    </span>
+                    <div>
+                      <p className="mentee-timeline-title">
+                        You are paired with {mentorName}
+                      </p>
+                      <p className="mentee-muted">
+                        Reach out to agree on a regular meeting time.
+                      </p>
+                    </div>
+                  </li>
+                )}
+                {hasQuestionnaire &&
+                  menteeSlots.length > 0 &&
+                  !matchCount &&
+                  !myMentor && (
+                    <li className="mentee-empty">
+                      <p>
+                        No mentor recommendations yet. Try widening your
+                        availability or adding subjects.
+                      </p>
+                      <button
+                        type="button"
+                        className="btn secondary small"
+                        onClick={() => setActiveTab("mentoring-preferences")}
+                      >
+                        Adjust preferences
+                      </button>
+                    </li>
+                  )}
+              </ul>
+            </section>
           </div>
         </div>
       );
@@ -848,10 +972,9 @@ import GroupsOutlined from "@mui/icons-material/GroupsOutlined";
       const totalMentees = stats.total_mentees ?? 0;
       const acceptedPairings = stats.accepted_pairings ?? 0;
       const isDark = theme === "dark";
-      const legendTextColor = isDark ? "#cbd5f5" : "#475569";
       const staffColors = isDark
-        ? ["#605EA1", "#34d399", "#fb923c"]
-        : ["#22177A", "#22c55e", "#f97316"];
+        ? ["#0ea5e9", "#10b981", "#f59e0b"]
+        : ["#0284c7", "#059669", "#d97706"];
 
       staffOverviewChartRef.current = new window.Chart(canvas, {
         type: "doughnut",
@@ -861,16 +984,23 @@ import GroupsOutlined from "@mui/icons-material/GroupsOutlined";
             {
               data: [totalMentors, totalMentees, acceptedPairings],
               backgroundColor: staffColors,
+              borderWidth: 3,
+              borderColor: "#ebf0f7",
+              hoverOffset: 8,
+              hoverBorderColor: "#ebf0f7",
+              hoverBorderWidth: 3,
             },
           ],
         },
         options: {
+          responsive: true,
+          maintainAspectRatio: false,
           plugins: {
             legend: {
               display: false,
             },
           },
-          cutout: "55%",
+          cutout: "68%",
         },
       });
     }, [stats, theme]);
@@ -885,6 +1015,15 @@ import GroupsOutlined from "@mui/icons-material/GroupsOutlined";
     const totalMentors = stats?.total_mentors ?? 0;
     const totalMentees = stats?.total_mentees ?? 0;
     const acceptedPairings = stats?.accepted_pairings ?? 0;
+    const totalUsers = totalMentors + totalMentees;
+    const mentorPct =
+      totalUsers > 0 ? Math.round((totalMentors / totalUsers) * 100) : 0;
+    const menteePct =
+      totalUsers > 0 ? Math.round((totalMentees / totalUsers) * 100) : 0;
+    const pairingPct =
+      totalMentees > 0
+        ? Math.min(100, Math.round((acceptedPairings / totalMentees) * 100))
+        : 0;
 
     if (user.role === "mentor") {
       const acceptedRequests = Array.isArray(mentorRequests)
@@ -918,60 +1057,60 @@ import GroupsOutlined from "@mui/icons-material/GroupsOutlined";
       );
 
       return (
-        <div className="home-dashboard-space mentor-dashboard-v2 page-shell">
+        <div className="mentor-dashboard-v2 page-shell">
           <div className="home-space-glow" aria-hidden="true" />
 
-          <section className="mentor-v2-hero">
-            <div className="mentor-v2-hero-leading">
-              <WelcomeHeroAvatar user={user} />
-              <div className="mentor-v2-hero-copy">
-                <div className="mentor-v2-eyebrow">Mentor Dashboard</div>
-                <h1 className="mentor-v2-title">
-                  Welcome back
-                  {user.full_name || user.display_name
-                    ? `, ${user.full_name || user.display_name}`
-                    : user.username
-                      ? `, ${user.username}`
-                      : ""}
-                </h1>
-                <p className="mentor-v2-subtitle">
-                  Track your mentees, keep your mentoring profile ready, and
-                  jump into the next action.
-                </p>
-                <div className="mentor-v2-status-row">
-                  {mentorType && MentorRoleBadge ? (
-                    <MentorRoleBadge role={mentorType} prominent />
-                  ) : null}
-                  <span
-                    className={
-                      "mentor-v2-status-pill " +
-                      (user.mentor_approved ? "is-approved" : "is-pending")
-                    }
-                  >
-                    {user.mentor_approved
-                      ? "Coordinator approved"
-                      : "Pending coordinator approval"}
-                  </span>
-                </div>
+          {/* Kasandigan Open Native Header — Zero box container */}
+          <header className="kasandigan-header">
+            <div className="kasandigan-header-content">
+              <div className="kasandigan-badge">
+                <span className="kasandigan-badge-dot" />
+                <span>AMU Faculty & Peer Mentors • Portal</span>
+              </div>
+              <h1 className="mentor-v2-title kasandigan-title">
+                Welcome back
+                {user.full_name || user.display_name
+                  ? `, ${user.full_name || user.display_name}`
+                  : user.username
+                    ? `, ${user.username}`
+                    : ""}
+              </h1>
+              <p className="mentor-v2-subtitle kasandigan-subtitle">
+                Track your mentees, keep your mentoring profile ready, and jump into the next action.
+              </p>
+              <div className="mentor-v2-status-row" style={{ marginTop: "8px" }}>
+                {mentorType && MentorRoleBadge ? (
+                  <MentorRoleBadge role={mentorType} prominent />
+                ) : null}
+                <span
+                  className={
+                    "mentor-v2-status-pill " +
+                    (user.mentor_approved ? "is-approved" : "is-pending")
+                  }
+                >
+                  {user.mentor_approved
+                    ? "Coordinator approved"
+                    : "Pending coordinator approval"}
+                </span>
               </div>
             </div>
-            <div className="mentor-v2-hero-actions">
+            <div className="kasandigan-header-actions">
               <button
                 type="button"
-                className="btn"
+                className="btn kasandigan-btn-primary"
                 onClick={() => setActiveTab("mentees")}
               >
                 View mentees
               </button>
               <button
                 type="button"
-                className="btn secondary"
+                className="btn kasandigan-btn-secondary"
                 onClick={() => setActiveTab("settings")}
               >
                 Update profile
               </button>
             </div>
-          </section>
+          </header>
 
           <section
             className="mentor-v2-metric-grid"
@@ -1178,83 +1317,240 @@ import GroupsOutlined from "@mui/icons-material/GroupsOutlined";
     }
 
     return (
-      <div className="home-dashboard-space mentor-staff-dashboard page-shell">
+      <div className="mentor-staff-dashboard page-shell">
         <div className="home-space-glow" aria-hidden="true" />
+
+        {/* Kasandigan Open Native Header — Zero box container */}
+        <header className="kasandigan-header">
+          <div className="kasandigan-header-content">
+            <div className="kasandigan-badge">
+              <span className="kasandigan-badge-dot" />
+              <span>Academic Mentoring Unit • Operations Console</span>
+            </div>
+            <h1 className="home-hero-title kasandigan-title">
+              Welcome back
+              {user.full_name || user.display_name
+                ? `, ${user.full_name || user.display_name}`
+                : user.username
+                  ? `, ${user.username}`
+                  : ""}
+            </h1>
+            <p className="home-hero-sub kasandigan-subtitle">{roleLine}</p>
+          </div>
+
+          <div className="kasandigan-header-actions">
+            <button
+              type="button"
+              className="btn kasandigan-btn-primary"
+              onClick={() => setActiveTab("users")}
+            >
+              Manage Users
+            </button>
+            <button
+              type="button"
+              className="btn kasandigan-btn-secondary"
+              onClick={() => setActiveTab("approvals")}
+            >
+              Pending Approvals
+            </button>
+          </div>
+        </header>
 
         <div className="home-top-stats">
           <div className="home-mini-stat">
-            <div className="home-mini-stat-label">Total mentors</div>
+            <div className="home-mini-stat-header">
+              <span className="home-mini-stat-label">Total mentors</span>
+              <span className="home-mini-stat-icon">
+                <MenteeDashIcon name="users" size={15} />
+              </span>
+            </div>
             <div className="home-mini-stat-value">{totalMentors}</div>
           </div>
           <div className="home-mini-stat">
-            <div className="home-mini-stat-label">Total mentees</div>
+            <div className="home-mini-stat-header">
+              <span className="home-mini-stat-label">Total mentees</span>
+              <span className="home-mini-stat-icon">
+                <MenteeDashIcon name="user" size={15} />
+              </span>
+            </div>
             <div className="home-mini-stat-value">{totalMentees}</div>
           </div>
           <div className="home-mini-stat">
-            <div className="home-mini-stat-label">Accepted pairings</div>
+            <div className="home-mini-stat-header">
+              <span className="home-mini-stat-label">Accepted pairings</span>
+              <span className="home-mini-stat-icon">
+                <MenteeDashIcon name="check" size={15} />
+              </span>
+            </div>
             <div className="home-mini-stat-value">{acceptedPairings}</div>
           </div>
           <div className="home-mini-stat">
-            <div className="home-mini-stat-label">Your mentees</div>
+            <div className="home-mini-stat-header">
+              <span className="home-mini-stat-label">Your mentees</span>
+              <span className="home-mini-stat-icon">
+                <MenteeDashIcon name="target" size={15} />
+              </span>
+            </div>
             <div className="home-mini-stat-value">
               {userProgress?.mentees_count ?? 0}
             </div>
           </div>
           <div className="home-mini-stat">
-            <div className="home-mini-stat-label">Mentor pairings (system)</div>
+            <div className="home-mini-stat-header">
+              <span className="home-mini-stat-label">Mentor pairings (system)</span>
+              <span className="home-mini-stat-icon">
+                <MenteeDashIcon name="barChart" size={15} />
+              </span>
+            </div>
             <div className="home-mini-stat-value">{acceptedPairings}</div>
           </div>
         </div>
 
         <div className="home-dashboard-grid">
-          <section className="home-hero-space">
-            <div className="home-hero-leading">
-              <WelcomeHeroAvatar user={user} />
-              <div className="home-hero-text">
-                <h1 className="home-hero-title">
-                  Welcome back
-                  {user.full_name || user.display_name
-                    ? `, ${user.full_name || user.display_name}`
-                    : user.username
-                      ? `, ${user.username}`
-                      : ""}
-                </h1>
-                <p className="home-hero-sub">{roleLine}</p>
-              </div>
+          <section className="dashboard-card home-staff-management-card">
+            <div className="mentee-card-head">
+              <h2>Administration shortcuts</h2>
             </div>
-
-            <div className="home-hero-icon" aria-hidden="true">
-              <img
-                className="home-hero-logo"
-                src="/static/assets/logo.png"
-                alt="AMU Mentoring"
-              />
+            <p className="mentee-muted" style={{ marginBottom: "16px" }}>
+              Quickly manage user accounts, run matching models, and review coordinator approvals.
+            </p>
+            <div className="mentee-quick-actions">
+              <button
+                type="button"
+                className="mentee-quick-action"
+                onClick={() => setActiveTab("users")}
+              >
+                <MenteeDashIcon name="users" size={18} />
+                <span>Manage users</span>
+              </button>
+              <button
+                type="button"
+                className="mentee-quick-action"
+                onClick={() => setActiveTab("matching")}
+              >
+                <MenteeDashIcon name="target" size={18} />
+                <span>Run matching model</span>
+              </button>
+              <button
+                type="button"
+                className="mentee-quick-action"
+                onClick={() => setActiveTab("approvals")}
+              >
+                <MenteeDashIcon name="check" size={18} />
+                <span>Review approvals</span>
+              </button>
+              <button
+                type="button"
+                className="mentee-quick-action"
+                onClick={() => setActiveTab("announcements")}
+              >
+                <MenteeDashIcon name="megaphone" size={18} />
+                <span>Post announcement</span>
+              </button>
             </div>
           </section>
 
-          <aside className="home-analytics-card">
+          <aside
+            className="dashboard-card kasandigan-card home-analytics-card"
+            aria-label="System distribution analytics"
+          >
             <div className="home-analytics-header">
-              <div className="home-analytics-title">Analytics</div>
-              <div className="home-analytics-sub">System overview</div>
-            </div>
-
-            <div
-              className="home-analytics-ring"
-              aria-label="Mentors, mentees, and pairings distribution"
-            >
-              <canvas id="staff-overview-chart" height="180" />
-            </div>
-
-            <div className="home-analytics-tabs" aria-hidden="true">
-              <span className="home-analytics-tab is-active">Mentors</span>
-              <span className="home-analytics-tab">Mentees</span>
-              <span className="home-analytics-tab">Pairings</span>
-            </div>
-
-            <div className="home-analytics-foot">
-              <span className="home-analytics-chip">
-                Accepted pairings: {acceptedPairings}
+              <div className="home-analytics-header-left">
+                <span className="home-analytics-badge-icon">
+                  <MenteeDashIcon name="barChart" size={16} />
+                </span>
+                <div>
+                  <h3 className="home-analytics-title">System Distribution</h3>
+                  <p className="home-analytics-sub">
+                    Active mentors, mentees & pairings
+                  </p>
+                </div>
+              </div>
+              <span className="home-analytics-live-badge">
+                <span className="kasandigan-pulse-dot" /> Live
               </span>
+            </div>
+
+            <div className="home-analytics-chart-wrap">
+              <div
+                className="home-analytics-ring"
+                aria-label="Mentors, mentees, and pairings distribution"
+              >
+                <canvas id="staff-overview-chart" height="180" />
+                <div className="home-analytics-donut-stat" aria-hidden="true">
+                  <span className="home-analytics-donut-num">{totalUsers}</span>
+                  <span className="home-analytics-donut-lbl">Total Users</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="home-analytics-breakdown">
+              <div className="home-analytics-row">
+                <div className="home-analytics-row-left">
+                  <span className="home-analytics-dot dot-mentors" />
+                  <span className="home-analytics-row-label">Mentors</span>
+                </div>
+                <div className="home-analytics-row-right">
+                  <span className="home-analytics-row-count">
+                    {totalMentors} registered
+                  </span>
+                  <span className="home-analytics-row-pct">{mentorPct}%</span>
+                </div>
+              </div>
+
+              <div className="home-analytics-row">
+                <div className="home-analytics-row-left">
+                  <span className="home-analytics-dot dot-mentees" />
+                  <span className="home-analytics-row-label">Mentees</span>
+                </div>
+                <div className="home-analytics-row-right">
+                  <span className="home-analytics-row-count">
+                    {totalMentees} registered
+                  </span>
+                  <span className="home-analytics-row-pct">{menteePct}%</span>
+                </div>
+              </div>
+
+              <div className="home-analytics-row">
+                <div className="home-analytics-row-left">
+                  <span className="home-analytics-dot dot-pairings" />
+                  <span className="home-analytics-row-label">
+                    Accepted Pairings
+                  </span>
+                </div>
+                <div className="home-analytics-row-right">
+                  <span className="home-analytics-row-count">
+                    {acceptedPairings} matched
+                  </span>
+                  <span className="home-analytics-row-pct highlight">
+                    {pairingPct}% paired
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="home-analytics-footer">
+              <div className="home-analytics-summary-box">
+                <div className="home-analytics-summary-item">
+                  <span className="home-analytics-summary-label">
+                    Mentee-to-Mentor
+                  </span>
+                  <span className="home-analytics-summary-val">
+                    {totalMentors > 0
+                      ? `${(totalMentees / totalMentors).toFixed(1)} : 1`
+                      : "—"}
+                  </span>
+                </div>
+                <div className="home-analytics-summary-divider" />
+                <div className="home-analytics-summary-item">
+                  <span className="home-analytics-summary-label">
+                    Pairing Rate
+                  </span>
+                  <span className="home-analytics-summary-val">
+                    {pairingPct}%
+                  </span>
+                </div>
+              </div>
             </div>
           </aside>
         </div>

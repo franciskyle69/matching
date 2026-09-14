@@ -224,9 +224,6 @@
         return { ok: false, status: response.status, data: null };
       }
     } catch (err) {
-      if (err && (err.name === "AbortError" || err.code === 20)) {
-        return { ok: false, status: 0, aborted: true, data: null };
-      }
       return { ok: false, status: 0, data: { error: "Network error. Please check if the server is running." } };
     }
   }

@@ -6,7 +6,7 @@
   --radius-sm: 8px;
   --radius-md: 12px;
   --radius-lg: 16px;
-  --radius-xl: 20px;
+  --radius-xl: 24px;
   --space-1: 4px;
   --space-2: 8px;
   --space-3: 12px;
@@ -17,16 +17,17 @@
   --space-8: 32px;
   --space-9: 40px;
   --space-10: 48px;
-  --text-xs: 0.725rem;
-  --text-sm: 0.8rem;
+  --text-xs: 0.75rem;
+  --text-sm: 0.8125rem;
   --text-md: 0.875rem;
-  --text-lg: 1.1rem;
+  --text-base: 0.9375rem;
+  --text-lg: 1.125rem;
   --text-xl: 1.35rem;
-  --text-2xl: 1.35rem;
-  --text-3xl: 1.75rem;
+  --text-2xl: 1.5rem;
+  --text-3xl: 1.875rem;
   --line-tight: 1.2;
   --line-normal: 1.5;
-  --line-relaxed: 1.65;
+  --line-relaxed: 1.6;
   --motion-fast: 150ms;
   --motion-base: 200ms;
   --motion-slow: 250ms;
@@ -34,17 +35,17 @@
   color-scheme: light dark;
 }
 
-/* Light Mode Design Tokens — clean, readable, zero effect on dark mode */
+/* Light Mode Design Tokens — Kasandigan Light Blue SaaS Aesthetic */
 [data-theme="light"] {
   --app-bg: #f8fafc;
   --app-bg-gradient: none;
 
-  /* Flat cards */
+  /* Crisp white cards with slate hairline border and soft shadow */
   --card-bg: #ffffff;
-  --card-border: 1px solid #cbd5e1;
-  --card-radius: 12px;
-  --card-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-  --card-shadow-hover: 0 1px 3px rgba(0, 0, 0, 0.05);
+  --card-border: 1px solid #e2e8f0;
+  --card-radius: 16px;
+  --card-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.02);
+  --card-shadow-hover: 0 6px 18px rgba(0, 0, 0, 0.06);
   --card-blur: none;
 
   /* Inner / grouped containers */
@@ -53,25 +54,25 @@
   --container-sub-bg: #f8fafc;
   --container-sub-border: 1px solid #e2e8f0;
 
-  /* Typography — high contrast only */
+  /* Typography — crisp slate hierarchy */
   --text-primary: #0f172a;
-  --text-secondary: #334155;
-  --text-muted: #475569;
+  --text-secondary: #475569;
+  --text-muted: #94a3b8;
   --text-label: #1e293b;
 
-  /* Accents & actions */
-  --accent-primary: #6d28d9;
-  --accent-primary-hover: #5b21b6;
-  --accent-light: #f3e8ff;
-  --accent-light-text: #6b21a8;
+  /* Accents & actions (Kasandigan Light Blue: #0ea5e9 / #0284c7) */
+  --accent-primary: #0ea5e9;
+  --accent-primary-hover: #0284c7;
+  --accent-light: #f0f9ff;
+  --accent-light-text: #0284c7;
 
-  /* Plain hero (no gradient) */
+  /* Hero styling */
   --hero-bg: #ffffff;
-  --hero-border: 1px solid #cbd5e1;
+  --hero-border: 1px solid #e2e8f0;
 
   /* Semantic aliases */
   --bg: var(--app-bg);
-  --bg-subtle: #f1f5f9;
+  --bg-subtle: #f8fafc;
   --bg-elevated: #ffffff;
   --card: var(--card-bg);
   --text: var(--text-primary);
@@ -80,99 +81,151 @@
   --primary: var(--accent-primary);
   --primary-hover: var(--accent-primary-hover);
   --primary-soft: var(--accent-light);
-  --focus-ring: color-mix(in srgb, var(--accent-primary) 22%, transparent);
-  --success: #166534;
-  --warning: #b45309;
-  --danger: #dc2626;
-  --info: #1d4ed8;
-  --shadow-xs: 0 1px 2px rgba(15, 23, 42, 0.04);
+  --brand: var(--accent-primary);
+  --brand-hover: var(--accent-primary-hover);
+  --surface: var(--card-bg);
+  --focus-ring: rgba(14, 165, 233, 0.25);
+  --success: #10b981;
+  --warning: #f59e0b;
+  --danger: #ef4444;
+  --info: #0ea5e9;
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.04);
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.05);
   --shadow-md: var(--card-shadow);
-  --shadow-lg: var(--card-shadow);
+  --shadow-lg: 0 10px 25px -5px rgba(0, 0, 0, 0.05);
 
   /* Form controls */
   --input-bg: #ffffff;
-  --input-border: 1px solid #94a3b8;
+  --input-border: 1px solid #cbd5e1;
   --input-text: #0f172a;
   --input-border-focus: var(--accent-primary);
-  --input-radius: var(--radius-sm);
-  --input-padding: 12px 16px;
+  --input-radius: 10px;
+  --input-padding: 10px 14px;
 
   /* Badge tokens */
-  --badge-role-bg: #f3e8ff;
-  --badge-role-text: #6b21a8;
-  --badge-score-bg: #dcfce7;
-  --badge-score-text: #166534;
-  --badge-official-bg: #e0e7ff;
-  --badge-official-text: #3730a3;
+  --badge-role-bg: #f0f9ff;
+  --badge-role-text: #0284c7;
+  --badge-score-bg: #ecfdf5;
+  --badge-score-text: #059669;
+  --badge-official-bg: #f0f9ff;
+  --badge-official-text: #0284c7;
 
   /* Legacy dash bridge */
   --dash-bg-main: var(--app-bg);
   --dash-bg-subtle: var(--subcard-bg);
   --dash-bg-card: var(--card-bg);
-  --dash-border: #cbd5e1;
-  --dash-border-soft: #e2e8f0;
+  --dash-border: #e2e8f0;
+  --dash-border-soft: #f8fafc;
   --dash-text: var(--text-primary);
   --dash-muted: var(--text-secondary);
   --dash-shadow: var(--card-shadow);
   --dash-primary: var(--accent-primary);
   --dash-primary-hover: var(--accent-primary-hover);
 
-  /* Sidebar navigation */
+  /* Kasandigan Sidebar navigation (Clean slate + light blue) */
   --nav-text-color: #475569;
   --nav-icon-color: #64748b;
-  --nav-hover-bg: #f1f5f9;
+  --nav-hover-bg: #f8fafc;
   --nav-hover-text: #0f172a;
-  --nav-hover-icon: #0f172a;
-  --nav-active-bg: #ede9fe;
-  --nav-active-text: #6d28d9;
-  --nav-active-icon: #6d28d9;
-  --nav-active-border: rgba(109, 40, 217, 0.2);
-  --nav-header-color: #64748b;
+  --nav-hover-icon: #0284c7;
+  --nav-active-bg: #f0f9ff;
+  --nav-active-text: #0284c7;
+  --nav-active-icon: #0ea5e9;
+  --nav-active-border: #bae6fd;
+  --nav-header-color: #94a3b8;
 }
 
+/* Dark Mode Design Tokens — Hero experience (Linear / Raycast / Vercel style) */
 .dark,
 [data-theme="dark"] {
-  --bg: #0f172a;
-  --bg-subtle: #1e293b;
-  --bg-elevated: #171026;
-  --card: rgba(23, 15, 38, 0.82);
-  --text: #f8fafc;
-  --text-muted: #94a3b8;
-  --border: rgba(255, 255, 255, 0.12);
-  --border-strong: rgba(255, 255, 255, 0.18);
-  --primary: #7c3aed;
-  --primary-hover: #6d28d9;
-  --primary-soft: rgba(168, 85, 247, 0.22);
-  --focus-ring: rgba(168, 85, 247, 0.4);
-  --shadow-sm: 0 1px 2px rgba(2, 6, 23, 0.4);
-  --shadow-md: 0 12px 30px rgba(2, 6, 23, 0.45);
-  --shadow-lg: 0 18px 48px rgba(2, 6, 23, 0.5);
+  --app-bg: #09090b;
+  --app-bg-gradient: none;
 
-  --text-primary: #f8fafc;
-  --text-secondary: #94a3b8;
+  --bg: #09090b;
+  --bg-subtle: #121215;
+  --bg-elevated: #18181b;
+  --card: rgba(24, 24, 27, 0.75);
+  --text: #fafafa;
+  --text-muted: #71717a;
+  --border: rgba(255, 255, 255, 0.08);
+  --border-strong: rgba(255, 255, 255, 0.16);
+  --primary: #0ea5e9;
+  --primary-hover: #38bdf8;
+  --primary-soft: rgba(14, 165, 233, 0.15);
+  --brand: var(--accent-primary);
+  --brand-hover: var(--accent-primary-hover);
+  --surface: var(--bg-elevated);
+  --focus-ring: rgba(14, 165, 233, 0.35);
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.35);
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.35);
+  --shadow-md: 0 12px 32px rgba(0, 0, 0, 0.45);
+  --shadow-lg: 0 24px 54px rgba(0, 0, 0, 0.55);
 
-  --card-bg: rgba(20, 14, 35, 0.75);
-  --card-border: 1px solid rgba(255, 255, 255, 0.12);
-  --card-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+  --text-primary: #fafafa;
+  --text-secondary: #a1a1aa;
+  --text-label: #e4e4e7;
+
+  --accent-primary: #0ea5e9;
+  --accent-primary-hover: #38bdf8;
+  --accent-light: rgba(14, 165, 233, 0.15);
+  --accent-light-text: #7dd3fc;
+
+  --success: #10b981;
+  --warning: #f59e0b;
+  --danger: #ef4444;
+  --info: #0ea5e9;
+
+  --card-bg: rgba(24, 24, 27, 0.75);
+  --card-border: 1px solid rgba(255, 255, 255, 0.08);
+  --card-shadow: 0 12px 36px 0 rgba(0, 0, 0, 0.5), 0 0 40px rgba(14, 165, 233, 0.04);
+  --card-shadow-hover: 0 16px 44px 0 rgba(0, 0, 0, 0.6), 0 0 40px rgba(14, 165, 233, 0.08);
   --card-blur: blur(16px);
-  --card-radius: var(--radius-lg);
-  --subcard-bg: rgba(30, 20, 50, 0.5);
-  --subcard-border: 1px solid rgba(255, 255, 255, 0.08);
+  --card-radius: 16px;
 
-  --input-bg: rgba(0, 0, 0, 0.35);
-  --input-border: 1px solid rgba(255, 255, 255, 0.15);
-  --input-border-focus: #a855f7;
+  --subcard-bg: rgba(39, 39, 42, 0.5);
+  --subcard-border: 1px solid rgba(255, 255, 255, 0.06);
+  --container-sub-bg: rgba(39, 39, 42, 0.5);
+  --container-sub-border: 1px solid rgba(255, 255, 255, 0.06);
 
-  /* Sidebar navigation */
-  --nav-text-color: #94a3b8;
-  --nav-icon-color: #94a3b8;
-  --nav-hover-bg: rgba(255, 255, 255, 0.06);
-  --nav-hover-text: #f8fafc;
-  --nav-hover-icon: #f8fafc;
-  --nav-active-bg: #7c3aed;
+  --hero-bg: linear-gradient(180deg, rgba(24, 24, 27, 0.85) 0%, rgba(18, 18, 21, 0.85) 100%);
+  --hero-border: 1px solid rgba(255, 255, 255, 0.08);
+
+  --input-bg: rgba(18, 18, 21, 0.75);
+  --input-border: 1px solid rgba(255, 255, 255, 0.1);
+  --input-text: #fafafa;
+  --input-border-focus: #38bdf8;
+  --input-radius: 10px;
+  --input-padding: 10px 14px;
+
+  /* Badge tokens */
+  --badge-role-bg: rgba(14, 165, 233, 0.14);
+  --badge-role-text: #7dd3fc;
+  --badge-score-bg: rgba(16, 185, 129, 0.15);
+  --badge-score-text: #34d399;
+  --badge-official-bg: rgba(14, 165, 233, 0.15);
+  --badge-official-text: #38bdf8;
+
+  /* Legacy dash bridge */
+  --dash-bg-main: var(--app-bg);
+  --dash-bg-subtle: var(--subcard-bg);
+  --dash-bg-card: var(--card-bg);
+  --dash-border: var(--border);
+  --dash-border-soft: rgba(255, 255, 255, 0.05);
+  --dash-text: var(--text-primary);
+  --dash-muted: var(--text-secondary);
+  --dash-shadow: var(--card-shadow);
+  --dash-primary: var(--accent-primary);
+  --dash-primary-hover: var(--accent-primary-hover);
+
+  /* Modern Sidebar navigation */
+  --nav-text-color: #a1a1aa;
+  --nav-icon-color: #71717a;
+  --nav-hover-bg: rgba(255, 255, 255, 0.05);
+  --nav-hover-text: #fafafa;
+  --nav-hover-icon: #fafafa;
+  --nav-active-bg: rgba(14, 165, 233, 0.12);
   --nav-active-text: #ffffff;
-  --nav-active-icon: #ffffff;
-  --nav-active-border: transparent;
-  --nav-header-color: #64748b;
+  --nav-active-icon: #38bdf8;
+  --nav-active-border: rgba(14, 165, 233, 0.3);
+  --nav-header-color: #52525b;
 }

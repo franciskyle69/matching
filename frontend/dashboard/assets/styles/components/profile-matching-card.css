@@ -79,8 +79,8 @@
   font-size: 1.125rem;
   letter-spacing: 0.02em;
   color: #ffffff;
-  background: linear-gradient(to bottom right, #9333ea, #4338ca);
-  border-color: rgba(167, 139, 250, 0.35);
+  background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
+  border-color: rgba(14, 165, 233, 0.35);
   text-align: center;
 }
 
@@ -190,9 +190,9 @@
 }
 
 .pmc-role {
-  background: rgba(124, 58, 237, 0.12);
-  border: 1px solid rgba(124, 58, 237, 0.35);
-  color: #7c3aed;
+  background: rgba(14, 165, 233, 0.12);
+  border: 1px solid rgba(14, 165, 233, 0.35);
+  color: #7dd3fc;
 }
 
 .pmc-score {
@@ -206,7 +206,7 @@
 }
 
 .pmc-official {
-  background: #7c3aed;
+  background: linear-gradient(180deg, #0ea5e9 0%, #0284c7 100%);
   color: #fff;
   border: none;
 }
@@ -254,8 +254,8 @@
   min-width: 0;
   padding: 12px 14px;
   border-radius: 14px;
-  background: color-mix(in srgb, var(--card-bg) 70%, #18152e);
-  border: 1px solid color-mix(in srgb, var(--text-primary) 10%, transparent);
+  background: var(--subcard-bg);
+  border: 1px solid var(--border);
 }
 
 .pmc-why-summary {
@@ -334,7 +334,7 @@
 }
 
 .pmc-why-group-label--subject {
-  color: #93c5fd;
+  color: #7dd3fc;
 }
 
 .pmc-why-group-label--competency {
@@ -511,15 +511,15 @@
   font-size: 0.875rem;
   border-radius: 10px;
   padding: 8px 16px;
-  background: #7c3aed;
+  background: linear-gradient(180deg, #0ea5e9 0%, #0284c7 100%);
   color: #fff;
-  box-shadow: none;
+  box-shadow: 0 4px 14px rgba(14, 165, 233, 0.35);
 }
 
 .pmc-cta.MuiButton-root:hover {
-  background: #6d28d9;
+  background: linear-gradient(180deg, #38bdf8 0%, #0284c7 100%);
   transform: translateY(-1px);
-  box-shadow: 0 6px 16px rgba(124, 58, 237, 0.35);
+  box-shadow: 0 6px 18px rgba(14, 165, 233, 0.45);
 }
 
 .pmc-cta.MuiButton-root:disabled {
@@ -560,14 +560,14 @@
 
 [data-theme="light"] .profile-matching-card {
   --card-bg: #ffffff;
-  --card-border: 1px solid #cbd5e1;
-  --card-shadow: 0 4px 12px -2px rgba(15, 23, 42, 0.05);
+  --card-border: 1px solid #e4e4e7;
+  --card-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
   --subcard-bg: #f8fafc;
   --subcard-border: 1px solid #e2e8f0;
   --text-primary: #0f172a;
-  --text-secondary: #334155;
-  --text-muted: #64748b;
-  --accent-primary: #7c3aed;
+  --text-secondary: #475569;
+  --text-muted: #94a3b8;
+  --accent-primary: #0ea5e9;
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
 }
@@ -575,13 +575,13 @@
 [data-theme="light"] .profile-matching-card:hover {
   transform: translateY(-2px);
   border-color: var(--accent-primary);
-  box-shadow: 0 10px 24px -12px rgba(124, 58, 237, 0.28);
+  box-shadow: 0 10px 24px -12px rgba(14, 165, 233, 0.25);
 }
 
 [data-theme="light"] .pmc-role {
-  background: rgba(124, 58, 237, 0.12);
-  border: 1px solid #7c3aed;
-  color: #6d28d9;
+  background: #f0f9ff;
+  border: 1px solid #bae6fd;
+  color: #0284c7;
 }
 
 [data-theme="light"] .pmc-score {
@@ -590,14 +590,14 @@
 }
 
 [data-theme="light"] .pmc-official {
-  background: #7c3aed;
+  background: linear-gradient(180deg, #0ea5e9 0%, #0284c7 100%);
   color: #fff;
 }
 
 [data-theme="light"] .pmc-chip--subject {
-  background: #e0f2fe;
-  border-color: #7dd3fc;
-  color: #0369a1;
+  background: #f0f9ff;
+  border-color: #bae6fd;
+  color: #0284c7;
 }
 
 [data-theme="light"] .pmc-chip--competency {
@@ -618,7 +618,7 @@
 }
 
 [data-theme="light"] .pmc-why-group-label--subject {
-  color: #0369a1;
+  color: #0284c7;
 }
 
 [data-theme="light"] .pmc-why-group-label--competency {
@@ -631,8 +631,8 @@
 
 [data-theme="light"] .pmc-chip--preview {
   background: #eef2ff;
-  border-color: #c7d2fe;
-  color: #334155;
+  border-color: #bae6fd;
+  color: #52525b;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -667,4 +667,294 @@
   .pmc-icon-actions {
     margin-left: 0;
   }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   Compact, Modern Hero/Spotlight Card Architecture
+   ═══════════════════════════════════════════════════════════════════ */
+
+.pmc-card--hero {
+  padding: 20px 24px;
+  gap: 14px;
+  border-radius: 16px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.pmc-card--hero .pmc-avatar {
+  width: 56px;
+  height: 56px;
+}
+
+.pmc-card--hero .pmc-avatar-fallback {
+  font-size: 1.25rem;
+}
+
+.pmc-card--hero .pmc-name {
+  font-size: 1.25rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.pmc-card--hero .pmc-header {
+  padding-bottom: 12px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.pmc-hero-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(280px, 0.85fr);
+  gap: 18px;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .pmc-hero-layout {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+}
+
+.pmc-hero-col-main,
+.pmc-hero-col-side {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+
+.pmc-card--hero .pmc-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+}
+
+.pmc-card--hero .pmc-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.pmc-card--hero .pmc-stat-value {
+  font-size: 14px;
+  font-weight: 800;
+  color: #0f172a;
+  line-height: 1.2;
+}
+
+.pmc-card--hero .pmc-stat-label {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.pmc-card--hero .pmc-why {
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: #f0f9ff;
+  border: 1px solid #bae6fd;
+  gap: 6px;
+}
+
+.pmc-card--hero .pmc-section-label {
+  font-size: 10.5px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #0284c7;
+  margin: 0 0 4px;
+}
+
+.pmc-card--hero .pmc-why-summary {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #0369a1;
+}
+
+.pmc-card--hero .pmc-chip--preview {
+  background: #ffffff;
+  border: 1px solid #bae6fd;
+  color: #0284c7;
+  font-size: 11.5px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 999px;
+}
+
+.pmc-card--hero .pmc-why-toggle {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #0284c7;
+}
+
+.pmc-card--hero .pmc-section {
+  gap: 4px;
+}
+
+.pmc-card--hero .pmc-bio {
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: #475569;
+}
+
+.pmc-card--hero .pmc-help {
+  margin: 0;
+  padding-left: 16px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: #475569;
+}
+
+.pmc-card--hero .pmc-chip--comm {
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  color: #475569;
+}
+
+.pmc-card--hero .pmc-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  padding-top: 12px;
+  border-top: 1px solid #f1f5f9;
+  margin-top: 2px;
+}
+
+/* ── Dark Mode: Hero / Spotlight Card & General Card ──────────── */
+
+[data-theme="dark"] .pmc-card--hero,
+.dark .pmc-card--hero {
+  background: var(--card-bg, rgba(24, 24, 27, 0.75)) !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
+  box-shadow: 0 12px 36px 0 rgba(0, 0, 0, 0.5), 0 0 40px rgba(14, 165, 233, 0.04) !important;
+}
+
+[data-theme="dark"] .pmc-card--hero .pmc-header,
+.dark .pmc-card--hero .pmc-header {
+  border-bottom-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+[data-theme="dark"] .pmc-card--hero .pmc-name,
+.dark .pmc-card--hero .pmc-name {
+  color: #f8fafc !important;
+}
+
+[data-theme="dark"] .pmc-card--hero .pmc-dept,
+.dark .pmc-card--hero .pmc-dept {
+  color: #94a3b8 !important;
+}
+
+[data-theme="dark"] .pmc-card--hero .pmc-location,
+.dark .pmc-card--hero .pmc-location {
+  background: rgba(255, 255, 255, 0.05) !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+  color: #94a3b8 !important;
+}
+
+/* Stats box (6 hrs weekly, Year 1, 3/5 need) */
+[data-theme="dark"] .pmc-card--hero .pmc-stats,
+.dark .pmc-card--hero .pmc-stats {
+  background: rgba(14, 165, 233, 0.06) !important;
+  border: 1px solid rgba(56, 189, 248, 0.18) !important;
+}
+
+[data-theme="dark"] .pmc-card--hero .pmc-stat-value,
+.dark .pmc-card--hero .pmc-stat-value {
+  color: #f8fafc !important;
+}
+
+[data-theme="dark"] .pmc-card--hero .pmc-stat-label,
+.dark .pmc-card--hero .pmc-stat-label {
+  color: #94a3b8 !important;
+}
+
+/* Why This Pairing card */
+[data-theme="dark"] .pmc-card--hero .pmc-why,
+.dark .pmc-card--hero .pmc-why {
+  background: rgba(14, 165, 233, 0.08) !important;
+  border: 1px solid rgba(56, 189, 248, 0.22) !important;
+}
+
+[data-theme="dark"] .pmc-card--hero .pmc-section-label,
+.dark .pmc-card--hero .pmc-section-label {
+  color: #38bdf8 !important;
+}
+
+[data-theme="dark"] .pmc-card--hero .pmc-why-summary,
+.dark .pmc-card--hero .pmc-why-summary {
+  color: #7dd3fc !important;
+}
+
+[data-theme="dark"] .pmc-card--hero .pmc-why-dot,
+.dark .pmc-card--hero .pmc-why-dot {
+  color: #0284c7 !important;
+}
+
+[data-theme="dark"] .pmc-card--hero .pmc-chip--preview,
+.dark .pmc-card--hero .pmc-chip--preview {
+  background: rgba(14, 165, 233, 0.14) !important;
+  border: 1px solid rgba(56, 189, 248, 0.3) !important;
+  color: #7dd3fc !important;
+}
+
+[data-theme="dark"] .pmc-card--hero .pmc-why-toggle,
+.dark .pmc-card--hero .pmc-why-toggle {
+  color: #38bdf8 !important;
+}
+
+[data-theme="dark"] .pmc-card--hero .pmc-bio,
+.dark .pmc-card--hero .pmc-bio {
+  color: #94a3b8 !important;
+}
+
+[data-theme="dark"] .pmc-card--hero .pmc-help,
+.dark .pmc-card--hero .pmc-help {
+  color: #94a3b8 !important;
+}
+
+/* Communication preference pills */
+[data-theme="dark"] .pmc-card--hero .pmc-chip--comm,
+.dark .pmc-card--hero .pmc-chip--comm {
+  background: rgba(255, 255, 255, 0.06) !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  color: #cbd5e1 !important;
+}
+
+/* Next available bar */
+[data-theme="dark"] .pmc-card--hero .pmc-next,
+.dark .pmc-card--hero .pmc-next,
+[data-theme="dark"] .pmc-next,
+.dark .pmc-next {
+  background: rgba(255, 255, 255, 0.04) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  color: #94a3b8 !important;
+}
+
+[data-theme="dark"] .pmc-card--hero .pmc-actions,
+.dark .pmc-card--hero .pmc-actions {
+  border-top-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+[data-theme="dark"] .pmc-card--hero .pmc-icon-btn.MuiIconButton-root,
+.dark .pmc-card--hero .pmc-icon-btn.MuiIconButton-root {
+  border-color: rgba(255, 255, 255, 0.12) !important;
+  color: #94a3b8 !important;
+}
+
+[data-theme="dark"] .pmc-card--hero .pmc-icon-btn.MuiIconButton-root:hover,
+.dark .pmc-card--hero .pmc-icon-btn.MuiIconButton-root:hover {
+  border-color: #38bdf8 !important;
+  color: #38bdf8 !important;
+  background: rgba(14, 165, 233, 0.12) !important;
 }

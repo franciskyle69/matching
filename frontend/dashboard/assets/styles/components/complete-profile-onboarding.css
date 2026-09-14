@@ -10,10 +10,10 @@
   width: min(100%, 720px);
   padding: 28px 28px 24px;
   border-radius: 20px;
-  background: rgba(24, 21, 46, 0.92);
-  border: 1px solid rgba(124, 58, 237, 0.28);
+  background: rgba(24, 24, 27, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   box-shadow:
-    0 24px 64px rgba(0, 0, 0, 0.4),
+    0 24px 64px rgba(0, 0, 0, 0.5),
     inset 0 1px 0 rgba(255, 255, 255, 0.06);
   backdrop-filter: blur(18px);
   -webkit-backdrop-filter: blur(18px);
@@ -31,7 +31,7 @@
   justify-content: space-between;
   font-size: 12px;
   font-weight: 700;
-  color: #c4b5fd;
+  color: #7dd3fc;
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
@@ -49,7 +49,8 @@
 }
 
 .cp-onboard-progress-fill.is-current {
-  background: linear-gradient(90deg, #7c3aed, #6366f1);
+  background: linear-gradient(90deg, #38bdf8, #0ea5e9);
+  box-shadow: 0 0 10px rgba(14, 165, 233, 0.6);
 }
 
 .cp-onboard-eyebrow {
@@ -58,7 +59,7 @@
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: #a78bfa;
+  color: #0ea5e9;
 }
 
 .cp-onboard-title {
@@ -81,7 +82,7 @@
   padding: 14px;
   margin-bottom: 22px;
   border-radius: 14px;
-  background: rgba(15, 23, 42, 0.45);
+  background: rgba(39, 39, 42, 0.45);
   border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
@@ -94,7 +95,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #7c3aed, #4338ca);
+  background: linear-gradient(135deg, #0ea5e9, #0284c7);
   font-weight: 700;
 }
 
@@ -147,7 +148,7 @@
   min-height: 44px;
   border-radius: 12px;
   border: 1px solid rgba(255, 255, 255, 0.14);
-  background: rgba(15, 23, 42, 0.5);
+  background: rgba(18, 18, 21, 0.6);
   color: #fff;
   padding: 0 12px;
   font: inherit;
@@ -156,8 +157,8 @@
 .cp-onboard-field input:focus,
 .cp-onboard-field select:focus {
   outline: none;
-  border-color: #7c3aed;
-  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.28);
+  border-color: #0ea5e9;
+  box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.25);
 }
 
 .cp-onboard-locked {
@@ -167,9 +168,9 @@
   align-items: center;
   padding: 0 12px;
   border-radius: 12px;
-  background: rgba(124, 58, 237, 0.12);
-  border: 1px solid rgba(124, 58, 237, 0.28);
-  color: #e9d5ff;
+  background: rgba(14, 165, 233, 0.12);
+  border: 1px solid rgba(14, 165, 233, 0.28);
+  color: #0284c7;
   font-weight: 600;
 }
 
@@ -184,7 +185,7 @@
   padding: 14px;
   border-radius: 14px;
   border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(15, 23, 42, 0.35);
+  background: rgba(39, 39, 42, 0.35);
   color: #e2e8f0;
   cursor: pointer;
   display: grid;
@@ -197,9 +198,9 @@
 }
 
 .cp-onboard-role-card.is-active {
-  border-color: #7c3aed;
-  background: rgba(124, 58, 237, 0.18);
-  box-shadow: 0 0 0 1px rgba(124, 58, 237, 0.35);
+  border-color: #0ea5e9;
+  background: rgba(14, 165, 233, 0.14);
+  box-shadow: 0 0 0 1px rgba(14, 165, 233, 0.35);
 }
 
 .cp-onboard-chips {
@@ -210,7 +211,7 @@
 
 .cp-onboard-chip {
   border: 1px solid rgba(255, 255, 255, 0.14);
-  background: rgba(15, 23, 42, 0.35);
+  background: rgba(39, 39, 42, 0.35);
   color: #e2e8f0;
   border-radius: 999px;
   padding: 8px 12px;
@@ -220,7 +221,7 @@
 }
 
 .cp-onboard-chip.is-active {
-  background: linear-gradient(135deg, #7c3aed, #6366f1);
+  background: linear-gradient(135deg, #0ea5e9, #0284c7);
   border-color: transparent;
   color: #fff;
 }
@@ -243,11 +244,17 @@
   min-height: 48px;
   border: 0;
   border-radius: 12px;
-  background: linear-gradient(135deg, #7c3aed, #6366f1);
+  background: linear-gradient(135deg, #0ea5e9, #0284c7);
   color: #fff;
   font-weight: 700;
   cursor: pointer;
-  box-shadow: 0 12px 28px rgba(124, 58, 237, 0.35);
+  box-shadow: 0 10px 24px rgba(14, 165, 233, 0.35);
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.cp-onboard-submit:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 14px 32px rgba(14, 165, 233, 0.45);
 }
 
 .cp-onboard-submit:disabled {

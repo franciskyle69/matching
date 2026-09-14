@@ -273,22 +273,28 @@ import NotificationsNoneOutlined from "@mui/icons-material/NotificationsNoneOutl
 
     return (
       <div className="notifications-page notifications-page--glass page-shell">
-        <div className="notifications-page-header page-shell-head">
-          <div>
-            <h1 className="page-title">Notifications</h1>
-            <p className="page-subtitle">Matching updates and activity.</p>
+        <header className="kasandigan-header">
+          <div className="kasandigan-header-content">
+            <div className="kasandigan-badge">
+              <span className="kasandigan-badge-dot" />
+              <span>Academic Mentoring Unit • Notifications</span>
+            </div>
+            <h1 className="kasandigan-title">Notifications</h1>
+            <p className="kasandigan-subtitle">
+              Matching updates, schedule alerts, and discussion activity.
+            </p>
           </div>
-          <div className="page-shell-actions">
+          <div className="kasandigan-header-actions">
             <button
               type="button"
-              className="btn secondary"
+              className="btn kasandigan-btn-secondary"
               onClick={handleMarkAllRead}
               disabled={!unreadCount}
             >
               Mark all as read
             </button>
           </div>
-        </div>
+        </header>
 
         {!notificationsLoading && notifications.length > 0 && Tabs && Tab ? (
           <Tabs

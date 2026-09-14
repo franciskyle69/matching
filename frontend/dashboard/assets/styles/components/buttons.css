@@ -1,3 +1,7 @@
+/* ═══════════════════════════════════════════════════════════════════
+   Universal Button System & Unified Hover Standards
+   ═══════════════════════════════════════════════════════════════════ */
+
 .btn,
 .btn.btn-primary,
 .btn.btn-secondary,
@@ -6,122 +10,248 @@
 .btn.btn-info,
 .btn.btn-danger,
 .btn-primary,
-.btn-secondary {
+.btn-secondary,
+.pmc-cta.MuiButton-root,
+.pmc-secondary.MuiButton-root,
+.match-mui-btn--primary.MuiButton-root,
+.match-mui-btn--outlined.MuiButton-root,
+.settings-btn-upload,
+.approval-accept-btn,
+.approval-reject-btn,
+.kasandigan-btn-primary,
+.kasandigan-btn-secondary {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: var(--space-2);
   min-height: 44px;
-  padding: 0.62rem 1rem;
+  padding: 0.62rem 1.1rem;
   border: 1px solid transparent;
-  border-radius: var(--radius-md);
-  font-size: var(--text-sm);
+  border-radius: var(--radius-md, 12px);
+  font-size: var(--text-sm, 0.875rem);
   font-weight: 600;
   line-height: 1.2;
   text-decoration: none;
   cursor: pointer;
-  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease, transform 0.12s ease;
+  transition:
+    background-color 0.18s cubic-bezier(0.16, 1, 0.3, 1),
+    background-image 0.18s cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 0.18s cubic-bezier(0.16, 1, 0.3, 1),
+    color 0.18s cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 0.18s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.15s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .btn:focus-visible,
 .btn-primary:focus-visible,
-.btn-secondary:focus-visible {
+.btn-secondary:focus-visible,
+.pmc-cta.MuiButton-root:focus-visible,
+.match-mui-btn--primary.MuiButton-root:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 3px var(--focus-ring);
+  box-shadow: 0 0 0 3px var(--focus-ring, rgba(14, 165, 233, 0.35));
 }
 
 .btn:disabled,
 .btn-primary:disabled,
-.btn-secondary:disabled {
+.btn-secondary:disabled,
+.pmc-cta.MuiButton-root:disabled,
+.settings-btn-upload:disabled {
   opacity: 0.62;
   cursor: not-allowed;
-  transform: none;
+  transform: none !important;
+  box-shadow: none !important;
 }
 
-.btn:hover:not(:disabled),
-.btn-primary:hover:not(:disabled),
-.btn-secondary:hover:not(:disabled) {
-  transform: translateY(-1px);
-}
+/* ── Primary Buttons (Base State) ─────────────────────────────── */
 
-.btn,
+.btn:not(.secondary):not(.btn-secondary):not(.kasandigan-btn-secondary):not(.sidebar-logout-btn):not(.danger):not(.btn-danger):not(.approval-reject-btn):not(.btn-warning):not(.btn-success):not(.outline):not(.ghost),
 .btn.btn-primary,
-.btn-primary {
-  background: var(--primary);
-  border-color: var(--primary);
-  color: #fff;
+.btn.primary,
+.btn-primary,
+.pmc-cta.MuiButton-root,
+.match-mui-btn--primary.MuiButton-root,
+.settings-btn-upload,
+.approval-accept-btn,
+.kasandigan-btn-primary {
+  background: linear-gradient(180deg, #0ea5e9 0%, #0284c7 100%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  color: #ffffff !important;
+  box-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.08),
+    0 2px 8px rgba(14, 165, 233, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
 }
 
-.btn:hover:not(:disabled),
+/* ── Universal Primary Button Hover (Identical across all buttons) ── */
+
+.btn:not(.secondary):not(.btn-secondary):not(.kasandigan-btn-secondary):not(.sidebar-logout-btn):not(.danger):not(.btn-danger):not(.approval-reject-btn):not(.btn-warning):not(.btn-success):not(.outline):not(.ghost):hover:not(:disabled),
 .btn.btn-primary:hover:not(:disabled),
-.btn-primary:hover:not(:disabled) {
-  background: var(--primary-hover);
-  border-color: var(--primary-hover);
+.btn.primary:hover:not(:disabled),
+.btn-primary:hover:not(:disabled),
+.pmc-cta.MuiButton-root:hover:not(:disabled),
+.match-mui-btn--primary.MuiButton-root:hover:not(:disabled),
+.settings-btn-upload:hover:not(:disabled),
+.approval-accept-btn:hover:not(:disabled),
+.kasandigan-btn-primary:hover:not(:disabled),
+[data-theme="dark"] .btn:not(.secondary):not(.btn-secondary):not(.kasandigan-btn-secondary):not(.sidebar-logout-btn):not(.danger):not(.btn-danger):not(.approval-reject-btn):not(.btn-warning):not(.btn-success):not(.outline):not(.ghost):hover:not(:disabled),
+[data-theme="dark"] .btn.btn-primary:hover:not(:disabled),
+[data-theme="dark"] .btn-primary:hover:not(:disabled),
+[data-theme="dark"] .btn.primary:hover:not(:disabled) {
+  background: linear-gradient(180deg, #38bdf8 0%, #0284c7 100%) !important;
+  border-color: rgba(255, 255, 255, 0.35) !important;
+  color: #ffffff !important;
+  box-shadow:
+    0 4px 16px rgba(14, 165, 233, 0.45),
+    0 1px 3px rgba(0, 0, 0, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3) !important;
+  transform: translateY(-1.5px) !important;
 }
+
+/* ── Secondary / Outlined Buttons (Base State) ────────────────── */
 
 .btn.secondary,
 .btn.btn-secondary,
-.btn-secondary {
-  background: var(--card);
-  border-color: var(--border);
-  color: var(--text);
+.btn-secondary,
+.btn.kasandigan-btn-secondary,
+.kasandigan-btn-secondary,
+.pmc-secondary.MuiButton-root,
+.match-mui-btn--outlined.MuiButton-root {
+  background: #ffffff !important;
+  border: 1px solid #cbd5e1 !important;
+  color: #0f172a !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04) !important;
 }
+
+[data-theme="dark"] .btn.secondary,
+[data-theme="dark"] .btn.btn-secondary,
+[data-theme="dark"] .btn-secondary,
+[data-theme="dark"] .btn.kasandigan-btn-secondary,
+[data-theme="dark"] .kasandigan-btn-secondary,
+[data-theme="dark"] .pmc-secondary.MuiButton-root,
+[data-theme="dark"] .match-mui-btn--outlined.MuiButton-root {
+  background: rgba(30, 41, 59, 0.85) !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  color: #f8fafc !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2) !important;
+}
+
+/* ── Universal Secondary Button Hover ─────────────────────────── */
 
 .btn.secondary:hover:not(:disabled),
 .btn.btn-secondary:hover:not(:disabled),
-.btn-secondary:hover:not(:disabled) {
-  background: var(--bg-subtle);
+.btn-secondary:hover:not(:disabled),
+.btn.kasandigan-btn-secondary:hover:not(:disabled),
+.kasandigan-btn-secondary:hover:not(:disabled),
+.pmc-secondary.MuiButton-root:hover:not(:disabled),
+.match-mui-btn--outlined.MuiButton-root:hover:not(:disabled),
+[data-theme="light"] .btn.secondary:hover:not(:disabled),
+[data-theme="light"] .btn.btn-secondary:hover:not(:disabled),
+[data-theme="light"] .btn-secondary:hover:not(:disabled),
+[data-theme="light"] .btn.kasandigan-btn-secondary:hover:not(:disabled),
+[data-theme="light"] .kasandigan-btn-secondary:hover:not(:disabled),
+[data-theme="light"] .pmc-secondary.MuiButton-root:hover:not(:disabled),
+[data-theme="light"] .match-mui-btn--outlined.MuiButton-root:hover:not(:disabled) {
+  background: #f0f9ff !important;
+  border-color: #38bdf8 !important;
+  color: #0284c7 !important;
+  box-shadow: 0 4px 12px rgba(14, 165, 233, 0.15) !important;
+  transform: translateY(-1.5px) !important;
 }
 
+[data-theme="dark"] .btn.secondary:hover:not(:disabled),
+[data-theme="dark"] .btn.btn-secondary:hover:not(:disabled),
+[data-theme="dark"] .btn-secondary:hover:not(:disabled),
+[data-theme="dark"] .btn.kasandigan-btn-secondary:hover:not(:disabled),
+[data-theme="dark"] .kasandigan-btn-secondary:hover:not(:disabled),
+[data-theme="dark"] .pmc-secondary.MuiButton-root:hover:not(:disabled),
+[data-theme="dark"] .match-mui-btn--outlined.MuiButton-root:hover:not(:disabled) {
+  background: rgba(14, 165, 233, 0.16) !important;
+  border-color: rgba(56, 189, 248, 0.5) !important;
+  color: #38bdf8 !important;
+  box-shadow: 0 4px 14px rgba(14, 165, 233, 0.25) !important;
+  transform: translateY(-1.5px) !important;
+}
+
+/* ── Universal Active (Press) State ───────────────────────────── */
+
+.btn:active:not(:disabled),
+.btn-primary:active:not(:disabled),
+.btn-secondary:active:not(:disabled),
+.pmc-cta.MuiButton-root:active:not(:disabled),
+.pmc-secondary.MuiButton-root:active:not(:disabled),
+.match-mui-btn--primary.MuiButton-root:active:not(:disabled),
+.match-mui-btn--outlined.MuiButton-root:active:not(:disabled),
+.settings-btn-upload:active:not(:disabled),
+.approval-accept-btn:active:not(:disabled),
+.kasandigan-btn-primary:active:not(:disabled),
+.kasandigan-btn-secondary:active:not(:disabled) {
+  transform: translateY(0px) !important;
+  box-shadow: 0 1px 4px rgba(14, 165, 233, 0.3) !important;
+}
+
+/* ── Danger & Feedback Buttons ────────────────────────────────── */
+
 .btn.danger,
-.btn.btn-danger {
-  background: var(--danger);
-  border-color: var(--danger);
-  color: #fff;
+.btn.btn-danger,
+.approval-reject-btn {
+  background: var(--danger, #ef4444);
+  border: 1px solid var(--danger, #ef4444);
+  color: #ffffff !important;
 }
 
 .btn.danger:hover:not(:disabled),
-.btn.btn-danger:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--danger) 88%, black);
-  border-color: color-mix(in srgb, var(--danger) 88%, black);
+.btn.btn-danger:hover:not(:disabled),
+.approval-reject-btn:hover:not(:disabled) {
+  background: #dc2626 !important;
+  border-color: #b91c1c !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 14px rgba(239, 68, 68, 0.35) !important;
+  transform: translateY(-1.5px) !important;
 }
 
 .btn.btn-success {
-  background: var(--success);
-  border-color: var(--success);
+  background: var(--success, #10b981);
+  border-color: var(--success, #10b981);
   color: #fff;
 }
 
 .btn.btn-success:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--success) 85%, black);
-  border-color: color-mix(in srgb, var(--success) 85%, black);
+  background: #059669 !important;
+  border-color: #047857 !important;
+  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35) !important;
+  transform: translateY(-1.5px) !important;
 }
 
 .btn.btn-warning {
-  background: var(--warning);
-  border-color: var(--warning);
-  color: color-mix(in srgb, var(--text) 90%, black);
+  background: var(--warning, #f59e0b);
+  border-color: var(--warning, #f59e0b);
+  color: #0f172a;
 }
 
 .btn.btn-warning:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--warning) 86%, black);
-  border-color: color-mix(in srgb, var(--warning) 86%, black);
+  background: #d97706 !important;
+  border-color: #b45309 !important;
+  box-shadow: 0 4px 14px rgba(245, 158, 11, 0.35) !important;
+  transform: translateY(-1.5px) !important;
 }
 
 .btn.btn-info {
-  background: var(--info);
-  border-color: var(--info);
+  background: var(--info, #0ea5e9);
+  border-color: var(--info, #0ea5e9);
   color: #fff;
 }
 
 .btn.btn-info:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--info) 85%, black);
-  border-color: color-mix(in srgb, var(--info) 85%, black);
+  background: linear-gradient(180deg, #38bdf8 0%, #0284c7 100%) !important;
+  transform: translateY(-1.5px) !important;
 }
+
+/* ── Size Modifiers ───────────────────────────────────────────── */
 
 .btn.small,
 .btn.btn-sm {
   min-height: 34px;
-  padding: 0.45rem 0.72rem;
-  font-size: var(--text-xs);
+  padding: 0.45rem 0.85rem;
+  font-size: var(--text-xs, 0.75rem);
 }
+

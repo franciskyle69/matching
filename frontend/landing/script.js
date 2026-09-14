@@ -34,16 +34,41 @@ function delay(ms) {
 (function initSiteNavScroll() {
   const nav = document.getElementById("site-nav");
   const hero = document.getElementById("hero");
-  if (!nav || !hero) return;
+  if (!nav) return;
 
-  const io = new IntersectionObserver(
-    ([entry]) => {
-      nav.classList.toggle("site-nav--solid", !entry.isIntersecting);
-    },
-    { threshold: 0 },
-  );
+  if (hero) {
+    const io = new IntersectionObserver(
+      ([entry]) => {
+        nav.classList.toggle("site-nav--solid", !entry.isIntersecting);
+      },
+      { threshold: 0 },
+    );
+    io.observe(hero);
+  }
 
-  io.observe(hero);
+  // Active section pill highlight
+  const sections = ["hero", "features", "how", "footer-contact"]
+    .map((id) => document.getElementById(id))
+    .filter(Boolean);
+  const navLinks = nav.querySelectorAll(".nav-link, .nav-link-pill");
+
+  if (sections.length && navLinks.length) {
+    const sectionObserver = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            const id = entry.target.id;
+            navLinks.forEach((link) => {
+              const href = link.getAttribute("href") || "";
+              link.classList.toggle("is-active", href === `#${id}`);
+            });
+          }
+        });
+      },
+      { threshold: 0.35, rootMargin: "-80px 0px -40% 0px" },
+    );
+    sections.forEach((sec) => sectionObserver.observe(sec));
+  }
 })();
 
 (function initScrollReveal() {
@@ -165,7 +190,7 @@ function delay(ms) {
       el.innerHTML = "";
       for (const seg of lines[lineIndex]) {
         const span = document.createElement("span");
-        if (seg.accent) span.className = "text-[#c2b8ff]";
+        if (seg.accent) span.className = "text-[#7dd3fc]";
         span.textContent = seg.text;
         el.appendChild(span);
       }
@@ -189,7 +214,7 @@ function delay(ms) {
 
       for (const seg of lines[lineIndex]) {
         const span = document.createElement("span");
-        if (seg.accent) span.className = "text-[#c2b8ff]";
+        if (seg.accent) span.className = "text-[#7dd3fc]";
         if (cursor.parentNode === container) container.removeChild(cursor);
         container.appendChild(span);
         for (let i = 0; i < seg.text.length; i++) {

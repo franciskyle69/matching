@@ -1,7 +1,7 @@
 (function () {
   "use strict";
   const React = window.React;
-  const { useEffect, useMemo, useState, useRef, useCallback } = React;
+  const { useEffect, useMemo, useState, useRef } = React;
   const MAIN_TABS =
     (window.DashboardApp && window.DashboardApp.MAIN_TABS) || [];
   const { getCookie, fetchJSON, ensureCsrfToken } =
@@ -14,9 +14,7 @@
     return !!(
       userData &&
       ((userData.role === "mentor" && userData.mentor_approved === false) ||
-        (userData.role === "mentee" && userData.mentee_approved === false) ||
-        userData.approved === false ||
-        userData.is_active === false)
+        (userData.role === "mentee" && userData.mentee_approved === false))
     );
   }
   function getPendingApprovalLandingTab(userData) {
@@ -178,6 +176,9 @@
       password: "",
     });
     const emptySignUpForm = {
+      display_name: "",
+      password: "",
+      confirm_password: "",
       role: "mentor",
       mentor_role: "",
       gender: "",
@@ -252,21 +253,7 @@
     const [mentorProfileHashId, setMentorProfileHashId] = useState(null);
     const [viewedUserProfile, setViewedUserProfile] = useState(null);
     const [menteeRecUpdating, setMenteeRecUpdating] = useState(false);
-    const myMentorAbortRef = useRef(null);
-    const myMentorInFlightRef = useRef(false);
-    const menteeRecAbortRef = useRef(null);
-    const menteeRecInFlightRef = useRef(false);
-    const mentorRequestsInFlightRef = useRef(false);
-    const userRef = useRef(user);
-    useEffect(() => {
-      userRef.current = user;
-    }, [user]);
-    const menteeRecommendationsRef = useRef(menteeRecommendations);
-    useEffect(() => {
-      menteeRecommendationsRef.current = menteeRecommendations;
-    }, [menteeRecommendations]);
     const prevActiveTabRef = useRef(activeTab);
-    const tabInitialLoadDoneRef = useRef(false);
     const lastMatchingRunRef = useRef(0);
     const lockoutCountdownRef = useRef(null);
     const signInPathRef = useRef(false);
@@ -277,17 +264,11 @@
     const lastSavedMentorProfileRef = useRef(cloneJson(EMPTY_MENTOR_PROFILE));
     const lastSavedMenteeMatchingRef = useRef(cloneJson(EMPTY_MENTEE_MATCHING));
     const [leaveGuard, setLeaveGuard] = useState(null);
-    const [theme, setThemeState] = useState(() => {
-      if (typeof window === "undefined") return "light";
-      const stored = window.localStorage.getItem("theme");
-      if (stored === "dark" || stored === "light") return stored;
-      return window.matchMedia("(prefers-color-scheme: dark)").matches
-        ? "dark"
-        : "light";
-    });
+    const [theme, setThemeState] = useState("light");
 
     function toggleTheme() {
-      setThemeState((prev) => (prev === "dark" ? "light" : "dark"));
+      // System is locked to light mode (Neumorphic Soft UI)
+      setThemeState("light");
     }
 
     function isSignInPathFlow() {
@@ -371,168 +352,6 @@
       };
     }, []);
 
-    const loadMentorRequests = useCallback(async () => {
-      const currentUser = userRef.current;
-      if (!currentUser || currentUser.role !== "mentor") return null;
-      if (
-        !currentUser.is_staff &&
-        (getIsPendingApproval(currentUser) || currentUser.mentor_approved !== true)
-      ) {
-        return null;
-      }
-
-      if (mentorRequestsInFlightRef.current) return;
-      mentorRequestsInFlightRef.current = true;
-      setMentorRequestsLoading(true);
-      try {
-        const result = await fetchJSON("/api/matching/mentor-requests/");
-        if (result.ok) setMentorRequests(result.data?.results || []);
-        else setMentorRequests([]);
-      } finally {
-        mentorRequestsInFlightRef.current = false;
-        setMentorRequestsLoading(false);
-      }
-    }, []);
-
-    const loadMyMentor = useCallback(async (options = {}) => {
-      const currentUser = options.user || userRef.current;
-      const role = options.role || currentUser?.role;
-      if (role !== "mentee") return null;
-      if (!currentUser || getIsPendingApproval(currentUser) || currentUser.mentee_approved !== true) {
-        return null;
-      }
-
-      if (myMentorInFlightRef.current && !options.force) {
-        return null;
-      }
-
-      if (myMentorAbortRef.current) {
-        myMentorAbortRef.current.abort();
-      }
-      const controller = new AbortController();
-      myMentorAbortRef.current = controller;
-      myMentorInFlightRef.current = true;
-
-      try {
-        const result = await fetchJSON("/api/matching/my-mentor/", {
-          signal: controller.signal,
-        });
-        if (result.aborted) return null;
-        if (result.ok) {
-          const mentor = result.data?.mentor || null;
-          setMyMentor((prev) => {
-            if (prev === mentor) return prev;
-            if (
-              prev &&
-              mentor &&
-              prev.id === mentor.id &&
-              prev.user_id === mentor.user_id
-            ) {
-              return prev;
-            }
-            return mentor;
-          });
-          setChosenMentorId((prev) => {
-            const nextId = mentor?.id ?? null;
-            return prev === nextId ? prev : nextId;
-          });
-        } else {
-          setMyMentor(null);
-          setChosenMentorId(null);
-        }
-        return result;
-      } catch (err) {
-        if (err && err.name !== "AbortError") {
-          setMyMentor(null);
-          setChosenMentorId(null);
-        }
-        return null;
-      } finally {
-        if (myMentorAbortRef.current === controller) {
-          myMentorAbortRef.current = null;
-          myMentorInFlightRef.current = false;
-        }
-      }
-    }, []);
-
-    const loadMenteeRecommendations = useCallback(async (limit, options = {}) => {
-      const currentUser = options.user || userRef.current;
-      if (!currentUser || currentUser.role !== "mentee") return null;
-      if (getIsPendingApproval(currentUser) || currentUser.mentee_approved !== true) {
-        return null;
-      }
-
-      if (menteeRecInFlightRef.current && !options.force) {
-        return null;
-      }
-
-      if (menteeRecAbortRef.current) {
-        menteeRecAbortRef.current.abort();
-      }
-      const controller = new AbortController();
-      menteeRecAbortRef.current = controller;
-      menteeRecInFlightRef.current = true;
-
-      const hasCached =
-        Array.isArray(menteeRecommendationsRef.current) &&
-        menteeRecommendationsRef.current.length > 0;
-      if (hasCached) {
-        setMenteeRecUpdating(true);
-      } else {
-        setMenteeRecLoading(true);
-      }
-      setError("");
-      const params = new URLSearchParams();
-      if (limit) params.set("limit", String(limit));
-      const url = params.toString()
-        ? `/api/matching/mentee-recommendations/?${params.toString()}`
-        : "/api/matching/mentee-recommendations/";
-
-      try {
-        const result = await fetchJSON(url, { signal: controller.signal });
-        if (result.aborted) return null;
-        if (!result.ok) {
-          setError(
-            result.data?.error || "Unable to load mentor recommendations.",
-          );
-          setMenteeRecMeta({
-            empty_reason: null,
-            message: "",
-            suggested_time_slots: [],
-            from_cache: false,
-            elapsed_ms: 0,
-          });
-          return result;
-        }
-        setMenteeRecommendations(result.data?.results || []);
-        setMenteeRecMeta({
-          empty_reason: result.data?.empty_reason || null,
-          message: result.data?.message || "",
-          suggested_time_slots: Array.isArray(result.data?.suggested_time_slots)
-            ? result.data.suggested_time_slots
-            : [],
-          from_cache: !!result.data?.from_cache,
-          elapsed_ms:
-            typeof result.data?.elapsed_ms === "number"
-              ? result.data.elapsed_ms
-              : 0,
-        });
-        return result;
-      } catch (err) {
-        if (err && err.name !== "AbortError") {
-          setError("Unable to load mentor recommendations.");
-        }
-        return null;
-      } finally {
-        if (menteeRecAbortRef.current === controller) {
-          menteeRecAbortRef.current = null;
-          menteeRecInFlightRef.current = false;
-          setMenteeRecLoading(false);
-          setMenteeRecUpdating(false);
-        }
-      }
-    }, []);
-
     function clearLockoutCountdown() {
       if (lockoutCountdownRef.current) {
         clearInterval(lockoutCountdownRef.current);
@@ -541,10 +360,9 @@
     }
 
     useEffect(() => {
-      // Keep theme behavior consistent on auth and app pages.
-      const effectiveTheme = theme === "dark" ? "dark" : "light";
-      document.documentElement.setAttribute("data-theme", effectiveTheme);
-      window.localStorage.setItem("theme", effectiveTheme);
+      // Entire system is strictly light mode (Neumorphic Soft UI)
+      document.documentElement.setAttribute("data-theme", "light");
+      window.localStorage.setItem("theme", "light");
     }, [theme]);
 
     useEffect(() => {
@@ -571,8 +389,6 @@
     useEffect(() => {
       return () => {
         clearLockoutCountdown();
-        if (myMentorAbortRef.current) myMentorAbortRef.current.abort();
-        if (menteeRecAbortRef.current) menteeRecAbortRef.current.abort();
       };
     }, []);
 
@@ -841,8 +657,7 @@
 
     useEffect(() => {
       if (!authCheckDone || !user) return;
-      const isPending = getIsPendingApproval(user);
-      if (user.is_onboarded === true && activeTab === "onboarding" && !isPending) {
+      if (user.is_onboarded === true && activeTab === "onboarding") {
         setActiveTab("home");
         return;
       }
@@ -852,7 +667,7 @@
         }
         return;
       }
-      if (!isPending) return;
+      if (!getIsPendingApproval(user)) return;
       const allowedPendingTabs = new Set([
         "onboarding",
         "complete-profile",
@@ -913,36 +728,20 @@
 
     useEffect(() => {
       if (!authCheckDone || !user) return;
-      const tabChanged = prevActiveTabRef.current !== activeTab;
-      const isInitial = !tabInitialLoadDoneRef.current;
-      if (isInitial) {
-        tabInitialLoadDoneRef.current = true;
-      }
-
-      const isPending = getIsPendingApproval(user);
       if (
-        (tabChanged || isInitial) &&
         (activeTab === "home" || activeTab === "mentees") &&
-        user.role === "mentor" &&
-        !isPending
+        user.role === "mentor"
       ) {
         loadMentorRequests();
       }
       if (
-        (tabChanged || isInitial) &&
         (activeTab === "matching" || activeTab === "home") &&
-        user.role === "mentee" &&
-        !isPending
+        user.role === "mentee"
       ) {
-        loadMyMentor({ role: "mentee", user });
+        loadMyMentor({ role: "mentee" });
       }
-      if (
-        (tabChanged || isInitial) &&
-        activeTab === "home" &&
-        user.role === "mentee" &&
-        !isPending
-      ) {
-        loadMenteeRecommendations(undefined, { user });
+      if (activeTab === "home" && user.role === "mentee") {
+        loadMenteeRecommendations();
       }
       if (activeTab === "announcements" && !announcementsLoaded)
         loadAnnouncements();
@@ -951,7 +750,7 @@
           prevActiveTabRef.current !== "matching" &&
           prevActiveTabRef.current !== "mentees"
         ) {
-          if (user.role === "mentor" && !isPending) loadMentorRequests();
+          if (user.role === "mentor") loadMentorRequests();
         }
       }
       prevActiveTabRef.current = activeTab;
@@ -976,15 +775,12 @@
     }, [
       activeTab,
       authCheckDone,
-      user?.id,
+      user,
       user?.role,
       user?.is_staff,
       mentorProfileHashId,
       viewedMentorProfile,
       postsFeedLoaded,
-      loadMentorRequests,
-      loadMyMentor,
-      loadMenteeRecommendations,
     ]);
 
     useEffect(() => {
@@ -1147,6 +943,9 @@
             "Review or complete your information below, then wait for coordinator approval.",
         });
         setActiveTab(getPendingApprovalLandingTab(result.data));
+        if (result.data.role === "mentee") {
+          loadMyMentor({ role: "mentee" });
+        }
         setAuthCheckDone(true);
         return result.data;
       }
@@ -1165,8 +964,8 @@
           ? requiredOnboardingTab || "home"
           : requiredOnboardingTab || prev,
       );
-      if (result.data.role === "mentee" && !unapproved && result.data.mentee_approved === true) {
-        loadMyMentor({ role: "mentee", user: result.data });
+      if (result.data.role === "mentee") {
+        loadMyMentor({ role: "mentee" });
       }
       setAuthCheckDone(true);
       return result.data;
@@ -1191,6 +990,28 @@
       setLastRunMode(result.data.mode || matchingMode);
       setLastRunMinScore(result.data.min_score ?? null);
       setMatchingLoading(false);
+    }
+
+    async function loadMentorRequests() {
+      setMentorRequestsLoading(true);
+      const result = await fetchJSON("/api/matching/mentor-requests/");
+      if (result.ok) setMentorRequests(result.data.results || []);
+      else setMentorRequests([]);
+      setMentorRequestsLoading(false);
+    }
+
+    async function loadMyMentor(options = {}) {
+      const role = options.role || user?.role;
+      if (role !== "mentee") return;
+      const result = await fetchJSON("/api/matching/my-mentor/");
+      if (result.ok) {
+        const mentor = result.data.mentor || null;
+        setMyMentor(mentor);
+        setChosenMentorId(mentor?.id ?? null);
+      } else {
+        setMyMentor(null);
+        setChosenMentorId(null);
+      }
     }
 
     async function loadMentorProfileByUserId(userId) {
@@ -1236,6 +1057,55 @@
       addToast("Mentee accepted.");
       loadMentorRequests();
       setActiveTab("matching");
+    }
+
+    async function loadMenteeRecommendations(limit) {
+      if (!user || user.role !== "mentee") return;
+      const hasCached =
+        Array.isArray(menteeRecommendations) &&
+        menteeRecommendations.length > 0;
+      if (hasCached) {
+        setMenteeRecUpdating(true);
+      } else {
+        setMenteeRecLoading(true);
+      }
+      setError("");
+      const params = new URLSearchParams();
+      if (limit) params.set("limit", String(limit));
+      const url = params.toString()
+        ? `/api/matching/mentee-recommendations/?${params.toString()}`
+        : "/api/matching/mentee-recommendations/";
+      const result = await fetchJSON(url);
+      if (!result.ok) {
+        setError(
+          result.data?.error || "Unable to load mentor recommendations.",
+        );
+        setMenteeRecMeta({
+          empty_reason: null,
+          message: "",
+          suggested_time_slots: [],
+          from_cache: false,
+          elapsed_ms: 0,
+        });
+        setMenteeRecLoading(false);
+        setMenteeRecUpdating(false);
+        return;
+      }
+      setMenteeRecommendations(result.data.results || []);
+      setMenteeRecMeta({
+        empty_reason: result.data.empty_reason || null,
+        message: result.data.message || "",
+        suggested_time_slots: Array.isArray(result.data.suggested_time_slots)
+          ? result.data.suggested_time_slots
+          : [],
+        from_cache: !!result.data.from_cache,
+        elapsed_ms:
+          typeof result.data.elapsed_ms === "number"
+            ? result.data.elapsed_ms
+            : 0,
+      });
+      setMenteeRecLoading(false);
+      setMenteeRecUpdating(false);
     }
 
     async function chooseMentor(mentorId) {
@@ -1460,6 +1330,63 @@
       setAuthAlert(null);
       setSignUpLoading(true);
       try {
+        if (signUpForm.display_name !== undefined) {
+          const displayName = String(signUpForm.display_name || "").trim();
+          const email = String(signUpForm.email || "")
+            .trim()
+            .toLowerCase();
+          const password = String(signUpForm.password || "");
+          const confirmPassword = String(signUpForm.confirm_password || "");
+          const institutionalEmail = /^[^\s@]+@(student\.)?buksu\.edu\.ph$/i;
+          if (
+            !displayName ||
+            !institutionalEmail.test(email) ||
+            !password ||
+            password !== confirmPassword
+          ) {
+            setAuthAlert({
+              severity: "error",
+              title: "Check your details",
+              message:
+                "Enter your name, institutional email, and matching passwords.",
+            });
+            return;
+          }
+          const body = new FormData();
+          body.append("display_name", displayName);
+          body.append("email", email);
+          body.append("password", password);
+          body.append("confirm_password", confirmPassword);
+          const portalRole = getPortalAuthRole();
+          if (portalRole === "mentor" || portalRole === "mentee")
+            body.append("role", portalRole);
+          const result = await fetchJSON("/api/auth/register/", {
+            method: "POST",
+            raw: true,
+            headers: { "X-CSRFToken": getCookie("csrftoken") },
+            body,
+          });
+          if (!result.ok) {
+            const message =
+              result.data?.error ||
+              Object.values(result.data?.errors || {})?.[0]?.[0] ||
+              "Unable to create your account.";
+            setAuthAlert({
+              severity: "error",
+              title: "Sign up failed",
+              message,
+            });
+            return;
+          }
+          const token = result.data?.access_token || "";
+          setAccessToken(token);
+          try {
+            window.sessionStorage.setItem("peerlink_access_token", token);
+          } catch (_) {}
+          const profile = await loadMe({ force: true });
+          if (profile) setActiveTab("onboarding");
+          return;
+        }
         const portalRole = getPortalAuthRole();
         if (portalRole === "staff") {
           setAuthAlert({

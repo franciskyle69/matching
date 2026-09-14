@@ -233,29 +233,37 @@
     }
 
     return (
-      <div className="home-dashboard-space announcements-page page-shell">
-        <div className="page-shell-head announcements-page-head">
-          <p className="page-subtitle announcements-page-subtitle">
-            {isMentor
-              ? "Post announcements to your mentees. They can comment below."
-              : "Announcements from your mentors. You can add comments."}
-          </p>
-          <div className="page-shell-actions">
+      <div className="announcements-page page-shell">
+        {/* Kasandigan Open Native Header — Zero box container */}
+        <header className="kasandigan-header">
+          <div className="kasandigan-header-content">
+            <div className="kasandigan-badge">
+              <span className="kasandigan-badge-dot" />
+              <span>Academic Mentoring Unit • Community Board</span>
+            </div>
+            <h1 className="kasandigan-title">Announcements</h1>
+            <p className="kasandigan-subtitle">
+              {isMentor
+                ? "Post announcements to your mentees and respond to discussion threads."
+                : "Official notices and study announcements from faculty and peer mentors."}
+            </p>
+          </div>
+          <div className="kasandigan-header-actions">
             <button
               type="button"
-              className="btn secondary small"
+              className="btn kasandigan-btn-secondary"
               onClick={loadAnnouncements}
             >
-              Refresh
+              Refresh Feed
             </button>
           </div>
-        </div>
+        </header>
 
         <div className="announcements-grid">
           <div className="announcements-main">
             {isMentor && (
               <section
-                className="announcement-card announcement-card--composer"
+                className="announcement-card announcement-card--composer kasandigan-card"
                 ref={composerRef}
                 aria-labelledby="announcement-composer-title"
               >
@@ -406,7 +414,7 @@
                   </div>
                 ))}
               {!announcementsLoading && announcements.length === 0 && (
-                <div className="fancy-empty announcements-empty">
+                <div className="fancy-empty announcements-empty kasandigan-card">
                   <span className="fancy-empty-icon" aria-hidden="true">
                     <svg
                       viewBox="0 0 24 24"
@@ -448,7 +456,7 @@
                 announcements.map((ann) => (
                   <article
                     key={ann.id}
-                    className="announcement-card announcement-card--post"
+                    className="announcement-card announcement-card--post kasandigan-card"
                   >
                     <div className="announcement-header">
                       <span className="announcement-author">
@@ -500,7 +508,7 @@
           </div>
 
           <aside className="announcements-rail" aria-label="Announcement summary">
-            <section className="announcement-card announcement-card--rail">
+            <section className="announcement-card announcement-card--rail kasandigan-card">
               <div className="announcement-card-head">
                 <h2 className="announcement-card-title">At a glance</h2>
               </div>
@@ -530,7 +538,7 @@
             </section>
 
             {isMentor && (
-              <section className="announcement-card announcement-card--rail">
+              <section className="announcement-card announcement-card--rail kasandigan-card">
                 <div className="announcement-card-head">
                   <h2 className="announcement-card-title">Your mentees</h2>
                   <span className="announcement-recipients-meta">

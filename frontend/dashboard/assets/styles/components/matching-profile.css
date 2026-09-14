@@ -1,6 +1,6 @@
 /* Mentor matching profile + mentee mentoring preferences.
    Surfaces and controls resolve from the tokens in styles/base/tokens.css so
-   the fixed dark purple background stays visible through every card. */
+   the fixed dark background stays visible through every card. */
 
 /* ── Glass card utility ──────────────────────────────────────── */
 
@@ -57,7 +57,7 @@
 }
 
 .mp-pill:hover:not(.is-active) {
-  border-color: rgba(168, 85, 247, 0.5);
+  border-color: rgba(14, 165, 233, 0.5);
   color: var(--text-primary);
 }
 
@@ -67,10 +67,11 @@
 }
 
 .mp-pill.is-active {
-  background: #7c3aed;
+  background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
   border: none;
   color: #ffffff;
   padding: 10px 17px;
+  box-shadow: 0 4px 14px rgba(14, 165, 233, 0.35);
 }
 
 .mp-chip-row {
@@ -121,7 +122,7 @@
 }
 
 .mp-subject-accordion.is-open {
-  border-color: rgba(168, 85, 247, 0.35);
+  border-color: rgba(56, 189, 248, 0.35);
 }
 
 .mp-subject-accordion-head {
@@ -235,7 +236,7 @@
 
 .mp-day-preset:hover,
 .mp-day-preset.is-active {
-  border-color: rgba(168, 85, 247, 0.55);
+  border-color: rgba(56, 189, 248, 0.55);
   color: var(--text-primary);
 }
 
@@ -263,7 +264,7 @@
 }
 
 .mp-day-chip:hover:not(.is-active) {
-  border-color: rgba(168, 85, 247, 0.5);
+  border-color: rgba(14, 165, 233, 0.5);
   color: var(--text-primary);
 }
 
@@ -273,8 +274,8 @@
 }
 
 .mp-day-chip.is-active {
-  background: #7c3aed;
-  border-color: #7c3aed;
+  background: #0ea5e9;
+  border-color: #0ea5e9;
   color: #ffffff;
 }
 
@@ -324,7 +325,7 @@
 
 .mentor-matching-profile-page .availability-action-btn:hover,
 .mentoring-preferences-page .availability-action-btn:hover {
-  border-color: rgba(168, 85, 247, 0.55);
+  border-color: rgba(14, 165, 233, 0.55);
   color: var(--text-primary);
 }
 
@@ -375,7 +376,8 @@
 .mp-progress-fill {
   height: 100%;
   border-radius: 999px;
-  background: linear-gradient(90deg, #7c3aed 0%, #a855f7 100%);
+  background: linear-gradient(90deg, #38bdf8 0%, #0ea5e9 100%);
+  box-shadow: 0 0 12px rgba(14, 165, 233, 0.5);
   transition: width var(--motion-slow) var(--ease-standard);
 }
 
@@ -401,7 +403,7 @@
 }
 
 .mp-preview-row.is-done .mp-preview-check {
-  color: #a855f7;
+  color: #0ea5e9;
 }
 
 .mp-preview-slots {
@@ -429,16 +431,17 @@
 
 .mentor-matching-profile-page .btn.mp-save-preferences {
   width: 100%;
-  background: #7c3aed;
-  border: 1px solid #7c3aed;
+  background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
+  border: 1px solid #38bdf8;
   color: #ffffff;
   font-weight: 700;
-  box-shadow: none;
+  box-shadow: 0 4px 14px rgba(14, 165, 233, 0.35);
 }
 
 .mentor-matching-profile-page .btn.mp-save-preferences:hover:not(:disabled) {
-  background: #6d28d9;
-  border-color: #6d28d9;
+  background: linear-gradient(135deg, #38bdf8 0%, #0ea5e9 100%);
+  border-color: #7dd3fc;
+  box-shadow: 0 6px 20px rgba(14, 165, 233, 0.45);
   filter: none;
 }
 

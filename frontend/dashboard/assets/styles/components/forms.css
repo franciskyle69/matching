@@ -7,11 +7,14 @@ textarea,
 .page-size-select,
 .users-edit-input,
 .users-edit-select {
-  border-color: var(--border);
-  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  border-radius: var(--input-radius, 10px);
   color: var(--text);
-  background: var(--card);
+  background: var(--input-bg, var(--card));
   font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  padding: var(--input-padding, 10px 14px);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
 }
 
 input:not(.app-topbar-search-input):not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="color"]):focus,
@@ -25,7 +28,7 @@ textarea:focus,
 .users-edit-select:focus {
   outline: none;
   border-color: var(--primary);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 18%, transparent);
+  box-shadow: 0 0 0 3px var(--focus-ring);
 }
 
 input:not(.app-topbar-search-input):not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="color"]),
@@ -53,7 +56,7 @@ input[type="radio"] {
   padding: 0;
   flex-shrink: 0;
   vertical-align: middle;
-  accent-color: #a855f7;
+  accent-color: var(--primary, #0ea5e9);
 }
 
 textarea {

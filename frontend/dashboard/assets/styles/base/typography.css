@@ -1,10 +1,13 @@
 body {
   font-family: var(--font-sans);
-  font-size: var(--text-md);
+  font-size: var(--text-base);
   font-weight: 400;
   line-height: var(--line-normal);
+  letter-spacing: -0.011em;
   color: var(--text);
   background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 input,

@@ -15,7 +15,7 @@ import "./components/Sidebar.jsx";
   const Sidebar = window.DashboardApp.Sidebar;
   const MAIN_TABS =
     (window.DashboardApp && window.DashboardApp.MAIN_TABS) || [];
-  const LOGO_URL = window.DashboardApp.LOGO_URL || "/static/assets/logo.png";
+  const LOGO_URL = window.DashboardApp.LOGO_URL || "/static/assets/logo_icon.png";
   const LOGO_ALT = window.DashboardApp.LOGO_ALT || "AMU Mentoring";
   const COMPACT_NAV_MAX_WIDTH = 899;
 
@@ -202,6 +202,30 @@ import "./components/Sidebar.jsx";
     const isStaff = !!(user?.is_staff || user?.role === "staff");
     const topbarDisplayName = getTopbarDisplayName(user);
     const topbarRoleLabel = getTopbarRoleLabel(user, isStaff, mentorProfile);
+
+    const TAB_TITLES = {
+      home: "Overview",
+      matching: "Mentor Directory",
+      announcements: "Announcements",
+      approvals: "User Approvals",
+      users: "User Directory",
+      mentees: "My Mentees",
+      settings: "Account Settings",
+      notifications: "Notifications",
+      "activity-logs": "Activity Logs",
+      backup: "System Backup",
+      "mentoring-preferences": "Mentoring Preferences",
+      "mentor-matching-profile": "Matching Profile",
+      onboarding: "Onboarding",
+      "complete-profile": "Profile Setup",
+    };
+    const currentPageTitle = TAB_TITLES[activeTab] || "Dashboard";
+
+    const currentDateText = new Date().toLocaleDateString("en-US", {
+      weekday: "short",
+      month: "short",
+      day: "numeric",
+    });
 
     const filteredTabs = MAIN_TABS.filter((tab) => {
       if (user && user.is_profile_complete === false && !isStaff) {
@@ -589,25 +613,23 @@ import "./components/Sidebar.jsx";
                 <MenuOutlinedIcon />
               </IconButton>
               <div className="mobile-app-header-brand">
-                <img src={LOGO_URL} alt="" className="mobile-app-header-logo" />
-                <span className="mobile-app-header-title">PeerLink</span>
+                <img src={LOGO_URL} alt="Peerlink" className="mobile-app-header-logo" />
+                <div className="mobile-app-header-text">
+                  <span className="mobile-app-header-title">
+                    <span className="brand-peer">Peer</span>
+                    <span className="brand-link">link</span>
+                  </span>
+                  <span className="mobile-app-header-subtitle">Academic Mentoring Unit</span>
+                </div>
               </div>
               <div className="mobile-app-header-actions">
                 <IconButton
                   className="mobile-header-icon-btn"
                   onClick={toggleTheme}
-                  aria-label={
-                    theme === "dark"
-                      ? "Switch to light mode"
-                      : "Switch to dark mode"
-                  }
-                  aria-pressed={theme === "light"}
+                  aria-label="Light mode active"
+                  aria-pressed="true"
                 >
-                  {theme === "dark" ? (
-                    <DarkModeOutlinedIcon />
-                  ) : (
-                    <LightModeOutlinedIcon />
-                  )}
+                  <LightModeOutlinedIcon />
                 </IconButton>
                 <div className="app-topbar-profile" ref={profileMenuRef}>
                   <IconButton
@@ -648,16 +670,75 @@ import "./components/Sidebar.jsx";
                     <div className="app-topbar-meta-label">{LOGO_ALT}</div>
                     <div className="app-topbar-title-row">
                       <h1 className="app-topbar-meta-title">PeerLink</h1>
+                      <span className="app-topbar-title-separator" aria-hidden="true">/</span>
+                      <span className="app-topbar-current-page">{currentPageTitle}</span>
                     </div>
+                  </div>
+                </div>
+              )}
+
+              {!isMobileView && (
+                <div className="app-topbar-center">
+                  <div className="app-topbar-term-badge" title="Active Academic Term">
+                    <span className="app-topbar-status-dot" aria-hidden="true" />
+                    <span className="app-topbar-term-text">AY 2024–2025</span>
+                    <span className="app-topbar-term-divider" aria-hidden="true">•</span>
+                    <span className="app-topbar-term-sub">1st Semester</span>
+                  </div>
+                  <div className="app-topbar-date-badge" title="Today's Date">
+                    <svg
+                      className="app-topbar-date-icon"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      aria-hidden="true"
+                    >
+                      <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                      <line x1="16" y1="2" x2="16" y2="6" />
+                      <line x1="8" y1="2" x2="8" y2="6" />
+                      <line x1="3" y1="10" x2="21" y2="10" />
+                    </svg>
+                    <span className="app-topbar-date-text">{currentDateText}</span>
                   </div>
                 </div>
               )}
 
               {!isPendingApproval ? (
                 <div className="app-topbar-right">
-                  <div className="app-topbar-search-wrapper">
-                    <div className="app-topbar-search">
-                      <span className="app-topbar-search-icon" aria-hidden="true">
+                  <div className="app-topbar-actions">
+                    {isStaff ? (
+                      <button
+                        type="button"
+                        className="app-topbar-quick-btn"
+                        onClick={() => goTo("announcements")}
+                        title="Go to announcements"
+                        aria-label="New announcement"
+                      >
+                        <svg
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2.2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          className="app-topbar-quick-icon"
+                          aria-hidden="true"
+                        >
+                          <path d="M12 5v14M5 12h14" />
+                        </svg>
+                        <span>Announcement</span>
+                      </button>
+                    ) : user?.role === "mentee" ? (
+                      <button
+                        type="button"
+                        className="app-topbar-quick-btn"
+                        onClick={() => goTo("matching")}
+                        title="Find mentors in directory"
+                        aria-label="Find mentor"
+                      >
                         <svg
                           viewBox="0 0 24 24"
                           fill="none"
@@ -665,170 +746,54 @@ import "./components/Sidebar.jsx";
                           strokeWidth="2"
                           strokeLinecap="round"
                           strokeLinejoin="round"
+                          className="app-topbar-quick-icon"
+                          aria-hidden="true"
                         >
-                          <circle cx="11" cy="11" r="7" />
-                          <line x1="16.65" y1="16.65" x2="21" y2="21" />
+                          <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
                         </svg>
-                      </span>
-                      <input
-                        ref={searchInputRef}
-                        type="search"
-                        className="app-topbar-search-input"
-                        placeholder="Search mentors, students, or skills..."
-                        aria-label="Search mentors, students, or skills"
-                        aria-keyshortcuts="Control+K Meta+K"
-                        value={searchQuery}
-                        onChange={(e) => {
-                          setSearchQuery(e.target.value);
-                          setSearchHighlight(0);
-                        }}
-                        onFocus={() => setSearchFocused(true)}
-                        onBlur={() => {
-                          // Delay so click on suggestion still registers
-                          setTimeout(() => setSearchFocused(false), 120);
-                        }}
-                        onKeyDown={handleSearchKeyDown}
-                      />
+                        <span>Find Mentor</span>
+                      </button>
+                    ) : user?.role === "mentor" ? (
                       <button
                         type="button"
-                        className="app-topbar-shortcut"
-                        aria-label={"Focus search, " + shortcutLabel}
-                        title={"Focus search (" + shortcutLabel + ")"}
-                        onClick={() => {
-                          if (searchInputRef.current) {
-                            searchInputRef.current.focus();
-                          }
-                        }}
+                        className="app-topbar-quick-btn"
+                        onClick={() => goTo("mentees")}
+                        title="View assigned mentees"
+                        aria-label="My mentees"
                       >
-                        <kbd>{shortcutLabel}</kbd>
+                        <svg
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          className="app-topbar-quick-icon"
+                          aria-hidden="true"
+                        >
+                          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                          <circle cx="9" cy="7" r="4" />
+                          <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                          <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                        </svg>
+                        <span>My Mentees</span>
                       </button>
-                    </div>
-                    {showSuggestions && (
-                      <div className="search-dropdown" role="listbox">
-                        {suggestions.some((s) => s.type === "user") && (
-                          <div className="search-dropdown-section">
-                            <div className="search-dropdown-heading">Users</div>
-                            {suggestions
-                              .filter((s) => s.type === "user")
-                              .map((item, idx) => {
-                                const globalIdx = suggestions.indexOf(item);
-                                return (
-                                  <button
-                                    key={item.id}
-                                    type="button"
-                                    className={
-                                      "search-dropdown-item" +
-                                      (globalIdx === searchHighlight
-                                        ? " active"
-                                        : "")
-                                    }
-                                    onMouseDown={(e) => {
-                                      e.preventDefault();
-                                      handleSuggestionSelect(item);
-                                    }}
-                                    role="option"
-                                    aria-selected={
-                                      globalIdx === searchHighlight
-                                    }
-                                  >
-                                    <div className="search-dropdown-avatar">
-                                      {item.avatar_url ? (
-                                        <img src={item.avatar_url} alt="" />
-                                      ) : (
-                                        <span className="search-dropdown-avatar-fallback">
-                                          {(item.label || "?")[0].toUpperCase()}
-                                        </span>
-                                      )}
-                                    </div>
-                                    <div className="search-dropdown-info">
-                                      <span className="search-dropdown-name">
-                                        <HighlightText
-                                          text={item.label}
-                                          query={trimmedQuery}
-                                        />
-                                      </span>
-                                      <span
-                                        className={
-                                          "search-dropdown-role search-role-" +
-                                          (item.role || "user")
-                                        }
-                                      >
-                                        {item.role === "mentor"
-                                          ? "Mentor"
-                                          : item.role === "mentee"
-                                            ? "Mentee"
-                                            : "User"}
-                                      </span>
-                                    </div>
-                                    <svg
-                                      className="search-dropdown-arrow"
-                                      width="14"
-                                      height="14"
-                                      viewBox="0 0 24 24"
-                                      fill="none"
-                                      stroke="currentColor"
-                                      strokeWidth="2"
-                                      strokeLinecap="round"
-                                      strokeLinejoin="round"
-                                    >
-                                      <polyline points="9 18 15 12 9 6" />
-                                    </svg>
-                                  </button>
-                                );
-                              })}
-                          </div>
-                        )}
-                        {suggestions.some((s) => s.type === "shortcut") && (
-                          <div className="search-dropdown-section">
-                            <div className="search-dropdown-heading">
-                              Quick actions
-                            </div>
-                            {suggestions
-                              .filter((s) => s.type === "shortcut")
-                              .map((item) => {
-                                const globalIdx = suggestions.indexOf(item);
-                                return (
-                                  <button
-                                    key={item.id}
-                                    type="button"
-                                    className={
-                                      "search-dropdown-item search-dropdown-item--shortcut" +
-                                      (globalIdx === searchHighlight
-                                        ? " active"
-                                        : "")
-                                    }
-                                    onMouseDown={(e) => {
-                                      e.preventDefault();
-                                      handleSuggestionSelect(item);
-                                    }}
-                                  >
-                                    <div className="search-dropdown-info">
-                                      <span className="search-dropdown-name">
-                                        <HighlightText
-                                          text={item.label}
-                                          query={trimmedQuery}
-                                        />
-                                      </span>
-                                      {item.hint && (
-                                        <span className="search-dropdown-hint">
-                                          {item.hint}
-                                        </span>
-                                      )}
-                                    </div>
-                                  </button>
-                                );
-                              })}
-                          </div>
-                        )}
-                        {trimmedQuery && suggestions.length === 0 && (
-                          <div className="search-dropdown-empty">
-                            No results found
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                  <div className="app-topbar-actions">
+                    ) : null}
+
+                    <button
+                      type="button"
+                      className="sidebar-icon-btn app-topbar-theme-btn"
+                      onClick={toggleTheme}
+                      aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+                      title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+                    >
+                      {theme === "dark" ? (
+                        <LightModeOutlinedIcon fontSize="small" aria-hidden="true" />
+                      ) : (
+                        <DarkModeOutlinedIcon fontSize="small" aria-hidden="true" />
+                      )}
+                    </button>
+
                     <button
                       type="button"
                       className="sidebar-icon-btn app-topbar-bell"

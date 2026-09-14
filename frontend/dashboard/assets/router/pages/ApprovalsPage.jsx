@@ -51,12 +51,14 @@
   function StatusBadge({ complete }) {
     if (complete) {
       return (
-        <span className="approval-badge approval-badge-complete">Complete</span>
+        <span className="approval-badge approval-badge-complete">
+          <span className="approval-badge-dot dot-complete" /> Complete
+        </span>
       );
     }
     return (
       <span className="approval-badge approval-badge-incomplete">
-        Incomplete
+        <span className="approval-badge-dot dot-incomplete" /> Incomplete
       </span>
     );
   }
@@ -232,71 +234,93 @@
         : [m.campus, m.admission_type].filter(Boolean).join(" • ");
 
     return (
-      <article className="approval-row" onClick={() => setExpanded((v) => !v)}>
-        <div className="approval-row-main">
-          <div className="approval-row-left">
-            <div className="approval-avatar" aria-hidden="true">
-              {initials}
+      <article className={"approval-row kasandigan-card " + (expanded ? "is-expanded" : "")}>
+        <div className="approval-card-main">
+          {/* Top Row: Identity on Left, Status & Details on Right */}
+          <div className="approval-card-header">
+            <div className="approval-card-identity">
+              <div className="approval-avatar" aria-hidden="true">
+                {initials}
+              </div>
+              <div className="approval-card-info">
+                <h3 className="approval-row-name" title={displayName}>
+                  {displayName}
+                </h3>
+                <p className="approval-row-email" title={m.email || "No email"}>
+                  {m.email || "No email"}
+                </p>
+              </div>
             </div>
-            <div className="approval-row-name-block">
-              <h3 className="approval-row-name">{displayName}</h3>
-              <p className="approval-row-email">{m.email || "No email"}</p>
-              {type === "mentor" && m.role && MentorRoleBadge ? (
+
+            <div className="approval-card-top-actions">
+              <StatusBadge complete={!!m.general_info_complete} />
+              <button
+                type="button"
+                className="btn secondary small approval-expand-btn"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setExpanded((v) => !v);
+                }}
+              >
+                {expanded ? "Hide" : "Details"}
+              </button>
+            </div>
+          </div>
+
+          {/* Middle Row: Badges / Summary Chips */}
+          <div className="approval-card-meta">
+            {type === "mentor" && (
+              m.role && MentorRoleBadge ? (
                 <MentorRoleBadge
                   role={m.role}
-                  prominent
                   className="approval-mentor-type-badge"
                 />
-              ) : type === "mentor" ? (
+              ) : (
                 <span className="approval-badge approval-badge-incomplete approval-mentor-type-missing">
                   Mentor type not set
                 </span>
-              ) : null}
-            </div>
-          </div>
-
-          <div className="approval-row-summary">
-            {summary || "—"}
-          </div>
-
-          <div className="approval-row-right">
-            <StatusBadge complete={!!m.general_info_complete} />
-            <button
-              type="button"
-              className="btn secondary small approval-expand-btn"
-              onClick={(e) => {
-                e.stopPropagation();
-                setExpanded((v) => !v);
-              }}
-            >
-              {expanded ? "Hide" : "Details"}
-            </button>
-            {loading ? (
-              <Spinner inline />
-            ) : (
-              <>
-                <button
-                  type="button"
-                  className="btn small approval-accept-btn"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onApprove(m.id);
-                  }}
-                >
-                  Accept
-                </button>
-                <button
-                  type="button"
-                  className="btn secondary small approval-reject-btn"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onRejectAsk(type, m.id, displayName);
-                  }}
-                >
-                  Reject
-                </button>
-              </>
+              )
             )}
+            {summary && summary !== "—" && (
+              <span className="approval-meta-pill">
+                {summary}
+              </span>
+            )}
+          </div>
+
+          {/* Bottom Row: Decision action bar */}
+          <div className="approval-card-footer">
+            <span className="approval-card-hint">
+              {expanded ? "Reviewing verification details" : "Coordinator decision required"}
+            </span>
+            <div className="approval-card-decision-btns">
+              {loading ? (
+                <Spinner inline />
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    className="btn small approval-accept-btn"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onApprove(m.id);
+                    }}
+                  >
+                    Accept
+                  </button>
+                  <button
+                    type="button"
+                    className="btn secondary small approval-reject-btn"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onRejectAsk(type, m.id, displayName);
+                    }}
+                  >
+                    Reject
+                  </button>
+                </>
+              )}
+            </div>
           </div>
         </div>
 
@@ -840,16 +864,30 @@
       ? approvalActionKey === `${rejectTarget.type}:${rejectTarget.id}`
       : false;
 
+    const totalPending =
+      (pendingMentors?.length || 0) + (pendingMentees?.length || 0);
+
     return (
-      <div className="card approvals-page-shell page-shell">
-        <div className="approvals-page-header page-shell-head">
-          <div>
-            <h1 className="page-title">User approvals</h1>
-            <p className="page-subtitle">
-              Compact review queue for pending mentors and mentees.
+      <div className="approvals-page-space page-shell">
+        {/* Kasandigan Open Native Header — Zero box container */}
+        <header className="kasandigan-header">
+          <div className="kasandigan-header-content">
+            <div className="kasandigan-badge">
+              <span className="kasandigan-badge-dot" />
+              <span>Academic Mentoring Unit • Operations Console</span>
+            </div>
+            <h1 className="kasandigan-title">User Approvals</h1>
+            <p className="kasandigan-subtitle">
+              Review verification documents and approve pending mentors and mentees.
             </p>
           </div>
-        </div>
+          <div className="kasandigan-header-actions">
+            <div className="approvals-summary-pill">
+              <span className="approvals-summary-pill-count">{totalPending}</span>
+              <span>Pending Decisions</span>
+            </div>
+          </div>
+        </header>
 
         {approvalsLoading && (
           <Spinner
@@ -860,11 +898,22 @@
         {!approvalsLoading && (
           <div className="approvals-grid approvals-grid-modern">
             <section className="approvals-section">
-              <h2 className="section-title">
-                Pending mentors ({pendingMentors.length})
-              </h2>
+              <div className="approvals-section-head">
+                <div className="approvals-section-title-group">
+                  <span className="approvals-section-icon mentor-icon" aria-hidden="true">
+                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>
+                  </span>
+                  <h2 className="approvals-section-title">Pending Mentors</h2>
+                </div>
+                <span className="approvals-count-badge">
+                  {pendingMentors.length} {pendingMentors.length === 1 ? "mentor" : "mentors"}
+                </span>
+              </div>
+
               {pendingMentors.length === 0 && (
-                <p className="muted">No pending mentors.</p>
+                <div className="approvals-empty-state kasandigan-card">
+                  <p className="muted">No pending mentors to review.</p>
+                </div>
               )}
               {pendingMentors.length > 0 && (
                 <div className="approval-rows-list">
@@ -885,11 +934,22 @@
             </section>
 
             <section className="approvals-section">
-              <h2 className="section-title">
-                Pending mentees ({pendingMentees.length})
-              </h2>
+              <div className="approvals-section-head">
+                <div className="approvals-section-title-group">
+                  <span className="approvals-section-icon mentee-icon" aria-hidden="true">
+                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                  </span>
+                  <h2 className="approvals-section-title">Pending Mentees</h2>
+                </div>
+                <span className="approvals-count-badge">
+                  {pendingMentees.length} {pendingMentees.length === 1 ? "mentee" : "mentees"}
+                </span>
+              </div>
+
               {pendingMentees.length === 0 && (
-                <p className="muted">No pending mentees.</p>
+                <div className="approvals-empty-state kasandigan-card">
+                  <p className="muted">No pending mentees to review.</p>
+                </div>
               )}
               {pendingMentees.length > 0 && (
                 <div className="approval-rows-list">

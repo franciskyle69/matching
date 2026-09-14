@@ -15,11 +15,53 @@
     </script>
 
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/spinkit/2.0.1/spinkit.min.css" crossorigin />
-    <link rel="stylesheet" href="/static/assets/app.css?v=127" />
+    <link rel="stylesheet" href="/static/assets/app.css?v=176" />
+    <style>
+      .session-check-overlay {
+        position: fixed !important;
+        inset: 0 !important;
+        z-index: 99999 !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        padding: 24px !important;
+        background: #ebf0f7 !important;
+      }
+      [data-theme="dark"] .session-check-overlay {
+        background: radial-gradient(circle at 50% 50%, rgba(14, 165, 233, 0.22) 0%, #0c1a30 65%, #081224 100%) !important;
+      }
+      .session-check-overlay .unified-loading-visual {
+        width: 72px !important;
+        height: 72px !important;
+      }
+      .session-check-overlay .unified-loading-ring {
+        border: 3px solid rgba(14, 165, 233, 0.2) !important;
+        border-top-color: #0ea5e9 !important;
+        box-shadow: 0 0 0 1px rgba(14, 165, 233, 0.12) inset, 0 0 16px rgba(14, 165, 233, 0.25) !important;
+      }
+      .session-check-overlay .unified-loading-dots {
+        gap: 5px !important;
+      }
+      .session-check-overlay .unified-loading-dot {
+        width: 8px !important;
+        height: 8px !important;
+        background: #0ea5e9 !important;
+        box-shadow: 0 0 8px rgba(14, 165, 233, 0.5) !important;
+      }
+      [data-theme="dark"] .session-check-overlay .unified-loading-ring {
+        border: 3px solid rgba(255, 255, 255, 0.15) !important;
+        border-top-color: #38bdf8 !important;
+        box-shadow: 0 0 0 1px rgba(14, 165, 233, 0.25) inset, 0 0 20px rgba(14, 165, 233, 0.45) !important;
+      }
+      [data-theme="dark"] .session-check-overlay .unified-loading-dot {
+        background: #38bdf8 !important;
+        box-shadow: 0 0 10px rgba(56, 189, 248, 0.7) !important;
+      }
+    </style>
   </head>
   <body>
     <div id="root"></div>
     <script src="https://cdn.jsdelivr.net/npm/chart.js" nonce="__CSP_NONCE__"></script>
-    <script src="/static/assets/dashboard.bundle.js?v=123" nonce="__CSP_NONCE__"></script>
+    <script src="/static/assets/dashboard.bundle.js?v=176" nonce="__CSP_NONCE__"></script>
   </body>
 </html>

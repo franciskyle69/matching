@@ -5,29 +5,29 @@
 @import "./styles/base/typography.css";
 
 /* Existing UI baseline preserved during migration */
-@import "./styles/legacy.css";
+@import "./styles/legacy.css?v=174";
 
 /* Modular layers (incremental refactor) */
 @import "./styles/layout/shell.css";
-@import "./styles/components/buttons.css";
-@import "./styles/components/cards.css";
+@import "./styles/components/buttons.css?v=174";
+@import "./styles/components/cards.css?v=174";
 @import "./styles/components/forms.css";
 @import "./styles/components/tables.css";
 @import "./styles/components/footer.css";
 @import "./styles/pages/dashboard.css";
 @import "./styles/pages/auth.css";
 @import "./styles/pages/phase1.css";
-@import "./styles/pages/phase2.css";
+@import "./styles/pages/phase2.css?v=174";
 @import "./styles/pages/users.css";
 @import "./styles/utilities/helpers.css";
 
 /* Fully tokenized surfaces — loaded last so they own the cascade */
-@import "./styles/components/announcements.css";
+@import "./styles/components/announcements.css?v=174";
 @import "./styles/components/matching-profile.css";
-@import "./styles/components/mentee-home.css";
+@import "./styles/components/mentee-home.css?v=176";
 @import "./styles/components/matching-page.css";
 @import "./styles/components/notifications-page.css";
-@import "./styles/base/light-theme.css";
+@import "./styles/base/light-theme.css?v=174";
 @import "./styles/components/sidebar-nav.css";
 @import "./styles/components/profile-matching-card.css";
 @import "./styles/components/preferences-page.css";
@@ -36,6 +36,7 @@
 @import "./styles/components/avatars.css";
 @import "./styles/components/complete-profile-onboarding.css";
 @import "./styles/layout/mobile-shell.css";
+@import "./styles/components/neumorphism.css?v=176";
 
 /* Global font rendering — loaded after tokens so --font-sans is available */
 *,
@@ -54,3 +55,166 @@ textarea,
 .MuiTypography-root {
   font-family: var(--font-sans) !important;
 }
+
+/* ═══════════════════════════════════════════════════════════════════
+   Native Open Page Canvas (Eliminate Outer Background Containers)
+   ═══════════════════════════════════════════════════════════════════ */
+.page-shell,
+.page-shell.card,
+.home-dashboard-space,
+.settings-page-shell,
+.approvals-page-shell,
+.approvals-page-space,
+.users-management-page,
+.users-management-space,
+.subjects-page-shell,
+.activity-logs-page,
+.activity-logs-space,
+.announcements-page,
+.notifications-page,
+.notifications-page--glass,
+.backup-page,
+.backup-page-space,
+.mentoring-preferences-page,
+.mentor-matching-profile-page,
+.matching-page,
+.mentees-page,
+.profile-content-shell,
+.mentee-home,
+.mentor-dashboard-v2,
+.mentor-staff-dashboard {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+  padding: 0 !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+[data-theme="light"] .page-shell,
+[data-theme="light"] .page-shell.card,
+[data-theme="light"] .home-dashboard-space,
+[data-theme="light"] .home-dashboard-space.settings-page-shell,
+[data-theme="light"] .home-dashboard-space.announcements-page,
+[data-theme="light"] .home-dashboard-space.mentee-dashboard,
+[data-theme="light"] .home-dashboard-space.mentor-staff-dashboard,
+[data-theme="light"] .home-dashboard-space.sessions-page,
+[data-theme="light"] .home-dashboard-space.mentees-page,
+[data-theme="light"] .settings-page-shell,
+[data-theme="light"] .approvals-page-shell,
+[data-theme="light"] .approvals-page-space,
+[data-theme="light"] .users-management-page,
+[data-theme="light"] .users-management-space,
+[data-theme="light"] .activity-logs-page,
+[data-theme="light"] .activity-logs-space,
+[data-theme="light"] .backup-page,
+[data-theme="light"] .backup-page-space,
+[data-theme="light"] .notifications-page,
+[data-theme="light"] .notifications-page--glass.page-shell,
+[data-theme="light"] .mentoring-preferences-page,
+[data-theme="light"] .mentor-matching-profile-page,
+[data-theme="light"] .matching-page,
+[data-theme="light"] .mentees-page,
+[data-theme="light"] .mentee-home,
+[data-theme="light"] .mentor-dashboard-v2,
+[data-theme="light"] .mentor-staff-dashboard {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+  padding: 0 !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+[data-theme="dark"] .page-shell,
+[data-theme="dark"] .page-shell.card,
+[data-theme="dark"] .home-dashboard-space,
+[data-theme="dark"] .settings-page-shell,
+[data-theme="dark"] .approvals-page-shell,
+[data-theme="dark"] .approvals-page-space,
+[data-theme="dark"] .users-management-page,
+[data-theme="dark"] .users-management-space,
+[data-theme="dark"] .activity-logs-page,
+[data-theme="dark"] .activity-logs-space,
+[data-theme="dark"] .announcements-page,
+[data-theme="dark"] .notifications-page,
+[data-theme="dark"] .notifications-page--glass,
+[data-theme="dark"] .backup-page,
+[data-theme="dark"] .backup-page-space,
+[data-theme="dark"] .mentoring-preferences-page,
+[data-theme="dark"] .mentor-matching-profile-page,
+[data-theme="dark"] .matching-page,
+[data-theme="dark"] .mentees-page,
+[data-theme="dark"] .mentee-home,
+[data-theme="dark"] .mentor-dashboard-v2,
+[data-theme="dark"] .mentor-staff-dashboard {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+  padding: 0 !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+.home-space-glow {
+  display: none !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   Session Check Loading Screen (Light Blue Theme)
+   ═══════════════════════════════════════════════════════════════════ */
+.session-check-overlay {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 99999 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 24px !important;
+  background: radial-gradient(circle at 50% 50%, #f0f9ff 0%, #e0f2fe 60%, #f8fafc 100%) !important;
+}
+
+[data-theme="dark"] .session-check-overlay {
+  background: radial-gradient(circle at 50% 50%, rgba(14, 165, 233, 0.22) 0%, #0c1a30 65%, #081224 100%) !important;
+}
+
+.session-check-overlay .unified-loading-visual {
+  width: 72px !important;
+  height: 72px !important;
+}
+
+.session-check-overlay .unified-loading-ring {
+  border: 3px solid rgba(14, 165, 233, 0.2) !important;
+  border-top-color: #0ea5e9 !important;
+  box-shadow:
+    0 0 0 1px rgba(14, 165, 233, 0.12) inset,
+    0 0 16px rgba(14, 165, 233, 0.25) !important;
+}
+
+.session-check-overlay .unified-loading-dots {
+  gap: 5px !important;
+}
+
+.session-check-overlay .unified-loading-dot {
+  width: 8px !important;
+  height: 8px !important;
+  background: #0ea5e9 !important;
+  box-shadow: 0 0 8px rgba(14, 165, 233, 0.5) !important;
+}
+
+[data-theme="dark"] .session-check-overlay .unified-loading-ring {
+  border: 3px solid rgba(255, 255, 255, 0.15) !important;
+  border-top-color: #38bdf8 !important;
+  box-shadow:
+    0 0 0 1px rgba(14, 165, 233, 0.25) inset,
+    0 0 20px rgba(14, 165, 233, 0.45) !important;
+}
+
+[data-theme="dark"] .session-check-overlay .unified-loading-dot {
+  background: #38bdf8 !important;
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.7) !important;
+}
+

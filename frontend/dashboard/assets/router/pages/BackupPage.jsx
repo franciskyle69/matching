@@ -61,28 +61,32 @@
     }
 
     return (
-      <div className="card backup-page page-shell">
-        <div className="backup-page-head page-shell-head">
-          <div>
-            <h1 className="page-title">Backup & Restore</h1>
-            <p className="page-subtitle">
-              Save or restore a full snapshot of the site data (users, matching data,
-              announcements, and more).
+      <div className="backup-page-space page-shell">
+        {/* Kasandigan Open Native Header — Zero box container */}
+        <header className="kasandigan-header">
+          <div className="kasandigan-header-content">
+            <div className="kasandigan-badge">
+              <span className="kasandigan-badge-dot" />
+              <span>Academic Mentoring Unit • Operations Console</span>
+            </div>
+            <h1 className="kasandigan-title">Backup & Restore</h1>
+            <p className="kasandigan-subtitle">
+              Save or restore complete database snapshots, user records, and mentoring pairings.
             </p>
           </div>
-          <div className="page-shell-actions">
+          <div className="kasandigan-header-actions">
             <button
               type="button"
-              className="btn secondary small"
+              className="btn kasandigan-btn-secondary"
               onClick={loadBackups}
               disabled={backupsLoading}
             >
-              Refresh
+              {backupsLoading ? <Spinner inline /> : "Refresh Backups"}
             </button>
           </div>
-        </div>
+        </header>
 
-        <div className="backup-alert" role="alert">
+        <div className="backup-alert kasandigan-alert-warning" role="alert">
           <span className="backup-alert-icon" aria-hidden="true">
             !
           </span>
@@ -95,7 +99,7 @@
           </div>
         </div>
 
-        <section className="backup-card">
+        <section className="backup-card kasandigan-card">
           <h2 className="backup-card-title">
             <span className="backup-card-icon" aria-hidden="true">
               <svg
@@ -121,7 +125,7 @@
           <div className="backup-card-actions">
             <button
               type="button"
-              className="btn"
+              className="btn kasandigan-btn-primary"
               onClick={createBackup}
               disabled={backupCreateLoading}
             >
@@ -140,7 +144,7 @@
             />
             <button
               type="button"
-              className="btn btn-success"
+              className="btn kasandigan-btn-success"
               onClick={handleUploadClick}
               disabled={backupRestoreLoading}
             >
@@ -153,7 +157,7 @@
           </div>
         </section>
 
-        <section className="backup-card">
+        <section className="backup-card kasandigan-card">
           <div className="backup-history-header">
             <h2 className="backup-card-title">
               <span className="backup-card-icon" aria-hidden="true">
@@ -174,7 +178,7 @@
             </h2>
             <button
               type="button"
-              className="btn secondary small"
+              className="btn kasandigan-btn-secondary small"
               onClick={loadBackups}
               disabled={backupsLoading}
             >

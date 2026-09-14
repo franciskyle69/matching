@@ -686,7 +686,7 @@ import TextField from "@mui/material/TextField";
 
     if (user.role !== "mentee") {
       return (
-        <div className="card mentoring-preferences-page page-shell">
+        <div className="mentoring-preferences-page page-shell">
           <h1 className="page-title">Mentoring Preferences</h1>
           <p className="page-subtitle">
             This page is available for student accounts only.
@@ -698,16 +698,36 @@ import TextField from "@mui/material/TextField";
     return (
       <div
         className={
-          "card mentoring-preferences-page page-shell" +
+          "mentoring-preferences-page page-shell" +
           (embedded ? " is-embedded" : "")
         }
       >
         {!embedded && (
-          <header className="complete-profile-header pref-page-header">
-            <h1 className="page-title">Mentoring preferences</h1>
-            <p className="page-subtitle">
-              Set the criteria we use to match you with mentors.
-            </p>
+          <header className="kasandigan-header">
+            <div className="kasandigan-header-content">
+              <div className="kasandigan-badge">
+                <span className="kasandigan-badge-dot" />
+                <span>Academic Mentoring Unit • Preferences</span>
+              </div>
+              <h1 className="kasandigan-title">Mentoring Preferences</h1>
+              <p className="kasandigan-subtitle">
+                Set the criteria, subjects, and topics we use to match you with mentors.
+              </p>
+            </div>
+            <div className="kasandigan-header-actions">
+              <span
+                className="kasandigan-badge"
+                style={{
+                  background: "#ffffff",
+                  border: "1px solid #bae6fd",
+                  color: "#0284c7",
+                  fontWeight: 600,
+                }}
+              >
+                <span className="kasandigan-badge-dot" style={{ background: "#0ea5e9" }} />
+                <span>Student Mentee</span>
+              </span>
+            </div>
           </header>
         )}
 

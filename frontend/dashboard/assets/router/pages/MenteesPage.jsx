@@ -74,28 +74,36 @@
     }, [mentorRequests, filter, search, accepted, pending]);
 
     return (
-      <div className="home-dashboard-space mentees-page page-shell">
-        <div className="mentees-page-header page-shell-head">
-          <div>
-            <h1 className="page-title">Mentees</h1>
-            <p className="page-subtitle">
-              All mentees linked to you through matching—official pairings and requests that could not be confirmed when your capacity was full.
+      <div className="mentees-page page-shell">
+        <header className="kasandigan-header">
+          <div className="kasandigan-header-content">
+            <div className="kasandigan-badge">
+              <span className="kasandigan-badge-dot" />
+              <span>Academic Mentoring Unit • Mentee Roster</span>
+            </div>
+            <h1 className="kasandigan-title">Mentees</h1>
+            <p className="kasandigan-subtitle">
+              All mentees linked to you through matching—official pairings and active requests.
             </p>
           </div>
-          <div className="mentees-page-header-actions">
+          <div className="kasandigan-header-actions">
             <button
               type="button"
-              className="btn secondary"
+              className="btn kasandigan-btn-secondary"
               onClick={() => loadMentorRequests && loadMentorRequests()}
               disabled={mentorRequestsLoading}
             >
               {mentorRequestsLoading ? "Refreshing…" : "Refresh"}
             </button>
-            <button type="button" className="btn" onClick={() => setActiveTab("announcements")}>
+            <button
+              type="button"
+              className="btn kasandigan-btn-primary"
+              onClick={() => setActiveTab("announcements")}
+            >
               Post announcement
             </button>
           </div>
-        </div>
+        </header>
 
         <div className="mentees-page-stats" aria-label="Mentee summary">
           <article className="mentees-page-stat">

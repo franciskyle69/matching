@@ -72,54 +72,93 @@
     }
 
     return (
-      <div className="card activity-logs-page page-shell">
-        <div className="activity-logs-page-head page-shell-head">
-          <div>
-            <h1 className="page-title">Activity Logs</h1>
-            <p className="page-subtitle">View audit trail of actions by users and admins.</p>
+      <div className="activity-logs-space page-shell">
+        {/* Kasandigan Open Native Header — Zero box container */}
+        <header className="kasandigan-header">
+          <div className="kasandigan-header-content">
+            <div className="kasandigan-badge">
+              <span className="kasandigan-badge-dot" />
+              <span>Academic Mentoring Unit • Operations Console</span>
+            </div>
+            <h1 className="kasandigan-title">Activity Logs</h1>
+            <p className="kasandigan-subtitle">
+              View audit trail of system events and actions by users and administrators.
+            </p>
           </div>
-        </div>
+          <div className="kasandigan-header-actions">
+            <div className="approvals-summary-pill">
+              <span className="approvals-summary-pill-count">{activityLogsTotal}</span>
+              <span>{activityLogsTotal === 1 ? "Event Log" : "Event Logs"}</span>
+            </div>
+          </div>
+        </header>
 
-        <div className="activity-logs-filters">
-          <input
-            type="text"
-            className="activity-logs-search"
-            placeholder="Search email, action, mm/dd/yyyy"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-          />
-          <input
-            type="date"
-            className="activity-logs-date"
-            value={dateFrom}
-            onChange={(e) => setDateFrom(e.target.value)}
-            title="From date"
-          />
-          <input
-            type="date"
-            className="activity-logs-date"
-            value={dateTo}
-            onChange={(e) => setDateTo(e.target.value)}
-            title="To date"
-          />
-          <button type="button" className="btn" onClick={handleSearch} disabled={activityLogsLoading}>
-            {activityLogsLoading ? <Spinner inline /> : "Search"}
-          </button>
-          <button
-            type="button"
-            className="btn secondary"
-            onClick={() => {
-              setSearch("");
-              setDateFrom("");
-              setDateTo("");
-              loadActivityLogs({ page: 1, page_size: activityLogsPageSize });
-            }}
-            disabled={activityLogsLoading}
-          >
-            Reset
-          </button>
-        </div>
+        <div className="activity-logs-card kasandigan-card">
+          <div className="activity-logs-filters">
+            <div className="activity-logs-search-box">
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="activity-logs-search-icon"
+                aria-hidden="true"
+              >
+                <circle cx="11" cy="11" r="7" />
+                <line x1="16.65" y1="16.65" x2="21" y2="21" />
+              </svg>
+              <input
+                type="text"
+                className="activity-logs-search"
+                placeholder="Search email, action, mm/dd/yyyy…"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+              />
+            </div>
+            <div className="activity-logs-date-group">
+              <input
+                type="date"
+                className="activity-logs-date"
+                value={dateFrom}
+                onChange={(e) => setDateFrom(e.target.value)}
+                title="From date"
+              />
+              <span className="activity-logs-date-sep">to</span>
+              <input
+                type="date"
+                className="activity-logs-date"
+                value={dateTo}
+                onChange={(e) => setDateTo(e.target.value)}
+                title="To date"
+              />
+            </div>
+            <button
+              type="button"
+              className="btn kasandigan-btn-primary activity-logs-filter-btn"
+              onClick={handleSearch}
+              disabled={activityLogsLoading}
+            >
+              {activityLogsLoading ? <Spinner inline /> : "Filter Logs"}
+            </button>
+            <button
+              type="button"
+              className="btn kasandigan-btn-secondary activity-logs-reset-btn"
+              onClick={() => {
+                setSearch("");
+                setDateFrom("");
+                setDateTo("");
+                loadActivityLogs({ page: 1, page_size: activityLogsPageSize });
+              }}
+              disabled={activityLogsLoading}
+            >
+              Reset
+            </button>
+          </div>
 
         <div className="activity-logs-toolbar">
           <div className="activity-logs-summary">
@@ -138,7 +177,7 @@
           </label>
         </div>
 
-        <div className="table-wrapper">
+        <div className="table-wrapper activity-logs-table-wrapper">
           <table className="table activity-logs-table">
             <thead>
               <tr>
@@ -157,19 +196,28 @@
                 </tr>
               ) : activityLogs.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="muted">No activity logs found.</td>
+                  <td colSpan={4} className="muted activity-logs-empty">No activity logs found.</td>
                 </tr>
               ) : (
                 activityLogs.map((log) => (
-                  <tr key={log.id}>
-                    <td>{formatLogTime(log.time)}</td>
+                  <tr key={log.id} className="activity-logs-row">
                     <td>
-                      {log.who}
-                      {log.role && <span className="activity-logs-role">({log.role})</span>}
+                      <span className="activity-logs-time">{formatLogTime(log.time)}</span>
                     </td>
-                    <td>{log.what}</td>
                     <td>
-                      <span className="activity-logs-status activity-logs-status-success">{log.status}</span>
+                      <div className="activity-logs-who">
+                        <span className="activity-logs-who-name">{log.who}</span>
+                        {log.role && <span className="activity-logs-role activity-logs-role-pill">({log.role})</span>}
+                      </div>
+                    </td>
+                    <td>
+                      <span className="activity-logs-what">{log.what}</span>
+                    </td>
+                    <td>
+                      <span className={`activity-logs-status ${log.status === "Success" ? "activity-logs-status-success" : ""}`}>
+                        <span className="activity-logs-status-dot" />
+                        {log.status}
+                      </span>
                     </td>
                   </tr>
                 ))
@@ -179,11 +227,11 @@
         </div>
 
         <div className="pagination-section activity-logs-pagination">
-          <div className="pagination-info">Page {activityLogsPage} of {activityLogsTotalPages}</div>
-          <div className="pagination-controls">
+          <div className="pagination-info activity-logs-pagination-info">Page {activityLogsPage} of {activityLogsTotalPages}</div>
+          <div className="pagination-controls activity-logs-pagination-controls">
             <button
               type="button"
-              className="btn secondary"
+              className="btn secondary activity-logs-page-btn"
               disabled={activityLogsLoading || activityLogsPage <= 1}
               onClick={() => loadPage(activityLogsPage - 1)}
             >
@@ -191,13 +239,14 @@
             </button>
             <button
               type="button"
-              className="btn secondary"
+              className="btn secondary activity-logs-page-btn"
               disabled={activityLogsLoading || activityLogsPage >= activityLogsTotalPages}
               onClick={() => loadPage(activityLogsPage + 1)}
             >
               Next
             </button>
           </div>
+        </div>
         </div>
       </div>
     );

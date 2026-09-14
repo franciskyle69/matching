@@ -131,17 +131,24 @@
   margin: 0;
   font-size: 0.75rem;
   font-weight: 600;
-  color: rgba(255, 255, 255, 0.88);
+  color: #475569;
 }
 
 .amu-site-footer--compact .amu-site-footer-links {
   margin: 4px 0 0;
   font-size: 0.6875rem;
-  color: rgba(255, 255, 255, 0.62);
+  color: #64748b;
 }
 
 .amu-site-footer--compact a {
-  color: rgba(255, 255, 255, 0.82);
+  color: #0284c7;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.amu-site-footer--compact a:hover {
+  color: #0369a1;
+  text-decoration: underline;
 }
 
 .app-page-stack {
@@ -154,7 +161,7 @@
 }
 
 [data-theme="light"] .amu-site-footer--compact .amu-site-footer-unit {
-  color: rgba(255, 255, 255, 0.95);
+  color: #334155;
 }
 
 @media (max-width: 900px) {

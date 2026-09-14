@@ -398,13 +398,13 @@
 }
 
 .announcements-page .announcements-empty {
-  padding: var(--space-8) var(--space-6);
-  border: 1px dashed
-    color-mix(in srgb, var(--text-secondary) 45%, transparent);
-  border-radius: var(--card-radius);
-  background: var(--card-bg);
-  box-shadow: none;
+  padding: 48px 32px;
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  border-radius: 26px;
+  background: var(--neu-base, #ebf0f7);
+  box-shadow: 11px 11px 26px var(--neu-dark-strong, rgba(150, 165, 185, 0.75)), -11px -11px 26px var(--neu-light, #ffffff);
   color: var(--text-secondary);
+  text-align: center;
 }
 
 .announcements-empty-actions {
@@ -427,11 +427,12 @@
 
 .announcement-stat {
   display: grid;
-  gap: 2px;
-  padding: var(--space-3);
-  border: var(--card-border);
-  border-radius: var(--radius-md);
-  background: color-mix(in srgb, var(--input-bg) 60%, transparent);
+  gap: 4px;
+  padding: 16px 20px;
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  border-radius: 18px;
+  background: var(--neu-base, #ebf0f7);
+  box-shadow: inset 3px 3px 6px var(--neu-dark, rgba(166, 180, 200, 0.55)), inset -3px -3px 6px var(--neu-light, #ffffff);
 }
 
 .announcement-stat-value {

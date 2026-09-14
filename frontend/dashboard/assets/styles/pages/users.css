@@ -11,8 +11,8 @@
   --users-success-fg: #166534;
   --users-danger-bg: rgba(220, 38, 38, 0.14);
   --users-danger-fg: #991b1b;
-  --users-role-bg: rgba(79, 70, 229, 0.12);
-  --users-role-fg: #3730a3;
+  --users-role-bg: rgba(2, 132, 199, 0.12);
+  --users-role-fg: #075985;
 
   display: flex;
   flex-direction: column;
@@ -41,8 +41,8 @@
   --users-success-fg: #86efac;
   --users-danger-bg: rgba(239, 68, 68, 0.22);
   --users-danger-fg: #fca5a5;
-  --users-role-bg: rgba(129, 140, 248, 0.24);
-  --users-role-fg: #c7d2fe;
+  --users-role-bg: rgba(56, 189, 248, 0.24);
+  --users-role-fg: #bae6fd;
 }
 
 .users-page-header {
@@ -487,8 +487,8 @@
 }
 
 .users-role-badge--mentee {
-  background: rgba(124, 58, 237, 0.13);
-  color: #6d28d9;
+  background: rgba(14, 165, 233, 0.13);
+  color: #0369a1;
 }
 
 .users-role-badge--both {
@@ -512,8 +512,8 @@
 }
 
 [data-theme="dark"] .users-role-badge--mentee {
-  background: rgba(167, 139, 250, 0.24);
-  color: #ddd6fe;
+  background: rgba(125, 211, 252, 0.24);
+  color: #e0f2fe;
 }
 
 [data-theme="dark"] .users-role-badge--both {

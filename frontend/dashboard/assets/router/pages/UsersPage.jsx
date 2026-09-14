@@ -196,60 +196,7 @@
   }
 
   function ensureDataTablesLoaded() {
-    const hasDataTables =
-      !!window.jQuery &&
-      !!window.jQuery.fn &&
-      !!window.jQuery.fn.DataTable;
-    if (hasDataTables) return Promise.resolve();
-    if (window.DashboardApp.__datatablesLoadPromise) {
-      return window.DashboardApp.__datatablesLoadPromise;
-    }
-
-    window.DashboardApp.__datatablesLoadPromise = new Promise((resolve, reject) => {
-      const ensureStyle = (id, href) => {
-        if (document.querySelector(`link[${id}='1']`)) return;
-        const link = document.createElement("link");
-        link.rel = "stylesheet";
-        link.href = href;
-        link.setAttribute(id, "1");
-        document.head.appendChild(link);
-      };
-
-      ensureStyle("data-dt-core-style", "https://cdn.datatables.net/1.13.8/css/jquery.dataTables.min.css");
-
-      function loadScriptOnce(attr, src) {
-        return new Promise((res, rej) => {
-          const existing = document.querySelector(`script[${attr}='1']`);
-          if (existing) {
-            if (existing.getAttribute("data-loaded") === "1") {
-              res();
-              return;
-            }
-            existing.addEventListener("load", () => res(), { once: true });
-            existing.addEventListener("error", () => rej(new Error("Failed to load DataTables dependencies.")), { once: true });
-            return;
-          }
-
-          const script = document.createElement("script");
-          script.src = src;
-          script.async = true;
-          script.setAttribute(attr, "1");
-          script.onload = () => {
-            script.setAttribute("data-loaded", "1");
-            res();
-          };
-          script.onerror = () => rej(new Error("Failed to load DataTables dependencies."));
-          document.body.appendChild(script);
-        });
-      }
-
-      loadScriptOnce("data-jquery-script", "https://code.jquery.com/jquery-3.7.1.min.js")
-        .then(() => loadScriptOnce("data-dt-script", "https://cdn.datatables.net/1.13.8/js/jquery.dataTables.min.js"))
-        .then(() => resolve())
-        .catch((err) => reject(err));
-    });
-
-    return window.DashboardApp.__datatablesLoadPromise;
+    return Promise.resolve();
   }
 
   const ROLE_OPTIONS = [
@@ -942,20 +889,18 @@
     });
 
     const [usersById, setUsersById] = useState({});
+    const [users, setUsers] = useState([]);
     const [loading, setLoading] = useState(false);
     const [search, setSearch] = useState("");
     const [roleFilter, setRoleFilter] = useState("");
     const [statusFilter, setStatusFilter] = useState("");
     const [staffFilter, setStaffFilter] = useState("");
-    const [tableReady, setTableReady] = useState(false);
-    const [tableEngineReady, setTableEngineReady] = useState(
-      !!window.jQuery && !!window.jQuery.fn && !!window.jQuery.fn.DataTable,
-    );
-    const [tableEngineError, setTableEngineError] = useState("");
     const [pageSize, setPageSize] = useState(20);
     const [total, setTotal] = useState(0);
     const [page, setPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
+    const [sortBy, setSortBy] = useState("date_joined");
+    const [sortDir, setSortDir] = useState("desc");
     const [selectedUser, setSelectedUser] = useState(null);
     const [modalStartInEdit, setModalStartInEdit] = useState(false);
     const [actionLoading, setActionLoading] = useState(null);
@@ -992,306 +937,109 @@
       usersCacheRef.current.clear();
     }
 
+    const fetchUsersData = async (
+      targetPage = page,
+      targetPageSize = pageSize,
+      targetSortBy = sortBy,
+      targetSortDir = sortDir,
+      liveFilters = filters,
+    ) => {
+      try {
+        setLoading(true);
+        const query = new URLSearchParams();
+        query.set("page", targetPage);
+        query.set("page_size", targetPageSize);
+        query.set("sort_by", targetSortBy);
+        query.set("sort_dir", targetSortDir);
+        if (liveFilters.search && liveFilters.search.trim()) {
+          query.set("search", liveFilters.search.trim());
+        }
+        if (liveFilters.roleFilter) {
+          query.set("role", liveFilters.roleFilter);
+        }
+        if (liveFilters.statusFilter) {
+          query.set("is_active", liveFilters.statusFilter === "active" ? "true" : "false");
+        }
+        if (liveFilters.staffFilter) {
+          query.set("is_staff", liveFilters.staffFilter === "yes" ? "true" : "false");
+        }
+
+        const cacheKey = query.toString();
+        const cached = usersCacheRef.current.get(cacheKey);
+        if (cached) {
+          setLoading(false);
+          setUsers(cached.rows);
+          setUsersById(cached.usersById);
+          setTotal(cached.total);
+          setPage(cached.page);
+          setTotalPages(cached.totalPages);
+          setPageSize(cached.pageSize);
+          return;
+        }
+
+        const result = await fetchJSON(`/api/users/?${query.toString()}`, {
+          method: "GET",
+          headers: { "X-CSRFToken": getCookie("csrftoken") || "" },
+        });
+
+        if (!result.ok) {
+          setLoading(false);
+          setUsers([]);
+          notify("error", "Load Failed", result.data?.error || "Unable to load users table.");
+          return;
+        }
+
+        const response = result.data || {};
+        const rows = response.users || response.data || [];
+        const mapped = {};
+        rows.forEach((u) => {
+          mapped[u.id] = u;
+        });
+        setUsers(rows);
+        setUsersById((prev) => ({ ...prev, ...mapped }));
+        setTotal(response.total || 0);
+        setPage(response.page || targetPage);
+        setTotalPages(response.total_pages || 1);
+        setPageSize(targetPageSize);
+
+        usersCacheRef.current.set(cacheKey, {
+          rows,
+          usersById: mapped,
+          total: response.total || 0,
+          page: response.page || targetPage,
+          totalPages: response.total_pages || 1,
+          pageSize: targetPageSize,
+        });
+        setLoading(false);
+      } catch (err) {
+        setLoading(false);
+        setUsers([]);
+        notify("error", "Load Failed", err?.message || "Unable to load users table.");
+      }
+    };
+
     function reloadTable() {
-      if (!tableInstanceRef.current) return;
-      setLoading(true);
-      tableInstanceRef.current.ajax.reload(null, true);
+      fetchUsersData(page, pageSize, sortBy, sortDir, filters);
     }
 
     useEffect(() => {
-      let cancelled = false;
-      if (window.jQuery && window.jQuery.fn && window.jQuery.fn.DataTable) {
-        setTableEngineReady(true);
-        return;
-      }
-      ensureDataTablesLoaded()
-        .then(() => {
-          if (!cancelled) {
-            setTableEngineReady(true);
-            setTableEngineError("");
-          }
-        })
-        .catch((err) => {
-          if (!cancelled) {
-            setTableEngineError(err?.message || "Failed to load table engine.");
-            notify("error", "Users Table Unavailable", "Could not load table engine. Please refresh.");
-          }
-        });
-      return () => {
-        cancelled = true;
-      };
-    }, []);
-
-    useEffect(() => {
-      if (
-        !tableEngineReady ||
-        !tableElRef.current ||
-        tableInstanceRef.current ||
-        !window.jQuery ||
-        !window.jQuery.fn ||
-        !window.jQuery.fn.DataTable
-      ) {
-        return;
-      }
-
-      const $ = window.jQuery;
-      const fieldByColumn = ["username", "role", "is_active", "date_joined", "id"];
-
-      const table = $(tableElRef.current).DataTable({
-        processing: false,
-        serverSide: true,
-        searching: false,
-        paging: true,
-        lengthChange: false,
-        info: false,
-        pageLength: pageSize,
-        order: [[3, "desc"]],
-        autoWidth: false,
-        dom: "t",
-        language: {
-          emptyTable: "No users found for the selected filters.",
-        },
-        ajax: async (dtRequest, callback) => {
-          try {
-            const liveFilters = filtersRef.current;
-            const query = new URLSearchParams();
-            const start = Number(dtRequest.start || 0);
-            const length = Number(dtRequest.length || pageSize);
-            const pageNum = Math.floor(start / Math.max(1, length)) + 1;
-            const orderInfo = Array.isArray(dtRequest.order) && dtRequest.order[0]
-              ? dtRequest.order[0]
-              : { column: 3, dir: "desc" };
-            const sortBy = fieldByColumn[orderInfo.column] || "date_joined";
-
-            query.set("page", pageNum);
-            query.set("page_size", length);
-            query.set("sort_by", sortBy);
-            query.set("sort_dir", orderInfo.dir || "desc");
-            if (liveFilters.search.trim()) query.set("search", liveFilters.search.trim());
-            if (liveFilters.roleFilter) query.set("role", liveFilters.roleFilter);
-            if (liveFilters.statusFilter) query.set("is_active", liveFilters.statusFilter === "active" ? "true" : "false");
-            if (liveFilters.staffFilter) query.set("is_staff", liveFilters.staffFilter === "yes" ? "true" : "false");
-
-            const cacheKey = query.toString();
-            const cached = usersCacheRef.current.get(cacheKey);
-            if (cached) {
-              setLoading(false);
-              setUsersById(cached.usersById);
-              setTotal(cached.total);
-              setPage(cached.page);
-              setTotalPages(cached.totalPages);
-              setPageSize(cached.pageSize);
-              callback({
-                draw: dtRequest.draw,
-                recordsTotal: cached.total,
-                recordsFiltered: cached.total,
-                data: cached.rows,
-              });
-              return;
-            }
-
-            setLoading(true);
-
-            const result = await fetchJSON(`/api/users/?${query.toString()}`, {
-              method: "GET",
-              headers: { "X-CSRFToken": getCookie("csrftoken") || "" },
-            });
-
-            if (!result.ok) {
-              callback({
-                draw: dtRequest.draw,
-                recordsTotal: 0,
-                recordsFiltered: 0,
-                data: [],
-              });
-              setLoading(false);
-              notify("error", "Load Failed", result.data?.error || "Unable to load users table.");
-              return;
-            }
-
-            const response = result.data || {};
-            const rows = response.users || response.data || [];
-            const mapped = {};
-            rows.forEach((u) => {
-              mapped[u.id] = u;
-            });
-            setUsersById(mapped);
-            setTotal(response.total || 0);
-            setPage(response.page || pageNum);
-            setTotalPages(response.total_pages || 1);
-            setPageSize(length);
-            usersCacheRef.current.set(cacheKey, {
-              rows,
-              usersById: mapped,
-              total: response.total || 0,
-              page: response.page || pageNum,
-              totalPages: response.total_pages || 1,
-              pageSize: length,
-            });
-
-            callback({
-              draw: dtRequest.draw,
-              recordsTotal: response.total || 0,
-              recordsFiltered: response.total || 0,
-              data: rows,
-            });
-            setLoading(false);
-          } catch (err) {
-            callback({
-              draw: dtRequest.draw,
-              recordsTotal: 0,
-              recordsFiltered: 0,
-              data: [],
-            });
-            setLoading(false);
-            notify("error", "Load Failed", err?.message || "Unable to load users table.");
-          }
-        },
-        columns: [
-          {
-            data: "username",
-            title: "User",
-            render: (_value, _type, row) => {
-              const displayName = row.full_name || row.username;
-              const fullName = escapeHtml(displayName);
-              const username = row.full_name && row.full_name !== row.username
-                ? `<span class="users-username">@${escapeHtml(row.username)}</span>`
-                : "";
-              const email = escapeHtml(row.email || "—");
-              const staffBadge = row.is_staff
-                ? '<span class="badge badge-staff">Staff</span>'
-                : "";
-              const hue = avatarHue(row.username || row.email || row.id);
-              return `
-                <div class="users-user-cell">
-                  <span class="users-avatar" style="--users-avatar-hue:${hue}" aria-hidden="true">${escapeHtml(getInitials(displayName))}</span>
-                  <div class="users-user-info">
-                    <div class="users-user-top">
-                      <span class="users-user-name">${fullName}</span>
-                      ${username}
-                      ${staffBadge}
-                    </div>
-                    <div class="users-user-email">${email}</div>
-                  </div>
-                </div>
-              `;
-            },
-          },
-          {
-            data: "role",
-            title: "Role",
-            render: (_value, _type, row) => {
-              const pending = pendingApprovalLabel(row);
-              const pendingPill = pending
-                ? `<span class="users-pending-pill">${escapeHtml(pending)}</span>`
-                : "";
-              return `
-                <div class="users-role-cell">
-                  <span class="users-role-badge users-role-badge--${roleVariant(row)}">${escapeHtml(getRoleDisplay(row))}</span>
-                  ${pendingPill}
-                </div>
-              `;
-            },
-          },
-          {
-            data: "is_active",
-            title: "Status",
-            className: "dt-center",
-            render: (value) => {
-              const active = !!value;
-              const cls = active ? "status-active" : "status-inactive";
-              return `<span class="status-badge ${cls}"><span class="users-status-dot" aria-hidden="true"></span>${active ? "Active" : "Inactive"}</span>`;
-            },
-          },
-          {
-            data: "date_joined",
-            title: "Joined",
-            render: (value) => `<span class="users-joined-cell">${escapeHtml(formatDate(value))}</span>`,
-          },
-          {
-            data: "id",
-            title: "Actions",
-            orderable: false,
-            searchable: false,
-            className: "dt-center",
-            render: (_value, _type, row) => {
-              const mentorApprove =
-                (row.role === "mentor" || row.role === "both") && row.mentor_approved === false
-                  ? '<button class="btn btn-sm btn-success" data-action="approve-mentor">Approve Mentor</button>'
-                  : "";
-              const menteeApprove =
-                (row.role === "mentee" || row.role === "both") && row.mentee_approved === false
-                  ? '<button class="btn btn-sm btn-success" data-action="approve-mentee">Approve Mentee</button>'
-                  : "";
-              const deleteAction = row.id === ctx.user.id
-                ? ""
-                : '<button class="btn btn-sm btn-danger" data-action="delete">Delete</button>';
-              return `
-                <div class="action-buttons users-action-buttons">
-                  <button class="btn btn-sm btn-info" data-action="view">View</button>
-                  ${mentorApprove}
-                  ${menteeApprove}
-                  ${deleteAction}
-                </div>
-              `;
-            },
-          },
-        ],
-      });
-
-      const rowActionHandler = async (ev) => {
-        const actionEl = ev.target.closest("button[data-action]");
-        if (!actionEl) return;
-
-        const action = actionEl.getAttribute("data-action");
-        const rowData = table.row(window.jQuery(actionEl).closest("tr")).data();
-        if (!rowData) return;
-        const userId = rowData.id;
-
-        if (actionLoading === userId) return;
-
-        if (action === "view") {
-          await handleViewUser(userId, false);
-          return;
-        }
-        if (action === "delete") {
-          await handleDeleteUser(userId);
-          return;
-        }
-        if (action === "approve-mentor") {
-          await handleApprove(userId, "mentor");
-          return;
-        }
-        if (action === "approve-mentee") {
-          await handleApprove(userId, "mentee");
-          return;
-        }
-      };
-
-      window.jQuery(tableElRef.current).on("click.usersActions", "button[data-action]", rowActionHandler);
-
-      tableInstanceRef.current = table;
-      setTableReady(true);
-
-      return () => {
-        if (requestTimerRef.current) clearTimeout(requestTimerRef.current);
-        window.jQuery(tableElRef.current).off("click.usersActions");
-        if (tableInstanceRef.current) {
-          // Keep the table element in the DOM for React; avoid hard-remove teardown.
-          tableInstanceRef.current.destroy();
-          tableInstanceRef.current = null;
-        }
-      };
-    }, [tableEngineReady]);
-
-    useEffect(() => {
-      if (!tableReady) return;
       if (requestTimerRef.current) clearTimeout(requestTimerRef.current);
-      requestTimerRef.current = setTimeout(() => reloadTable(), 220);
+      requestTimerRef.current = setTimeout(() => {
+        fetchUsersData(1, pageSize, sortBy, sortDir, filters);
+      }, 200);
       return () => {
         if (requestTimerRef.current) clearTimeout(requestTimerRef.current);
       };
-    }, [filters, tableReady]);
+    }, [filters, pageSize, sortBy, sortDir]);
+
+    function handleSort(colName) {
+      if (sortBy === colName) {
+        setSortDir((prev) => (prev === "asc" ? "desc" : "asc"));
+      } else {
+        setSortBy(colName);
+        setSortDir("asc");
+      }
+    }
 
     async function handleDeleteUser(userId) {
       const targetUser = usersById[userId] || selectedUser;
@@ -1467,18 +1215,53 @@
     }
 
     return (
-      <div className="card users-management-page page-shell">
-        <div className="users-page-header page-shell-head">
-          <div className="users-page-heading">
-            <h1 className="page-title users-page-title">User Management</h1>
-            <p className="page-subtitle users-page-subtitle">Manage user access, roles, and approvals from a single admin workspace.</p>
+      <div className="users-management-space users-management-page page-shell">
+        {/* Kasandigan Open Native Header — Zero box container */}
+        <header className="kasandigan-header">
+          <div className="kasandigan-header-content">
+            <div className="kasandigan-badge">
+              <span className="kasandigan-badge-dot" />
+              <span>Academic Mentoring Unit • Operations Console</span>
+            </div>
+            <h1 className="kasandigan-title">User Management</h1>
+            <p className="kasandigan-subtitle">
+              Manage user access, roles, and approvals from a single admin workspace.
+            </p>
           </div>
-          <div className="users-page-header-actions">
-            <span className="users-total-pill">
-              <strong>{total}</strong> {total === 1 ? "user" : "users"}
-            </span>
-            <button type="button" className="btn users-add-btn" onClick={handleAddUser}>
+          <div className="kasandigan-header-actions">
+            <div className="approvals-summary-pill">
+              <span className="approvals-summary-pill-count">{total}</span>
+              <span>{total === 1 ? "User" : "Users"}</span>
+            </div>
+            <button
+              type="button"
+              className="btn kasandigan-btn-primary"
+              onClick={handleAddUser}
+            >
               <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                width="16"
+                height="16"
+                aria-hidden="true"
+              >
+                <line x1="12" y1="5" x2="12" y2="19" />
+                <line x1="5" y1="12" x2="19" y2="12" />
+              </svg>
+              <span>Add User</span>
+            </button>
+          </div>
+        </header>
+
+        <div className="users-management-card kasandigan-card">
+          <div className="users-toolbar">
+            <div className="users-search-field">
+              <svg
+                className="users-search-icon"
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
@@ -1487,204 +1270,299 @@
                 strokeLinejoin="round"
                 aria-hidden="true"
               >
-                <line x1="12" y1="5" x2="12" y2="19" />
-                <line x1="5" y1="12" x2="19" y2="12" />
+                <circle cx="11" cy="11" r="7" />
+                <line x1="16.65" y1="16.65" x2="21" y2="21" />
               </svg>
-              Add User
-            </button>
-          </div>
-        </div>
+              <input
+                type="search"
+                id="users-search"
+                className="users-search-input"
+                placeholder="Search by name, email, or username"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+              {search && (
+                <button
+                  type="button"
+                  className="users-search-clear"
+                  onClick={() => setSearch("")}
+                  aria-label="Clear search"
+                >
+                  ×
+                </button>
+              )}
+            </div>
 
-        <div className="users-toolbar">
-          <div className="users-search-field">
-            <svg
-              className="users-search-icon"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden="true"
-            >
-              <circle cx="11" cy="11" r="7" />
-              <line x1="16.65" y1="16.65" x2="21" y2="21" />
-            </svg>
-            <input
-              type="search"
-              id="users-search"
-              className="users-search-input"
-              placeholder="Search by name, email, or username"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-            {search && (
+            <div className="users-toolbar-filters">
+              <div className="users-filter-group">
+                <label htmlFor="users-filter-role">Role</label>
+                <select
+                  id="users-filter-role"
+                  className="users-filter-select"
+                  value={roleFilter}
+                  onChange={(e) => setRoleFilter(e.target.value)}
+                >
+                  {ROLE_FILTER_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="users-filter-group">
+                <label htmlFor="users-filter-status">Status</label>
+                <select
+                  id="users-filter-status"
+                  className="users-filter-select"
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                >
+                  {STATUS_FILTER_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="users-filter-group">
+                <label htmlFor="users-filter-access">Access</label>
+                <select
+                  id="users-filter-access"
+                  className="users-filter-select"
+                  value={staffFilter}
+                  onChange={(e) => setStaffFilter(e.target.value)}
+                >
+                  {ACCESS_FILTER_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
               <button
                 type="button"
-                className="users-search-clear"
-                onClick={() => setSearch("")}
-                aria-label="Clear search"
+                className="btn secondary users-reset-btn"
+                onClick={resetFilters}
+                disabled={!hasActiveFilters}
               >
-                ×
+                Reset
               </button>
-            )}
+            </div>
           </div>
 
-          <div className="users-toolbar-filters">
-            <div className="users-filter-group">
-              <label htmlFor="users-filter-role">Role</label>
-              <select
-                id="users-filter-role"
-                className="users-filter-select"
-                value={roleFilter}
-                onChange={(e) => setRoleFilter(e.target.value)}
-              >
-                {ROLE_FILTER_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
+          <div className="users-results-bar">
+            <span className="users-filter-info" aria-live="polite">
+              {loading ? (
+                "Refreshing users…"
+              ) : total === 0 ? (
+                "No users match the current filters"
+              ) : (
+                <>
+                  Showing <strong>{showingFrom}–{showingTo}</strong> of{" "}
+                  <strong>{total}</strong> users
+                </>
+              )}
+            </span>
+
+            {activeFilterChips.length > 0 && (
+              <div className="users-active-filters">
+                {activeFilterChips.map((chip) => (
+                  <button
+                    key={chip.key}
+                    type="button"
+                    className="users-filter-chip"
+                    onClick={chip.clear}
+                    title={`Remove ${chip.name} filter`}
+                  >
+                    <span className="users-filter-chip-name">{chip.name}</span>
+                    <span className="users-filter-chip-value">{chip.value}</span>
+                    <span className="users-filter-chip-x" aria-hidden="true">×</span>
+                  </button>
                 ))}
-              </select>
-            </div>
-
-            <div className="users-filter-group">
-              <label htmlFor="users-filter-status">Status</label>
-              <select
-                id="users-filter-status"
-                className="users-filter-select"
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-              >
-                {STATUS_FILTER_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="users-filter-group">
-              <label htmlFor="users-filter-access">Access</label>
-              <select
-                id="users-filter-access"
-                className="users-filter-select"
-                value={staffFilter}
-                onChange={(e) => setStaffFilter(e.target.value)}
-              >
-                {ACCESS_FILTER_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <button
-              type="button"
-              className="btn secondary users-reset-btn"
-              onClick={resetFilters}
-              disabled={!hasActiveFilters}
-            >
-              Reset
-            </button>
-          </div>
-        </div>
-
-        <div className="users-results-bar">
-          <span className="users-filter-info" aria-live="polite">
-            {loading ? (
-              "Refreshing users…"
-            ) : total === 0 ? (
-              "No users match the current filters"
-            ) : (
-              <>
-                Showing <strong>{showingFrom}–{showingTo}</strong> of{" "}
-                <strong>{total}</strong> users
-              </>
+              </div>
             )}
-          </span>
 
-          {activeFilterChips.length > 0 && (
-            <div className="users-active-filters">
-              {activeFilterChips.map((chip) => (
-                <button
-                  key={chip.key}
-                  type="button"
-                  className="users-filter-chip"
-                  onClick={chip.clear}
-                  title={`Remove ${chip.name} filter`}
-                >
-                  <span className="users-filter-chip-name">{chip.name}</span>
-                  <span className="users-filter-chip-value">{chip.value}</span>
-                  <span className="users-filter-chip-x" aria-hidden="true">×</span>
-                </button>
-              ))}
+            <label className="users-page-size">
+              <span>Rows</span>
+              <select
+                className="page-size-select"
+                value={pageSize}
+                onChange={(e) => {
+                  const next = Number(e.target.value);
+                  if (!next) return;
+                  setPageSize(next);
+                  fetchUsersData(1, next, sortBy, sortDir, filters);
+                }}
+              >
+                {PAGE_SIZE_OPTIONS.map((size) => (
+                  <option key={size} value={size}>
+                    {size}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+
+          <div className="table-wrapper users-table-shell">
+            <table className="users-datatable display" style={{ width: "100%" }}>
+              <thead>
+                <tr>
+                  <th onClick={() => handleSort("username")} className="users-th-sortable">
+                    User {sortBy === "username" ? (sortDir === "asc" ? " ▲" : " ▼") : ""}
+                  </th>
+                  <th onClick={() => handleSort("role")} className="users-th-sortable">
+                    Role {sortBy === "role" ? (sortDir === "asc" ? " ▲" : " ▼") : ""}
+                  </th>
+                  <th onClick={() => handleSort("is_active")} className="users-th-sortable dt-center">
+                    Status {sortBy === "is_active" ? (sortDir === "asc" ? " ▲" : " ▼") : ""}
+                  </th>
+                  <th onClick={() => handleSort("date_joined")} className="users-th-sortable">
+                    Joined {sortBy === "date_joined" ? (sortDir === "asc" ? " ▲" : " ▼") : ""}
+                  </th>
+                  <th className="dt-center">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {loading && users.length === 0 ? (
+                  <tr>
+                    <td colSpan="5" className="users-td-loading" style={{ textAlign: "center", padding: "36px" }}>
+                      <div className="users-table-loading-spinner">Loading users…</div>
+                    </td>
+                  </tr>
+                ) : users.length === 0 ? (
+                  <tr>
+                    <td colSpan="5" className="users-td-empty" style={{ textAlign: "center", padding: "36px" }}>
+                      <div className="users-empty-state">No users found. Try changing filters or search terms.</div>
+                    </td>
+                  </tr>
+                ) : (
+                  users.map((row) => {
+                    const displayName = row.full_name || row.username;
+                    const initials = getInitials(displayName);
+                    const hue = avatarHue(row.username || row.email || row.id);
+                    const pending = pendingApprovalLabel(row);
+                    const isCurrentUser = Number(row.id) === Number(ctx.user.id);
+                    const isActionBusy = actionLoading === row.id;
+
+                    return (
+                      <tr key={`user-${row.id}`} className="users-table-row">
+                        <td>
+                          <div className="users-user-cell">
+                            <span
+                              className="users-avatar"
+                              style={{ "--users-avatar-hue": hue }}
+                              aria-hidden="true"
+                            >
+                              {initials}
+                            </span>
+                            <div className="users-user-info">
+                              <div className="users-user-top">
+                                <span className="users-user-name">{displayName}</span>
+                                {row.full_name && row.full_name !== row.username && (
+                                  <span className="users-username">@{row.username}</span>
+                                )}
+                                {row.is_staff && (
+                                  <span className="badge badge-staff">Staff</span>
+                                )}
+                              </div>
+                              <div className="users-user-email">{row.email || "—"}</div>
+                            </div>
+                          </div>
+                        </td>
+                        <td>
+                          <div className="users-role-cell">
+                            <span className={`users-role-badge users-role-badge--${roleVariant(row)}`}>
+                              {getRoleDisplay(row)}
+                            </span>
+                            {pending && (
+                              <span className="users-pending-pill">{pending}</span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="dt-center">
+                          <span className={`status-badge ${row.is_active ? "status-active" : "status-inactive"}`}>
+                            <span className="users-status-dot" aria-hidden="true" />
+                            {row.is_active ? "Active" : "Inactive"}
+                          </span>
+                        </td>
+                        <td>
+                          <span className="users-joined-cell">{formatDate(row.date_joined)}</span>
+                        </td>
+                        <td className="dt-center">
+                          <div className="action-buttons users-action-buttons">
+                            <button
+                              type="button"
+                              className="btn small users-action-btn view-btn"
+                              onClick={() => handleViewUser(row.id, false)}
+                              disabled={isActionBusy}
+                            >
+                              View
+                            </button>
+                            {(row.role === "mentor" || row.role === "both") && row.mentor_approved === false && (
+                              <button
+                                type="button"
+                                className="btn small users-action-btn approve-btn"
+                                onClick={() => handleApprove(row.id, "mentor")}
+                                disabled={isActionBusy}
+                              >
+                                Approve Mentor
+                              </button>
+                            )}
+                            {(row.role === "mentee" || row.role === "both") && row.mentee_approved === false && (
+                              <button
+                                type="button"
+                                className="btn small users-action-btn approve-btn"
+                                onClick={() => handleApprove(row.id, "mentee")}
+                                disabled={isActionBusy}
+                              >
+                                Approve Mentee
+                              </button>
+                            )}
+                            {!isCurrentUser && (
+                              <button
+                                type="button"
+                                className="btn small users-action-btn delete-btn"
+                                onClick={() => handleDeleteUser(row.id)}
+                                disabled={isActionBusy}
+                              >
+                                Delete
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="pagination-section users-pagination">
+            <div className="pagination-info">
+              Page {page} of {totalPages}
             </div>
-          )}
-
-          <label className="users-page-size">
-            <span>Rows</span>
-            <select
-              className="page-size-select"
-              value={pageSize}
-              onChange={(e) => {
-                const next = Number(e.target.value);
-                if (!next) return;
-                tableInstanceRef.current?.page.len(next).draw("page");
-              }}
-            >
-              {PAGE_SIZE_OPTIONS.map((size) => (
-                <option key={size} value={size}>
-                  {size}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
-
-        <div className="users-table-status" aria-live="polite">
-          {!tableEngineReady && !tableEngineError && "Loading table engine…"}
-          {loading && tableEngineReady && "Loading users…"}
-          {tableEngineError && tableEngineError}
-        </div>
-
-        <div className="table-wrapper users-table-shell">
-          <table ref={tableElRef} className="users-datatable display" style={{ width: "100%" }}>
-            <thead>
-              <tr>
-                <th>User</th>
-                <th>Role</th>
-                <th>Status</th>
-                <th>Joined</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-          </table>
-        </div>
-
-        {total === 0 && !loading && tableEngineReady && (
-          <div className="users-empty-state">No users found. Try changing filters or search terms.</div>
-        )}
-
-        <div className="pagination-section users-pagination">
-          <div className="pagination-info">Page {page} of {totalPages}</div>
-          <div className="pagination-controls">
-            <button
-              type="button"
-              className="btn secondary"
-              disabled={page <= 1 || loading}
-              onClick={() => tableInstanceRef.current?.page("previous").draw("page")}
-            >
-              Previous
-            </button>
-            <button
-              type="button"
-              className="btn secondary"
-              disabled={page >= totalPages || loading}
-              onClick={() => tableInstanceRef.current?.page("next").draw("page")}
-            >
-              Next
-            </button>
+            <div className="pagination-controls">
+              <button
+                type="button"
+                className="btn secondary"
+                disabled={page <= 1 || loading}
+                onClick={() => fetchUsersData(page - 1, pageSize, sortBy, sortDir, filters)}
+              >
+                Previous
+              </button>
+              <button
+                type="button"
+                className="btn secondary"
+                disabled={page >= totalPages || loading}
+                onClick={() => fetchUsersData(page + 1, pageSize, sortBy, sortDir, filters)}
+              >
+                Next
+              </button>
+            </div>
           </div>
         </div>
 

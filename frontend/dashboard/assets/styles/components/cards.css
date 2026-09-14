@@ -3,14 +3,27 @@
   border: var(--card-border, 1px solid var(--border));
   background: var(--card-bg, var(--card));
   box-shadow: var(--card-shadow, var(--shadow-md));
+  backdrop-filter: var(--card-blur, blur(16px));
+  -webkit-backdrop-filter: var(--card-blur, blur(16px));
+  transition: transform var(--motion-base) var(--ease-standard),
+              border-color var(--motion-base) var(--ease-standard),
+              box-shadow var(--motion-base) var(--ease-standard);
+  position: relative;
+}
+
+[data-theme="dark"] .card:hover {
+  border-color: rgba(14, 165, 233, 0.3);
+  box-shadow: 0 16px 40px -10px rgba(0, 0, 0, 0.7), 0 0 30px rgba(14, 165, 233, 0.08);
 }
 
 [data-theme="light"] .card {
-  transition: border-color var(--motion-base) var(--ease-standard);
+  transition: transform var(--motion-base) var(--ease-standard),
+              border-color var(--motion-base) var(--ease-standard),
+              box-shadow var(--motion-base) var(--ease-standard);
 }
 
 [data-theme="light"] .card:hover {
-  border-color: #94a3b8;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-  transform: none;
+  border-color: #d4d4d8;
+  box-shadow: 0 10px 26px -2px rgba(0, 0, 0, 0.08), 0 4px 8px -1px rgba(0, 0, 0, 0.04);
+  transform: translateY(-3px);
 }
