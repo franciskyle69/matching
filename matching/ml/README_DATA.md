@@ -4,7 +4,7 @@
 > Production model quality must be validated with historical, human-reviewed
 > matching outcomes before claiming accuracy.
 
-The XGBoost matching model is trained on a CSV of **mentor–mentee pairs** with a **label** (1 = good match, 0 = poor match). You can add more data in several ways.
+The XGBoost matching model is trained on a CSV of **mentor–mentee pairs** with a continuous **target_score** float (0.0 to 1.0 representing match quality). You can add more data in several ways.
 
 ---
 
@@ -37,7 +37,7 @@ python manage.py train_xgb --input matching/ml/synthetic_train.csv
 
 ## 2. Use your own CSV (e.g. from Google Forms)
 
-Your CSV must have these **column names** (and a **label** column):
+Your CSV must have these **column names** (and a **target_score** column):
 
 | Column | Description |
 |--------|-------------|
@@ -54,7 +54,9 @@ Your CSV must have these **column names** (and a **label** column):
 | `mentor_years_experience` | Numeric years of overall experience |
 | `mentor_teaching_experience_years` | Numeric teaching experience years |
 | `mentor_expertise_level` | 1–5 |
-| `label` | 1 = good match, 0 = poor match |
+| `target_score` | Continuous match score (0.0 to 1.0) |
+
+- Legacy CSVs with a binary `label` (0 or 1) are also backwards-compatible.
 
 - Subjects/topics can match the ones in `profiles/subject_catalog.py` (major IT + minor GE/NSTP/PE).
 - Minor-only rows may leave `mentee_topics` / `mentor_topics` empty; matching still uses subject overlap.

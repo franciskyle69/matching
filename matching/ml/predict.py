@@ -14,8 +14,10 @@ def predict_match_score(model, meta: Dict[str, Any], row: Dict[str, Any]) -> flo
     if feature_names:
         X = X.reindex(columns=feature_names, fill_value=0.0)
 
-    task = meta.get("task", "classification")
+    task = meta.get("task", "regression")
     if task == "classification":
-        return float(model.predict_proba(X.values)[0, 1])
-    return float(model.predict(X.values)[0])
+        score = float(model.predict_proba(X.values)[0, 1])
+    else:
+        score = float(model.predict(X.values)[0])
+    return max(0.0, min(1.0, score))
 

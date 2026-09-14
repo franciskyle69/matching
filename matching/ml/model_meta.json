@@ -1,7 +1,7 @@
 {
-  "version": "xgb-20260903-003856",
-  "task": "classification",
-  "target": "label",
+  "version": "xgb-20260914-083237",
+  "task": "regression",
+  "target": "target_score",
   "feature_names": [
     "subjects_jaccard",
     "topics_jaccard",
@@ -26,13 +26,11 @@
     "academic_gap"
   ],
   "metrics": {
-    "auc": 0.9809102674719585,
-    "accuracy": 0.9485714285714286,
-    "precision": 0.9411764705882353,
-    "recall": 0.9824561403508771,
-    "f1": 0.9613733905579399
+    "mae": 0.019495243282590592,
+    "rmse": 0.03304800157297115,
+    "r2": 0.9744585075741637
   },
-  "csv_path": "C:\\Users\\Kyle\\Desktop\\Capstonereal\\matching\\matching\\ml\\synthetic_train.csv",
+  "csv_path": "C:\\Users\\Francis\\Desktop\\capstone\\matching\\matching\\ml\\synthetic_train.csv",
   "params": {
     "n_estimators": 300,
     "max_depth": 5,
@@ -42,5 +40,5 @@
     "random_state": 42,
     "n_jobs": 0
   },
-  "trained_at": "2026-09-03T00:38:56.775436+00:00"
+  "trained_at": "2026-09-14T08:32:37.022429+00:00"
 }

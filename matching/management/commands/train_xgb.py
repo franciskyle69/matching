@@ -18,8 +18,8 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument("--input", required=True, help="Path to input CSV with labeled pairs")
-        parser.add_argument("--target", default="label", help="Target column name (classification: 0/1) or regression score")
-        parser.add_argument("--task", choices=["classification", "regression"], default="classification")
+        parser.add_argument("--target", default="target_score", help="Target column name (default: target_score for regression, or label)")
+        parser.add_argument("--task", choices=["classification", "regression"], default="regression")
         parser.add_argument("--test-size", type=float, default=0.2, help="Test split size (0-1)")
         parser.add_argument("--random-state", type=int, default=42)
         parser.add_argument("--model-path", default=None, help="Optional path to save model (default: matching/ml/model.bin)")
@@ -43,7 +43,16 @@ class Command(BaseCommand):
 
         df = load_dataset(csv_path)
         if target_col not in df.columns:
-            raise CommandError(f"Target column '{target_col}' not found in CSV. Columns: {list(df.columns)}")
+            if target_col == "target_score" and "label" in df.columns:
+                target_col = "label"
+                task = "classification"
+                self.stdout.write(self.style.WARNING("target_score not found; falling back to 'label' column with classification task."))
+            elif target_col == "label" and "target_score" in df.columns:
+                target_col = "target_score"
+                task = "regression"
+                self.stdout.write(self.style.WARNING("label not found; falling back to 'target_score' column with regression task."))
+            else:
+                raise CommandError(f"Target column '{target_col}' not found in CSV. Columns: {list(df.columns)}")
 
         X, y = build_feature_frame(df, target_col)
         X_train, X_val, y_train, y_val = split_dataset(

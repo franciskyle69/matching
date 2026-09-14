@@ -144,43 +144,113 @@ def sample_mentor_row() -> dict:
     }
 
 
+from matching.ml.features import availability_overlap_ratio  # noqa: E402
+
+
 def _token_set(value: str) -> set[str]:
     return {part.strip().lower() for part in str(value or "").split(",") if part.strip()}
 
 
-def compute_label(mentee: dict, mentor: dict) -> int:
-    mentee_subjects = _token_set(mentee["mentee_subjects"])
-    mentor_subjects = _token_set(mentor["mentor_subjects"])
-    mentee_topics = _token_set(mentee["mentee_topics"])
-    mentor_topics = _token_set(mentor["mentor_topics"])
-    mentee_competencies = _token_set(mentee["mentee_competencies"])
-    mentor_competencies = _token_set(mentor["mentor_competencies"])
+def _jaccard_sets(a: set[str], b: set[str]) -> float:
+    union = a | b
+    if not union:
+        return 0.0
+    return len(a & b) / len(union)
 
-    subj_intersection = len(mentee_subjects & mentor_subjects)
-    topic_intersection = len(mentee_topics & mentor_topics)
-    competency_intersection = len(mentee_competencies & mentor_competencies)
-    competency_union = len(mentee_competencies | mentor_competencies)
-    competency_jaccard = (
-        competency_intersection / competency_union if competency_union else 0.0
+
+def compute_target_score(mentee: dict, mentor: dict) -> float:
+    mentee_subjects = _token_set(mentee.get("mentee_subjects", ""))
+    mentor_subjects = _token_set(mentor.get("mentor_subjects", ""))
+    mentee_topics = _token_set(mentee.get("mentee_topics", ""))
+    mentor_topics = _token_set(mentor.get("mentor_topics", ""))
+    mentee_competencies = _token_set(mentee.get("mentee_competencies", ""))
+    mentor_competencies = _token_set(mentor.get("mentor_competencies", ""))
+
+    subj_jaccard = _jaccard_sets(mentee_subjects, mentor_subjects)
+    sched_overlap = availability_overlap_ratio(
+        mentee.get("mentee_availability", ""),
+        mentor.get("mentor_availability", ""),
     )
 
-    mentee_diff = int(mentee["mentee_difficulty_level"])
-    mentor_exp = int(mentor["mentor_expertise_level"])
-    academic_gap = int(mentor["mentor_year_level"]) - int(mentee["mentee_year_level"])
+    mentee_diff = int(mentee.get("mentee_difficulty_level", 3))
+    mentor_exp = int(mentor.get("mentor_expertise_level", 3))
+    diff_alignment = max(0.0, 1.0 - abs(mentor_exp - mentee_diff) / 4.0)
 
-    score = 0.0
-    score += subj_intersection * 1.0
-    score += topic_intersection * 0.4
-    score += competency_jaccard * 2.0
-    score += 0.5 if mentor_exp >= mentee_diff else -0.4
-    score += 0.25 if academic_gap >= 2 else 0.0
+    academic_gap = int(mentor.get("mentor_year_level", 4)) - int(mentee.get("mentee_year_level", 1))
+    role_factor = (
+        1.0
+        if mentor.get("mentor_role") == "Instructor"
+        else min(1.0, max(0.0, academic_gap / 3.0))
+    )
 
-    mentee_has_major = any(not is_minor_subject(s) for s in mentee["mentee_subjects"].split(", "))
-    if not mentee_has_major and subj_intersection >= 1 and mentor_exp >= mentee_diff:
-        score += 0.75
+    has_topics = bool(mentee_topics)
+    if has_topics:
+        topic_jaccard = _jaccard_sets(mentee_topics, mentor_topics)
+        comp_jaccard = _jaccard_sets(mentee_competencies, mentor_competencies)
+        raw_score = (
+            0.35 * subj_jaccard
+            + 0.25 * topic_jaccard
+            + 0.20 * comp_jaccard
+            + 0.10 * sched_overlap
+            + 0.05 * diff_alignment
+            + 0.05 * role_factor
+        )
+    else:
+        raw_score = (
+            0.65 * subj_jaccard
+            + 0.15 * sched_overlap
+            + 0.10 * diff_alignment
+            + 0.10 * role_factor
+        )
 
-    score += RNG.uniform(-0.35, 0.35)
-    return 1 if score >= 1.4 else 0
+    # Small continuous variance for a smooth, natural distribution across [0.0, 1.0]
+    variance = RNG.uniform(-0.02, 0.02)
+    score = max(0.0, min(1.0, raw_score + variance))
+    return round(score, 4)
+
+
+def sample_aligned_mentor(mentee: dict, alignment: str = "high") -> dict:
+    role = RNG.choices(MENTOR_ROLES, weights=[0.35, 0.65], k=1)[0]
+    mentee_subjs = [s.strip() for s in mentee["mentee_subjects"].split(",") if s.strip()]
+    mentee_avail = [s.strip() for s in mentee["mentee_availability"].split(",") if s.strip()]
+    mentee_comps = [s.strip() for s in mentee["mentee_competencies"].split(",") if s.strip()]
+
+    if alignment == "high":
+        mentor_subjs = sorted(set(mentee_subjs + sample_subset(MAJOR_SUBJECT_NAMES, 1, 2)))
+        mentor_comps = sorted(set(mentee_comps + sample_subset(competencies_for_subjects(mentor_subjs), 1, 3)))
+        mentor_topics = topics_for_competencies(mentor_comps)
+        mentor_avail = sorted(set(mentee_avail[:2] + sample_availability()[:2]))
+        exp = RNG.choice([4, 5])
+    elif alignment == "medium":
+        shared = mentee_subjs[: max(1, len(mentee_subjs) // 2)]
+        mentor_subjs = sorted(set(shared + sample_subset(MAJOR_SUBJECT_NAMES, 1, 2)))
+        mentor_comps = sample_subset(competencies_for_subjects(mentor_subjs), 2, 4)
+        mentor_topics = topics_for_competencies(mentor_comps)
+        mentor_avail = sample_availability()
+        exp = RNG.choice([3, 4])
+    else:
+        return sample_mentor_row()
+
+    if role == "Instructor":
+        year_level = 4
+        years_experience = RNG.randint(3, 15)
+        teaching_exp = RNG.randint(2, years_experience)
+    else:
+        year_level = RNG.choice([3, 4])
+        years_experience = RNG.randint(1, 4)
+        teaching_exp = RNG.randint(0, years_experience)
+
+    return {
+        "mentor_role": role,
+        "mentor_subjects": ", ".join(mentor_subjs),
+        "mentor_topics": ", ".join(mentor_topics),
+        "mentor_competencies": ", ".join(mentor_comps),
+        "mentor_availability": ", ".join(mentor_avail),
+        "mentor_years_experience": years_experience,
+        "mentor_teaching_experience_years": teaching_exp,
+        "mentor_expertise_level": exp,
+        "mentor_year_level": year_level,
+    }
 
 
 def write_csv(output_path: Path, rows: list[dict]) -> None:
@@ -201,7 +271,7 @@ def write_csv(output_path: Path, rows: list[dict]) -> None:
         "mentor_teaching_experience_years",
         "mentor_expertise_level",
         "mentor_year_level",
-        "label",
+        "target_score",
     ]
     with output_path.open("w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=fieldnames)
@@ -214,9 +284,13 @@ def generate_rows(n_rows: int) -> list[dict]:
     rows = []
     for _ in range(n_rows):
         mentee = sample_mentee_row()
-        mentor = sample_mentor_row()
-        label = compute_label(mentee, mentor)
-        rows.append({**mentee, **mentor, "label": label})
+        mode = RNG.choices(["random", "medium", "high"], weights=[0.35, 0.35, 0.30], k=1)[0]
+        if mode == "random":
+            mentor = sample_mentor_row()
+        else:
+            mentor = sample_aligned_mentor(mentee, mode)
+        target_score = compute_target_score(mentee, mentor)
+        rows.append({**mentee, **mentor, "target_score": target_score})
     return rows
 
 

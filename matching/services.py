@@ -293,6 +293,15 @@ def _get_model():
         return None, None
 
 
+def reload_model():
+    """Force reload of the XGBoost model and metadata from disk."""
+    global _MODEL, _META, _MODEL_LOAD_ERROR
+    _MODEL = None
+    _META = None
+    _MODEL_LOAD_ERROR = None
+    return _get_model()
+
+
 def _build_row(mentor: MentorProfile, mentee: MenteeProfile) -> Dict[str, Any]:
     mentor_competency_levels = {}
     if hasattr(mentor, "competency_levels"):
@@ -331,34 +340,12 @@ def _build_row(mentor: MentorProfile, mentee: MenteeProfile) -> Dict[str, Any]:
     }
 
 
-def _score_with_model(mentor: MentorProfile, mentee: MenteeProfile) -> Optional[float]:
-    model, meta = _get_model()
-    if model is None or meta is None:
-        return None
-    row = _build_row(mentor, mentee)
-    feats = build_features(row)
-    X = pd.DataFrame([feats])
-    feature_names = meta.get("feature_names")
-    if feature_names:
-        X = X.reindex(columns=feature_names, fill_value=0.0)
+def _heuristic_score(mentor: MentorProfile, mentee: MenteeProfile) -> float:
+    """Feature-level ranking score that produces *differentiated* values.
 
-    task = meta.get("task", "classification")
-    if task == "classification":
-        proba = model.predict_proba(X.values)[0, 1]
-        mentor_topics = _to_set(mentor.topics) or _to_set(mentor.skills)
-        mentee_topics = _to_set(mentee.topics) or _to_set(mentee.skills)
-        confidence = _topic_overlap_confidence(mentor_topics, mentee_topics)
-        adjusted = float(proba) * (0.85 + 0.15 * confidence)
-        return max(0.0, min(1.0, adjusted))
-    pred = model.predict(X.values)[0]
-    return float(pred)
-
-
-def compute_score(mentor: MentorProfile, mentee: MenteeProfile) -> float:
-    model_score = _score_with_model(mentor, mentee)
-    if model_score is not None:
-        return model_score
-
+    Directly measures how much overlap exists across subjects, topics,
+    competencies, difficulty alignment, and role.
+    """
     mentor_subjects = _to_set(mentor.subjects) or _to_set(mentor.skills)
     mentee_subjects = _to_set(mentee.subjects) or _to_set(mentee.skills)
     mentor_topics = _to_set(mentor.topics) or _to_set(mentor.skills)
@@ -385,6 +372,45 @@ def compute_score(mentor: MentorProfile, mentee: MenteeProfile) -> float:
         + 0.1 * difficulty
         + 0.05 * instructor
     )
+
+
+def _score_with_model(mentor: MentorProfile, mentee: MenteeProfile) -> Optional[float]:
+    model, meta = _get_model()
+    if model is None or meta is None:
+        return None
+    row = _build_row(mentor, mentee)
+    feats = build_features(row)
+    X = pd.DataFrame([feats])
+    feature_names = meta.get("feature_names")
+    if feature_names:
+        X = X.reindex(columns=feature_names, fill_value=0.0)
+
+    task = meta.get("task", "regression")
+    if task == "classification":
+        score = float(model.predict_proba(X.values)[0, 1])
+    else:
+        # Direct predicted continuous regression score in [0.0, 1.0]
+        score = float(model.predict(X.values)[0])
+
+    # Smooth confidence adjustment: scale continuous score smoothly using topic support
+    # without pushing all values to 1.0
+    mentor_topics = _to_set(mentor.topics) or _to_set(mentor.skills)
+    mentee_topics = _to_set(mentee.topics) or _to_set(mentee.skills)
+    if mentor_topics and mentee_topics and (mentor_topics & mentee_topics):
+        topic_confidence = _topic_overlap_confidence(mentor_topics, mentee_topics)
+        score *= (0.85 + 0.15 * topic_confidence)
+
+    # Clip final values strictly between 0.0 and 1.0
+    return max(0.0, min(1.0, score))
+
+
+def compute_score(mentor: MentorProfile, mentee: MenteeProfile) -> float:
+    model_score = _score_with_model(mentor, mentee)
+    if model_score is not None:
+        return model_score
+
+    # Fallback when the XGBoost model is unavailable.
+    return max(0.0, min(1.0, _heuristic_score(mentor, mentee)))
 
 
 GROUP_MATCHING_DEFAULT_MIN_SCORE = 0.3
@@ -469,7 +495,7 @@ def recommend_mentors_for_mentee_with_meta(
     # Use a global profiles version so that when any mentor/mentee profile changes,
     # cached recommendations are automatically invalidated.
     version = int(cache.get(MATCHING_PROFILES_VERSION_KEY, 1))
-    cache_key = f"matching:recs:v2:mentee:{mentee.id}:limit:{int(limit or 0)}:min:{float(min_score or 0.0):.2f}"
+    cache_key = f"matching:recs:v3:mentee:{mentee.id}:limit:{int(limit or 0)}:min:{float(min_score or 0.0):.2f}"
 
     cached = cache.get(cache_key, version=version)
     if cached:

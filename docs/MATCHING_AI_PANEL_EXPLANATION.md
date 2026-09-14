@@ -99,7 +99,7 @@ So this pair would get a **match score of about 0.49**. In the UI and API this i
 
 - **Model file location:** `matching/ml/xgb_model.pkl` (if trained)
 - **Model metadata:** `matching/ml/xgb_metadata.json` (defines features, task type, feature names)
-- **Training command:** `python manage.py train_xgb --input <csv_path> --target <target_col> --task [classification|regression]`
+- **Training command:** `python manage.py train_xgb --input <csv_path> --target target_score --task regression`
 - **Feature builder:** `matching.ml.features.build_features()` — used for both training and inference
 - **If no model exists:** The system automatically uses the rule-based **fallback formula** (above) with the weights shown in Section 2.
 - **Recommendation cache:** Mentee recommendations are cached for 300 seconds to reduce redundant scoring; cache key is user ID.
@@ -121,7 +121,7 @@ So this pair would get a **match score of about 0.49**. In the UI and API this i
 **A:** Yes. The same `compute_score` function is used for building the recommendation list for a single mentee and for generating the candidate pairs in batch matching. The difference is how we use the scores: recommendations = sort and take top N; batch = greedy assignment with capacity and one-to-one constraints.
 
 **Q5: How is the ML model trained and what data does it need?**  
-**A:** We train an XGBoost model (classification or regression) from a CSV where each row is a mentor–mentee pair. The CSV must have columns that we can map to mentee/mentor subjects, topics, difficulty, expertise, and role, plus a target column (e.g. “label” 0/1 or a numeric score). We run `build_features` on each row to get the same features we use at runtime, then train and save the model and metadata (e.g. feature names, task type). The management command is `train_xgb` with `--input <csv>`, `--target label`, and `--task classification` (or regression).
+**A:** We train an XGBoost regression model from a CSV where each row is a mentor–mentee pair. The CSV has columns mapped to mentee/mentor subjects, topics, difficulty, expertise, schedule availability, and role, plus a continuous target column (`target_score` float in 0.0 to 1.0). We run `build_features` on each row to get the 21 normalized features, then train with `reg:squarederror` and save the model and metadata (`model.bin`, `model_meta.json`). The management command is `python manage.py train_xgb --input <csv> --target target_score --task regression`.
 
 **Q6: What if the model file is missing or fails to load?**  
 **A:** The system falls back to the rule-based formula above. So matching still works without the ML model; we just use the fixed weights and Jaccard/alignment/instructor features.
