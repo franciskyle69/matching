@@ -301,9 +301,9 @@ import NotificationsNoneOutlined from "@mui/icons-material/NotificationsNoneOutl
             value={activeFilter}
             onChange={(_e, value) => setActiveFilter(value)}
             className="notifications-filter-tabs"
-            variant="scrollable"
-            scrollButtons="auto"
-            allowScrollButtonsMobile
+            variant="standard"
+            scrollButtons={false}
+            allowScrollButtonsMobile={false}
           >
             {FILTER_TABS.map((tab) => (
               <Tab key={tab.id} label={tab.label} value={tab.id} />

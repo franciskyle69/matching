@@ -82,6 +82,21 @@
     inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
 }
 
+[data-theme="dark"] .btn:not(.secondary):not(.btn-secondary):not(.kasandigan-btn-secondary):not(.sidebar-logout-btn):not(.danger):not(.btn-danger):not(.approval-reject-btn):not(.btn-warning):not(.btn-success):not(.outline):not(.ghost),
+[data-theme="dark"] .btn.btn-primary,
+[data-theme="dark"] .btn.primary,
+[data-theme="dark"] .btn-primary,
+[data-theme="dark"] .pmc-cta.MuiButton-root,
+[data-theme="dark"] .match-mui-btn--primary.MuiButton-root,
+[data-theme="dark"] .settings-btn-upload,
+[data-theme="dark"] .approval-accept-btn,
+[data-theme="dark"] .kasandigan-btn-primary {
+  background: #20242b !important;
+  border: 1px solid rgba(56, 189, 248, 0.3) !important;
+  color: #e2e8f0 !important;
+  box-shadow: 4px 4px 12px rgba(0, 0, 0, 0.55) !important;
+}
+
 /* ── Universal Primary Button Hover (Identical across all buttons) ── */
 
 .btn:not(.secondary):not(.btn-secondary):not(.kasandigan-btn-secondary):not(.sidebar-logout-btn):not(.danger):not(.btn-danger):not(.approval-reject-btn):not(.btn-warning):not(.btn-success):not(.outline):not(.ghost):hover:not(:disabled),
@@ -92,11 +107,7 @@
 .match-mui-btn--primary.MuiButton-root:hover:not(:disabled),
 .settings-btn-upload:hover:not(:disabled),
 .approval-accept-btn:hover:not(:disabled),
-.kasandigan-btn-primary:hover:not(:disabled),
-[data-theme="dark"] .btn:not(.secondary):not(.btn-secondary):not(.kasandigan-btn-secondary):not(.sidebar-logout-btn):not(.danger):not(.btn-danger):not(.approval-reject-btn):not(.btn-warning):not(.btn-success):not(.outline):not(.ghost):hover:not(:disabled),
-[data-theme="dark"] .btn.btn-primary:hover:not(:disabled),
-[data-theme="dark"] .btn-primary:hover:not(:disabled),
-[data-theme="dark"] .btn.primary:hover:not(:disabled) {
+.kasandigan-btn-primary:hover:not(:disabled) {
   background: linear-gradient(180deg, #38bdf8 0%, #0284c7 100%) !important;
   border-color: rgba(255, 255, 255, 0.35) !important;
   color: #ffffff !important;
@@ -105,6 +116,22 @@
     0 1px 3px rgba(0, 0, 0, 0.1),
     inset 0 1px 0 rgba(255, 255, 255, 0.3) !important;
   transform: translateY(-1.5px) !important;
+}
+
+[data-theme="dark"] .btn:not(.secondary):not(.btn-secondary):not(.kasandigan-btn-secondary):not(.sidebar-logout-btn):not(.danger):not(.btn-danger):not(.approval-reject-btn):not(.btn-warning):not(.btn-success):not(.outline):not(.ghost):hover:not(:disabled),
+[data-theme="dark"] .btn.btn-primary:hover:not(:disabled),
+[data-theme="dark"] .btn-primary:hover:not(:disabled),
+[data-theme="dark"] .btn.primary:hover:not(:disabled),
+[data-theme="dark"] .pmc-cta.MuiButton-root:hover:not(:disabled),
+[data-theme="dark"] .match-mui-btn--primary.MuiButton-root:hover:not(:disabled),
+[data-theme="dark"] .settings-btn-upload:hover:not(:disabled),
+[data-theme="dark"] .approval-accept-btn:hover:not(:disabled),
+[data-theme="dark"] .kasandigan-btn-primary:hover:not(:disabled) {
+  background: #272d37 !important;
+  border-color: rgba(56, 189, 248, 0.5) !important;
+  color: #38bdf8 !important;
+  box-shadow: 6px 6px 16px rgba(0, 0, 0, 0.65) !important;
+  transform: translateY(-1px) !important;
 }
 
 /* ── Secondary / Outlined Buttons (Base State) ────────────────── */

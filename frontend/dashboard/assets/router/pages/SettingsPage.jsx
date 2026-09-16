@@ -61,13 +61,13 @@ import Tabs from "@mui/material/Tabs";
     };
     return (
       <Tabs
-        allowScrollButtonsMobile
+        allowScrollButtonsMobile={false}
         aria-label="Settings sections"
         className="settings-tabs"
         onChange={handleTabChange}
-        scrollButtons="auto"
+        scrollButtons={false}
         value={activeTab}
-        variant="scrollable"
+        variant="standard"
       >
         {tabs.map((tab) => (
           <Tab key={tab.id} label={tab.label} value={tab.id} />

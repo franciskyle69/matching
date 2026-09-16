@@ -159,18 +159,7 @@
   display: none;
 }
 
-/* Collapsed sidebar — icon-only */
-.sidebar.collapsed .sidebar-link.nav-item {
-  justify-content: center;
-  padding: 10px;
-}
-
-.sidebar.collapsed .sidebar-link.nav-item .sidebar-link-icon {
-  margin-right: 0;
-}
-
-/* Theme toggle + logout MUI icons */
-.sidebar .sidebar-mui-icon--toggle,
+/* Logout MUI icons */
 .sidebar .sidebar-logout-btn .sidebar-mui-icon {
   width: 18px;
   height: 18px;
@@ -180,7 +169,7 @@
   transition: color 0.2s ease-in-out;
 }
 
-.sidebar .theme-toggle:hover .sidebar-mui-icon--toggle,
 .sidebar .sidebar-logout-btn:hover:not(:disabled) .sidebar-mui-icon {
   color: currentColor;
 }
+

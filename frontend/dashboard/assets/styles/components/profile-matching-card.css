@@ -167,12 +167,34 @@
   white-space: normal;
 }
 
+.pmc-name-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+}
+
+.pmc-name-row .pmc-badges {
+  margin-top: 0;
+}
+
+.pmc-dept-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 10px;
+}
+
+.pmc-dept-row .pmc-location {
+  margin-top: 0;
+}
+
 .pmc-badges {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 8px;
-  margin-top: 8px;
+  margin-top: 4px;
 }
 
 .pmc-role,
@@ -674,12 +696,12 @@
    ═══════════════════════════════════════════════════════════════════ */
 
 .pmc-card--hero {
-  padding: 20px 24px;
-  gap: 14px;
-  border-radius: 16px;
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  padding: 26px 30px;
+  gap: 16px;
+  border-radius: 26px;
+  background: var(--neu-base, #ebf0f7);
+  border: 1.5px solid rgba(255, 255, 255, 0.95);
+  box-shadow: 10px 10px 26px rgba(166, 180, 200, 0.6), -10px -10px 26px #ffffff;
 }
 
 .pmc-card--hero .pmc-avatar {
@@ -726,11 +748,11 @@
 .pmc-card--hero .pmc-stats {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
-  padding: 10px 14px;
-  border-radius: 12px;
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
+  gap: 12px;
+  padding: 0;
+  border-radius: 18px;
+  background: transparent;
+  border: none;
 }
 
 .pmc-card--hero .pmc-stat {

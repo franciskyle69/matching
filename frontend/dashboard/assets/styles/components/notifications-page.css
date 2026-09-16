@@ -1,259 +1,488 @@
-/* Notifications page — Kasandigan Light Blue & Clean Structured Feed */
+/* Notifications page — Porcelain Neumorphic Soft UI */
 
-.notifications-page--glass.page-shell {
-  background: transparent;
-  border: none;
-  box-shadow: none;
-  overflow: visible;
-  font-family: "Inter", "SF Pro Text", "SF Pro Display", var(--font-sans);
+.notifications-page--glass.page-shell,
+.notifications-page.page-shell {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  overflow: visible !important;
+  font-family: var(--font-sans, "Inter", system-ui, sans-serif);
 }
 
-/* ── Filter tabs ─────────────────────────────────────────────── */
+/* ── Kasandigan Header Card ────────────────────────────────────── */
 
-.notifications-page--glass .notifications-filter-wrap {
-  margin-bottom: 20px;
+.notifications-page .kasandigan-header {
+  background: var(--neu-base, #f5f5f7) !important;
+  border: 1px solid rgba(226, 232, 240, 0.9) !important;
+  border-radius: 24px !important;
+  box-shadow: 10px 10px 24px var(--neu-dark-strong, rgba(166, 180, 200, 0.45)), -10px -10px 24px var(--neu-light, #ffffff) !important;
+  padding: 24px 28px !important;
+  margin-bottom: 24px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 16px !important;
+  flex-wrap: wrap !important;
 }
 
-.notifications-page--glass .notifications-filter-tabs {
-  border-bottom: 1px solid var(--card-border, #e2e8f0);
+.notifications-page .kasandigan-title {
+  color: #0f2b48 !important;
+  font-weight: 800 !important;
+  font-size: 1.75rem !important;
+  letter-spacing: -0.02em !important;
+  margin: 4px 0 6px !important;
 }
 
-.notifications-page--glass .notifications-filter-tabs .MuiTab-root {
-  color: var(--text-secondary, #64748b);
-  font-weight: 600;
-  font-size: 14px;
-  text-transform: none;
-  min-height: 44px;
+.notifications-page .kasandigan-subtitle {
+  color: #64748b !important;
+  font-size: 0.92rem !important;
+  font-weight: 500 !important;
+  margin: 0 !important;
 }
 
-.notifications-page--glass .notifications-filter-tabs .MuiTab-root.Mui-selected {
-  color: var(--accent-primary-hover, #0284c7);
-}
-
-.notifications-page--glass .notifications-filter-tabs .MuiTabs-indicator {
-  background: linear-gradient(90deg, #38bdf8, #0ea5e9);
-  height: 3px;
-  border-radius: 3px 3px 0 0;
-}
-
-/* ── Notification card ───────────────────────────────────────── */
-
-.notifications-page--glass .notifications-list {
-  display: grid;
-  gap: 12px;
-}
-
-.notifications-page--glass .notification-card {
-  position: relative;
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  gap: 14px;
-  align-items: start;
-  background: var(--card-bg, #ffffff);
-  border: var(--card-border, 1px solid #e2e8f0);
-  border-radius: 14px;
-  padding: 16px 20px;
-  box-shadow: var(--card-shadow, 0 1px 3px rgba(0, 0, 0, 0.05));
-  transition:
-    border-color 0.2s ease,
-    transform 0.2s ease,
-    background 0.2s ease,
-    box-shadow 0.2s ease;
-  cursor: pointer;
-}
-
-.notifications-page--glass .notification-card:hover {
-  border-color: rgba(14, 165, 233, 0.4);
-  background: var(--card-bg, #ffffff);
-  transform: translateX(2px);
-  box-shadow: 0 4px 16px rgba(14, 165, 233, 0.08);
-}
-
-.notifications-page--glass .notification-card.unread {
-  border-left: 4px solid var(--accent-primary, #0ea5e9);
-  background: var(--accent-light, #f0f9ff);
-}
-
-.notifications-page--glass .notification-card.read {
-  background: var(--card-bg, #ffffff);
-}
-
-.notifications-page--glass .notification-card.read .notification-message {
-  color: var(--text-secondary, #64748b);
-}
-
-.notifications-page--glass .notification-card.read .notification-time {
-  color: var(--text-secondary, #94a3b8);
-}
-
-.notifications-page--glass .notification-card.unread::before {
-  content: "";
-  position: absolute;
-  top: 18px;
-  right: 16px;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--accent-primary, #0ea5e9);
-  box-shadow: 0 0 10px rgba(14, 165, 233, 0.7);
-}
-
-/* ── Leading icon / avatar ───────────────────────────────────── */
-
-.notifications-page--glass .notification-leading {
-  position: relative;
-  flex-shrink: 0;
-}
-
-.notifications-page--glass .notification-icon-wrap {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 44px;
-  height: 44px;
-  border-radius: 12px;
-  border: 1px solid var(--card-border, #e2e8f0);
-}
-
-.notifications-page--glass .notification-icon-wrap svg {
-  font-size: 22px;
-}
-
-.notifications-page--glass .notification-icon-wrap--session_scheduled {
-  color: #0284c7;
-  background: #f0f9ff;
-  box-shadow: 0 0 12px rgba(14, 165, 233, 0.15);
-}
-
-.notifications-page--glass .notification-icon-wrap--session_completed {
-  color: #059669;
-  background: #ecfdf5;
-  box-shadow: 0 0 12px rgba(16, 185, 129, 0.15);
-}
-
-.notifications-page--glass .notification-icon-wrap--announcement,
-.notifications-page--glass .notification-icon-wrap--message {
-  color: #0284c7;
-  background: #f0f9ff;
-  box-shadow: 0 0 12px rgba(14, 165, 233, 0.15);
-}
-
-.notifications-page--glass .notification-icon-wrap--matching,
-.notifications-page--glass .notification-icon-wrap--general {
-  color: #0369a1;
-  background: #e0f2fe;
-}
-
-.notifications-page--glass .notification-avatar {
-  width: 44px;
-  height: 44px;
-  border-radius: 12px;
-  object-fit: cover;
-  border: 1px solid var(--card-border, #e2e8f0);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-}
-
-/* ── Content ─────────────────────────────────────────────────── */
-
-.notifications-page--glass .notification-content {
-  min-width: 0;
-  padding-right: 12px;
-}
-
-.notifications-page--glass .notification-message {
-  margin: 0 0 8px;
-  font-size: 14px;
-  line-height: 1.5;
-  color: var(--text-primary, #0f172a);
-}
-
-.notifications-page--glass .notification-time {
-  font-size: 12px;
-  color: var(--text-secondary, #64748b);
-}
-
-.notifications-page--glass .notification-actions-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 12px;
-}
-
-.notifications-page--glass .notification-cta.MuiButton-root {
-  text-transform: none;
-  font-weight: 600;
-  font-size: 13px;
-  border-radius: 8px;
-}
-
-.notifications-page--glass .notification-cta--outlined.MuiButton-root {
-  border-color: var(--card-border, #cbd5e1);
-  color: var(--text-primary, #0f172a);
-}
-
-.notifications-page--glass .notification-cta--outlined.MuiButton-root:hover {
-  border-color: #0ea5e9;
-  background: #f0f9ff;
-  color: #0284c7;
-}
-
-.notifications-page--glass .notification-cta--text.MuiButton-root {
-  color: #0284c7;
-}
-
-.notifications-page--glass .notification-cta--text.MuiButton-root:hover {
-  background: #f0f9ff;
-}
-
-/* ── Mark-read hover action ────────────────────────────────────── */
-
-.notifications-page--glass .notification-card-actions {
-  display: flex;
-  align-items: flex-start;
-  padding-top: 2px;
-}
-
-.notifications-page--glass .notification-mark-read-btn {
-  opacity: 0;
-  transition: opacity 0.2s ease;
-  color: var(--text-secondary, #64748b) !important;
-}
-
-.notifications-page--glass .notification-card:hover .notification-mark-read-btn,
-.notifications-page--glass .notification-mark-read-btn:focus-visible {
-  opacity: 1;
-}
-
-.notifications-page--glass .notification-mark-read-btn:hover {
+/* Badge in header */
+.notifications-page .kasandigan-badge {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  background: var(--neu-base, #ebf0f7) !important;
+  border: 1px solid rgba(2, 132, 199, 0.25) !important;
+  box-shadow: inset 1.5px 1.5px 3.5px var(--neu-dark, rgba(166, 180, 200, 0.4)), inset -1.5px -1.5px 3.5px var(--neu-light, #ffffff) !important;
+  border-radius: 9999px !important;
+  padding: 4px 12px !important;
+  font-size: 0.78rem !important;
+  font-weight: 700 !important;
   color: #0284c7 !important;
-  background: #f0f9ff !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.04em !important;
 }
 
-/* ── Empty state ───────────────────────────────────────────────── */
+.notifications-page .kasandigan-badge-dot {
+  width: 7px !important;
+  height: 7px !important;
+  border-radius: 50% !important;
+  background: #0284c7 !important;
+  box-shadow: 0 0 6px rgba(2, 132, 199, 0.6) !important;
+}
 
-.notifications-page--glass .notifications-empty {
-  text-align: center;
-  padding: 40px 24px;
-  border-radius: 16px;
-  border: 1px dashed var(--card-border, #cbd5e1);
-  background: var(--card-bg, #ffffff);
-  color: var(--text-secondary, #64748b);
+/* Mark All as Read Button */
+.notifications-page .kasandigan-header-actions .btn {
+  background: var(--neu-base, #ebf0f7) !important;
+  border: 1px solid rgba(166, 180, 200, 0.3) !important;
+  border-radius: 14px !important;
+  box-shadow: 3px 3px 8px var(--neu-dark-strong, rgba(166, 180, 200, 0.45)), -3px -3px 8px var(--neu-light, #ffffff) !important;
+  color: #0284c7 !important;
+  font-weight: 700 !important;
+  font-size: 0.88rem !important;
+  padding: 9px 20px !important;
+  text-transform: none !important;
+  cursor: pointer !important;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+.notifications-page .kasandigan-header-actions .btn:hover:not(:disabled) {
+  color: #0369a1 !important;
+  box-shadow: 5px 5px 14px var(--neu-dark-strong, rgba(166, 180, 200, 0.55)), -4px -4px 10px var(--neu-light, #ffffff) !important;
+  transform: translateY(-1.5px) !important;
+}
+
+.notifications-page .kasandigan-header-actions .btn:active:not(:disabled) {
+  box-shadow: inset 2px 2px 4px var(--neu-dark-strong, rgba(166, 180, 200, 0.5)), inset -2px -2px 4px var(--neu-light, #ffffff) !important;
+  transform: translateY(0) !important;
+}
+
+.notifications-page .kasandigan-header-actions .btn:disabled {
+  opacity: 0.45 !important;
+  box-shadow: none !important;
+  cursor: default !important;
+  border-color: rgba(255, 255, 255, 0.5) !important;
+}
+
+/* ── Filter Tabs Track (Underline Tab Indicator System) ───────── */
+
+.notifications-page .notifications-filter-tabs.MuiTabs-root,
+.notifications-page .notifications-filter-tabs {
+  background: transparent !important;
+  box-shadow: none !important;
+  border: none !important;
+  border-radius: 0 !important;
+  padding: 0 !important;
+  border-bottom: 1.5px solid rgba(166, 180, 200, 0.35) !important;
+  margin-bottom: 24px !important;
+  width: fit-content !important;
+  max-width: 100% !important;
+  min-height: auto !important;
+}
+
+.notifications-page .notifications-filter-tabs .MuiTabs-scroller {
+  position: relative !important;
+  overflow: visible !important;
+}
+
+.notifications-page .notifications-filter-tabs .MuiTabs-flexContainer {
+  gap: 28px !important;
+  align-items: center !important;
+  position: relative !important;
+}
+
+/* Smooth Underline Tab Indicator */
+.notifications-page .notifications-filter-tabs .MuiTabs-indicator {
+  display: block !important;
+  top: auto !important;
+  bottom: 0 !important;
+  height: 3px !important;
+  border-radius: 3px 3px 0 0 !important;
+  background: #0284c7 !important;
+  box-shadow: none !important;
+  border: none !important;
+  z-index: 2 !important;
+  pointer-events: none !important;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+/* Tab Items */
+.notifications-page .notifications-filter-tabs .MuiTab-root {
+  position: relative !important;
+  z-index: 2 !important;
+  min-height: 42px !important;
+  min-width: 0 !important;
+  padding: 10px 4px 14px 4px !important;
+  border-radius: 0 !important;
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  color: #64748b !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  border: none !important;
+  text-transform: none !important;
+  white-space: nowrap !important;
+  cursor: pointer !important;
+  transition: color 0.2s ease !important;
+}
+
+.notifications-page .notifications-filter-tabs .MuiTab-root:hover:not(.Mui-selected) {
+  background: transparent !important;
+  color: #0f172a !important;
+  box-shadow: none !important;
+}
+
+.notifications-page .notifications-filter-tabs .MuiTab-root.Mui-selected {
+  color: #0284c7 !important;
+  font-weight: 750 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+/* ── Notification List & Cards ─────────────────────────────────── */
+
+.notifications-page .notifications-list {
+  display: grid !important;
+  gap: 16px !important;
+}
+
+.notifications-page .notification-card {
+  position: relative !important;
+  display: grid !important;
+  grid-template-columns: auto minmax(0, 1fr) auto !important;
+  gap: 18px !important;
+  align-items: start !important;
+  background: var(--neu-base, #f5f5f7) !important;
+  border: 1px solid rgba(226, 232, 240, 0.9) !important;
+  border-radius: 20px !important;
+  padding: 20px 24px !important;
+  box-shadow: 6px 6px 16px rgba(166, 180, 200, 0.35), -6px -6px 16px var(--neu-light, #ffffff) !important;
+  transition: transform 0.22s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.22s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.22s ease !important;
+  cursor: pointer !important;
+}
+
+.notifications-page .notification-card:hover {
+  border-color: rgba(2, 132, 199, 0.35) !important;
+  transform: translateY(-2px) !important;
+  box-shadow: 8px 8px 22px rgba(166, 180, 200, 0.45), -8px -8px 22px var(--neu-light, #ffffff) !important;
+}
+
+.notifications-page .notification-card:active {
+  transform: translateY(0) !important;
+  box-shadow: 3px 3px 8px rgba(166, 180, 200, 0.35), -3px -3px 8px var(--neu-light, #ffffff) !important;
+}
+
+/* Unread State Accent */
+.notifications-page .notification-card.unread {
+  border: 1px solid rgba(2, 132, 199, 0.25) !important;
+}
+
+.notifications-page .notification-card.unread::before {
+  content: "" !important;
+  position: absolute !important;
+  top: 22px !important;
+  right: 20px !important;
+  width: 9px !important;
+  height: 9px !important;
+  border-radius: 50% !important;
+  background: #0284c7 !important;
+  box-shadow: 0 0 10px rgba(2, 132, 199, 0.7) !important;
+}
+
+.notifications-page .notification-card.read .notification-message {
+  color: #475569 !important;
+}
+
+.notifications-page .notification-card.read .notification-time {
+  color: #94a3b8 !important;
+}
+
+/* ── Leading Icon & Avatar (Molded Inset Wells) ────────────────── */
+
+.notifications-page .notification-leading {
+  position: relative !important;
+  flex-shrink: 0 !important;
+}
+
+.notifications-page .notification-icon-wrap {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 46px !important;
+  height: 46px !important;
+  border-radius: 14px !important;
+  background: var(--neu-base, #f0f3f8) !important;
+  box-shadow: inset 2px 2px 4px rgba(166, 180, 200, 0.35), inset -2px -2px 4px var(--neu-light, #ffffff) !important;
+  border: 1px solid rgba(226, 232, 240, 0.9) !important;
+  transition: transform 0.2s ease !important;
+}
+
+.notifications-page .notification-card:hover .notification-icon-wrap {
+  transform: scale(1.05) !important;
+}
+
+.notifications-page .notification-icon-wrap svg {
+  font-size: 22px !important;
+}
+
+.notifications-page .notification-icon-wrap--session_scheduled {
+  color: #0284c7 !important;
+}
+
+.notifications-page .notification-icon-wrap--session_completed {
+  color: #059669 !important;
+}
+
+.notifications-page .notification-icon-wrap--announcement,
+.notifications-page .notification-icon-wrap--message {
+  color: #0284c7 !important;
+}
+
+.notifications-page .notification-icon-wrap--matching,
+.notifications-page .notification-icon-wrap--general {
+  color: #0369a1 !important;
+}
+
+.notifications-page .notification-avatar {
+  width: 46px !important;
+  height: 46px !important;
+  border-radius: 14px !important;
+  object-fit: cover !important;
+  border: 2px solid rgba(226, 232, 240, 0.9) !important;
+  box-shadow: 2px 2px 6px rgba(166, 180, 200, 0.4), -2px -2px 6px var(--neu-light, #ffffff) !important;
+  transition: transform 0.2s ease !important;
+}
+
+.notifications-page .notification-card:hover .notification-avatar {
+  transform: scale(1.05) !important;
+}
+
+/* ── Content & Message ─────────────────────────────────────────── */
+
+.notifications-page .notification-content {
+  min-width: 0 !important;
+  padding-right: 16px !important;
+}
+
+.notifications-page .notification-message {
+  margin: 0 0 6px !important;
+  font-size: 0.95rem !important;
+  line-height: 1.5 !important;
+  font-weight: 600 !important;
+  color: #0f2b48 !important;
+}
+
+.notifications-page .notification-time {
+  font-size: 0.8rem !important;
+  font-weight: 500 !important;
+  color: #64748b !important;
+}
+
+/* ── Actions Row & CTAs ────────────────────────────────────────── */
+
+.notifications-page .notification-actions-row {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 10px !important;
+  margin-top: 14px !important;
+}
+
+.notifications-page .notification-cta.MuiButton-root {
+  text-transform: none !important;
+  font-weight: 700 !important;
+  font-size: 13px !important;
+  border-radius: 12px !important;
+  padding: 7px 18px !important;
+  min-height: 36px !important;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+.notifications-page .notification-cta--outlined.MuiButton-root {
+  background: var(--neu-base, #f0f3f8) !important;
+  border: 1px solid rgba(2, 132, 199, 0.3) !important;
+  box-shadow: 2px 2px 6px rgba(166, 180, 200, 0.35), -2px -2px 6px var(--neu-light, #ffffff) !important;
+  color: #0284c7 !important;
+}
+
+.notifications-page .notification-cta--outlined.MuiButton-root:hover {
+  color: #0369a1 !important;
+  border-color: rgba(2, 132, 199, 0.5) !important;
+  box-shadow: 3px 3px 10px rgba(166, 180, 200, 0.45), -3px -3px 8px var(--neu-light, #ffffff) !important;
+  transform: translateY(-1.5px) !important;
+  background: var(--neu-base, #f0f3f8) !important;
+}
+
+.notifications-page .notification-cta--outlined.MuiButton-root:active {
+  box-shadow: inset 1.5px 1.5px 3px rgba(166, 180, 200, 0.4), inset -1.5px -1.5px 3px var(--neu-light, #ffffff) !important;
+  transform: translateY(0) scale(0.98) !important;
+}
+
+.notifications-page .notification-cta--text.MuiButton-root {
+  background: transparent !important;
+  color: #0284c7 !important;
+}
+
+.notifications-page .notification-cta--text.MuiButton-root:hover {
+  background: rgba(2, 132, 199, 0.08) !important;
+  box-shadow: none !important;
+}
+
+/* ── Mark Read Hover Button ────────────────────────────────────── */
+
+.notifications-page .notification-card-actions {
+  display: flex !important;
+  align-items: flex-start !important;
+  padding-top: 2px !important;
+}
+
+.notifications-page .notification-mark-read-btn {
+  opacity: 0 !important;
+  width: 34px !important;
+  height: 34px !important;
+  border-radius: 50% !important;
+  background: var(--neu-base, #f0f3f8) !important;
+  box-shadow: 2px 2px 6px rgba(166, 180, 200, 0.35), -2px -2px 6px var(--neu-light, #ffffff) !important;
+  border: 1px solid rgba(166, 180, 200, 0.25) !important;
+  color: #64748b !important;
+  transition: opacity 0.2s ease, transform 0.2s ease, color 0.2s ease !important;
+}
+
+.notifications-page .notification-card:hover .notification-mark-read-btn,
+.notifications-page .notification-mark-read-btn:focus-visible {
+  opacity: 1 !important;
+}
+
+.notifications-page .notification-mark-read-btn:hover {
+  color: #059669 !important;
+  box-shadow: inset 1.5px 1.5px 3.5px rgba(5, 150, 105, 0.3), inset -1.5px -1.5px 3.5px #ffffff !important;
+  transform: scale(0.96) !important;
+}
+
+/* ── Empty State ───────────────────────────────────────────────── */
+
+.notifications-page .notifications-empty {
+  text-align: center !important;
+  padding: 48px 24px !important;
+  border-radius: 24px !important;
+  background: var(--neu-base, #f5f5f7) !important;
+  border: 1px solid rgba(226, 232, 240, 0.9) !important;
+  box-shadow: 8px 8px 22px rgba(166, 180, 200, 0.35), -8px -8px 22px var(--neu-light, #ffffff) !important;
+  color: #64748b !important;
+}
+
+.notifications-page .notifications-empty .fancy-empty-icon {
+  width: 64px !important;
+  height: 64px !important;
+  border-radius: 50% !important;
+  margin: 0 auto 16px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  background: var(--neu-base, #f0f3f8) !important;
+  box-shadow: inset 3px 3px 7px rgba(166, 180, 200, 0.45), inset -3px -3px 7px var(--neu-light, #ffffff) !important;
+  color: #0284c7 !important;
+  font-size: 28px !important;
+}
+
+.notifications-page .notifications-empty-actions .btn {
+  background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%) !important;
+  color: #ffffff !important;
+  border: 1px solid rgba(255, 255, 255, 0.3) !important;
+  border-radius: 14px !important;
+  box-shadow: 4px 4px 12px rgba(14, 165, 233, 0.35), -2px -2px 8px #ffffff !important;
+  font-weight: 700 !important;
+  padding: 8px 22px !important;
+}
+
+/* ── Dark Mode Overrides ───────────────────────────────────────── */
+
+[data-theme="dark"] .notifications-page .kasandigan-header,
+.dark .notifications-page .kasandigan-header,
+[data-theme="dark"] .notifications-page .notification-card,
+.dark .notifications-page .notification-card,
+[data-theme="dark"] .notifications-page .notifications-empty,
+.dark .notifications-page .notifications-empty {
+  border-color: rgba(255, 255, 255, 0.06) !important;
+}
+
+[data-theme="dark"] .notifications-page .kasandigan-title,
+.dark .notifications-page .kasandigan-title,
+[data-theme="dark"] .notifications-page .notification-message,
+.dark .notifications-page .notification-message {
+  color: #f8fafc !important;
+}
+
+[data-theme="dark"] .notifications-page .kasandigan-subtitle,
+.dark .notifications-page .kasandigan-subtitle,
+[data-theme="dark"] .notifications-page .notification-card.read .notification-message,
+.dark .notifications-page .notification-card.read .notification-message {
+  color: #94a3b8 !important;
+}
+
+[data-theme="dark"] .notifications-page .notification-filter-tabs .MuiTab-root,
+.dark .notifications-page .notification-filter-tabs .MuiTab-root {
+  color: #94a3b8 !important;
+}
+
+[data-theme="dark"] .notifications-page .notification-filter-tabs .MuiTab-root:hover:not(.Mui-selected),
+.dark .notifications-page .notification-filter-tabs .MuiTab-root:hover:not(.Mui-selected) {
+  background: rgba(255, 255, 255, 0.08) !important;
+  color: #f8fafc !important;
+}
+
+[data-theme="dark"] .notifications-page .notification-cta--outlined.MuiButton-root,
+.dark .notifications-page .notification-cta--outlined.MuiButton-root {
+  border-color: rgba(56, 189, 248, 0.25) !important;
 }
 
 @media (max-width: 640px) {
-  .notifications-page--glass .notification-card {
-    grid-template-columns: auto minmax(0, 1fr);
-    padding: 14px 16px;
+  .notifications-page .notification-card {
+    grid-template-columns: auto minmax(0, 1fr) !important;
+    padding: 16px !important;
   }
 
-  .notifications-page--glass .notification-card-actions {
-    grid-column: 2;
-    justify-content: flex-end;
-    padding-top: 0;
+  .notifications-page .notification-card-actions {
+    grid-column: 2 !important;
+    justify-content: flex-end !important;
+    padding-top: 0 !important;
   }
 
-  .notifications-page--glass .notification-card.unread::before {
-    top: 14px;
-    right: 12px;
+  .notifications-page .notification-card.unread::before {
+    top: 16px !important;
+    right: 14px !important;
   }
 }

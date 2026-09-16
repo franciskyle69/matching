@@ -710,15 +710,7 @@
               </p>
             </div>
             <div className="kasandigan-header-actions">
-              <span
-                className="kasandigan-badge"
-                style={{
-                  background: "#ffffff",
-                  border: "1px solid #bae6fd",
-                  color: "#0284c7",
-                  fontWeight: 600,
-                }}
-              >
+              <span className="kasandigan-badge">
                 <span className="kasandigan-badge-dot" style={{ background: "#0ea5e9" }} />
                 <span>Peer Mentor</span>
               </span>

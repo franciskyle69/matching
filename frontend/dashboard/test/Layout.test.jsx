@@ -68,14 +68,15 @@ describe("Dashboard topbar", () => {
     window.innerWidth = 1280;
   });
 
-  it("renders academic term pill, live profile, and notifications without search bar", () => {
+  it("renders live profile, date, and notifications without search bar", () => {
     renderLayout();
 
     expect(
       screen.queryByPlaceholderText("Search mentors, students, or skills..."),
     ).not.toBeInTheDocument();
     expect(screen.queryByText(/^(⌘K|Ctrl\+K)$/)).not.toBeInTheDocument();
-    expect(screen.getByText(/AY 2024–2025/i)).toBeInTheDocument();
+    expect(screen.queryByText(/AY 2024–2025/i)).not.toBeInTheDocument();
+    expect(document.querySelector(".app-topbar-date-badge")).not.toBeNull();
     expect(screen.getByText("Alex Smith")).toBeInTheDocument();
     expect(screen.getByText("Mentee")).toBeInTheDocument();
     expect(screen.queryByText(/Active Matches/i)).not.toBeInTheDocument();

@@ -56,7 +56,11 @@
                           ? "NSTP"
                           : "PE"}
                   </span>
-                  {active ? <span className="mp-subject-check" aria-hidden="true">✓</span> : null}
+                  {active ? (
+                    <span className="mp-subject-check" aria-hidden="true">✓</span>
+                  ) : (
+                    <span className="mp-subject-check-placeholder" aria-hidden="true" />
+                  )}
                 </div>
                 {entry.code ? (
                   <span className="complete-profile-subject-code">{entry.code}</span>

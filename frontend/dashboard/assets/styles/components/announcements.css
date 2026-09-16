@@ -169,43 +169,49 @@
 
 .segmented-control {
   display: inline-flex;
-  padding: 4px;
-  gap: 4px;
-  border: var(--input-border);
-  border-radius: 999px;
-  background: var(--input-bg);
+  align-items: center;
+  padding: 6px;
+  gap: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  border-radius: 16px;
+  background: var(--neu-base, #ebf0f7);
+  box-shadow: inset 2.5px 2.5px 5px var(--neu-dark-strong, rgba(166, 180, 200, 0.45)), inset -2.5px -2.5px 5px var(--neu-light, #ffffff);
 }
 
 .segmented-option {
   appearance: none;
   border: none;
-  padding: 8px 18px;
-  border-radius: 999px;
+  min-height: 40px;
+  padding: 8px 20px;
+  border-radius: 12px;
   background: transparent;
-  color: var(--text-secondary);
+  color: #475569;
   font-family: var(--font-sans);
-  font-size: var(--text-sm);
-  font-weight: 600;
+  font-size: 13.5px;
+  font-weight: 700;
   line-height: 1.2;
+  white-space: nowrap;
   cursor: pointer;
-  transition:
-    background-color var(--motion-fast) var(--ease-standard),
-    color var(--motion-fast) var(--ease-standard);
+  box-shadow: none;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .segmented-option:hover:not(.is-active) {
-  color: var(--text-primary);
-  background: color-mix(in srgb, var(--accent-primary) 16%, transparent);
+  color: #0f172a;
+  background: rgba(255, 255, 255, 0.55);
+  box-shadow: 2px 2px 6px rgba(166, 180, 200, 0.2), -2px -2px 6px rgba(255, 255, 255, 0.7);
 }
 
 .segmented-option:focus-visible {
-  outline: 2px solid var(--input-border-focus);
+  outline: 2px solid #0284c7;
   outline-offset: 2px;
 }
 
 .segmented-option.is-active {
-  background: var(--accent-primary);
+  background: linear-gradient(145deg, #0ea5e9, #0284c7);
   color: #ffffff;
+  font-weight: 800;
+  box-shadow: 3px 3px 10px rgba(2, 132, 199, 0.38), -2px -2px 6px rgba(255, 255, 255, 0.8);
 }
 
 /* ── Recipient chips (replaces checkbox inputs) ──────────────── */
@@ -330,16 +336,29 @@
   filter: none;
 }
 
-.announcements-page .btn.danger {
-  background: transparent;
-  border: 1px solid color-mix(in srgb, var(--danger) 55%, transparent);
-  color: var(--danger);
-  box-shadow: none;
+.announcements-page .btn.danger,
+.announcements-page .announcement-delete-btn {
+  background: var(--card-bg, #ffffff);
+  border: 1px solid rgba(239, 68, 68, 0.45);
+  color: #dc2626 !important;
+  box-shadow: 0 1px 3px rgba(239, 68, 68, 0.12);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 650;
+  font-size: var(--text-xs);
+  padding: 5px 12px;
+  border-radius: 8px;
+  transition: all 0.18s ease;
 }
 
-.announcements-page .btn.danger:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--danger) 16%, transparent);
-  filter: none;
+.announcements-page .btn.danger:hover:not(:disabled),
+.announcements-page .announcement-delete-btn:hover:not(:disabled) {
+  background: #fee2e2;
+  border-color: #f87171;
+  color: #b91c1c !important;
+  box-shadow: 0 3px 8px rgba(239, 68, 68, 0.2);
+  transform: translateY(-1px);
 }
 
 /* ── Feed ────────────────────────────────────────────────────── */

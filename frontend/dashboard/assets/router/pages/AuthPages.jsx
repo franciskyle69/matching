@@ -127,55 +127,13 @@ import {
   }
 
   function NeuBackButton({ onClick, label }) {
-    const [isHovered, setIsHovered] = useState(false);
-    const [isPressed, setIsPressed] = useState(false);
     return (
       <button
         type="button"
         className="auth-neu-back-btn"
         onClick={onClick}
-        onMouseEnter={() => setIsHovered(true)}
-        onMouseLeave={() => {
-          setIsHovered(false);
-          setIsPressed(false);
-        }}
-        onMouseDown={() => setIsPressed(true)}
-        onMouseUp={() => setIsPressed(false)}
         aria-label={label}
         title={label}
-        style={{
-          position: "fixed",
-          top: "20px",
-          left: "24px",
-          zIndex: 1000,
-          display: "inline-flex",
-          alignItems: "center",
-          gap: "8px",
-          height: "34px",
-          padding: "0 14px",
-          borderRadius: "999px",
-          backgroundColor: "#ebf0f7",
-          color: isHovered ? "#0f172a" : "#334155",
-          border: "1px solid rgba(255, 255, 255, 0.95)",
-          boxShadow: isPressed
-            ? "inset 2px 2px 5px rgba(166, 180, 200, 0.65), inset -2px -2px 5px #ffffff"
-            : isHovered
-              ? "5px 5px 12px rgba(166, 180, 200, 0.7), -5px -5px 12px #ffffff"
-              : "3px 3px 8px rgba(166, 180, 200, 0.6), -3px -3px 8px #ffffff",
-          transform: isPressed
-            ? "translateY(1px)"
-            : isHovered
-              ? "translateY(-1px)"
-              : "none",
-          fontSize: "12.5px",
-          fontWeight: 600,
-          cursor: "pointer",
-          textDecoration: "none",
-          lineHeight: 1,
-          outline: "none",
-          transition: "all 0.18s cubic-bezier(0.16, 1, 0.3, 1)",
-          userSelect: "none",
-        }}
       >
         <svg
           viewBox="0 0 24 24"
@@ -185,19 +143,11 @@ import {
           strokeLinecap="round"
           strokeLinejoin="round"
           aria-hidden="true"
-          style={{
-            width: "14px",
-            height: "14px",
-            flexShrink: 0,
-            display: "block",
-            transform: isHovered ? "translateX(-2px)" : "none",
-            transition: "transform 0.18s ease",
-          }}
         >
           <line x1="19" y1="12" x2="5" y2="12"></line>
           <polyline points="12 19 5 12 12 5"></polyline>
         </svg>
-        <span style={{ whiteSpace: "nowrap" }}>{label}</span>
+        <span>{label}</span>
       </button>
     );
   }
@@ -931,18 +881,7 @@ import {
                 <>
                   <div className="auth-field">
                     <p className="auth-field-label">Role</p>
-                    <p
-                      className="auth-role-locked"
-                      style={{
-                        margin: 0,
-                        padding: "0.65rem 0.85rem",
-                        borderRadius: "8px",
-                        background: "rgba(99, 102, 241, 0.12)",
-                        color: "rgba(255, 255, 255, 0.95)",
-                        border: "1px solid rgba(255, 255, 255, 0.12)",
-                        fontWeight: 600,
-                      }}
-                    >
+                    <p className="auth-role-locked">
                       {portalRoleLabel ||
                         (signUpForm.role === "mentee" ? "Mentee" : "Mentor")}
                     </p>

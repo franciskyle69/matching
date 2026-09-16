@@ -226,11 +226,7 @@
         : "";
     const summary =
       type === "mentor"
-        ? m.role === "Instructor"
-          ? "Instructor"
-          : [m.role === "Senior IT Student" ? "Student mentor" : m.role, yearLabel]
-              .filter(Boolean)
-              .join(" • ")
+        ? [m.program, yearLabel].filter(Boolean).join(" • ")
         : [m.campus, m.admission_type].filter(Boolean).join(" • ");
 
     return (

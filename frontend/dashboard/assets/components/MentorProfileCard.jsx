@@ -529,6 +529,60 @@ import ExpandLess from "@mui/icons-material/ExpandLess";
     const officialLabel =
       kind === "mentee" ? "Official mentee" : "Official mentor";
 
+    const actionButtons = (
+      <>
+        {showPrimary ? (
+          <Button
+            variant="contained"
+            className="pmc-cta"
+            onClick={handlePrimary}
+            disabled={primaryDisabled}
+          >
+            {primaryLabel}
+          </Button>
+        ) : null}
+        {onViewProfile && !isOfficial ? (
+          <Button
+            variant="outlined"
+            className="pmc-secondary"
+            onClick={onViewProfile}
+          >
+            View full profile
+          </Button>
+        ) : null}
+        <div className="pmc-icon-actions">
+          {messageHref ? (
+            <Tooltip title="Send message">
+              <IconButton
+                className="pmc-icon-btn"
+                component="a"
+                href={messageHref}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Send message"
+              >
+                <ChatBubbleOutline fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          ) : null}
+          <Tooltip title={saved ? "Remove saved profile" : "Save profile"}>
+            <IconButton
+              className="pmc-icon-btn"
+              onClick={toggleSaved}
+              aria-label={saved ? "Remove saved profile" : "Save profile"}
+              aria-pressed={saved}
+            >
+              {saved ? (
+                <Bookmark fontSize="small" />
+              ) : (
+                <BookmarkBorder fontSize="small" />
+              )}
+            </IconButton>
+          </Tooltip>
+        </div>
+      </>
+    );
+
     return (
       <article
         className={
@@ -545,116 +599,129 @@ import ExpandLess from "@mui/icons-material/ExpandLess";
               available={!!(isOfficial || nextWindow)}
             />
             <div className="pmc-identity-text">
-              <p className="pmc-name">{name}</p>
-              {title ? <p className="pmc-title">{title}</p> : null}
-              {deptLine ? <p className="pmc-dept">{deptLine}</p> : null}
-              <span className="pmc-location">{locationPill}</span>
-              <div className="pmc-badges">
-                {person.role ? <RolePill role={person.role} /> : null}
-                {kind === "mentor" && score != null ? (
-                  <ScorePill score={score} />
-                ) : null}
-                {isOfficial ? (
-                  <span className="pmc-official">{officialLabel}</span>
-                ) : null}
+              <div className="pmc-name-row">
+                <p className="pmc-name">{name}</p>
+                <div className="pmc-badges">
+                  {person.role ? <RolePill role={person.role} /> : null}
+                  {kind === "mentor" && score != null ? (
+                    <ScorePill score={score} />
+                  ) : null}
+                  {isOfficial ? (
+                    <span className="pmc-official">{officialLabel}</span>
+                  ) : null}
+                </div>
               </div>
+              {title ? <p className="pmc-title">{title}</p> : null}
+              {deptLine || locationPill ? (
+                <div className="pmc-dept-row">
+                  {deptLine ? <p className="pmc-dept">{deptLine}</p> : null}
+                  {locationPill ? (
+                    <span className="pmc-location">{locationPill}</span>
+                  ) : null}
+                </div>
+              ) : null}
             </div>
           </div>
+          {isHero ? (
+            <div className="pmc-header-actions">{actionButtons}</div>
+          ) : null}
         </header>
 
         {isHero ? (
           <div className="pmc-hero-layout">
-            <div className="pmc-hero-col-main">
-              {showStats && (weeklyHrs || menteesValue || experience || expertise) ? (
-                <div className="pmc-stats" role="list">
-                  <StatItem label="Weekly hours" value={weeklyHrs} />
-                  <StatItem
-                    label={kind === "mentee" ? "Year level" : "Capacity"}
-                    value={
-                      kind === "mentee"
-                        ? yearLabel(person.year_level)
-                        : person.capacity != null
-                          ? `${person.capacity} mentees`
-                          : menteesValue
-                    }
-                  />
-                  <StatItem
-                    label={kind === "mentee" ? "Support need" : "Experience"}
-                    value={kind === "mentee" ? expertise : experience || expertise}
-                  />
-                </div>
-              ) : null}
+            {showStats && (weeklyHrs || menteesValue || experience || expertise) ? (
+              <div className="pmc-stats pmc-hero-stats" role="list">
+                <StatItem label="Weekly hours" value={weeklyHrs} />
+                <StatItem
+                  label={kind === "mentee" ? "Year level" : "Capacity"}
+                  value={
+                    kind === "mentee"
+                      ? yearLabel(person.year_level)
+                      : person.capacity != null
+                        ? `${person.capacity} mentees`
+                        : menteesValue
+                  }
+                />
+                <StatItem
+                  label={kind === "mentee" ? "Support need" : "Experience"}
+                  value={kind === "mentee" ? expertise : experience || expertise}
+                />
+              </div>
+            ) : null}
 
-              {bio ? (
-                <section className="pmc-section">
-                  <p className="pmc-section-label">About & mentoring style</p>
-                  <p
-                    className={
-                      "pmc-bio" + (!bioOpen && bioNeedsClamp ? " pmc-bio--clamp" : "")
-                    }
-                  >
-                    {bio}
-                  </p>
-                  {bioNeedsClamp ? (
-                    <button
-                      type="button"
-                      className="pmc-bio-toggle"
-                      onClick={() => setBioOpen((open) => !open)}
+            <div className="pmc-hero-cols">
+              <div className="pmc-hero-col-main">
+                {bio ? (
+                  <section className="pmc-section">
+                    <p className="pmc-section-label">About & mentoring style</p>
+                    <p
+                      className={
+                        "pmc-bio" + (!bioOpen && bioNeedsClamp ? " pmc-bio--clamp" : "")
+                      }
                     >
-                      {bioOpen ? "Show less" : "Read full bio"}
-                    </button>
-                  ) : null}
-                </section>
-              ) : null}
+                      {bio}
+                    </p>
+                    {bioNeedsClamp ? (
+                      <button
+                        type="button"
+                        className="pmc-bio-toggle"
+                        onClick={() => setBioOpen((open) => !open)}
+                      >
+                        {bioOpen ? "Show less" : "Read full bio"}
+                      </button>
+                    ) : null}
+                  </section>
+                ) : null}
 
-              {helpItems.length > 0 && kind === "mentor" ? (
-                <section className="pmc-section">
-                  <p className="pmc-section-label">What I can help with</p>
-                  <ul className="pmc-help">
-                    {helpItems.map((item) => (
-                      <li key={item}>{item}</li>
-                    ))}
-                  </ul>
-                </section>
-              ) : null}
-            </div>
+                {helpItems.length > 0 && kind === "mentor" ? (
+                  <section className="pmc-section">
+                    <p className="pmc-section-label">What I can help with</p>
+                    <ul className="pmc-help">
+                      {helpItems.map((item) => (
+                        <li key={item}>{item}</li>
+                      ))}
+                    </ul>
+                  </section>
+                ) : null}
+              </div>
 
-            <div className="pmc-hero-col-side">
-              {showWhy ? (
-                <MatchWhySection kind={kind} chips={chips} />
-              ) : (
-                <p className="pmc-fallback">
-                  Good overall fit based on your mentoring preferences
-                </p>
-              )}
+              <div className="pmc-hero-col-side">
+                {showWhy ? (
+                  <MatchWhySection kind={kind} chips={chips} />
+                ) : (
+                  <p className="pmc-fallback">
+                    Good overall fit based on your mentoring preferences
+                  </p>
+                )}
 
-              {showStory ? (
-                <section className="pmc-section">
-                  <p className="pmc-section-label">Communication preferences</p>
-                  <div className="pmc-chips">
-                    {comms.map((item) => (
-                      <span key={item} className="pmc-chip pmc-chip--comm">
-                        {item}
-                      </span>
-                    ))}
+                {showStory && comms.length > 0 && kind === "mentor" ? (
+                  <section className="pmc-section">
+                    <p className="pmc-section-label">Communication preferences</p>
+                    <div className="pmc-chips">
+                      {comms.map((item) => (
+                        <span key={item} className="pmc-chip pmc-chip--comm">
+                          {item}
+                        </span>
+                      ))}
+                    </div>
+                  </section>
+                ) : null}
+
+                {slotsLeft != null && slotsLeft >= 0 && !isOfficial && kind === "mentor" ? (
+                  <p className="pmc-slots">
+                    {slotsLeft} slot{slotsLeft === 1 ? "" : "s"} left
+                  </p>
+                ) : null}
+
+                {nextWindow ? (
+                  <div className="pmc-next">
+                    <EventAvailableOutlined fontSize="inherit" />
+                    <span>
+                      Next available: {formatNextWindow(nextWindow)}
+                    </span>
                   </div>
-                </section>
-              ) : null}
-
-              {slotsLeft != null && slotsLeft >= 0 && !isOfficial && kind === "mentor" ? (
-                <p className="pmc-slots">
-                  {slotsLeft} slot{slotsLeft === 1 ? "" : "s"} left
-                </p>
-              ) : null}
-
-              {nextWindow ? (
-                <div className="pmc-next">
-                  <EventAvailableOutlined fontSize="inherit" />
-                  <span>
-                    Next available: {formatNextWindow(nextWindow)}
-                  </span>
-                </div>
-              ) : null}
+                ) : null}
+              </div>
             </div>
           </div>
         ) : (
@@ -750,57 +817,9 @@ import ExpandLess from "@mui/icons-material/ExpandLess";
           </>
         )}
 
-        <footer className="pmc-actions">
-          {showPrimary ? (
-            <Button
-              variant="contained"
-              className="pmc-cta"
-              onClick={handlePrimary}
-              disabled={primaryDisabled}
-            >
-              {primaryLabel}
-            </Button>
-          ) : null}
-          {onViewProfile && !isOfficial ? (
-            <Button
-              variant="outlined"
-              className="pmc-secondary"
-              onClick={onViewProfile}
-            >
-              View full profile
-            </Button>
-          ) : null}
-          <div className="pmc-icon-actions">
-            {messageHref ? (
-              <Tooltip title="Send message">
-                <IconButton
-                  className="pmc-icon-btn"
-                  component="a"
-                  href={messageHref}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  aria-label="Send message"
-                >
-                  <ChatBubbleOutline fontSize="small" />
-                </IconButton>
-              </Tooltip>
-            ) : null}
-            <Tooltip title={saved ? "Remove saved profile" : "Save profile"}>
-              <IconButton
-                className="pmc-icon-btn"
-                onClick={toggleSaved}
-                aria-label={saved ? "Remove saved profile" : "Save profile"}
-                aria-pressed={saved}
-              >
-                {saved ? (
-                  <Bookmark fontSize="small" />
-                ) : (
-                  <BookmarkBorder fontSize="small" />
-                )}
-              </IconButton>
-            </Tooltip>
-          </div>
-        </footer>
+        {!isHero ? (
+          <footer className="pmc-actions">{actionButtons}</footer>
+        ) : null}
       </article>
     );
   }

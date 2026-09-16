@@ -14,24 +14,24 @@
   font-family: "Inter", "SF Pro Text", "SF Pro Display", var(--font-sans);
 }
 
-/* ── Clean Card Token ─────────────────────────────────────────── */
+/* ── Neumorphic Card Token ─────────────────────────────────────── */
 
 .matching-page--mentee .matching-card {
-  background: var(--card-bg, #ffffff);
-  border: var(--card-border, 1px solid #e2e8f0);
-  border-radius: 16px;
-  padding: 24px;
-  box-shadow: var(--card-shadow, 0 1px 3px rgba(0, 0, 0, 0.05));
+  background: var(--neu-base, #ebf0f7);
+  border: 1.5px solid rgba(255, 255, 255, 0.95);
+  border-radius: 26px;
+  padding: 26px 30px;
+  box-shadow: 10px 10px 26px rgba(166, 180, 200, 0.6), -10px -10px 26px #ffffff;
   transition:
-    transform 0.2s cubic-bezier(0.16, 1, 0.3, 1),
-    border-color 0.2s cubic-bezier(0.16, 1, 0.3, 1),
-    box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    transform 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .matching-page--mentee .matching-card:hover {
-  border-color: rgba(14, 165, 233, 0.35);
-  box-shadow: 0 10px 25px -5px rgba(14, 165, 233, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
-  transform: translateY(-2px);
+  border-color: #ffffff;
+  box-shadow: 14px 14px 32px rgba(150, 165, 185, 0.72), -14px -14px 32px #ffffff, 0 0 20px rgba(14, 165, 233, 0.12);
+  transform: translateY(-4px);
 }
 
 /* ── Unified badges ───────────────────────────────────────────── */

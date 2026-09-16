@@ -11745,9 +11745,9 @@ textarea {
   align-items: center;
   gap: 8px;
   margin: -8px 0 16px;
-  color: rgba(255, 255, 255, 0.65);
+  color: #475569;
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
@@ -11756,12 +11756,12 @@ textarea {
   width: 7px;
   height: 7px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.28);
+  background: #cbd5e1;
 }
 
 .auth-step-dot.is-active {
   width: 18px;
-  background: #bae6fd;
+  background: #0284c7;
 }
 
 .auth-step-actions {
@@ -13993,14 +13993,13 @@ textarea {
 }
 
 .mentees-page-search {
-  min-width: min(320px, 100%);
-  flex: 1 1 220px;
-  max-width: 420px;
-  padding: 10px 14px;
-  border-radius: 12px;
-  border: 1px solid rgba(148, 163, 184, 0.22);
-  background: rgba(15, 23, 42, 0.55);
-  color: #f8fafc;
+  border: none;
+  background: transparent;
+  color: inherit;
+  outline: none;
+  padding: 0;
+  margin: 0;
+  box-shadow: none;
 }
 
 .mentees-page-grid {
@@ -14116,7 +14115,7 @@ textarea {
 }
 
 [data-theme="light"] .mentees-page-search {
-  background: #fff;
+  background: transparent;
   color: var(--slate-900, #0f172a);
 }
 

@@ -102,16 +102,7 @@ import "./components/Sidebar.jsx";
       mentorProfile,
     } = ctx;
 
-    const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
-      if (typeof window === "undefined") return false;
-      try {
-        return (
-          window.localStorage.getItem("dashboard-sidebar-collapsed") === "true"
-        );
-      } catch (_) {
-        return false;
-      }
-    });
+    const sidebarCollapsed = false;
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const [isMobileView, setIsMobileView] = useState(() =>
       typeof window !== "undefined"
@@ -121,12 +112,9 @@ import "./components/Sidebar.jsx";
 
     useEffect(() => {
       try {
-        window.localStorage.setItem(
-          "dashboard-sidebar-collapsed",
-          String(sidebarCollapsed),
-        );
+        window.localStorage.removeItem("dashboard-sidebar-collapsed");
       } catch (_) {}
-    }, [sidebarCollapsed]);
+    }, []);
 
     useEffect(() => {
       const onResize = () => {
@@ -149,13 +137,10 @@ import "./components/Sidebar.jsx";
       };
     }, [mobileMenuOpen]);
 
-    const toggleSidebar = () => setSidebarCollapsed((c) => !c);
     const closeMobileMenu = () => setMobileMenuOpen(false);
     const handleHeaderCollapseClick = () => {
       if (isMobileView) {
         closeMobileMenu();
-      } else {
-        toggleSidebar();
       }
     };
     const goTo = (tabId) => {
@@ -205,7 +190,7 @@ import "./components/Sidebar.jsx";
 
     const TAB_TITLES = {
       home: "Overview",
-      matching: "Mentor Directory",
+      matching: isStaff ? "Pairings & Matching" : "Mentor Directory",
       announcements: "Announcements",
       approvals: "User Approvals",
       users: "User Directory",
@@ -264,7 +249,7 @@ import "./components/Sidebar.jsx";
       if (tab.id === "users") return isStaff;
       if (tab.id === "activity-logs") return isStaff;
       if (tab.id === "backup") return isStaff;
-      if (tab.id === "matching") return !isStaff;
+      // matching tab is available to both staff and students
       if (tab.id === "approvals") return isStaff;
       if (tab.id === "complete-profile") {
         const unapprovedMentor =
@@ -275,7 +260,16 @@ import "./components/Sidebar.jsx";
       }
       return true;
     });
-    const dashboardTab = filteredTabs.find((tab) => tab.id === "home");
+    const tabsWithDynamicLabels = filteredTabs.map((tab) => {
+      if (tab.id === "matching") {
+        return {
+          ...tab,
+          label: isStaff ? "Pairings & Matching" : "Matching",
+        };
+      }
+      return tab;
+    });
+    const dashboardTab = tabsWithDynamicLabels.find((tab) => tab.id === "home");
     const activityTabIds = new Set([
       "newsfeed",
       "matching",
@@ -294,10 +288,10 @@ import "./components/Sidebar.jsx";
       "mentoring-preferences",
       "mentor-matching-profile",
     ]);
-    const activityTabs = filteredTabs.filter((tab) =>
+    const activityTabs = tabsWithDynamicLabels.filter((tab) =>
       activityTabIds.has(tab.id),
     );
-    const accountTabs = filteredTabs.filter((tab) => accountTabIds.has(tab.id));
+    const accountTabs = tabsWithDynamicLabels.filter((tab) => accountTabIds.has(tab.id));
 
     const role = user?.role;
     const baseShortcuts = isPendingApproval
@@ -520,7 +514,7 @@ import "./components/Sidebar.jsx";
 
     const sidebarNav = Sidebar ? (
       <Sidebar
-        collapsed={isMobileView ? false : sidebarCollapsed}
+        collapsed={false}
         isDrawer={isMobileView}
         dashboardTab={dashboardTab}
         activityTabs={activityTabs}
@@ -590,17 +584,36 @@ import "./components/Sidebar.jsx";
               {sidebarNav}
             </Drawer>
           ) : (
-            <aside
-              className={
-                "sidebar sidebar--desktop" +
-                (sidebarCollapsed ? " collapsed" : "")
-              }
-            >
+            <aside className="sidebar sidebar--desktop">
               {sidebarNav}
             </aside>
           ))}
 
         <div className="app-main-shell">
+          {!isAuthenticated && (
+            <div className="auth-floating-topbar">
+              <a href="/landing/" className="auth-floating-back-btn" aria-label="Back to landing page">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <line x1="19" y1="12" x2="5" y2="12" />
+                  <polyline points="12 19 5 12 12 5" />
+                </svg>
+                <span>Back to landing</span>
+              </a>
+              <button
+                type="button"
+                className="sidebar-icon-btn app-topbar-theme-btn auth-floating-theme-btn"
+                onClick={toggleTheme}
+                aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+                title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+              >
+                {theme === "dark" ? (
+                  <LightModeOutlinedIcon fontSize="small" aria-hidden="true" />
+                ) : (
+                  <DarkModeOutlinedIcon fontSize="small" aria-hidden="true" />
+                )}
+              </button>
+            </div>
+          )}
           {isAuthenticated && isMobileView && (
             <header className="mobile-app-header">
               <IconButton
@@ -679,16 +692,12 @@ import "./components/Sidebar.jsx";
 
               {!isMobileView && (
                 <div className="app-topbar-center">
-                  <div className="app-topbar-term-badge" title="Active Academic Term">
-                    <span className="app-topbar-status-dot" aria-hidden="true" />
-                    <span className="app-topbar-term-text">AY 2024–2025</span>
-                    <span className="app-topbar-term-divider" aria-hidden="true">•</span>
-                    <span className="app-topbar-term-sub">1st Semester</span>
-                  </div>
                   <div className="app-topbar-date-badge" title="Today's Date">
                     <svg
                       className="app-topbar-date-icon"
                       viewBox="0 0 24 24"
+                      width="15"
+                      height="15"
                       fill="none"
                       stroke="currentColor"
                       strokeWidth="2"
@@ -713,23 +722,28 @@ import "./components/Sidebar.jsx";
                       <button
                         type="button"
                         className="app-topbar-quick-btn"
-                        onClick={() => goTo("announcements")}
-                        title="Go to announcements"
-                        aria-label="New announcement"
+                        onClick={() => goTo("users")}
+                        title="Search and manage all registered mentors and mentees"
+                        aria-label="User Directory"
                       >
                         <svg
                           viewBox="0 0 24 24"
+                          width="16"
+                          height="16"
                           fill="none"
                           stroke="currentColor"
-                          strokeWidth="2.2"
+                          strokeWidth="2"
                           strokeLinecap="round"
                           strokeLinejoin="round"
                           className="app-topbar-quick-icon"
                           aria-hidden="true"
                         >
-                          <path d="M12 5v14M5 12h14" />
+                          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                          <circle cx="9" cy="7" r="4" />
+                          <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                          <path d="M16 3.13a4 4 0 0 1 0 7.75" />
                         </svg>
-                        <span>Announcement</span>
+                        <span>Users</span>
                       </button>
                     ) : user?.role === "mentee" ? (
                       <button
@@ -741,6 +755,8 @@ import "./components/Sidebar.jsx";
                       >
                         <svg
                           viewBox="0 0 24 24"
+                          width="16"
+                          height="16"
                           fill="none"
                           stroke="currentColor"
                           strokeWidth="2"
@@ -763,6 +779,8 @@ import "./components/Sidebar.jsx";
                       >
                         <svg
                           viewBox="0 0 24 24"
+                          width="16"
+                          height="16"
                           fill="none"
                           stroke="currentColor"
                           strokeWidth="2"
