@@ -13,6 +13,44 @@
       background-color: #050218;
       color-scheme: dark;
     }
+    html:not([data-theme="dark"]):not(.dark) body.auth-signup-page {
+      --signup-text: #0f172a;
+      --signup-muted: #475569;
+      --signup-border: #cbd5e1;
+      --signup-input: #ffffff;
+      background: #ebf0f7 url("/static/assets/auth-background.png?v=2") center / cover no-repeat fixed;
+      color-scheme: light;
+      color: #0f172a;
+    }
+    html:not([data-theme="dark"]):not(.dark) body.auth-signup-page .auth-shell {
+      background: rgba(255, 255, 255, 0.94);
+      border-color: rgba(203, 213, 225, 0.8);
+      box-shadow: 12px 12px 28px rgba(166, 180, 200, 0.5), -10px -10px 24px #ffffff;
+    }
+    html:not([data-theme="dark"]):not(.dark) body.auth-signup-page .auth-panel-left {
+      background: #f8fafc;
+      border-right: 1px solid #e2e8f0;
+    }
+    html:not([data-theme="dark"]):not(.dark) body.auth-signup-page .auth-panel-right {
+      background: #ffffff;
+    }
+    html:not([data-theme="dark"]):not(.dark) body.auth-signup-page .form-group input,
+    html:not([data-theme="dark"]):not(.dark) body.auth-signup-page .form-group select,
+    html:not([data-theme="dark"]):not(.dark) body.auth-signup-page .auth-panel-form input {
+      background: #ffffff;
+      border-color: #cbd5e1;
+      color: #0f172a;
+    }
+    html:not([data-theme="dark"]):not(.dark) body.auth-signup-page .signup-back-button {
+      background: rgba(0, 0, 0, 0.04);
+      border-color: #cbd5e1;
+      color: #334155;
+    }
+    html:not([data-theme="dark"]):not(.dark) body.auth-signup-page .signup-back-button:hover {
+      background: rgba(0, 0, 0, 0.08);
+      border-color: #94a3b8;
+      color: #0f172a;
+    }
     .auth-signup-page .main {
       max-width: 980px;
       padding: 2rem 1rem;

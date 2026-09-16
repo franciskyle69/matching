@@ -10,6 +10,27 @@
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/spinkit/2.0.1/spinkit.min.css" crossorigin />
   <link rel="stylesheet" href="{% static 'assets/app.css' %}?v=37" />
+  <script nonce="{{ csp_nonce }}">
+    (function() {
+      try {
+        var saved = localStorage.getItem('theme');
+        if (!saved) {
+          var match = document.cookie.match(/(?:^|; )theme=([^;]*)/);
+          if (match) saved = decodeURIComponent(match[1]);
+        }
+        var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+        var theme = saved === 'dark' || (!saved && prefersDark) ? 'dark' : 'light';
+        document.documentElement.setAttribute('data-theme', theme);
+        if (theme === 'dark') {
+          document.documentElement.classList.add('dark');
+          if (document.body) document.body.classList.add('dark');
+        } else {
+          document.documentElement.classList.remove('dark');
+          if (document.body) document.body.classList.remove('dark');
+        }
+      } catch (_) {}
+    })();
+  </script>
   <style>
     :root {
       --bg: #f1f5f9;
@@ -86,6 +107,156 @@
       --indigo-600: #352c90;
       --green-600: #16a34a;
       color-scheme: light;
+    }
+    [data-theme="dark"] .auth-page,
+    html.dark .auth-page,
+    .auth-page[data-theme="dark"],
+    .auth-page.dark {
+      --bg: #0f172a;
+      --surface: #181b20;
+      --border: rgba(255, 255, 255, 0.1);
+      --text: #f1f5f9;
+      --text-muted: #94a3b8;
+      --accent: #38bdf8;
+      --accent-hover: #0284c7;
+      --accent-light: rgba(56, 189, 248, 0.15);
+      --slate-200: #334155;
+      --slate-300: #475569;
+      --slate-500: #94a3b8;
+      --slate-600: #cbd5e1;
+      --slate-800: #e2e8f0;
+      --slate-900: #f1f5f9;
+      --indigo-200: rgba(56, 189, 248, 0.2);
+      --indigo-400: #38bdf8;
+      --indigo-600: #0284c7;
+      color-scheme: dark !important;
+    }
+
+    /* Auth Shell & Form Dark Styling */
+    [data-theme="dark"] .auth-shell,
+    html.dark .auth-shell {
+      background: #181b20 !important;
+      border-color: rgba(255, 255, 255, 0.1) !important;
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6) !important;
+    }
+    [data-theme="dark"] .auth-panel-left,
+    html.dark .auth-panel-left {
+      background: radial-gradient(circle at top left, rgba(56, 189, 248, 0.12), #13171f) !important;
+      border-right-color: rgba(255, 255, 255, 0.08) !important;
+      color: #f1f5f9 !important;
+    }
+    [data-theme="dark"] .auth-panel-right,
+    html.dark .auth-panel-right {
+      background: #181b20 !important;
+      color: #f1f5f9 !important;
+    }
+    [data-theme="dark"] .auth-panel-left h1,
+    [data-theme="dark"] .auth-panel-right h2,
+    html.dark .auth-panel-left h1,
+    html.dark .auth-panel-right h2 {
+      color: #f1f5f9 !important;
+    }
+    [data-theme="dark"] .form-group input,
+    [data-theme="dark"] .form-group select,
+    html.dark .form-group input,
+    html.dark .form-group select {
+      background: #12151a !important;
+      border-color: rgba(255, 255, 255, 0.12) !important;
+      color: #f1f5f9 !important;
+    }
+    [data-theme="dark"] .form-group label,
+    html.dark .form-group label {
+      color: #cbd5e1 !important;
+    }
+    [data-theme="dark"] .auth-panel-subtitle,
+    [data-theme="dark"] .auth-panel-left p,
+    [data-theme="dark"] .auth-panel-left ul,
+    [data-theme="dark"] .divider,
+    html.dark .auth-panel-subtitle,
+    html.dark .auth-panel-left p,
+    html.dark .auth-panel-left ul,
+    html.dark .divider {
+      color: #94a3b8 !important;
+    }
+    [data-theme="dark"] .footer-links a,
+    html.dark .footer-links a {
+      color: #38bdf8 !important;
+    }
+    [data-theme="dark"] .login-back-button,
+    [data-theme="dark"] .signup-back-button,
+    html.dark .login-back-button,
+    html.dark .signup-back-button {
+      background: rgba(255, 255, 255, 0.06) !important;
+      border-color: rgba(255, 255, 255, 0.14) !important;
+      color: #cbd5e1 !important;
+    }
+    [data-theme="dark"] .login-back-button:hover,
+    [data-theme="dark"] .signup-back-button:hover,
+    html.dark .login-back-button:hover,
+    html.dark .signup-back-button:hover {
+      background: rgba(255, 255, 255, 0.12) !important;
+      border-color: rgba(56, 189, 248, 0.5) !important;
+      color: #38bdf8 !important;
+    }
+
+    /* Floating Theme Toggle on Auth / Public pages */
+    .base-floating-theme-toggle {
+      position: fixed;
+      top: 20px;
+      right: 24px;
+      z-index: 1000;
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      height: 34px;
+      padding: 0 14px;
+      border-radius: 999px;
+      background: var(--surface);
+      color: var(--text);
+      border: 1px solid var(--border);
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.12);
+      font-size: 12.5px;
+      font-weight: 600;
+      font-family: inherit;
+      cursor: pointer;
+      line-height: 1;
+      transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+      user-select: none;
+      text-decoration: none;
+    }
+
+    .base-floating-theme-toggle:hover {
+      color: var(--accent);
+      border-color: var(--accent);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
+    }
+
+    .base-floating-theme-toggle:active {
+      transform: translateY(1px);
+    }
+
+    .base-floating-theme-toggle .theme-icon-sun,
+    .base-floating-theme-toggle .theme-icon-moon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    html:not([data-theme="dark"]) .base-floating-theme-toggle .theme-icon-sun { display: none; }
+    html:not([data-theme="dark"]) .base-floating-theme-toggle .theme-icon-moon { display: inline-flex; color: #64748b; }
+    html[data-theme="dark"] .base-floating-theme-toggle .theme-icon-sun { display: inline-flex; color: #f59e0b; }
+    html[data-theme="dark"] .base-floating-theme-toggle .theme-icon-moon { display: none; }
+
+    @media (max-width: 640px) {
+      .base-floating-theme-toggle {
+        top: 14px;
+        right: 14px;
+        height: 30px;
+        padding: 0 11px;
+        font-size: 11.5px;
+        gap: 5px;
+      }
     }
     * { box-sizing: border-box; }
     body {
@@ -419,14 +590,17 @@
     }
     .auth-panel-left p {
       margin: 0;
-      color: var(--text-muted);
+      color: #334155;
+      font-size: 0.95rem;
+      line-height: 1.6;
       max-width: 26rem;
     }
     .auth-panel-left ul {
       margin: 1rem 0 0 0;
       padding-left: 1.1rem;
-      color: var(--text-muted);
-      font-size: .9rem;
+      color: #334155;
+      font-size: .92rem;
+      font-weight: 500;
     }
     .auth-panel-left li + li {
       margin-top: .25rem;
@@ -444,8 +618,9 @@
     }
     .auth-panel-subtitle {
       margin: 0;
-      color: var(--text-muted);
-      font-size: .9rem;
+      color: #475569;
+      font-size: .92rem;
+      font-weight: 500;
     }
     .auth-panel-form {
       margin-top: 1rem;
@@ -555,6 +730,22 @@
       </div>
     </aside>
   {% else %}
+  {% if not user.is_authenticated %}
+  <button type="button" id="base-theme-toggle" class="base-floating-theme-toggle" aria-label="Toggle dark mode" title="Toggle dark mode">
+    <span class="theme-icon-sun" aria-hidden="true">
+      <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="4"></circle>
+        <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"></path>
+      </svg>
+    </span>
+    <span class="theme-icon-moon" aria-hidden="true">
+      <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+      </svg>
+    </span>
+    <span id="base-theme-label">Dark</span>
+  </button>
+  {% endif %}
   {% block public_header %}
   <header class="app-header-simple">
     <a href="{% url 'home' %}" class="app-brand">
@@ -620,35 +811,58 @@
     </div>
   </div>
   <script nonce="{{ csp_nonce }}">
+    (function() {
+      const key = "theme";
       const root = document.documentElement;
-      const toggle = document.getElementById("theme-toggle");
       const icon = document.getElementById("theme-icon");
       const label = document.getElementById("theme-label");
+      const baseLabel = document.getElementById("base-theme-label");
 
       function applyTheme(theme) {
-        if (theme === "dark") {
-          root.setAttribute("data-theme", "dark");
+        const activeTheme = theme === "dark" ? "dark" : "light";
+        root.setAttribute("data-theme", activeTheme);
+        if (document.body) document.body.setAttribute("data-theme", activeTheme);
+        if (activeTheme === "dark") {
+          root.classList.add("dark");
+          if (document.body) document.body.classList.add("dark");
           if (icon) icon.textContent = "☀️";
           if (label) label.textContent = "Light";
+          if (baseLabel) baseLabel.textContent = "Light";
         } else {
-          root.removeAttribute("data-theme");
+          root.classList.remove("dark");
+          if (document.body) document.body.classList.remove("dark");
           if (icon) icon.textContent = "🌙";
           if (label) label.textContent = "Dark";
+          if (baseLabel) baseLabel.textContent = "Dark";
         }
+        try { localStorage.setItem(key, activeTheme); } catch (_) {}
+        try { document.cookie = "theme=" + activeTheme + "; path=/; max-age=31536000; SameSite=Lax"; } catch (_) {}
       }
 
-      const saved = localStorage.getItem(key);
+      let saved = null;
+      try { saved = localStorage.getItem(key); } catch (_) {}
+      if (!saved) {
+        try {
+          var match = document.cookie.match(/(?:^|; )theme=([^;]*)/);
+          if (match) saved = decodeURIComponent(match[1]);
+        } catch (_) {}
+      }
       const prefersDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
-      applyTheme(saved || (prefersDark ? "dark" : "light"));
+      applyTheme(saved === "dark" || (!saved && prefersDark) ? "dark" : "light");
 
-      if (toggle) {
-        toggle.addEventListener("click", function() {
+      document.querySelectorAll("#theme-toggle, #base-theme-toggle").forEach((btn) => {
+        btn.addEventListener("click", function() {
           const isDark = root.getAttribute("data-theme") === "dark";
           const next = isDark ? "light" : "dark";
-          localStorage.setItem(key, next);
           applyTheme(next);
         });
-      }
+      });
+
+      window.addEventListener("storage", function(e) {
+        if (e.key === key && (e.newValue === "dark" || e.newValue === "light")) {
+          applyTheme(e.newValue);
+        }
+      });
     })();
 
     (function() {

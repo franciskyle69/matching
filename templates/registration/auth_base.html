@@ -8,6 +8,27 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script nonce="{{ csp_nonce }}">
+    (function() {
+      try {
+        var saved = localStorage.getItem('theme');
+        if (!saved) {
+          var match = document.cookie.match(/(?:^|; )theme=([^;]*)/);
+          if (match) saved = decodeURIComponent(match[1]);
+        }
+        var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+        var theme = saved === 'dark' || (!saved && prefersDark) ? 'dark' : 'light';
+        document.documentElement.setAttribute('data-theme', theme);
+        if (theme === 'dark') {
+          document.documentElement.classList.add('dark');
+          if (document.body) document.body.classList.add('dark');
+        } else {
+          document.documentElement.classList.remove('dark');
+          if (document.body) document.body.classList.remove('dark');
+        }
+      } catch (_) {}
+    })();
+  </script>
   <style>
     :root {
       --neu-base: #ebf0f7;
@@ -21,6 +42,19 @@
       --text-muted: #64748b;
     }
 
+    html[data-theme="dark"], html.dark {
+      --neu-base: #12161f;
+      --neu-light: rgba(255, 255, 255, 0.07);
+      --neu-dark: rgba(0, 0, 0, 0.7);
+      --neu-dark-strong: rgba(0, 0, 0, 0.88);
+      --neu-primary: #0284c7;
+      --neu-primary-hover: #0369a1;
+      --text-main: #f1f5f9;
+      --text-sub: #94a3b8;
+      --text-muted: #64748b;
+      color-scheme: dark !important;
+    }
+
     * { box-sizing: border-box; }
 
     body {
@@ -31,7 +65,13 @@
       color: var(--text-main);
       line-height: 1.6;
       -webkit-font-smoothing: antialiased;
-      color-scheme: light !important;
+      transition: background-color 0.2s ease, color 0.2s ease;
+    }
+
+    html[data-theme="dark"] body, html.dark body {
+      background-color: #12161f !important;
+      color: var(--text-main);
+      color-scheme: dark !important;
     }
 
     .auth-page-wrap {
@@ -51,6 +91,17 @@
       background: radial-gradient(circle at 50% 30%, rgba(14, 165, 233, 0.08), transparent 60%);
       z-index: 0;
       pointer-events: none;
+    }
+
+    html[data-theme="dark"] .auth-page-wrap,
+    html.dark .auth-page-wrap {
+      background-color: #12161f !important;
+    }
+
+    html[data-theme="dark"] .auth-page-wrap::before,
+    html.dark .auth-page-wrap::before {
+      display: none !important;
+      background: none !important;
     }
 
     /* Neumorphic compact Back button positioned outside the auth card */
@@ -248,12 +299,12 @@
       font-size: 0.95rem;
       font-weight: 600;
       color: #ffffff;
-      background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
-      border: none;
+      background: #0284c7;
+      border: 1px solid rgba(2, 132, 199, 0.3);
       border-radius: 14px;
       cursor: pointer;
       margin-top: 8px;
-      box-shadow: 4px 4px 12px rgba(14, 165, 233, 0.35), -2px -2px 6px rgba(255, 255, 255, 0.6);
+      box-shadow: 0 4px 12px rgba(2, 132, 199, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.2);
       transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
       font-family: inherit;
       display: inline-flex;
@@ -264,14 +315,15 @@
     }
 
     .auth-card-standalone .btn-primary:hover {
-      background: linear-gradient(135deg, #38bdf8 0%, #0ea5e9 100%);
-      box-shadow: 6px 6px 16px rgba(14, 165, 233, 0.45);
+      background: #0369a1;
+      border-color: rgba(2, 132, 199, 0.5);
+      box-shadow: 0 6px 16px rgba(2, 132, 199, 0.35);
       transform: translateY(-1px);
     }
 
     .auth-card-standalone .btn-primary:active {
       transform: translateY(1px);
-      box-shadow: inset 2px 2px 5px rgba(2, 132, 199, 0.5);
+      box-shadow: inset 1px 1px 3px rgba(0, 0, 0, 0.3);
     }
 
     .auth-card-standalone .btn-primary:disabled {
@@ -280,6 +332,18 @@
       cursor: not-allowed;
       box-shadow: none;
       transform: none;
+    }
+
+    .auth-icon-circle {
+      width: 58px;
+      height: 58px;
+      border-radius: 50%;
+      background: #ebf0f7;
+      box-shadow: 4px 4px 10px rgba(166, 180, 200, 0.6), -4px -4px 10px #ffffff;
+      border: 1px solid rgba(255, 255, 255, 0.95);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
     }
 
     .auth-card-standalone .auth-link {
@@ -396,8 +460,209 @@
       font-weight: 500;
     }
 
-    .auth-card-standalone .password-strength-item.is-invalid {
+    /* Neumorphic Theme Toggle Button */
+    .auth-neu-theme-btn {
+      position: fixed;
+      top: 20px;
+      right: 24px;
+      z-index: 1000;
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      height: 34px;
+      padding: 0 14px;
+      border-radius: 999px;
+      background-color: var(--neu-base);
+      color: #334155;
+      border: 1px solid rgba(255, 255, 255, 0.95);
+      box-shadow: 3px 3px 8px rgba(166, 180, 200, 0.6), -3px -3px 8px #ffffff;
+      font-size: 12.5px;
+      font-weight: 600;
+      font-family: inherit;
+      cursor: pointer;
+      line-height: 1;
+      transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+      user-select: none;
+    }
+
+    .auth-neu-theme-btn:hover {
+      color: #0284c7;
+      transform: translateY(-1px);
+      box-shadow: 5px 5px 12px rgba(166, 180, 200, 0.7), -5px -5px 12px #ffffff;
+    }
+
+    .auth-neu-theme-btn:active {
+      transform: translateY(1px);
+      box-shadow: inset 2px 2px 5px rgba(166, 180, 200, 0.65), inset -2px -2px 5px #ffffff;
+    }
+
+    .auth-neu-theme-btn:focus-visible {
+      outline: 2px solid rgba(56, 189, 248, 0.8);
+      outline-offset: 3px;
+    }
+
+    .auth-theme-icon-sun,
+    .auth-theme-icon-moon {
+      width: 14px;
+      height: 14px;
+      stroke: currentColor;
+      stroke-width: 2.2;
+      flex-shrink: 0;
+      transition: transform 0.18s ease;
+    }
+
+    html:not([data-theme="dark"]) .auth-theme-icon-sun { display: none; }
+    html:not([data-theme="dark"]) .auth-theme-icon-moon { display: block; }
+    html[data-theme="dark"] .auth-theme-icon-sun { display: block; color: #f59e0b; }
+    html[data-theme="dark"] .auth-theme-icon-moon { display: none; }
+
+    @media (max-width: 640px) {
+      .auth-neu-theme-btn {
+        top: 14px;
+        right: 14px;
+        height: 30px;
+        padding: 0 11px;
+        font-size: 11.5px;
+        gap: 5px;
+      }
+      .auth-theme-icon-sun,
+      .auth-theme-icon-moon {
+        width: 12px;
+        height: 12px;
+      }
+    }
+
+    html[data-theme="dark"] .auth-card-standalone,
+    html.dark .auth-card-standalone {
+      background: #181b20 !important;
+      border: 1px solid rgba(255, 255, 255, 0.08) !important;
+      box-shadow: 10px 10px 28px rgba(0, 0, 0, 0.65), -4px -4px 16px rgba(255, 255, 255, 0.02) !important;
+    }
+
+    /* Calibrated non-vibrant primary button in dark mode */
+    html[data-theme="dark"] .auth-card-standalone .btn-primary,
+    html.dark .auth-card-standalone .btn-primary {
+      background: #0284c7 !important;
+      color: #ffffff !important;
+      border: 1px solid rgba(56, 189, 248, 0.25) !important;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.15) !important;
+    }
+
+    html[data-theme="dark"] .auth-card-standalone .btn-primary:hover,
+    html.dark .auth-card-standalone .btn-primary:hover {
+      background: #0369a1 !important;
+      border-color: rgba(56, 189, 248, 0.45) !important;
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.75), inset 0 1px 0 rgba(255, 255, 255, 0.22) !important;
+      transform: translateY(-1px) !important;
+    }
+
+    html[data-theme="dark"] .auth-card-standalone .btn-primary:active,
+    html.dark .auth-card-standalone .btn-primary:active {
+      background: #075985 !important;
+      box-shadow: inset 1px 1px 4px rgba(0, 0, 0, 0.7) !important;
+      transform: translateY(1px) !important;
+    }
+
+    html[data-theme="dark"] .auth-card-standalone .btn-primary:disabled,
+    html.dark .auth-card-standalone .btn-primary:disabled {
+      background: #1e293b !important;
+      color: #64748b !important;
+      border-color: rgba(255, 255, 255, 0.05) !important;
+      box-shadow: none !important;
+      transform: none !important;
+    }
+
+    html[data-theme="dark"] .auth-icon-circle,
+    html.dark .auth-icon-circle {
+      background: #14171d !important;
+      border: 1px solid rgba(255, 255, 255, 0.08) !important;
+      box-shadow: inset 1.5px 1.5px 3px rgba(0, 0, 0, 0.6), 0 4px 12px rgba(0, 0, 0, 0.5) !important;
+    }
+
+    html[data-theme="dark"] .auth-neu-back-btn,
+    html.dark .auth-neu-back-btn,
+    html[data-theme="dark"] .auth-neu-theme-btn,
+    html.dark .auth-neu-theme-btn {
+      background-color: #181b20 !important;
+      color: #cbd5e1 !important;
+      border: 1px solid rgba(255, 255, 255, 0.08) !important;
+      box-shadow: 3px 3px 8px rgba(0, 0, 0, 0.5), -2px -2px 6px rgba(255, 255, 255, 0.02) !important;
+    }
+
+    html[data-theme="dark"] .auth-neu-back-btn:hover,
+    html.dark .auth-neu-back-btn:hover,
+    html[data-theme="dark"] .auth-neu-theme-btn:hover,
+    html.dark .auth-neu-theme-btn:hover {
+      color: #38bdf8 !important;
+      border-color: rgba(56, 189, 248, 0.4) !important;
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.85) !important;
+    }
+
+    html[data-theme="dark"] .auth-neu-back-btn:active,
+    html.dark .auth-neu-back-btn:active,
+    html[data-theme="dark"] .auth-neu-theme-btn:active,
+    html.dark .auth-neu-theme-btn:active {
+      box-shadow: inset 2px 2px 5px rgba(0, 0, 0, 0.8), inset -1px -1px 4px rgba(255, 255, 255, 0.05) !important;
+    }
+
+    html[data-theme="dark"] .auth-card-standalone h1,
+    html.dark .auth-card-standalone h1 {
+      color: #f1f5f9;
+    }
+
+    html[data-theme="dark"] .auth-card-standalone .subtitle,
+    html.dark .auth-card-standalone .subtitle {
       color: #94a3b8;
+    }
+
+    html[data-theme="dark"] .auth-brand-title .brand-peer,
+    html.dark .auth-brand-title .brand-peer {
+      color: #f1f5f9;
+    }
+
+    html[data-theme="dark"] .auth-card-standalone .form-group label,
+    html.dark .auth-card-standalone .form-group label {
+      color: #cbd5e1;
+    }
+
+    html[data-theme="dark"] .auth-card-standalone .form-group input,
+    html[data-theme="dark"] .auth-card-standalone .form-group select,
+    html.dark .auth-card-standalone .form-group input,
+    html.dark .auth-card-standalone .form-group select {
+      background-color: #12151a;
+      color: #f1f5f9;
+      border: 1px solid rgba(255, 255, 255, 0.09);
+      box-shadow: inset 2px 2px 5px rgba(0, 0, 0, 0.7), inset -1px -1px 3px rgba(255, 255, 255, 0.04);
+    }
+
+    html[data-theme="dark"] .auth-card-standalone .form-group input:focus,
+    html.dark .auth-card-standalone .form-group input:focus {
+      border-color: #38bdf8;
+      box-shadow: inset 2px 2px 5px rgba(0, 0, 0, 0.7), 0 0 0 3px rgba(56, 189, 248, 0.25);
+    }
+
+    html[data-theme="dark"] .auth-card-standalone .password-rules-card,
+    html.dark .auth-card-standalone .password-rules-card {
+      background-color: #12151a;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      box-shadow: inset 2px 2px 5px rgba(0, 0, 0, 0.6);
+    }
+
+    html[data-theme="dark"] .auth-card-standalone .password-rules-title,
+    html.dark .auth-card-standalone .password-rules-title {
+      color: #cbd5e1;
+    }
+
+    html[data-theme="dark"] .auth-card-standalone .password-strength-track,
+    html.dark .auth-card-standalone .password-strength-track {
+      background: #232832;
+    }
+
+    html[data-theme="dark"] div[style*="background: #ebf0f7"],
+    html.dark div[style*="background: #ebf0f7"] {
+      background: #12151a !important;
+      box-shadow: 4px 4px 12px rgba(0, 0, 0, 0.7), -3px -3px 8px rgba(255, 255, 255, 0.04) !important;
+      border-color: rgba(255, 255, 255, 0.08) !important;
     }
 
     {% block extra_css %}{% endblock %}
@@ -411,6 +676,17 @@
     </svg>
     <span>{% block back_text %}Back to Sign in{% endblock %}</span>
   </a>
+
+  <button type="button" id="auth-theme-toggle" class="auth-neu-theme-btn" aria-label="Toggle dark mode" title="Toggle dark mode">
+    <svg class="auth-theme-icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <circle cx="12" cy="12" r="4"></circle>
+      <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"></path>
+    </svg>
+    <svg class="auth-theme-icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+    </svg>
+    <span id="auth-theme-label">Dark</span>
+  </button>
 
   <div class="auth-page-wrap">
     <div class="auth-card-standalone">
@@ -502,6 +778,49 @@
       } else {
         initPasswordWidgets();
       }
+    })();
+
+    (function initAuthTheme() {
+      const toggle = document.getElementById("auth-theme-toggle");
+      const label = document.getElementById("auth-theme-label");
+      function updateLabel() {
+        const isDark = document.documentElement.getAttribute("data-theme") === "dark";
+        if (label) label.textContent = isDark ? "Light" : "Dark";
+      }
+      updateLabel();
+
+      function applyTheme(next) {
+        try {
+          localStorage.setItem("theme", next);
+        } catch (_) {}
+        try {
+          document.cookie = "theme=" + next + "; path=/; max-age=31536000; SameSite=Lax";
+        } catch (_) {}
+        document.documentElement.setAttribute("data-theme", next);
+        if (document.body) document.body.setAttribute("data-theme", next);
+        if (next === "dark") {
+          document.documentElement.classList.add("dark");
+          if (document.body) document.body.classList.add("dark");
+        } else {
+          document.documentElement.classList.remove("dark");
+          if (document.body) document.body.classList.remove("dark");
+        }
+        updateLabel();
+      }
+
+      if (toggle) {
+        toggle.addEventListener("click", function() {
+          const isDark = document.documentElement.getAttribute("data-theme") === "dark";
+          const next = isDark ? "light" : "dark";
+          applyTheme(next);
+        });
+      }
+
+      window.addEventListener("storage", function(e) {
+        if (e.key === "theme" && (e.newValue === "dark" || e.newValue === "light")) {
+          applyTheme(e.newValue);
+        }
+      });
     })();
   </script>
   {% block extra_js %}{% endblock %}
