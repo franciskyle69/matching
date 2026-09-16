@@ -404,6 +404,116 @@ def _score_with_model(mentor: MentorProfile, mentee: MenteeProfile) -> Optional[
     return max(0.0, min(1.0, score))
 
 
+def _overlapping_slots_formatted(a_slots: List[Slot], b_slots: List[Slot]) -> List[str]:
+    overlaps: List[str] = []
+    seen: Set[str] = set()
+    for a_days, a_start, a_end in a_slots:
+        for b_days, b_start, b_end in b_slots:
+            shared_days = a_days & b_days
+            if not shared_days:
+                continue
+            inter_start = max(a_start, b_start)
+            inter_end = min(a_end, b_end)
+            if inter_start < inter_end:
+                slot_str = _format_slot((shared_days, inter_start, inter_end))
+                if slot_str not in seen:
+                    seen.add(slot_str)
+                    overlaps.append(slot_str)
+    return overlaps
+
+
+def compute_score_breakdown(mentor: MentorProfile, mentee: MenteeProfile) -> Dict[str, Any]:
+    """Calculate an explainable, transparent AI match score breakdown."""
+    mentor_subjects = _to_set(mentor.subjects) or _to_set(mentor.skills)
+    mentee_subjects = _to_set(mentee.subjects) or _to_set(mentee.skills)
+    mentor_topics = _to_set(mentor.topics) or _to_set(mentor.skills)
+    mentee_topics = _to_set(mentee.topics) or _to_set(mentee.skills)
+
+    shared_subjects = sorted(list(mentor_subjects & mentee_subjects))
+    shared_topics = sorted(list(mentor_topics & mentee_topics))
+    subj_jaccard = _jaccard(mentor_subjects, mentee_subjects)
+    top_jaccard = _jaccard(mentor_topics, mentee_topics)
+    academic_pct = max(10, min(100, round((0.6 * subj_jaccard + 0.4 * top_jaccard) * 100))) if (mentor_subjects or mentee_subjects) else 60
+
+    mentor_comp_ids = set(mentor.competencies.values_list("id", flat=True)) if hasattr(mentor, "competencies") else set()
+    mentee_comp_ids = set(mentee.competencies.values_list("id", flat=True)) if hasattr(mentee, "competencies") else set()
+    shared_comp_ids = mentor_comp_ids & mentee_comp_ids
+    comp_jaccard = _jaccard(mentor_comp_ids, mentee_comp_ids)
+    competency_pct = max(15, min(100, round(comp_jaccard * 100))) if (mentor_comp_ids or mentee_comp_ids) else academic_pct
+
+    mentor_level = getattr(mentor, "expertise_level", None)
+    mentee_level = getattr(mentee, "difficulty_level", None)
+    diff_val = _difficulty_alignment(mentor_level, mentee_level)
+    diff_pct = max(20, min(100, round(diff_val * 100)))
+
+    mentor_slots = _normalise_slots(getattr(mentor, "availability", []))
+    mentee_slots = _normalise_slots(getattr(mentee, "availability", []))
+    overlap_slots = _overlapping_slots_formatted(mentor_slots, mentee_slots)
+    has_overlap = len(overlap_slots) > 0
+    if has_overlap:
+        schedule_pct = 100
+    elif not mentor_slots or not mentee_slots:
+        schedule_pct = 75
+    else:
+        schedule_pct = 35
+
+    model_score = _score_with_model(mentor, mentee)
+    is_ml = model_score is not None
+    final_score = model_score if is_ml else _heuristic_score(mentor, mentee)
+    final_score = max(0.0, min(1.0, float(final_score)))
+    overall_pct = max(1, min(100, round(final_score * 100)))
+
+    if overall_pct >= 88:
+        tier, label = "high", "Exceptional Fit"
+    elif overall_pct >= 75:
+        tier, label = "high", "Strong Fit"
+    elif overall_pct >= 60:
+        tier, label = "medium", "Good Fit"
+    else:
+        tier, label = "low", "Moderate Fit"
+
+    return {
+        "overall_score": round(final_score, 4),
+        "overall_percentage": overall_pct,
+        "tier": tier,
+        "tier_label": label,
+        "algorithm": "XGBoost Machine Learning" if is_ml else "Heuristic Feature Alignment",
+        "factors": {
+            "academic": {
+                "label": "Academic & Subject Fit",
+                "score": academic_pct,
+                "weight_pct": 40,
+                "shared_subjects": shared_subjects,
+                "shared_topics": shared_topics,
+                "summary": f"{len(shared_subjects)} shared subject(s), {len(shared_topics)} topic(s)" if (shared_subjects or shared_topics) else "General curriculum alignment",
+            },
+            "competency": {
+                "label": "Competency Alignment",
+                "score": competency_pct,
+                "weight_pct": 25,
+                "shared_count": len(shared_comp_ids),
+                "summary": f"{len(shared_comp_ids)} verified competency matches" if shared_comp_ids else "Complementary curriculum skillset",
+            },
+            "difficulty": {
+                "label": "Experience & Difficulty Balance",
+                "score": diff_pct,
+                "weight_pct": 15,
+                "mentor_level": mentor_level,
+                "mentee_level": mentee_level,
+                "summary": f"Mentor expertise: {mentor_level or 'Standard'} • Mentee difficulty: {mentee_level or 'Standard'}",
+            },
+            "schedule": {
+                "label": "Schedule Compatibility",
+                "score": schedule_pct,
+                "weight_pct": 20,
+                "has_overlap": has_overlap,
+                "overlapping_slots": overlap_slots,
+                "summary": f"Compatible slots: {', '.join(overlap_slots[:3])}" if overlap_slots else ("Open mutual availability" if (not mentor_slots or not mentee_slots) else "Adjustable schedule"),
+            },
+        },
+    }
+
+
 def compute_score(mentor: MentorProfile, mentee: MenteeProfile) -> float:
     model_score = _score_with_model(mentor, mentee)
     if model_score is not None:

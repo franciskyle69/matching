@@ -19,6 +19,7 @@ from matching.services import (
     run_greedy_matching,
     recommend_mentors_for_mentee_with_meta,
     compute_score,
+    compute_score_breakdown,
 )
 
 from ..views import (
@@ -82,6 +83,12 @@ def _build_match_details(mentee_profile, mentor):
             .order_by("name")
             .values_list("name", flat=True)
         )
+    breakdown = None
+    try:
+        breakdown = compute_score_breakdown(mentor, mentee_profile)
+    except Exception as exc:
+        logger.warning("compute_score_breakdown_failed", extra={"error": str(exc)})
+
     return {
         "common_subjects": overlap_subjects,
         "common_topics": overlap_topics,
@@ -90,6 +97,7 @@ def _build_match_details(mentee_profile, mentor):
         "mentor_topics": mentor_topics,
         "mentee_subjects": mentee_subjects,
         "mentee_topics": mentee_topics,
+        "score_breakdown": breakdown,
     }
 
 
@@ -207,6 +215,12 @@ def run_matching(request):
                 .order_by("name")
                 .values_list("name", flat=True)
             )
+        breakdown = None
+        if m and e:
+            try:
+                breakdown = compute_score_breakdown(m, e)
+            except Exception:
+                pass
         data.append(
             {
                 "mentor_id": mid,
@@ -218,6 +232,7 @@ def run_matching(request):
                 "mentee_display_name": (get_user_display_name(e.user) or e.user.username) if e else None,
                 "mentee": _serialize_mentee_for_matching(e, request),
                 "score": round(float(score), 4),
+                "score_breakdown": breakdown,
                 "match_details": {
                     "common_subjects": overlap_subjects,
                     "common_topics": overlap_topics,
@@ -226,6 +241,7 @@ def run_matching(request):
                     "mentor_topics": mentor_topics,
                     "mentee_subjects": mentee_subjects,
                     "mentee_topics": mentee_topics,
+                    "score_breakdown": breakdown,
                 },
             }
         )
@@ -300,6 +316,7 @@ def mentee_recommendations(request):
                 "mentee_display_name": get_user_display_name(mentee_profile.user) or mentee_profile.user.username,
                 "mentee": _serialize_mentee_for_matching(mentee_profile, request),
                 "score": round(float(score), 4),
+                "score_breakdown": match_details.get("score_breakdown"),
                 "match_details": match_details,
             }
         )
@@ -454,6 +471,7 @@ def mentor_requests(request):
         requests_list = list(
             MenteeMentorRequest.objects.filter(mentor=mentor_locked)
             .select_related("mentee", "mentee__user")
+            .prefetch_related("mentee__competencies", "mentor__competencies")
             .order_by("-created_at")
         )
         accepted_count = sum(1 for r in requests_list if r.accepted)
@@ -482,6 +500,11 @@ def mentor_requests(request):
             from api.views.helpers import _avatar_url
 
             mentee_avatar = _avatar_url(request, e.avatar_url)
+        match_details = _build_match_details(e, mentor_locked)
+        try:
+            score = round(float(compute_score(mentor_locked, e)), 4)
+        except Exception:
+            score = 0.85
         data.append({
             "mentee_id": e.id,
             "mentee_user_id": e.user_id,
@@ -494,6 +517,9 @@ def mentor_requests(request):
             "request_id": r.id,
             "status": status,
             "slots_left": slots_left,
+            "score": score,
+            "score_breakdown": match_details.get("score_breakdown"),
+            "match_details": match_details,
             "mentee_subjects": subjects,
             "mentee_topics": topics,
             "mentee_difficulty_level": e.difficulty_level,
@@ -566,6 +592,7 @@ def my_mentor(request):
     mentor_payload = _serialize_mentor_for_matching(m, request)
     mentor_payload["accepted_at"] = req.accepted_at.isoformat()
     mentor_payload["match_details"] = _build_match_details(mentee_profile, m)
+    mentor_payload["score_breakdown"] = mentor_payload["match_details"].get("score_breakdown")
     mentor_payload["score"] = round(float(compute_score(m, mentee_profile)), 4)
     return JsonResponse({"mentor": mentor_payload})
 
@@ -607,6 +634,7 @@ def admin_pairings(request):
                 "accepted_at": req.accepted_at.isoformat() if req.accepted_at else None,
                 "created_at": req.created_at.isoformat() if req.created_at else None,
                 "score": score,
+                "score_breakdown": match_details.get("score_breakdown"),
                 "mentor_id": m.id,
                 "mentor_user_id": m.user_id,
                 "mentor_username": m.user.username,
