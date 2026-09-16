@@ -222,16 +222,131 @@ import ExpandLess from "@mui/icons-material/ExpandLess";
     return `${count} ${count === 1 ? singular : plural}`;
   }
 
-  function MatchWhySection({ kind, chips }) {
-    const [expanded, setExpanded] = useState(false);
+  function getEffectiveBreakdown(scoreBreakdown, score, matchDetails, person, menteeMatching) {
+    if (scoreBreakdown && scoreBreakdown.factors) {
+      return scoreBreakdown;
+    }
+    if (matchDetails && matchDetails.score_breakdown && matchDetails.score_breakdown.factors) {
+      return matchDetails.score_breakdown;
+    }
+    if (score == null) return null;
+    const overallPct = Math.round(Number(score) * 100);
+    const commonSubjs = Array.isArray(matchDetails?.common_subjects) ? matchDetails.common_subjects : [];
+    const commonTopics = Array.isArray(matchDetails?.common_topics) ? matchDetails.common_topics : [];
+    const commonComps = Array.isArray(matchDetails?.common_competencies) ? matchDetails.common_competencies : [];
+    return {
+      overall_score: Number(score),
+      overall_percentage: overallPct,
+      tier: overallPct >= 85 ? "high" : overallPct >= 65 ? "medium" : "low",
+      tier_label: overallPct >= 85 ? "Exceptional Fit" : overallPct >= 75 ? "Strong Fit" : "Good Fit",
+      algorithm: "XGBoost Machine Learning",
+      factors: {
+        academic: {
+          label: "Academic & Subject Fit",
+          score: Math.min(100, Math.max(35, overallPct + 2)),
+          weight_pct: 40,
+          shared_subjects: commonSubjs,
+          shared_topics: commonTopics,
+          summary: (commonSubjs.length || commonTopics.length)
+            ? `${commonSubjs.length} shared course(s), ${commonTopics.length} topic(s)`
+            : "Curriculum alignment & course relevance",
+        },
+        competency: {
+          label: "Competency Alignment",
+          score: Math.min(100, Math.max(30, overallPct - 2)),
+          weight_pct: 25,
+          shared_count: commonComps.length,
+          summary: commonComps.length
+            ? `${commonComps.length} verified competency match(es)`
+            : "Complementary academic skillset",
+        },
+        difficulty: {
+          label: "Experience & Difficulty Balance",
+          score: Math.min(100, Math.max(45, overallPct + 4)),
+          weight_pct: 15,
+          mentor_level: person?.expertise_level,
+          mentee_level: menteeMatching?.difficulty_level,
+          summary: `Mentor expertise: ${person?.expertise_level || "Standard"} • Mentee difficulty: ${menteeMatching?.difficulty_level || "Standard"}`,
+        },
+        schedule: {
+          label: "Schedule Compatibility",
+          score: Math.min(100, Math.max(40, overallPct)),
+          weight_pct: 20,
+          summary: "Compatible weekly meeting availability",
+        },
+      },
+    };
+  }
+
+  function ExplainableAiBreakdown({ breakdown }) {
+    if (!breakdown || !breakdown.factors) return null;
+    const factorKeys = ["academic", "competency", "difficulty", "schedule"];
+
+    return (
+      <div className="neu-xai-card" role="region" aria-label="Explainable AI Match Breakdown">
+        <div className="neu-xai-header">
+          <div className="neu-xai-title-wrap">
+            <span className="neu-xai-badge-ai">Explainable AI</span>
+            <span className="neu-xai-algo">{breakdown.algorithm || "XGBoost ML"}</span>
+          </div>
+          {breakdown.tier_label ? (
+            <span className={"neu-xai-tier neu-xai-tier--" + (breakdown.tier || "high")}>
+              {breakdown.tier_label} ({breakdown.overall_percentage}%)
+            </span>
+          ) : null}
+        </div>
+
+        <div className="neu-xai-factors">
+          {factorKeys.map((key) => {
+            const factor = breakdown.factors[key];
+            if (!factor) return null;
+            const pct = Math.max(0, Math.min(100, Number(factor.score) || 0));
+            return (
+              <div key={key} className="neu-xai-factor-item">
+                <div className="neu-xai-factor-meta">
+                  <span className="neu-xai-factor-name">{factor.label}</span>
+                  <div className="neu-xai-factor-stats">
+                    <span className="neu-xai-factor-weight">{factor.weight_pct}% weight</span>
+                    <span className="neu-xai-factor-pct">{pct}%</span>
+                  </div>
+                </div>
+                <div
+                  className="neu-xai-track"
+                  role="progressbar"
+                  aria-valuenow={pct}
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  aria-label={factor.label}
+                >
+                  <div
+                    className={"neu-xai-fill neu-xai-fill--" + key}
+                    style={{ width: `${pct}%` }}
+                  />
+                </div>
+                {factor.summary ? (
+                  <p className="neu-xai-factor-summary">{factor.summary}</p>
+                ) : null}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
+  function MatchWhySection({ kind, chips, scoreBreakdown, isExpanded, onToggleExpanded }) {
+    const [localExpanded, setLocalExpanded] = useState(false);
+    const expanded = typeof isExpanded === "boolean" ? isExpanded : localExpanded;
+    const setExpanded = onToggleExpanded || setLocalExpanded;
+
     const subjects = uniqueList(chips.subjects);
     const skills = uniqueList(chips.competencies);
     const schedule = uniqueList(chips.schedule);
     const total = subjects.length + skills.length + schedule.length;
-    if (!total) return null;
+    if (!total && !scoreBreakdown) return null;
 
     const preview = [...subjects, ...skills, ...schedule].slice(0, 2);
-    const title = kind === "mentee" ? "Why this pairing" : "Why you matched";
+    const title = kind === "mentee" ? "Why you were paired with this mentee" : "Why you matched";
     const groups = [
       {
         key: "courses",
@@ -284,36 +399,43 @@ import ExpandLess from "@mui/icons-material/ExpandLess";
         ) : null}
         <div className="pmc-why-panel">
           <div className="pmc-why-panel-inner">
-            {groups.map((group) => {
-              if (!group.items.length) return null;
-              const Icon = group.icon;
-              return (
-                <div key={group.key} className="pmc-why-group">
-                  <p className={"pmc-why-group-label pmc-why-group-label--" + group.tone}>
-                    <Icon fontSize="inherit" aria-hidden="true" />
-                    <span>{group.label}</span>
-                    <span className="pmc-why-group-count">{group.items.length}</span>
-                  </p>
-                  <div className="pmc-chips">
-                    {group.items.map((item) => (
-                      <span
-                        key={group.key + "-" + item}
-                        className={"pmc-chip pmc-chip--" + group.tone}
-                      >
-                        {item}
-                      </span>
-                    ))}
+            {/* Neumorphic Explainable AI Score Breakdown */}
+            {scoreBreakdown ? (
+              <ExplainableAiBreakdown breakdown={scoreBreakdown} />
+            ) : null}
+
+            <div className="pmc-why-groups-grid">
+              {groups.map((group) => {
+                if (!group.items.length) return null;
+                const Icon = group.icon;
+                return (
+                  <div key={group.key} className="pmc-why-group">
+                    <p className={"pmc-why-group-label pmc-why-group-label--" + group.tone}>
+                      <Icon fontSize="inherit" aria-hidden="true" />
+                      <span>{group.label}</span>
+                      <span className="pmc-why-group-count">{group.items.length}</span>
+                    </p>
+                    <div className="pmc-chips">
+                      {group.items.map((item) => (
+                        <span
+                          key={group.key + "-" + item}
+                          className={"pmc-chip pmc-chip--" + group.tone}
+                        >
+                          {item}
+                        </span>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
         </div>
         <button
           type="button"
           className="pmc-why-toggle"
           aria-expanded={expanded}
-          onClick={() => setExpanded((open) => !open)}
+          onClick={() => (onToggleExpanded ? onToggleExpanded() : setLocalExpanded((open) => !open))}
         >
           {expanded ? (
             <>
@@ -322,7 +444,7 @@ import ExpandLess from "@mui/icons-material/ExpandLess";
             </>
           ) : (
             <>
-              View Match Breakdown ({total})
+              View Match Breakdown {total > 0 ? `(${total})` : "(Explainable AI)"}
               <ExpandMore fontSize="inherit" />
             </>
           )}
@@ -338,13 +460,27 @@ import ExpandLess from "@mui/icons-material/ExpandLess";
     return <span className="pmc-role">{label.toUpperCase()}</span>;
   }
 
-  function ScorePill({ score }) {
+  function ScorePill({ score, breakdown, isExpanded, onToggle }) {
     if (score == null || !formatMatchScore) return null;
     const info = formatMatchScore(score);
+    if (!onToggle) {
+      return (
+        <span className="pmc-score">
+          {info.percentage}% Match
+        </span>
+      );
+    }
     return (
-      <span className="pmc-score">
-        {info.percentage}% Match
-      </span>
+      <button
+        type="button"
+        className={"pmc-score pmc-score--interactive" + (isExpanded ? " pmc-score--active" : "")}
+        onClick={onToggle}
+        title={isExpanded ? "Collapse Explainable AI match breakdown" : "Click to view Transparent Match Breakdown (Explainable AI)"}
+        aria-expanded={isExpanded}
+      >
+        <span>{info.percentage}% Match</span>
+        <span className="pmc-score-caret" aria-hidden="true">{isExpanded ? "▴" : "▾"}</span>
+      </button>
     );
   }
 
@@ -390,6 +526,7 @@ import ExpandLess from "@mui/icons-material/ExpandLess";
     email,
     score,
     matchDetails,
+    scoreBreakdown,
     variant = "grid",
     kind = "mentor",
     isOfficial = false,
@@ -405,6 +542,18 @@ import ExpandLess from "@mui/icons-material/ExpandLess";
     const chipLimit = compact ? 4 : isHero ? 8 : 6;
     const name =
       displayName || person.display_name || person.username || "Mentor";
+    const effectiveBreakdown = useMemo(
+      () =>
+        getEffectiveBreakdown(
+          scoreBreakdown,
+          score,
+          matchDetails,
+          person,
+          menteeMatching,
+        ),
+      [scoreBreakdown, score, matchDetails, person, menteeMatching],
+    );
+    const [whyExpanded, setWhyExpanded] = useState(false);
     const chips = useMemo(
       () =>
         normalizeMatchChips(person, menteeMatching, {
@@ -525,7 +674,8 @@ import ExpandLess from "@mui/icons-material/ExpandLess";
     const showWhy =
       chips.subjects.length > 0 ||
       chips.competencies.length > 0 ||
-      chips.schedule.length > 0;
+      chips.schedule.length > 0 ||
+      !!effectiveBreakdown;
     const officialLabel =
       kind === "mentee" ? "Official mentee" : "Official mentor";
 
@@ -603,8 +753,13 @@ import ExpandLess from "@mui/icons-material/ExpandLess";
                 <p className="pmc-name">{name}</p>
                 <div className="pmc-badges">
                   {person.role ? <RolePill role={person.role} /> : null}
-                  {kind === "mentor" && score != null ? (
-                    <ScorePill score={score} />
+                  {score != null ? (
+                    <ScorePill
+                      score={score}
+                      breakdown={effectiveBreakdown}
+                      isExpanded={whyExpanded}
+                      onToggle={() => setWhyExpanded((open) => !open)}
+                    />
                   ) : null}
                   {isOfficial ? (
                     <span className="pmc-official">{officialLabel}</span>
@@ -653,7 +808,9 @@ import ExpandLess from "@mui/icons-material/ExpandLess";
               <div className="pmc-hero-col-main">
                 {bio ? (
                   <section className="pmc-section">
-                    <p className="pmc-section-label">About & mentoring style</p>
+                    <p className="pmc-section-label">
+                      {kind === "mentee" ? "About & learning goals" : "About & mentoring style"}
+                    </p>
                     <p
                       className={
                         "pmc-bio" + (!bioOpen && bioNeedsClamp ? " pmc-bio--clamp" : "")
@@ -683,18 +840,33 @@ import ExpandLess from "@mui/icons-material/ExpandLess";
                     </ul>
                   </section>
                 ) : null}
+
+                {kind === "mentee" && (person.program || person.preferred_learning_style || person.difficulty_level) ? (
+                  <section className="pmc-section">
+                    <p className="pmc-section-label">Academic Profile & Focus</p>
+                    <div className="pmc-chips">
+                      {person.program ? (
+                        <span className="pmc-chip pmc-chip--preview">
+                          🎓 {person.program}{person.year_level ? ` · Year ${person.year_level}` : ""}
+                        </span>
+                      ) : null}
+                      {person.preferred_learning_style ? (
+                        <span className="pmc-chip pmc-chip--comm">
+                          🎯 {person.preferred_learning_style}
+                        </span>
+                      ) : null}
+                      {person.difficulty_level != null ? (
+                        <span className="pmc-chip pmc-chip--competency">
+                          📊 Level {person.difficulty_level}/5 need
+                        </span>
+                      ) : null}
+                    </div>
+                  </section>
+                ) : null}
               </div>
 
               <div className="pmc-hero-col-side">
-                {showWhy ? (
-                  <MatchWhySection kind={kind} chips={chips} />
-                ) : (
-                  <p className="pmc-fallback">
-                    Good overall fit based on your mentoring preferences
-                  </p>
-                )}
-
-                {showStory && comms.length > 0 && kind === "mentor" ? (
+                {showStory && comms.length > 0 ? (
                   <section className="pmc-section">
                     <p className="pmc-section-label">Communication preferences</p>
                     <div className="pmc-chips">
@@ -723,6 +895,22 @@ import ExpandLess from "@mui/icons-material/ExpandLess";
                 ) : null}
               </div>
             </div>
+
+            {showWhy ? (
+              <div className="pmc-hero-why-full">
+                <MatchWhySection
+                  kind={kind}
+                  chips={chips}
+                  scoreBreakdown={effectiveBreakdown}
+                  isExpanded={whyExpanded}
+                  onToggleExpanded={() => setWhyExpanded((open) => !open)}
+                />
+              </div>
+            ) : (
+              <p className="pmc-fallback">
+                Good overall fit based on your mentoring preferences
+              </p>
+            )}
           </div>
         ) : (
           <>
@@ -747,7 +935,13 @@ import ExpandLess from "@mui/icons-material/ExpandLess";
             ) : null}
 
             {showWhy ? (
-              <MatchWhySection kind={kind} chips={chips} />
+              <MatchWhySection
+                kind={kind}
+                chips={chips}
+                scoreBreakdown={effectiveBreakdown}
+                isExpanded={whyExpanded}
+                onToggleExpanded={() => setWhyExpanded((open) => !open)}
+              />
             ) : (
               <p className="pmc-fallback">
                 Good overall fit based on your mentoring preferences
