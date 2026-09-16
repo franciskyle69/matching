@@ -34,6 +34,7 @@ from .controllers.matching_controller import (
     mentor_accept_mentee,
     my_mentor,
     mentor_profile_by_user_id,
+    admin_pairings,
 )
 from .controllers.approvals_controller import (
     pending_list,
@@ -120,6 +121,7 @@ urlpatterns = [
     path('matching/mentor-accept-mentee/', mentor_accept_mentee, name='api-matching-mentor-accept-mentee'),
     path('matching/my-mentor/', my_mentor, name='api-matching-my-mentor'),
     path('matching/mentor-profile/<int:user_id>/', mentor_profile_by_user_id, name='api-matching-mentor-profile-by-user-id'),
+    path('matching/admin-pairings/', admin_pairings, name='api-matching-admin-pairings'),
     path('auth/login/', auth_login, name='api-auth-login'),
     path('auth/refresh/', auth_refresh, name='api-auth-refresh'),
     path('auth/logout/', auth_logout, name='api-auth-logout'),

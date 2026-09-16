@@ -569,3 +569,57 @@ def my_mentor(request):
     mentor_payload["score"] = round(float(compute_score(m, mentee_profile)), 4)
     return JsonResponse({"mentor": mentor_payload})
 
+
+@login_required
+@require_GET
+def admin_pairings(request):
+    """
+    Staff-only endpoint: return all confirmed mentee-mentor pairings
+    with rich matching details (compatibility score, shared subjects, shared competencies, schedules).
+    """
+    if not request.user.is_staff:
+        return JsonResponse({"error": "Unauthorized. Staff access required."}, status=403)
+
+    requests = (
+        MenteeMentorRequest.objects.filter(accepted=True)
+        .select_related("mentor", "mentor__user", "mentee", "mentee__user")
+        .prefetch_related("mentor__competencies", "mentee__competencies")
+        .order_by("-accepted_at", "-created_at")
+    )
+    results = []
+    for req in requests:
+        m = req.mentor
+        e = req.mentee
+        if not m or not e:
+            continue
+        mentor_data = _serialize_mentor_for_matching(m, request)
+        mentee_data = _serialize_mentee_for_matching(e, request)
+        match_details = _build_match_details(e, m)
+        try:
+            score = round(float(compute_score(m, e)), 4)
+        except Exception:
+            score = 0.85
+
+        results.append(
+            {
+                "id": req.id,
+                "accepted": req.accepted,
+                "accepted_at": req.accepted_at.isoformat() if req.accepted_at else None,
+                "created_at": req.created_at.isoformat() if req.created_at else None,
+                "score": score,
+                "mentor_id": m.id,
+                "mentor_user_id": m.user_id,
+                "mentor_username": m.user.username,
+                "mentor_display_name": get_user_display_name(m.user) or m.user.username,
+                "mentor": mentor_data,
+                "mentee_id": e.id,
+                "mentee_user_id": e.user_id,
+                "mentee_username": e.user.username,
+                "mentee_display_name": get_user_display_name(e.user) or e.user.username,
+                "mentee": mentee_data,
+                "match_details": match_details,
+            }
+        )
+    return JsonResponse({"count": len(results), "results": results})
+
+
