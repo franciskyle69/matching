@@ -10,12 +10,31 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
     <script nonce="__CSP_NONCE__">
       (function() {
-        document.documentElement.setAttribute('data-theme', 'light');
+        try {
+          var saved = localStorage.getItem('theme');
+          if (!saved) {
+            var match = document.cookie.match(/(?:^|; )theme=([^;]*)/);
+            if (match) saved = decodeURIComponent(match[1]);
+          }
+          var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+          var theme = saved === 'dark' || (!saved && prefersDark) ? 'dark' : 'light';
+          document.documentElement.setAttribute('data-theme', theme);
+          if (theme === 'dark') {
+            document.documentElement.classList.add('dark');
+            if (document.body) document.body.classList.add('dark');
+          } else {
+            document.documentElement.classList.remove('dark');
+            if (document.body) document.body.classList.remove('dark');
+          }
+        } catch(e) {
+          document.documentElement.setAttribute('data-theme', 'light');
+          document.documentElement.classList.remove('dark');
+        }
       })();
     </script>
 
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/spinkit/2.0.1/spinkit.min.css" crossorigin />
-    <link rel="stylesheet" href="/static/assets/app.css?v=176" />
+    <link rel="stylesheet" href="/static/assets/app.bundle.css?v=257" />
     <style>
       .session-check-overlay {
         position: fixed !important;
@@ -25,7 +44,7 @@
         align-items: center !important;
         justify-content: center !important;
         padding: 24px !important;
-        background: #ebf0f7 !important;
+        background: #f0f3f8 !important;
       }
       [data-theme="dark"] .session-check-overlay {
         background: radial-gradient(circle at 50% 50%, rgba(14, 165, 233, 0.22) 0%, #0c1a30 65%, #081224 100%) !important;
@@ -62,6 +81,6 @@
   <body>
     <div id="root"></div>
     <script src="https://cdn.jsdelivr.net/npm/chart.js" nonce="__CSP_NONCE__"></script>
-    <script src="/static/assets/dashboard.bundle.js?v=180" nonce="__CSP_NONCE__"></script>
+    <script src="/static/assets/dashboard.bundle.js?v=251" nonce="__CSP_NONCE__"></script>
   </body>
 </html>

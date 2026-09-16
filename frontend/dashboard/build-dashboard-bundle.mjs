@@ -17,4 +17,12 @@ await build({
   jsxFragment: "React.Fragment",
 });
 
-console.log("Built assets/dashboard.bundle.js");
+await build({
+  entryPoints: ["assets/app.css"],
+  bundle: true,
+  minify: true,
+  external: ["/static/*", "https://*"],
+  outfile: "assets/app.bundle.css",
+});
+
+console.log("Built assets/dashboard.bundle.js and assets/app.bundle.css");

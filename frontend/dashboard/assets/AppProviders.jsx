@@ -213,6 +213,8 @@
     const [chosenMentorId, setChosenMentorId] = useState(null);
     const [mentorRequestsLoading, setMentorRequestsLoading] = useState(false);
     const [mentorRequests, setMentorRequests] = useState([]);
+    const [adminPairingsLoading, setAdminPairingsLoading] = useState(false);
+    const [adminPairings, setAdminPairings] = useState([]);
     const [myMentor, setMyMentor] = useState(null);
     const [acceptMenteeLoading, setAcceptMenteeLoading] = useState(null);
     const [announcements, setAnnouncements] = useState([]);
@@ -258,17 +260,33 @@
     const lockoutCountdownRef = useRef(null);
     const signInPathRef = useRef(false);
     const meInFlightRef = useRef(null);
+    const mentorRequestsInFlightRef = useRef(null);
+    const adminPairingsInFlightRef = useRef(null);
     const meLastFetchTsRef = useRef(0);
     const ME_MIN_FETCH_INTERVAL_MS = 30000;
     const unsavedChangesDirtyRef = useRef(false);
     const lastSavedMentorProfileRef = useRef(cloneJson(EMPTY_MENTOR_PROFILE));
     const lastSavedMenteeMatchingRef = useRef(cloneJson(EMPTY_MENTEE_MATCHING));
     const [leaveGuard, setLeaveGuard] = useState(null);
-    const [theme, setThemeState] = useState("light");
+    const [theme, setThemeState] = useState(() => {
+      try {
+        const stored = window.localStorage.getItem("theme");
+        if (stored === "dark" || stored === "light") return stored;
+        const match = document.cookie.match(/(?:^|; )theme=([^;]*)/);
+        if (match) {
+          const cTheme = decodeURIComponent(match[1]);
+          if (cTheme === "dark" || cTheme === "light") return cTheme;
+        }
+      } catch {}
+      const prefersDark =
+        typeof window !== "undefined" &&
+        window.matchMedia &&
+        window.matchMedia("(prefers-color-scheme: dark)").matches;
+      return prefersDark ? "dark" : "light";
+    });
 
     function toggleTheme() {
-      // System is locked to light mode (Neumorphic Soft UI)
-      setThemeState("light");
+      setThemeState((prev) => (prev === "dark" ? "light" : "dark"));
     }
 
     function isSignInPathFlow() {
@@ -360,10 +378,41 @@
     }
 
     useEffect(() => {
-      // Entire system is strictly light mode (Neumorphic Soft UI)
-      document.documentElement.setAttribute("data-theme", "light");
-      window.localStorage.setItem("theme", "light");
+      const activeTheme = theme === "dark" ? "dark" : "light";
+      document.documentElement.setAttribute("data-theme", activeTheme);
+      if (document.body) {
+        document.body.setAttribute("data-theme", activeTheme);
+      }
+      if (activeTheme === "dark") {
+        document.documentElement.classList.add("dark");
+        if (document.body) document.body.classList.add("dark");
+      } else {
+        document.documentElement.classList.remove("dark");
+        if (document.body) document.body.classList.remove("dark");
+      }
+      try {
+        window.localStorage.setItem("theme", activeTheme);
+      } catch {}
+      try {
+        document.cookie =
+          "theme=" +
+          activeTheme +
+          "; path=/; max-age=31536000; SameSite=Lax";
+      } catch {}
     }, [theme]);
+
+    useEffect(() => {
+      function onStorage(e) {
+        if (
+          e.key === "theme" &&
+          (e.newValue === "dark" || e.newValue === "light")
+        ) {
+          setThemeState(e.newValue);
+        }
+      }
+      window.addEventListener("storage", onStorage);
+      return () => window.removeEventListener("storage", onStorage);
+    }, []);
 
     useEffect(() => {
       if (typeof ensureCsrfToken === "function") {
@@ -743,6 +792,12 @@
       if (activeTab === "home" && user.role === "mentee") {
         loadMenteeRecommendations();
       }
+      if (
+        (activeTab === "home" || activeTab === "matching") &&
+        (user.role === "staff" || user.is_staff)
+      ) {
+        loadAdminPairings();
+      }
       if (activeTab === "announcements" && !announcementsLoaded)
         loadAnnouncements();
       if (activeTab === "matching" || activeTab === "mentees") {
@@ -810,7 +865,8 @@
 
       const requestPromise = fetchJSON(force ? "/api/me/?force=1" : "/api/me/");
       meInFlightRef.current = requestPromise;
-      const result = await requestPromise;
+      const optionsPromise = loadQuestionnaireOptions();
+      const [result] = await Promise.all([requestPromise, optionsPromise]);
       meInFlightRef.current = null;
       if (!result.ok) {
         if (result.status === 401 || result.status === 403) {
@@ -830,7 +886,6 @@
           );
         } catch (_) {}
       }
-      await loadQuestionnaireOptions();
       const unapproved = getIsPendingApproval(result.data);
       setUser(result.data);
       setStats(result.data.stats);
@@ -967,6 +1022,9 @@
       if (result.data.role === "mentee") {
         loadMyMentor({ role: "mentee" });
       }
+      if (result.data.role === "staff" || result.data.is_staff) {
+        loadAdminPairings();
+      }
       setAuthCheckDone(true);
       return result.data;
     }
@@ -992,12 +1050,48 @@
       setMatchingLoading(false);
     }
 
+    async function loadAdminPairings() {
+      if (adminPairingsInFlightRef.current) {
+        return adminPairingsInFlightRef.current;
+      }
+      setAdminPairingsLoading(true);
+      const p = (async () => {
+        try {
+          const result = await fetchJSON("/api/matching/admin-pairings/");
+          if (result.ok && result.data && Array.isArray(result.data.results)) {
+            setAdminPairings(result.data.results);
+          } else {
+            setAdminPairings([]);
+          }
+        } catch (err) {
+          console.error("Failed to load admin pairings:", err);
+          setAdminPairings([]);
+        } finally {
+          adminPairingsInFlightRef.current = null;
+          setAdminPairingsLoading(false);
+        }
+      })();
+      adminPairingsInFlightRef.current = p;
+      return p;
+    }
+
     async function loadMentorRequests() {
+      if (mentorRequestsInFlightRef.current) {
+        return mentorRequestsInFlightRef.current;
+      }
       setMentorRequestsLoading(true);
-      const result = await fetchJSON("/api/matching/mentor-requests/");
-      if (result.ok) setMentorRequests(result.data.results || []);
-      else setMentorRequests([]);
-      setMentorRequestsLoading(false);
+      const p = (async () => {
+        try {
+          const result = await fetchJSON("/api/matching/mentor-requests/");
+          if (result.ok) setMentorRequests(result.data.results || []);
+          else setMentorRequests([]);
+        } finally {
+          mentorRequestsInFlightRef.current = null;
+          setMentorRequestsLoading(false);
+        }
+      })();
+      mentorRequestsInFlightRef.current = p;
+      return p;
     }
 
     async function loadMyMentor(options = {}) {
@@ -2696,6 +2790,9 @@
       mentorRequestsLoading,
       mentorRequests,
       loadMentorRequests,
+      adminPairingsLoading,
+      adminPairings,
+      loadAdminPairings,
       acceptMentee,
       acceptMenteeLoading,
       myMentor,

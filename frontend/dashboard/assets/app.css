@@ -1,6 +1,6 @@
 @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
 
-@import "./styles/base/tokens.css";
+@import "./styles/base/tokens.css?v=222";
 @import "./styles/base/reset.css";
 @import "./styles/base/typography.css";
 
@@ -9,7 +9,7 @@
 
 /* Modular layers (incremental refactor) */
 @import "./styles/layout/shell.css";
-@import "./styles/components/buttons.css?v=174";
+@import "./styles/components/buttons.css?v=206";
 @import "./styles/components/cards.css?v=174";
 @import "./styles/components/forms.css";
 @import "./styles/components/tables.css";
@@ -17,26 +17,26 @@
 @import "./styles/pages/dashboard.css";
 @import "./styles/pages/auth.css";
 @import "./styles/pages/phase1.css";
-@import "./styles/pages/phase2.css?v=174";
+@import "./styles/pages/phase2.css?v=191";
 @import "./styles/pages/users.css";
 @import "./styles/utilities/helpers.css";
 
 /* Fully tokenized surfaces — loaded last so they own the cascade */
-@import "./styles/components/announcements.css?v=174";
-@import "./styles/components/matching-profile.css";
-@import "./styles/components/mentee-home.css?v=176";
+@import "./styles/components/announcements.css?v=204";
+@import "./styles/components/matching-profile.css?v=215";
+@import "./styles/components/mentee-home.css?v=207";
 @import "./styles/components/matching-page.css";
-@import "./styles/components/notifications-page.css";
-@import "./styles/base/light-theme.css?v=174";
-@import "./styles/components/sidebar-nav.css";
-@import "./styles/components/profile-matching-card.css";
-@import "./styles/components/preferences-page.css";
-@import "./styles/components/settings-page.css";
-@import "./styles/components/topbar.css";
+@import "./styles/components/notifications-page.css?v=204";
+@import "./styles/base/light-theme.css?v=204";
+@import "./styles/components/sidebar-nav.css?v=204";
+@import "./styles/components/profile-matching-card.css?v=208";
+@import "./styles/components/preferences-page.css?v=204";
+@import "./styles/components/settings-page.css?v=204";
+@import "./styles/components/topbar.css?v=222";
 @import "./styles/components/avatars.css";
 @import "./styles/components/complete-profile-onboarding.css";
 @import "./styles/layout/mobile-shell.css";
-@import "./styles/components/neumorphism.css?v=176";
+@import "./styles/components/neumorphism.css?v=222";
 
 /* Global font rendering — loaded after tokens so --font-sans is available */
 *,

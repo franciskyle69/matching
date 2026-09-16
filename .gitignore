@@ -55,6 +55,10 @@ htmlcov/
 .pytest_cache/
 .mypy_cache/
 
+# QA test cases & local evidence
+PeerLink_QA_*.xlsx
+QA_AUTOMATION_*.txt
+
 # Frontend
 node_modules/
 .vite/
