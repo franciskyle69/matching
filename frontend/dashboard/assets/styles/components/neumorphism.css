@@ -16414,3 +16414,364 @@ html[data-theme="dark"] .auth-floating-theme-btn:hover,
     height: 32px !important;
   }
 }
+
+/* ═══════════════════════════════════════════════════════════════════
+   Explainable AI (XAI) Neumorphic Match Score Breakdown
+   Soft-extruded cards, sunken track meters, tactile pill badges.
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* Interactive Score Pill */
+.pmc-score--interactive {
+  cursor: pointer;
+  user-select: none;
+  border: 1px solid rgba(255, 255, 255, 0.45) !important;
+  box-shadow: 3px 3px 8px rgba(16, 185, 129, 0.28), -2px -2px 6px rgba(255, 255, 255, 0.7) !important;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, filter 0.18s ease !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 5px !important;
+  font-family: inherit !important;
+}
+
+.pmc-score--interactive:hover {
+  transform: translateY(-1px) scale(1.02);
+  box-shadow: 4px 5px 12px rgba(16, 185, 129, 0.38), -3px -3px 8px rgba(255, 255, 255, 0.9) !important;
+  filter: brightness(1.05);
+}
+
+.pmc-score--interactive:active,
+.pmc-score--interactive.pmc-score--active {
+  transform: translateY(1px);
+  box-shadow: inset 2px 2px 4px rgba(0, 0, 0, 0.3), inset -1.5px -1.5px 3px rgba(255, 255, 255, 0.4) !important;
+}
+
+.pmc-score-caret {
+  font-size: 11px;
+  line-height: 1;
+  transition: transform 0.2s ease;
+  margin-left: 2px;
+}
+
+/* XAI Neumorphic Container (Mentee Card) */
+.neu-xai-card {
+  margin: 8px 0 12px;
+  padding: 12px 16px;
+  border-radius: 14px;
+  background: var(--neu-base, #f5f5f7);
+  box-shadow: 4px 4px 12px rgba(164, 177, 196, 0.3), -4px -4px 12px rgba(255, 255, 255, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.65);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+html[data-theme="dark"] .neu-xai-card,
+[data-theme="dark"] .neu-xai-card,
+.dark .neu-xai-card {
+  background: #181b20 !important;
+  box-shadow: 5px 5px 14px rgba(0, 0, 0, 0.75), -4px -4px 12px rgba(255, 255, 255, 0.04) !important;
+  border: 1px solid rgba(255, 255, 255, 0.07) !important;
+}
+
+/* Header */
+.neu-xai-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(164, 177, 196, 0.2);
+}
+
+html[data-theme="dark"] .neu-xai-header,
+[data-theme="dark"] .neu-xai-header,
+.dark .neu-xai-header {
+  border-bottom-color: rgba(255, 255, 255, 0.06);
+}
+
+.neu-xai-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.neu-xai-badge-ai {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+  color: #ffffff;
+  box-shadow: 2px 2px 5px rgba(2, 132, 199, 0.35);
+}
+
+.neu-xai-algo {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--text-secondary, #64748b);
+  display: inline-flex;
+  align-items: center;
+}
+
+.neu-xai-tier {
+  font-size: 11.5px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: rgba(16, 185, 129, 0.12);
+  color: #10b981;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.neu-xai-tier--high {
+  background: rgba(16, 185, 129, 0.15);
+  color: #059669;
+  border-color: rgba(16, 185, 129, 0.35);
+}
+
+html[data-theme="dark"] .neu-xai-tier--high {
+  color: #34d399;
+}
+
+.neu-xai-tier--medium {
+  background: rgba(245, 158, 11, 0.15);
+  color: #d97706;
+  border-color: rgba(245, 158, 11, 0.35);
+}
+
+html[data-theme="dark"] .neu-xai-tier--medium {
+  color: #fbbf24;
+}
+
+.neu-xai-tier--low {
+  background: rgba(239, 68, 68, 0.15);
+  color: #dc2626;
+  border-color: rgba(239, 68, 68, 0.35);
+}
+
+/* Factor Items - 2-Column Balanced Grid */
+.neu-xai-factors {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px 16px;
+}
+
+@media (max-width: 680px) {
+  .neu-xai-factors {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+}
+
+.neu-xai-factor-item {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.neu-xai-factor-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+}
+
+.neu-xai-factor-name {
+  font-weight: 600;
+  color: var(--text-primary, #1e293b);
+}
+
+html[data-theme="dark"] .neu-xai-factor-name,
+[data-theme="dark"] .neu-xai-factor-name,
+.dark .neu-xai-factor-name {
+  color: #f1f5f9;
+}
+
+.neu-xai-factor-stats {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.neu-xai-factor-weight {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-secondary, #64748b);
+  background: rgba(100, 116, 139, 0.1);
+  padding: 1px 6px;
+  border-radius: 6px;
+}
+
+.neu-xai-factor-pct {
+  font-weight: 700;
+  font-size: 12px;
+  color: var(--text-primary, #0f172a);
+}
+
+html[data-theme="dark"] .neu-xai-factor-pct,
+[data-theme="dark"] .neu-xai-factor-pct,
+.dark .neu-xai-factor-pct {
+  color: #f8fafc;
+}
+
+/* Sunken Inset Track (True Neumorphism) */
+.neu-xai-track {
+  width: 100%;
+  height: 6px;
+  border-radius: 999px;
+  background: #e2e8f0;
+  box-shadow: inset 2px 2px 5px rgba(164, 177, 196, 0.5), inset -2px -2px 5px rgba(255, 255, 255, 0.85);
+  overflow: hidden;
+  position: relative;
+}
+
+html[data-theme="dark"] .neu-xai-track,
+[data-theme="dark"] .neu-xai-track,
+.dark .neu-xai-track {
+  background: #111317 !important;
+  box-shadow: inset 2px 2px 5px rgba(0, 0, 0, 0.85), inset -1.5px -1.5px 4px rgba(255, 255, 255, 0.04) !important;
+}
+
+/* Progress Fill */
+.neu-xai-fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+}
+
+.neu-xai-fill--academic {
+  background: linear-gradient(90deg, #2563eb, #38bdf8);
+}
+
+.neu-xai-fill--competency {
+  background: linear-gradient(90deg, #7c3aed, #a855f7);
+}
+
+.neu-xai-fill--difficulty {
+  background: linear-gradient(90deg, #db2777, #f43f5e);
+}
+
+.neu-xai-fill--schedule {
+  background: linear-gradient(90deg, #059669, #10b981);
+}
+
+.neu-xai-factor-summary {
+  margin: 0;
+  font-size: 11px;
+  color: var(--text-secondary, #64748b);
+  line-height: 1.3;
+}
+
+html[data-theme="dark"] .neu-xai-factor-summary,
+[data-theme="dark"] .neu-xai-factor-summary,
+.dark .neu-xai-factor-summary {
+  color: #94a3b8;
+}
+
+/* Full-width Hero Match Breakdown Container & Balanced 3-Column Chip Grid */
+.pmc-hero-why-full {
+  margin-top: 14px;
+  width: 100%;
+}
+
+.pmc-why-groups-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 10px;
+}
+
+@media (max-width: 820px) {
+  .pmc-why-groups-grid {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+}
+
+.pmc-why-groups-grid .pmc-why-group {
+  margin-top: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  height: 100%;
+}
+
+/* ── Admin Confirmed Pairings XAI Shelf ──────────────────────────── */
+.admin-neu-xai-card {
+  margin: 0 0 14px 0;
+  padding: 16px 18px;
+  border-radius: 14px;
+  background: var(--neu-base, #f5f5f7);
+  box-shadow: 5px 5px 13px rgba(164, 177, 196, 0.3), -5px -5px 13px rgba(255, 255, 255, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+html[data-theme="dark"] .admin-neu-xai-card,
+[data-theme="dark"] .admin-neu-xai-card,
+.dark .admin-neu-xai-card {
+  background: #181b20 !important;
+  box-shadow: 5px 5px 14px rgba(0, 0, 0, 0.7), -4px -4px 10px rgba(255, 255, 255, 0.04) !important;
+  border: 1px solid rgba(255, 255, 255, 0.07) !important;
+}
+
+.admin-neu-xai-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(164, 177, 196, 0.2);
+}
+
+html[data-theme="dark"] .admin-neu-xai-header,
+[data-theme="dark"] .admin-neu-xai-header,
+.dark .admin-neu-xai-header {
+  border-bottom-color: rgba(255, 255, 255, 0.06);
+}
+
+.admin-neu-xai-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.admin-neu-xai-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px 18px;
+}
+
+@media (max-width: 640px) {
+  .admin-neu-xai-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+}
+
+.admin-neu-xai-factor {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.admin-neu-xai-summary {
+  font-size: 11px;
+  color: var(--text-secondary, #64748b);
+  line-height: 1.3;
+}
+
+html[data-theme="dark"] .admin-neu-xai-summary,
+[data-theme="dark"] .admin-neu-xai-summary,
+.dark .admin-neu-xai-summary {
+  color: #94a3b8;
+}
+
