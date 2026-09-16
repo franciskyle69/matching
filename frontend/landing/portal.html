@@ -3,9 +3,30 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>PeerLink — Choose your role</title>
+    <title>PeerLink &mdash; Choose your role</title>
     <link rel="icon" href="/static/assets/logo.png" type="image/png" />
-    <link rel="stylesheet" href="/static/portal.css?v=155" />
+    <link rel="stylesheet" href="/static/portal.css?v=159" />
+    <script>
+      (function() {
+        try {
+          var saved = localStorage.getItem('theme');
+          if (!saved) {
+            var match = document.cookie.match(/(?:^|; )theme=([^;]*)/);
+            if (match) saved = decodeURIComponent(match[1]);
+          }
+          var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+          var theme = saved === 'dark' || (!saved && prefersDark) ? 'dark' : 'light';
+          document.documentElement.setAttribute('data-theme', theme);
+          if (theme === 'dark') {
+            document.documentElement.classList.add('dark');
+            if (document.body) document.body.classList.add('dark');
+          } else {
+            document.documentElement.classList.remove('dark');
+            if (document.body) document.body.classList.remove('dark');
+          }
+        } catch (_) {}
+      })();
+    </script>
   </head>
   <body class="portal-page">
     <a href="/landing/" class="portal-landing-back" aria-label="Back to landing page">
@@ -14,6 +35,16 @@
       </svg>
       <span>Back to landing</span>
     </a>
+    <button type="button" id="portal-theme-toggle" class="portal-theme-toggle" aria-label="Toggle dark mode" title="Toggle dark mode">
+      <svg class="portal-theme-icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="12" cy="12" r="4"></circle>
+        <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"></path>
+      </svg>
+      <svg class="portal-theme-icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+      </svg>
+      <span id="portal-theme-label">Dark</span>
+    </button>
     <main class="portal-card" aria-labelledby="portal-heading">
       <aside class="portal-panel portal-panel--brand">
         <div class="portal-brand-inner">
@@ -30,7 +61,7 @@
           </div>
           <h1 id="portal-heading" class="portal-brand-title">Welcome to PeerLink</h1>
           <p class="portal-brand-text">
-            Bukidnon State University mentor–mentee matching. Choose how you will
+            Bukidnon State University mentor-mentee matching. Choose how you will
             use PeerLink when creating your account.
           </p>
           <ul class="portal-brand-points">
@@ -41,11 +72,11 @@
         </div>
         <div class="portal-brand-footer">
           <p class="portal-brand-footer-unit">
-            Bukidnon State University — Academic Mentoring Unit
+            Bukidnon State University &bull; Academic Mentoring Unit
           </p>
           <p class="portal-brand-footer-links">
             <a href="mailto:amu@buksu.edu.ph">amu@buksu.edu.ph</a>
-            <span aria-hidden="true"> · </span>
+            <span aria-hidden="true"> &bull; </span>
             <a
               href="https://www.facebook.com/buksuAMU"
               target="_blank"
@@ -132,7 +163,7 @@
           <p class="portal-footnote">
             Already have an account?
             <a href="/app/#signin">Sign in</a>
-            <span aria-hidden="true"> · </span>
+            <span aria-hidden="true"> &bull; </span>
             <a href="/landing/">Learn more</a>
           </p>
         </div>
@@ -140,9 +171,9 @@
     </main>
     <footer class="portal-page-footer" role="contentinfo">
       <p>
-        <strong>Bukidnon State University — Academic Mentoring Unit</strong><br />
-        Malaybalay City, Bukidnon ·
-        <a href="mailto:amu@buksu.edu.ph">amu@buksu.edu.ph</a> ·
+        <strong>Bukidnon State University &bull; Academic Mentoring Unit</strong><br />
+        Malaybalay City, Bukidnon &bull;&bull;
+        <a href="mailto:amu@buksu.edu.ph">amu@buksu.edu.ph</a> &bull;&bull;
         <a href="https://www.facebook.com/buksuAMU" target="_blank" rel="noopener noreferrer">Facebook</a>
       </p>
     </footer>

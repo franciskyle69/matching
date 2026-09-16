@@ -46,7 +46,27 @@ function delay(ms) {
     io.observe(hero);
   }
 
-  // Active section pill highlight
+  // Active section pill highlight & smooth sliding indicator
+  const track = document.getElementById("nav-pill-track");
+  const indicator = document.getElementById("nav-pill-indicator");
+
+  function updateNavIndicator() {
+    if (!track || !indicator) return;
+    const activeLink = track.querySelector(".nav-link-pill.is-active");
+    if (!activeLink) {
+      indicator.style.opacity = "0";
+      return;
+    }
+    const trackRect = track.getBoundingClientRect();
+    const linkRect = activeLink.getBoundingClientRect();
+    const left = linkRect.left - trackRect.left;
+    const width = linkRect.width;
+
+    indicator.style.opacity = "1";
+    indicator.style.transform = `translate3d(${Math.round(left)}px, 0, 0)`;
+    indicator.style.width = `${Math.round(width)}px`;
+  }
+
   const sections = ["hero", "features", "how", "footer-contact"]
     .map((id) => document.getElementById(id))
     .filter(Boolean);
@@ -62,12 +82,40 @@ function delay(ms) {
               const href = link.getAttribute("href") || "";
               link.classList.toggle("is-active", href === `#${id}`);
             });
+            updateNavIndicator();
           }
         });
       },
       { threshold: 0.35, rootMargin: "-80px 0px -40% 0px" },
     );
     sections.forEach((sec) => sectionObserver.observe(sec));
+
+    navLinks.forEach((link) => {
+      link.addEventListener("click", (e) => {
+        const href = link.getAttribute("href");
+        if (href && href.startsWith("#")) {
+          const target = document.querySelector(href);
+          if (target) {
+            e.preventDefault();
+            navLinks.forEach((l) => l.classList.remove("is-active"));
+            link.classList.add("is-active");
+            updateNavIndicator();
+            target.scrollIntoView({ behavior: "smooth", block: "start" });
+            if (window.history.pushState) {
+              window.history.pushState(null, "", href);
+            }
+          }
+        }
+      });
+    });
+
+    window.addEventListener("resize", updateNavIndicator, { passive: true });
+    if (document.fonts && document.fonts.ready) {
+      document.fonts.ready.then(updateNavIndicator);
+    }
+    requestAnimationFrame(updateNavIndicator);
+    window.setTimeout(updateNavIndicator, 60);
+    window.setTimeout(updateNavIndicator, 300);
   }
 })();
 
@@ -190,7 +238,7 @@ function delay(ms) {
       el.innerHTML = "";
       for (const seg of lines[lineIndex]) {
         const span = document.createElement("span");
-        if (seg.accent) span.className = "text-[#7dd3fc]";
+        span.className = seg.accent ? "hero-word-accent" : "hero-word-base";
         span.textContent = seg.text;
         el.appendChild(span);
       }
@@ -214,7 +262,7 @@ function delay(ms) {
 
       for (const seg of lines[lineIndex]) {
         const span = document.createElement("span");
-        if (seg.accent) span.className = "text-[#7dd3fc]";
+        span.className = seg.accent ? "hero-word-accent" : "hero-word-base";
         if (cursor.parentNode === container) container.removeChild(cursor);
         container.appendChild(span);
         for (let i = 0; i < seg.text.length; i++) {
@@ -391,4 +439,62 @@ if (closeMenu && navLinks) {
   ro.observe(stage);
   go(0);
   requestAnimationFrame(() => render());
+})();
+
+(function initLandingTheme() {
+  const landingToggle = document.getElementById("landing-theme-toggle");
+  const mobileToggle = document.getElementById("mobile-theme-toggle");
+  const mobileLabel = document.getElementById("mobile-theme-label");
+
+  function updateUi() {
+    const isDark = document.documentElement.getAttribute("data-theme") === "dark";
+    if (mobileLabel) {
+      mobileLabel.textContent = isDark ? "Switch to Light Mode" : "Switch to Dark Mode";
+    }
+  }
+
+  function toggleTheme() {
+    const isDark = document.documentElement.getAttribute("data-theme") === "dark";
+    const next = isDark ? "light" : "dark";
+    try {
+      localStorage.setItem("theme", next);
+    } catch (_) {}
+    try {
+      document.cookie = "theme=" + next + "; path=/; max-age=31536000; SameSite=Lax";
+    } catch (_) {}
+    document.documentElement.setAttribute("data-theme", next);
+    if (document.body) document.body.setAttribute("data-theme", next);
+    if (next === "dark") {
+      document.documentElement.classList.add("dark");
+      if (document.body) document.body.classList.add("dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+      if (document.body) document.body.classList.remove("dark");
+    }
+    updateUi();
+  }
+
+  updateUi();
+  if (landingToggle && !landingToggle.dataset.themeBound) {
+    landingToggle.dataset.themeBound = "1";
+    landingToggle.addEventListener("click", toggleTheme);
+  }
+  if (mobileToggle && !mobileToggle.dataset.themeBound) {
+    mobileToggle.dataset.themeBound = "1";
+    mobileToggle.addEventListener("click", toggleTheme);
+  }
+  window.addEventListener("storage", (e) => {
+    if (e.key === "theme" && (e.newValue === "dark" || e.newValue === "light")) {
+      document.documentElement.setAttribute("data-theme", e.newValue);
+      if (document.body) document.body.setAttribute("data-theme", e.newValue);
+      if (e.newValue === "dark") {
+        document.documentElement.classList.add("dark");
+        if (document.body) document.body.classList.add("dark");
+      } else {
+        document.documentElement.classList.remove("dark");
+        if (document.body) document.body.classList.remove("dark");
+      }
+      updateUi();
+    }
+  });
 })();

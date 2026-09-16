@@ -4,7 +4,7 @@
    ═══════════════════════════════════════════════════════════════════ */
 
 :root {
-  --neu-base: #ebf0f7;
+  --neu-base: #f5f5f7;
   --neu-light: #ffffff;
   --neu-dark: rgba(166, 180, 200, 0.55);
   --neu-dark-strong: rgba(150, 165, 185, 0.75);
@@ -24,6 +24,35 @@
   --portal-text-muted: #64748b;
   --portal-radius: 28px;
   --portal-font: "Plus Jakarta Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
+}
+
+html[data-theme="dark"], html.dark {
+  --neu-base: #12161f;
+  --neu-light: transparent;
+  --neu-dark: rgba(0, 0, 0, 0.75);
+  --neu-dark-strong: rgba(0, 0, 0, 0.9);
+  --neu-primary: #38bdf8;
+  --neu-primary-hover: #0ea5e9;
+
+  --neu-flat: 8px 8px 24px rgba(0, 0, 0, 0.72);
+  --neu-flat-lg: 14px 14px 36px rgba(0, 0, 0, 0.82);
+  --neu-flat-sm: 4px 4px 12px rgba(0, 0, 0, 0.65);
+  --neu-flat-xs: 3px 3px 8px rgba(0, 0, 0, 0.6);
+  --neu-pressed: inset 3px 3px 8px rgba(0, 0, 0, 0.8);
+  --neu-pressed-sm: inset 2px 2px 5px rgba(0, 0, 0, 0.75);
+  --neu-rim: 1px solid rgba(255, 255, 255, 0.08);
+
+  --portal-text-main: #f1f5f9;
+  --portal-text-sub: #cbd5e1;
+  --portal-text-muted: #94a3b8;
+  color-scheme: dark !important;
+}
+
+html[data-theme="dark"] .portal-page,
+html.dark .portal-page {
+  background-color: var(--neu-base);
+  color: var(--portal-text-main);
+  color-scheme: dark !important;
 }
 
 *,
@@ -103,6 +132,63 @@
 .portal-landing-back:active {
   box-shadow: var(--neu-pressed-sm);
   transform: translateY(1px);
+}
+
+.portal-theme-toggle {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px 10px 14px;
+  border-radius: 999px;
+  border: var(--neu-rim);
+  background: var(--neu-base);
+  color: var(--portal-text-main);
+  box-shadow: var(--neu-flat-xs);
+  font-size: 0.875rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  line-height: 1;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  user-select: none;
+}
+
+.portal-theme-toggle:hover {
+  color: var(--neu-primary);
+  box-shadow: var(--neu-flat-sm);
+  transform: translateY(-1.5px);
+}
+
+.portal-theme-toggle:active {
+  box-shadow: var(--neu-pressed-sm);
+  transform: translateY(1px);
+}
+
+.portal-theme-icon-sun,
+.portal-theme-icon-moon {
+  width: 16px;
+  height: 16px;
+  stroke: currentColor;
+  stroke-width: 2;
+  flex-shrink: 0;
+}
+
+html:not([data-theme="dark"]) .portal-theme-icon-sun { display: none; }
+html:not([data-theme="dark"]) .portal-theme-icon-moon { display: block; color: var(--neu-primary); }
+html[data-theme="dark"] .portal-theme-icon-sun { display: block; color: #f59e0b; }
+html[data-theme="dark"] .portal-theme-icon-moon { display: none; }
+
+@media (max-width: 640px) {
+  .portal-theme-toggle {
+    top: 12px;
+    right: 12px;
+    padding: 8px 14px 8px 10px;
+    font-size: 0.8125rem;
+  }
 }
 
 /* ── 3. Main Extruded Slab (Portal Card) ───────────────────────── */
@@ -424,7 +510,7 @@
   border-radius: 14px;
   background: var(--neu-base);
   box-shadow: var(--neu-pressed-sm);
-  border: 1px solid rgba(255, 255, 255, 0.7);
+  border: 1.5px solid rgba(255, 255, 255, 0.9);
 }
 
 .portal-role-icon svg {
@@ -542,6 +628,7 @@
   border: 1px solid rgba(255, 255, 255, 0.4);
   color: #ffffff;
   background: linear-gradient(145deg, #0ea5e9, #0284c7);
+  border: 1px solid rgba(255, 255, 255, 0.4);
   box-shadow:
     4px 4px 14px rgba(14, 165, 233, 0.4),
     3px 3px 8px var(--neu-dark),
@@ -633,4 +720,255 @@
   .portal-brand-footer {
     display: none;
   }
+}
+
+/* ── Dark Mode Comprehensive Neumorphism & Text Visibility ─── */
+html[data-theme="dark"] .portal-page,
+html.dark .portal-page {
+  background-color: #12161f !important;
+  color: #f1f5f9 !important;
+}
+
+/* Top Navigation Pills */
+html[data-theme="dark"] .portal-landing-back,
+html.dark .portal-landing-back {
+  background: #181b20 !important;
+  color: #f1f5f9 !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  box-shadow: 3px 3px 10px rgba(0, 0, 0, 0.65) !important;
+}
+
+html[data-theme="dark"] .portal-landing-back:hover,
+html.dark .portal-landing-back:hover {
+  color: #38bdf8 !important;
+  border-color: rgba(56, 189, 248, 0.4) !important;
+  box-shadow: 5px 5px 14px rgba(0, 0, 0, 0.75) !important;
+}
+
+html[data-theme="dark"] .portal-landing-back:active,
+html.dark .portal-landing-back:active {
+  box-shadow: inset 2px 2px 5px rgba(0, 0, 0, 0.75) !important;
+}
+
+html[data-theme="dark"] .portal-theme-toggle,
+html.dark .portal-theme-toggle {
+  background: #181b20 !important;
+  color: #f1f5f9 !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  box-shadow: 3px 3px 10px rgba(0, 0, 0, 0.65) !important;
+}
+
+html[data-theme="dark"] .portal-theme-toggle:hover,
+html.dark .portal-theme-toggle:hover {
+  color: #38bdf8 !important;
+  border-color: rgba(56, 189, 248, 0.4) !important;
+  box-shadow: 5px 5px 14px rgba(0, 0, 0, 0.75) !important;
+}
+
+html[data-theme="dark"] .portal-theme-toggle:active,
+html.dark .portal-theme-toggle:active {
+  box-shadow: inset 2px 2px 5px rgba(0, 0, 0, 0.75) !important;
+}
+
+/* Main Portal Card Slab */
+html[data-theme="dark"] .portal-card,
+html.dark .portal-card {
+  background: #181b20 !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  box-shadow: 12px 12px 34px rgba(0, 0, 0, 0.8) !important;
+}
+
+html[data-theme="dark"] .portal-panel--brand,
+html.dark .portal-panel--brand,
+html[data-theme="dark"] .portal-panel--actions,
+html.dark .portal-panel--actions {
+  background: #181b20 !important;
+}
+
+html[data-theme="dark"] .portal-divider,
+html.dark .portal-divider {
+  background: linear-gradient(180deg, transparent, rgba(255, 255, 255, 0.08) 20%, rgba(255, 255, 255, 0.08) 80%, transparent) !important;
+  box-shadow: none !important;
+}
+
+/* Brand Section Text Visibility */
+html[data-theme="dark"] .portal-brand-title-main .brand-peer,
+html.dark .portal-brand-title-main .brand-peer {
+  color: #f1f5f9 !important;
+}
+
+html[data-theme="dark"] .portal-brand-title-main .brand-link,
+html.dark .portal-brand-title-main .brand-link {
+  color: #38bdf8 !important;
+}
+
+html[data-theme="dark"] .portal-brand-subtitle-main,
+html.dark .portal-brand-subtitle-main {
+  color: #38bdf8 !important;
+}
+
+html[data-theme="dark"] .portal-brand-title,
+html.dark .portal-brand-title {
+  color: #f1f5f9 !important;
+  text-shadow: none !important;
+}
+
+html[data-theme="dark"] .portal-brand-text,
+html.dark .portal-brand-text {
+  color: #cbd5e1 !important;
+}
+
+/* Bullet Points - High Contrast */
+html[data-theme="dark"] .portal-brand-points,
+html.dark .portal-brand-points {
+  color: #cbd5e1 !important;
+}
+
+html[data-theme="dark"] .portal-brand-points li,
+html.dark .portal-brand-points li {
+  color: #cbd5e1 !important;
+  font-weight: 500 !important;
+}
+
+html[data-theme="dark"] .portal-brand-points li::before,
+html.dark .portal-brand-points li::before {
+  background: linear-gradient(135deg, #38bdf8, #0284c7) !important;
+  box-shadow: 0 0 8px rgba(56, 189, 248, 0.45) !important;
+}
+
+html[data-theme="dark"] .portal-brand-footer-unit,
+html.dark .portal-brand-footer-unit {
+  color: #f1f5f9 !important;
+}
+
+html[data-theme="dark"] .portal-brand-footer,
+html.dark .portal-brand-footer {
+  color: #94a3b8 !important;
+}
+
+html[data-theme="dark"] .portal-brand-footer-links a,
+html.dark .portal-brand-footer-links a {
+  color: #38bdf8 !important;
+}
+
+/* Actions Section Text Visibility */
+html[data-theme="dark"] .portal-kicker,
+html.dark .portal-kicker {
+  color: #38bdf8 !important;
+}
+
+html[data-theme="dark"] .portal-step-title,
+html.dark .portal-step-title {
+  color: #f1f5f9 !important;
+}
+
+html[data-theme="dark"] .portal-step-sub,
+html.dark .portal-step-sub {
+  color: #cbd5e1 !important;
+}
+
+/* Neumorphic Extruded Role Cards */
+html[data-theme="dark"] .portal-role-card,
+html.dark .portal-role-card {
+  background: #151922 !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  box-shadow: 4px 4px 12px rgba(0, 0, 0, 0.65) !important;
+}
+
+html[data-theme="dark"] .portal-role-card:hover,
+html.dark .portal-role-card:hover {
+  transform: translateY(-2px) !important;
+  border-color: rgba(56, 189, 248, 0.45) !important;
+  box-shadow: 6px 6px 18px rgba(0, 0, 0, 0.8), 0 0 14px rgba(56, 189, 248, 0.16) !important;
+}
+
+html[data-theme="dark"] .portal-role-card:active,
+html.dark .portal-role-card:active {
+  transform: translateY(1px) !important;
+  box-shadow: inset 2px 2px 6px rgba(0, 0, 0, 0.8) !important;
+}
+
+html[data-theme="dark"] .portal-role-name,
+html.dark .portal-role-name {
+  color: #f1f5f9 !important;
+}
+
+html[data-theme="dark"] .portal-role-desc,
+html.dark .portal-role-desc {
+  color: #94a3b8 !important;
+}
+
+/* Sunken Recessed Role Icon Wells */
+html[data-theme="dark"] .portal-role-icon,
+html.dark .portal-role-icon {
+  background: #10131a !important;
+  border: 1px solid rgba(255, 255, 255, 0.06) !important;
+  box-shadow: inset 2px 2px 5px rgba(0, 0, 0, 0.75) !important;
+}
+
+html[data-theme="dark"] .portal-role-card--staff .portal-role-icon,
+html.dark .portal-role-card--staff .portal-role-icon {
+  color: #fbbf24 !important;
+}
+
+html[data-theme="dark"] .portal-role-card--mentor .portal-role-icon,
+html.dark .portal-role-card--mentor .portal-role-icon {
+  color: #38bdf8 !important;
+}
+
+html[data-theme="dark"] .portal-role-card--mentee .portal-role-icon,
+html.dark .portal-role-card--mentee .portal-role-icon {
+  color: #4ade80 !important;
+}
+
+/* Footnotes & Bottom Page Footer */
+html[data-theme="dark"] .portal-footnote,
+html.dark .portal-footnote {
+  color: #94a3b8 !important;
+}
+
+html[data-theme="dark"] .portal-footnote a,
+html.dark .portal-footnote a {
+  color: #38bdf8 !important;
+}
+
+html[data-theme="dark"] .portal-page-footer,
+html.dark .portal-page-footer {
+  color: #94a3b8 !important;
+}
+
+html[data-theme="dark"] .portal-page-footer strong,
+html.dark .portal-page-footer strong {
+  color: #f1f5f9 !important;
+}
+
+html[data-theme="dark"] .portal-page-footer a,
+html.dark .portal-page-footer a {
+  color: #38bdf8 !important;
+}
+
+/* Secondary & Back Buttons in Step 2 */
+html[data-theme="dark"] .portal-back-btn,
+html.dark .portal-back-btn,
+html[data-theme="dark"] .portal-btn--secondary,
+html.dark .portal-btn--secondary {
+  background: #181b20 !important;
+  color: #f1f5f9 !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  box-shadow: 3px 3px 10px rgba(0, 0, 0, 0.65) !important;
+}
+
+html[data-theme="dark"] .portal-btn--primary,
+html.dark .portal-btn--primary {
+  background: #1d4ed8 !important;
+  color: #ffffff !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.65) !important;
+}
+
+html[data-theme="dark"] .portal-btn--primary:hover,
+html.dark .portal-btn--primary:hover {
+  background: #2563eb !important;
+  color: #ffffff !important;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.8) !important;
 }

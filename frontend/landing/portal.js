@@ -66,4 +66,48 @@
       window.location.href = authHref("signup", role.authRole);
     });
   });
+
+  (function initPortalTheme() {
+    const toggle = document.getElementById("portal-theme-toggle");
+    const label = document.getElementById("portal-theme-label");
+
+    function updateLabel() {
+      const isDark = document.documentElement.getAttribute("data-theme") === "dark";
+      if (label) label.textContent = isDark ? "Light" : "Dark";
+    }
+    updateLabel();
+
+    function applyTheme(next) {
+      try {
+        localStorage.setItem("theme", next);
+      } catch (_) {}
+      try {
+        document.cookie = "theme=" + next + "; path=/; max-age=31536000; SameSite=Lax";
+      } catch (_) {}
+      document.documentElement.setAttribute("data-theme", next);
+      if (document.body) document.body.setAttribute("data-theme", next);
+      if (next === "dark") {
+        document.documentElement.classList.add("dark");
+        if (document.body) document.body.classList.add("dark");
+      } else {
+        document.documentElement.classList.remove("dark");
+        if (document.body) document.body.classList.remove("dark");
+      }
+      updateLabel();
+    }
+
+    if (toggle) {
+      toggle.addEventListener("click", () => {
+        const isDark = document.documentElement.getAttribute("data-theme") === "dark";
+        const next = isDark ? "light" : "dark";
+        applyTheme(next);
+      });
+    }
+
+    window.addEventListener("storage", (e) => {
+      if (e.key === "theme" && (e.newValue === "dark" || e.newValue === "light")) {
+        applyTheme(e.newValue);
+      }
+    });
+  })();
 })();
