@@ -186,8 +186,8 @@
   grid-template-columns: auto minmax(0, 1fr) auto !important;
   gap: 18px !important;
   align-items: start !important;
-  background: var(--neu-base, #f5f5f7) !important;
-  border: 1px solid rgba(226, 232, 240, 0.9) !important;
+  background: #ffffff !important;
+  border: 1px solid rgba(203, 213, 225, 0.85) !important;
   border-radius: 20px !important;
   padding: 20px 24px !important;
   box-shadow: 6px 6px 16px rgba(166, 180, 200, 0.35), -6px -6px 16px var(--neu-light, #ffffff) !important;
@@ -196,7 +196,7 @@
 }
 
 .notifications-page .notification-card:hover {
-  border-color: rgba(2, 132, 199, 0.35) !important;
+  border-color: rgba(148, 163, 184, 0.95) !important;
   transform: translateY(-2px) !important;
   box-shadow: 8px 8px 22px rgba(166, 180, 200, 0.45), -8px -8px 22px var(--neu-light, #ffffff) !important;
 }

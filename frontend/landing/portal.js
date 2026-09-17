@@ -54,6 +54,12 @@
       const role = ROLES[key];
       if (!role) return;
 
+      const currentTheme = document.documentElement.getAttribute("data-theme") || "dark";
+      try {
+        localStorage.setItem("theme", currentTheme);
+        document.cookie = "theme=" + currentTheme + "; path=/; max-age=31536000; SameSite=Lax";
+      } catch (_) {}
+
       // Staff accounts are not created here — go straight to sign-in.
       if (role.signinOnly) {
         clearPortalRole();
@@ -71,11 +77,24 @@
     const toggle = document.getElementById("portal-theme-toggle");
     const label = document.getElementById("portal-theme-label");
 
+    function getTheme() {
+      let t = document.documentElement.getAttribute("data-theme");
+      if (!t) {
+        try { t = localStorage.getItem("theme"); } catch (_) {}
+      }
+      if (!t) {
+        try {
+          var match = document.cookie.match(/(?:^|; )theme=([^;]*)/);
+          if (match) t = decodeURIComponent(match[1]);
+        } catch (_) {}
+      }
+      return t === "light" ? "light" : "dark";
+    }
+
     function updateLabel() {
       const isDark = document.documentElement.getAttribute("data-theme") === "dark";
       if (label) label.textContent = isDark ? "Light" : "Dark";
     }
-    updateLabel();
 
     function applyTheme(next) {
       try {
@@ -109,5 +128,7 @@
         applyTheme(e.newValue);
       }
     });
+
+    applyTheme(getTheme());
   })();
 })();

@@ -5,6 +5,7 @@
 
 :root {
   --neu-base: #f5f5f7;
+  --neu-card-bg: #ffffff;
   --neu-light: #ffffff;
   --neu-dark: rgba(166, 180, 200, 0.55);
   --neu-dark-strong: rgba(150, 165, 185, 0.75);
@@ -17,7 +18,7 @@
   --neu-flat-xs: 3px 3px 8px var(--neu-dark), -3px -3px 8px var(--neu-light);
   --neu-pressed: inset 3px 3px 7px var(--neu-dark), inset -3px -3px 7px var(--neu-light);
   --neu-pressed-sm: inset 2px 2px 5px var(--neu-dark), inset -2px -2px 5px var(--neu-light);
-  --neu-rim: 1px solid rgba(255, 255, 255, 0.85);
+  --neu-rim: 1px solid rgba(203, 213, 225, 0.85);
 
   --portal-text-main: #0f172a;
   --portal-text-sub: #475569;
@@ -28,6 +29,7 @@
 
 html[data-theme="dark"], html.dark {
   --neu-base: #12161f;
+  --neu-card-bg: #181b20;
   --neu-light: transparent;
   --neu-dark: rgba(0, 0, 0, 0.75);
   --neu-dark-strong: rgba(0, 0, 0, 0.9);
@@ -202,9 +204,9 @@ html[data-theme="dark"] .portal-theme-icon-moon { display: none; }
   flex-shrink: 0;
   display: grid;
   grid-template-columns: 1fr 1px 1fr;
-  background: var(--neu-base);
+  background: var(--neu-card-bg);
   border-radius: var(--portal-radius);
-  border: 1.5px solid rgba(255, 255, 255, 0.9);
+  border: var(--neu-rim);
   box-shadow: var(--neu-flat-lg);
   overflow: hidden;
   animation: portal-scale-in 0.34s cubic-bezier(0.16, 1, 0.3, 1) backwards;
@@ -471,7 +473,7 @@ html[data-theme="dark"] .portal-theme-icon-moon { display: none; }
   padding: 16px 18px;
   border-radius: 18px;
   border: var(--neu-rim);
-  background: var(--neu-base);
+  background: var(--neu-card-bg);
   color: #0f172a;
   font-family: inherit;
   text-align: left;

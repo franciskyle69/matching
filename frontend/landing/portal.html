@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>PeerLink &mdash; Choose your role</title>
     <link rel="icon" href="/static/assets/logo.png" type="image/png" />
-    <link rel="stylesheet" href="/static/portal.css?v=159" />
+    <link rel="stylesheet" href="/static/portal.css?v=160" />
     <script>
       (function() {
         try {
@@ -14,8 +14,7 @@
             var match = document.cookie.match(/(?:^|; )theme=([^;]*)/);
             if (match) saved = decodeURIComponent(match[1]);
           }
-          var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-          var theme = saved === 'dark' || (!saved && prefersDark) ? 'dark' : 'light';
+          var theme = saved === 'light' ? 'light' : 'dark';
           document.documentElement.setAttribute('data-theme', theme);
           if (theme === 'dark') {
             document.documentElement.classList.add('dark');
@@ -24,7 +23,16 @@
             document.documentElement.classList.remove('dark');
             if (document.body) document.body.classList.remove('dark');
           }
-        } catch (_) {}
+          if (!saved) {
+            try {
+              localStorage.setItem('theme', theme);
+              document.cookie = 'theme=' + theme + '; path=/; max-age=31536000; SameSite=Lax';
+            } catch (_) {}
+          }
+        } catch (_) {
+          document.documentElement.setAttribute('data-theme', 'dark');
+          document.documentElement.classList.add('dark');
+        }
       })();
     </script>
   </head>
@@ -177,6 +185,6 @@
         <a href="https://www.facebook.com/buksuAMU" target="_blank" rel="noopener noreferrer">Facebook</a>
       </p>
     </footer>
-    <script src="/static/portal.js?v=5" nonce="__CSP_NONCE__"></script>
+    <script src="/static/portal.js?v=6" nonce="__CSP_NONCE__"></script>
   </body>
 </html>

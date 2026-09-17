@@ -5,6 +5,7 @@
 
 :root {
   --neu-base: #f5f5f7;
+  --neu-card-bg: #ffffff;
   --neu-light: #ffffff;
   --neu-dark: rgba(166, 180, 200, 0.55);
   --neu-dark-strong: rgba(150, 165, 185, 0.75);
@@ -17,12 +18,13 @@
   --neu-flat-xs: 3px 3px 8px var(--neu-dark), -3px -3px 8px var(--neu-light);
   --neu-pressed: inset 3px 3px 7px var(--neu-dark), inset -3px -3px 7px var(--neu-light);
   --neu-pressed-sm: inset 2px 2px 5px var(--neu-dark), inset -2px -2px 5px var(--neu-light);
-  --neu-rim: 1px solid rgba(255, 255, 255, 0.85);
+  --neu-rim: 1px solid rgba(203, 213, 225, 0.85);
 }
 
 html[data-theme="dark"],
 html.dark {
   --neu-base: #12161f;
+  --neu-card-bg: #181b20;
   --neu-light: rgba(255, 255, 255, 0.05);
   --neu-dark: rgba(0, 0, 0, 0.7);
   --neu-dark-strong: rgba(0, 0, 0, 0.88);
@@ -290,25 +292,60 @@ html[data-theme="dark"] .landing-theme-icon-moon { display: none !important; }
   border: var(--neu-rim) !important;
 }
 
-/* ── 3. Hero Section ───────────────────────────────────────────── */
+/* ── 3. Hero Section & Soft Light Blue Motion ───────────────────── */
 
 #hero {
   background: var(--neu-base) !important;
+  position: relative !important;
+  overflow: hidden !important;
 }
 
 .hero-space-bg {
   background-color: var(--neu-base) !important;
   background-image: none !important;
+  position: absolute !important;
+  inset: 0 !important;
+  overflow: hidden !important;
+  will-change: transform !important;
 }
 
-.hero-space-bg::before,
+/* Soft Light Blue Atmospheric Motion — Layer 1: Drifting Fluid Clouds */
 .hero-space-bg::after {
-  opacity: 0.18 !important;
+  content: "" !important;
+  position: absolute !important;
+  inset: -25% !important;
+  background:
+    radial-gradient(ellipse 70% 55% at 30% 25%, rgba(186, 230, 253, 0.75), transparent 62%),
+    radial-gradient(ellipse 65% 50% at 72% 38%, rgba(125, 211, 252, 0.55), transparent 60%),
+    radial-gradient(circle at 50% 75%, rgba(224, 242, 254, 0.85), transparent 55%) !important;
+  filter: blur(45px) !important;
+  opacity: 0.88 !important;
   mix-blend-mode: normal !important;
+  transform: translate3d(0, 0, 0) !important;
+  animation: hero-glow-drift 10s ease-in-out infinite !important;
+  pointer-events: none !important;
 }
 
+/* Soft Light Blue Atmospheric Motion — Layer 2: Orbital Rotating Light Halo */
+.hero-space-bg::before {
+  content: "" !important;
+  position: absolute !important;
+  inset: -15% !important;
+  background:
+    radial-gradient(circle at 22% 26%, rgba(224, 242, 254, 0.9), transparent 45%),
+    radial-gradient(circle at 76% 22%, rgba(186, 230, 253, 0.7), transparent 50%),
+    radial-gradient(circle at 50% 68%, rgba(56, 189, 248, 0.38), transparent 56%) !important;
+  filter: blur(40px) !important;
+  opacity: 0.82 !important;
+  mix-blend-mode: normal !important;
+  animation: hero-orbital 16s linear infinite !important;
+  pointer-events: none !important;
+}
+
+/* Overhead Soft Light Blue Bloom */
 #hero .pointer-events-none.absolute {
-  opacity: 0.15 !important;
+  background: radial-gradient(ellipse 115% 75% at 50% -12%, rgba(186, 230, 253, 0.65), rgba(224, 242, 254, 0.4) 45%, transparent 70%) !important;
+  opacity: 1 !important;
 }
 
 #hero-headline,
@@ -332,18 +369,27 @@ html[data-theme="dark"] .landing-theme-icon-moon { display: none !important; }
   text-shadow: none !important;
 }
 
-/* Hero CTA Button (Extruded Tactile Button) */
+/* Hero CTA Button (Extruded Tactile Button with Soft Light Blue Pulse Aura) */
 .hero-cta-pulse {
   background: #0284c7 !important;
   color: #ffffff !important;
   border: 1px solid rgba(255, 255, 255, 0.25) !important;
   box-shadow: 0 4px 14px rgba(2, 132, 199, 0.28), 0 2px 6px rgba(15, 23, 42, 0.08) !important;
   transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  position: relative !important;
 }
 
 .hero-cta-pulse::after {
-  display: none !important;
-  animation: none !important;
+  content: "" !important;
+  display: block !important;
+  position: absolute !important;
+  inset: -6px !important;
+  border-radius: inherit !important;
+  border: 1.5px solid rgba(56, 189, 248, 0.45) !important;
+  box-shadow: 0 0 16px rgba(186, 230, 253, 0.65) !important;
+  opacity: 0 !important;
+  animation: hero-cta-ring 2.4s ease-out infinite !important;
+  pointer-events: none !important;
 }
 
 .hero-cta-pulse:hover {
@@ -398,7 +444,7 @@ html[data-theme="dark"] .landing-theme-icon-moon { display: none !important; }
 
 /* Extruded Plastic Feature Cards */
 article.card-hover-lift {
-  background: var(--neu-base) !important;
+  background: var(--neu-card-bg, #ffffff) !important;
   border: var(--neu-rim) !important;
   border-radius: 24px !important;
   box-shadow: var(--neu-flat) !important;
@@ -422,9 +468,9 @@ article.card-hover-lift::after {
 article.card-hover-lift span.mb-4,
 article.card-hover-lift .feature-card-icon,
 .feature-card-icon {
-  background: var(--neu-base) !important;
-  box-shadow: var(--neu-pressed-sm) !important;
-  border: 1px solid rgba(255, 255, 255, 0.7) !important;
+  background: #f8fafc !important;
+  box-shadow: inset 1px 1px 3px rgba(166, 180, 200, 0.35), inset -1px -1px 3px #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
   color: #0284c7 !important;
 }
 
@@ -1189,6 +1235,41 @@ html[data-theme="dark"] .hero-cta-pulse::after,
 html.dark .hero-cta-pulse::after {
   display: none !important;
   animation: none !important;
+}
+
+html[data-theme="dark"] .hero-space-bg,
+html.dark .hero-space-bg {
+  background-color: #090e17 !important;
+  background-image: url("/static/assets/hero-space-bg.png") !important;
+}
+
+html[data-theme="dark"] .hero-space-bg::after,
+html.dark .hero-space-bg::after {
+  background:
+    radial-gradient(circle at 30% 20%, rgba(56, 189, 248, 0.35), transparent 58%),
+    radial-gradient(circle at 70% 45%, rgba(14, 165, 233, 0.28), transparent 52%),
+    radial-gradient(circle at 55% 80%, rgba(2, 132, 199, 0.20), transparent 56%) !important;
+  filter: blur(22px) !important;
+  opacity: 0.7 !important;
+  mix-blend-mode: screen !important;
+  animation: hero-glow-drift 8.5s ease-in-out infinite !important;
+}
+
+html[data-theme="dark"] .hero-space-bg::before,
+html.dark .hero-space-bg::before {
+  background:
+    radial-gradient(circle at 18% 22%, rgba(255, 255, 255, 0.2), transparent 30%),
+    radial-gradient(circle at 78% 20%, rgba(56, 189, 248, 0.28), transparent 38%),
+    radial-gradient(circle at 52% 72%, rgba(14, 165, 233, 0.24), transparent 42%) !important;
+  opacity: 0.78 !important;
+  mix-blend-mode: screen !important;
+  animation: hero-orbital 13s linear infinite !important;
+}
+
+html[data-theme="dark"] #hero .pointer-events-none.absolute,
+html.dark #hero .pointer-events-none.absolute {
+  background: radial-gradient(ellipse 120% 80% at 50% -20%, rgba(14, 165, 233, 0.25), transparent 55%) !important;
+  opacity: 0.7 !important;
 }
 
 /* Section specific overrides */

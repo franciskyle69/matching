@@ -582,22 +582,22 @@
 
 [data-theme="light"] .profile-matching-card {
   --card-bg: #ffffff;
-  --card-border: 1px solid #e4e4e7;
-  --card-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  --card-border: 1px solid rgba(203, 213, 225, 0.85);
+  --card-shadow: 4px 6px 20px rgba(148, 163, 184, 0.22);
   --subcard-bg: #f8fafc;
   --subcard-border: 1px solid #e2e8f0;
   --text-primary: #0f172a;
   --text-secondary: #475569;
   --text-muted: #94a3b8;
-  --accent-primary: #0ea5e9;
+  --accent-primary: #0284c7;
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
 }
 
 [data-theme="light"] .profile-matching-card:hover {
   transform: translateY(-2px);
-  border-color: var(--accent-primary);
-  box-shadow: 0 10px 24px -12px rgba(14, 165, 233, 0.25);
+  border-color: #cbd5e1;
+  box-shadow: 6px 12px 24px rgba(148, 163, 184, 0.32);
 }
 
 [data-theme="light"] .pmc-role {
@@ -696,12 +696,12 @@
    ═══════════════════════════════════════════════════════════════════ */
 
 .pmc-card--hero {
-  padding: 26px 30px;
+  padding: 24px 28px;
   gap: 16px;
-  border-radius: 26px;
-  background: var(--neu-base, #ebf0f7);
-  border: 1.5px solid rgba(255, 255, 255, 0.95);
-  box-shadow: 10px 10px 26px rgba(166, 180, 200, 0.6), -10px -10px 26px #ffffff;
+  border-radius: 22px;
+  background: #ffffff;
+  border: 1px solid rgba(203, 213, 225, 0.85);
+  box-shadow: 4px 6px 20px rgba(148, 163, 184, 0.25), -3px -3px 10px #ffffff;
 }
 
 .pmc-card--hero .pmc-avatar {

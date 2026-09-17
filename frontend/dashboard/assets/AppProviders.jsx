@@ -278,11 +278,7 @@
           if (cTheme === "dark" || cTheme === "light") return cTheme;
         }
       } catch {}
-      const prefersDark =
-        typeof window !== "undefined" &&
-        window.matchMedia &&
-        window.matchMedia("(prefers-color-scheme: dark)").matches;
-      return prefersDark ? "dark" : "light";
+      return "dark";
     });
 
     function toggleTheme() {
