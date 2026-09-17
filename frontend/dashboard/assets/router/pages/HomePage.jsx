@@ -1549,7 +1549,7 @@ import HourglassEmptyOutlined from "@mui/icons-material/HourglassEmptyOutlined";
         </div>
 
         <div className="home-dashboard-grid">
-          <section className="dashboard-card home-staff-management-card">
+          <section className="dashboard-card kasandigan-card home-staff-management-card">
             <div className="mentee-card-head">
               <h2>Administration shortcuts</h2>
             </div>

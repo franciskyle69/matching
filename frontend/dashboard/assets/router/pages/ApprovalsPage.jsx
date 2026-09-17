@@ -180,13 +180,21 @@
     );
   }
 
-  function DetailChip({ label, value }) {
+  function DetailChip({ label, value, fullWidth = false }) {
     if (value == null || value === "") return null;
-    const text = Array.isArray(value) ? value.join(", ") : String(value);
+    const isArray = Array.isArray(value);
     return (
-      <div className="approval-detail-chip">
+      <div className={`approval-detail-chip ${fullWidth ? "approval-detail-chip--full" : ""}`}>
         <span className="approval-detail-chip-label">{label}</span>
-        <span className="approval-detail-chip-value">{text}</span>
+        {isArray ? (
+          <div className="approval-detail-tags">
+            {value.map((item, idx) => (
+              <span key={idx} className="approval-detail-subtag">{String(item)}</span>
+            ))}
+          </div>
+        ) : (
+          <span className="approval-detail-chip-value">{String(value)}</span>
+        )}
       </div>
     );
   }
@@ -322,7 +330,7 @@
 
         {expanded && (
           <div
-            className="approval-row-secondary"
+            className={`approval-row-secondary ${!((m?.verification_documents && m.verification_documents.length) || m?.verification_document_url) ? "approval-row-secondary--no-docs" : ""}`}
             onClick={(e) => e.stopPropagation()}
           >
             <VerificationDocumentsBlock profile={m} onPreview={onPreview} />
@@ -348,7 +356,7 @@
                   />
                 ) : null}
                 {type === "mentor" && (
-                  <DetailChip label="Expertise" value={m.expertise_level} />
+                  <DetailChip label="Expertise" value={m.expertise_level ? `Level ${m.expertise_level} / 5` : null} />
                 )}
                 {type === "mentee" && (
                   <DetailChip label="Campus" value={m.campus} />
@@ -365,12 +373,14 @@
                 <DetailChip
                   label="Subjects"
                   value={m.subjects?.length ? m.subjects : null}
+                  fullWidth
                 />
                 <DetailChip
                   label="Competencies"
                   value={m.topics?.length ? m.topics : null}
+                  fullWidth
                 />
-                <DetailChip label="Interests" value={m.interests} />
+                <DetailChip label="Interests" value={m.interests} fullWidth />
               </div>
             </div>
           </div>

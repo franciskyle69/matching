@@ -102,6 +102,7 @@ import Tabs from "@mui/material/Tabs";
     onDirtyChange,
     registerActions,
     onDraftChange,
+    addToast,
   }) {
     const [bioText, setBioText] = useState(bio);
     const [bioSaving, setBioSaving] = useState(false);
@@ -163,8 +164,8 @@ import Tabs from "@mui/material/Tabs";
       }
     }
 
-    function addTag(name) {
-      const trimmed = name.trim();
+    function addTag(tagName) {
+      const trimmed = tagName.trim();
       if (!trimmed) return;
       if (localTags.length >= MAX_TAGS) {
         setTagError("Maximum " + MAX_TAGS + " tags allowed.");
@@ -194,12 +195,24 @@ import Tabs from "@mui/material/Tabs";
     }
 
     async function saveBio() {
+      if (!bioChanged) {
+        if (typeof addToast === "function") {
+          addToast("Bio is already up to date.", "info");
+        }
+        return;
+      }
       setBioSaving(true);
       await onBioSave(bioText);
       setBioSaving(false);
     }
 
     async function saveTags() {
+      if (!tagsChanged) {
+        if (typeof addToast === "function") {
+          addToast("Interests are already up to date.", "info");
+        }
+        return;
+      }
       setTagsSaving(true);
       await onTagsSave(localTags);
       setTagsSaving(false);
@@ -283,15 +296,14 @@ import Tabs from "@mui/material/Tabs";
               </div>
               <button
                 type="button"
-                className="btn small"
+                className={`btn small ${bioChanged ? "btn-primary" : "secondary"}`}
                 onClick={saveBio}
-                disabled={bioSaving || !bioChanged}
+                disabled={bioSaving}
+                title={bioChanged ? "Save bio changes" : "Bio is up to date"}
               >
                 {bioSaving
                   ? "Saving\u2026"
-                  : bioChanged
-                    ? "Save bio"
-                    : "No changes"}
+                  : "Save bio"}
               </button>
             </div>
           </div>
@@ -360,15 +372,14 @@ import Tabs from "@mui/material/Tabs";
           <div className="settings-tags-toolbar">
             <button
               type="button"
-              className="btn small"
+              className={`btn small ${tagsChanged ? "btn-primary" : "secondary"}`}
               onClick={saveTags}
-              disabled={tagsSaving || !tagsChanged}
+              disabled={tagsSaving}
+              title={tagsChanged ? "Save interests changes" : "Interests are up to date"}
             >
               {tagsSaving
                 ? "Saving\u2026"
-                : tagsChanged
-                  ? "Save interests"
-                  : "No changes"}
+                : "Save interests"}
             </button>
           </div>
         </div>
@@ -1042,6 +1053,7 @@ import Tabs from "@mui/material/Tabs";
               registerActions={(actions) => {
                 bioActionsRef.current = actions;
               }}
+              addToast={addToast}
             />
           </div>
         )}

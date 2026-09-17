@@ -1164,14 +1164,14 @@ import GroupsOutlined from "@mui/icons-material/GroupsOutlined";
                     <button
                       type="button"
                       className="btn secondary small"
-                      onClick={() => setActiveTab("settings")}
+                      onClick={() => setActiveTab("mentoring-preferences")}
                     >
                       Adjust availability
                     </button>
                     <button
                       type="button"
                       className="btn secondary small"
-                      onClick={() => setActiveTab("settings")}
+                      onClick={() => setActiveTab("mentoring-preferences")}
                     >
                       Select more subjects
                     </button>

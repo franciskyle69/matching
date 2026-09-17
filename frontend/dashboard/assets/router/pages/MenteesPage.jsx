@@ -47,6 +47,9 @@ import RefreshOutlined from "@mui/icons-material/RefreshOutlined";
       loadMentorRequests,
       setActiveTab,
       loadUserProfile,
+      acceptMentee,
+      acceptMenteeLoading,
+      mentorProfile,
     } = ctx;
 
     if (!user || user.role !== "mentor") {
@@ -69,6 +72,9 @@ import RefreshOutlined from "@mui/icons-material/RefreshOutlined";
       () => (mentorRequests || []).filter((r) => !r.accepted),
       [mentorRequests]
     );
+
+    const mentorCapacity = mentorProfile?.capacity ?? mentorProfile?.max_mentees ?? 5;
+    const capacityFull = mentorCapacity > 0 && accepted.length >= mentorCapacity;
 
     const filtered = useMemo(() => {
       let list = mentorRequests || [];
@@ -347,6 +353,26 @@ import RefreshOutlined from "@mui/icons-material/RefreshOutlined";
                       >
                         <PersonOutline fontSize="inherit" />
                         <span>View profile</span>
+                      </button>
+                    )}
+                    {!request.accepted && typeof acceptMentee === "function" && (
+                      <button
+                        type="button"
+                        className="btn kasandigan-btn-primary small"
+                        disabled={
+                          acceptMenteeLoading === (request.mentee_id || request.mentee_user_id) ||
+                          capacityFull
+                        }
+                        onClick={() => acceptMentee(request.mentee_id || request.mentee_user_id)}
+                      >
+                        <CheckCircleOutline fontSize="inherit" />
+                        <span>
+                          {acceptMenteeLoading === (request.mentee_id || request.mentee_user_id)
+                            ? "Accepting..."
+                            : capacityFull
+                              ? "Capacity reached"
+                              : "Accept Match"}
+                        </span>
                       </button>
                     )}
                     {request.accepted && (

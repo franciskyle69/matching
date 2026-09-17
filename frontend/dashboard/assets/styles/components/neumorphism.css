@@ -52,6 +52,7 @@ html[data-theme="dark"],
 [data-theme="dark"],
 .dark {
   --neu-base: #181b20;
+  --neu-card-bg: #181b20;
   --neu-light: rgba(255, 255, 255, 0.07);
   --neu-dark: rgba(0, 0, 0, 0.7);
   --neu-dark-strong: rgba(0, 0, 0, 0.85);
@@ -278,8 +279,10 @@ html:not([data-theme="dark"]) .newsfeed-header,
 /* ── 4b. System Distribution & Analytics Components (Soft UI) ────── */
 
 html[data-theme="light"] .home-analytics-card,
-body:not(.dark):not([data-theme="dark"]) .home-analytics-card {
-  background: var(--neu-base) !important;
+body:not(.dark):not([data-theme="dark"]) .home-analytics-card,
+html[data-theme="light"] .home-staff-management-card,
+body:not(.dark):not([data-theme="dark"]) .home-staff-management-card {
+  background: var(--neu-card-bg, #ffffff) !important;
   border-radius: 26px !important;
   box-shadow: 11px 11px 26px var(--neu-dark-strong), -11px -11px 26px var(--neu-light) !important;
   border: 1px solid rgba(255, 255, 255, 0.60) !important;
@@ -292,10 +295,24 @@ body:not(.dark):not([data-theme="dark"]) .home-analytics-card {
 }
 
 html[data-theme="light"] .home-analytics-card:hover,
-body:not(.dark):not([data-theme="dark"]) .home-analytics-card:hover {
+body:not(.dark):not([data-theme="dark"]) .home-analytics-card:hover,
+html[data-theme="light"] .home-staff-management-card:hover,
+body:not(.dark):not([data-theme="dark"]) .home-staff-management-card:hover {
   transform: translateY(-4px) !important;
   box-shadow: 11px 11px 24px var(--neu-dark-strong), -11px -11px 24px var(--neu-light) !important;
   border-color: rgba(255, 255, 255, 0.8) !important;
+}
+
+html[data-theme="light"] .home-staff-management-card h2,
+body:not(.dark):not([data-theme="dark"]) .home-staff-management-card h2 {
+  color: #0f2b48 !important;
+  font-weight: 800 !important;
+  letter-spacing: -0.02em !important;
+}
+
+html[data-theme="light"] .home-staff-management-card .mentee-muted,
+body:not(.dark):not([data-theme="dark"]) .home-staff-management-card .mentee-muted {
+  color: #476282 !important;
 }
 
 /* Header icon pod: Sunken molded well */
@@ -483,7 +500,10 @@ html[data-theme="light"] .home-analytics-summary-divider {
 /* ── Home Analytics / System Distribution Dark Mode (Soft Neumorphic Obsidian) ──── */
 html[data-theme="dark"] .home-analytics-card,
 [data-theme="dark"] .home-analytics-card,
-.dark .home-analytics-card {
+.dark .home-analytics-card,
+html[data-theme="dark"] .home-staff-management-card,
+[data-theme="dark"] .home-staff-management-card,
+.dark .home-staff-management-card {
   background: #181b20 !important;
   border-radius: 26px !important;
   border: 1.5px solid rgba(255, 255, 255, 0.08) !important;
@@ -498,10 +518,63 @@ html[data-theme="dark"] .home-analytics-card,
 
 html[data-theme="dark"] .home-analytics-card:hover,
 [data-theme="dark"] .home-analytics-card:hover,
-.dark .home-analytics-card:hover {
+.dark .home-analytics-card:hover,
+html[data-theme="dark"] .home-staff-management-card:hover,
+[data-theme="dark"] .home-staff-management-card:hover,
+.dark .home-staff-management-card:hover {
   transform: translateY(-4px) !important;
   box-shadow: 12px 12px 30px rgba(0, 0, 0, 0.85), -6px -6px 18px rgba(255, 255, 255, 0.03) !important;
   border-color: rgba(56, 189, 248, 0.4) !important;
+}
+
+html[data-theme="dark"] .home-staff-management-card h2,
+[data-theme="dark"] .home-staff-management-card h2,
+.dark .home-staff-management-card h2,
+html[data-theme="dark"] .home-staff-management-card .mentee-card-head h2,
+[data-theme="dark"] .home-staff-management-card .mentee-card-head h2,
+.dark .home-staff-management-card .mentee-card-head h2 {
+  color: #f8fafc !important;
+  font-weight: 800 !important;
+  letter-spacing: -0.02em !important;
+}
+
+html[data-theme="dark"] .home-staff-management-card .mentee-muted,
+[data-theme="dark"] .home-staff-management-card .mentee-muted,
+.dark .home-staff-management-card .mentee-muted {
+  color: #94a3b8 !important;
+}
+
+html[data-theme="dark"] .home-staff-management-card .mentee-quick-action,
+[data-theme="dark"] .home-staff-management-card .mentee-quick-action,
+.dark .home-staff-management-card .mentee-quick-action {
+  background: #1e2530 !important;
+  color: #e2e8f0 !important;
+  border: 1px solid rgba(56, 189, 248, 0.15) !important;
+  box-shadow: 5px 5px 14px rgba(0, 0, 0, 0.55), -3px -3px 10px rgba(30, 37, 48, 0.25) !important;
+}
+
+html[data-theme="dark"] .home-staff-management-card .mentee-quick-action:hover,
+[data-theme="dark"] .home-staff-management-card .mentee-quick-action:hover,
+.dark .home-staff-management-card .mentee-quick-action:hover {
+  background: #242a36 !important;
+  color: #7dd3fc !important;
+  border-color: rgba(56, 189, 248, 0.35) !important;
+  box-shadow: 8px 8px 20px rgba(0, 0, 0, 0.65), -4px -4px 12px rgba(30, 37, 48, 0.3) !important;
+  transform: translateY(-2px) !important;
+}
+
+html[data-theme="dark"] .home-staff-management-card .mentee-quick-action svg,
+[data-theme="dark"] .home-staff-management-card .mentee-quick-action .mentee-dash-icon,
+.dark .home-staff-management-card .mentee-quick-action svg,
+.dark .home-staff-management-card .mentee-quick-action .mentee-dash-icon {
+  color: #38bdf8 !important;
+}
+
+html[data-theme="dark"] .home-staff-management-card .mentee-quick-action:hover svg,
+[data-theme="dark"] .home-staff-management-card .mentee-quick-action:hover .mentee-dash-icon,
+.dark .home-staff-management-card .mentee-quick-action:hover svg,
+.dark .home-staff-management-card .mentee-quick-action:hover .mentee-dash-icon {
+  color: #7dd3fc !important;
 }
 
 html[data-theme="dark"] .home-analytics-badge-icon,
@@ -1229,50 +1302,153 @@ html[data-theme="light"] .approvals-count-badge,
   border-radius: 999px !important;
 }
 
-/* User Approval Card: Extruded Neumorphic Plastic */
-html[data-theme="light"] .approval-row,
+/* ═══════════════════════════════════════════════════════════════════
+   4d. User Approvals Console — Neumorphic Soft UI (Light & Dark)
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* Section Headers & Counters */
+.approvals-section-head {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  margin-bottom: 16px !important;
+}
+
+.approvals-section-title-group {
+  display: flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+}
+
+.approvals-section-icon {
+  width: 36px !important;
+  height: 36px !important;
+  border-radius: 12px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+html:not([data-theme="dark"]) .approvals-section-icon,
+[data-theme="light"] .approvals-section-icon {
+  background: var(--neu-base, #f0f4f8) !important;
+  box-shadow: 3px 3px 8px var(--neu-dark, rgba(148, 163, 184, 0.35)), -3px -3px 8px var(--neu-light, #ffffff) !important;
+  border: 1px solid rgba(255, 255, 255, 0.85) !important;
+  color: #0284c7 !important;
+}
+
+html[data-theme="dark"] .approvals-section-icon,
+[data-theme="dark"] .approvals-section-icon,
+.dark .approvals-section-icon {
+  background: linear-gradient(145deg, #1e232b, #171a20) !important;
+  box-shadow: 3px 3px 8px rgba(0, 0, 0, 0.65), -2px -2px 6px rgba(255, 255, 255, 0.04) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  color: #38bdf8 !important;
+}
+
+.approvals-section-title {
+  margin: 0 !important;
+  font-size: 18px !important;
+  font-weight: 800 !important;
+  letter-spacing: -0.02em !important;
+}
+
+html:not([data-theme="dark"]) .approvals-section-title,
+[data-theme="light"] .approvals-section-title {
+  color: #0f172a !important;
+}
+
+html[data-theme="dark"] .approvals-section-title,
+[data-theme="dark"] .approvals-section-title,
+.dark .approvals-section-title {
+  color: #f8fafc !important;
+}
+
+.approvals-count-badge {
+  font-size: 11.5px !important;
+  font-weight: 700 !important;
+  padding: 4px 12px !important;
+  border-radius: 9999px !important;
+  letter-spacing: 0.03em !important;
+}
+
+html:not([data-theme="dark"]) .approvals-count-badge,
+[data-theme="light"] .approvals-count-badge {
+  background: var(--neu-base, #f0f4f8) !important;
+  box-shadow: inset 1.5px 1.5px 3.5px var(--neu-dark, rgba(148, 163, 184, 0.3)), inset -1.5px -1.5px 3.5px #ffffff !important;
+  border: 1px solid rgba(255, 255, 255, 0.8) !important;
+  color: #475569 !important;
+}
+
+html[data-theme="dark"] .approvals-count-badge,
+[data-theme="dark"] .approvals-count-badge,
+.dark .approvals-count-badge {
+  background: #14171d !important;
+  box-shadow: inset 2px 2px 4px rgba(0, 0, 0, 0.65), inset -1.5px -1.5px 3px rgba(255, 255, 255, 0.04) !important;
+  border: 1px solid rgba(255, 255, 255, 0.07) !important;
+  color: #94a3b8 !important;
+}
+
+/* User Approval Card: Extruded Neumorphic Slab */
 .approval-row {
-  border: 1.5px solid rgba(255, 255, 255, 0.65) !important;
-  border-radius: 24px !important;
-  background: var(--neu-base) !important;
-  box-shadow: 10px 10px 24px var(--neu-dark-strong), -10px -10px 24px var(--neu-light) !important;
+  border-radius: 22px !important;
   transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
   overflow: hidden !important;
   cursor: default !important;
+  margin-bottom: 18px !important;
 }
 
-html[data-theme="light"] .approval-row:hover,
-.approval-row:hover {
-  transform: translateY(-4px) !important;
+html:not([data-theme="dark"]) .approval-row,
+[data-theme="light"] .approval-row {
+  border: 1.5px solid rgba(255, 255, 255, 0.85) !important;
+  background: var(--neu-base, #f0f4f8) !important;
+  box-shadow: 8px 8px 22px rgba(148, 163, 184, 0.32), -8px -8px 20px rgba(255, 255, 255, 0.95) !important;
+}
+
+html:not([data-theme="dark"]) .approval-row:hover,
+[data-theme="light"] .approval-row:hover {
+  transform: translateY(-3px) !important;
   border-color: #ffffff !important;
-  box-shadow: 11px 11px 24px var(--neu-dark-strong), -11px -11px 24px var(--neu-light) !important;
+  box-shadow: 11px 11px 26px rgba(148, 163, 184, 0.42), -10px -10px 24px #ffffff !important;
 }
 
-html[data-theme="light"] .approval-card-main,
+html[data-theme="dark"] .approval-row,
+[data-theme="dark"] .approval-row,
+.dark .approval-row {
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  background: linear-gradient(145deg, #1d2128, #171a20) !important;
+  box-shadow: 8px 8px 22px rgba(0, 0, 0, 0.72), -6px -6px 18px rgba(255, 255, 255, 0.045) !important;
+}
+
+html[data-theme="dark"] .approval-row:hover,
+[data-theme="dark"] .approval-row:hover,
+.dark .approval-row:hover {
+  transform: translateY(-3px) !important;
+  border-color: rgba(56, 189, 248, 0.3) !important;
+  box-shadow: 12px 12px 28px rgba(0, 0, 0, 0.82), -8px -8px 22px rgba(255, 255, 255, 0.065) !important;
+}
+
 .approval-card-main {
-  padding: 20px 22px !important;
+  padding: 22px 24px !important;
   display: flex !important;
   flex-direction: column !important;
   gap: 14px !important;
 }
 
 /* Identity & Avatar */
-html[data-theme="light"] .approval-card-header,
 .approval-card-header {
   display: flex !important;
-  align-items: center !important;
+  align-items: flex-start !important;
   justify-content: space-between !important;
   gap: 12px !important;
   background: transparent !important;
   border: none !important;
-  border-bottom: none !important;
   padding: 0 !important;
   margin: 0 !important;
   box-shadow: none !important;
   border-radius: 0 !important;
 }
 
-html[data-theme="light"] .approval-card-identity,
 .approval-card-identity {
   display: flex !important;
   align-items: center !important;
@@ -1280,53 +1456,82 @@ html[data-theme="light"] .approval-card-identity,
   min-width: 0 !important;
 }
 
-html[data-theme="light"] .approval-avatar,
 .approval-avatar {
-  width: 44px !important;
-  height: 44px !important;
-  border-radius: 18px !important;
+  width: 46px !important;
+  height: 46px !important;
+  border-radius: 16px !important;
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
   font-size: 14px !important;
   font-weight: 800 !important;
-  color: #0284c7 !important;
-  background: var(--neu-base) !important;
-  box-shadow: inset 3px 3px 6px var(--neu-dark-strong), inset -3px -3px 6px var(--neu-light) !important;
-  border: 1px solid rgba(255, 255, 255, 0.8) !important;
   flex-shrink: 0 !important;
 }
 
-html[data-theme="light"] .approval-card-info,
+html:not([data-theme="dark"]) .approval-avatar,
+[data-theme="light"] .approval-avatar {
+  color: #0284c7 !important;
+  background: linear-gradient(135deg, #e0f2fe, #bae6fd) !important;
+  box-shadow: 3px 3px 8px rgba(148, 163, 184, 0.28), -3px -3px 8px #ffffff !important;
+  border: 1.5px solid #ffffff !important;
+}
+
+html[data-theme="dark"] .approval-avatar,
+[data-theme="dark"] .approval-avatar,
+.dark .approval-avatar {
+  color: #38bdf8 !important;
+  background: linear-gradient(135deg, #1e293b, #0f172a) !important;
+  box-shadow: inset 2px 2px 5px rgba(0, 0, 0, 0.8), inset -2px -2px 5px rgba(255, 255, 255, 0.08), 3px 3px 8px rgba(0, 0, 0, 0.45) !important;
+  border: 1px solid rgba(56, 189, 248, 0.25) !important;
+}
+
 .approval-card-info {
   min-width: 0 !important;
 }
 
-html[data-theme="light"] .approval-row-name,
 .approval-row-name {
   margin: 0 !important;
-  font-size: 15px !important;
+  font-size: 16px !important;
   font-weight: 800 !important;
-  color: #0f172a !important;
-  line-height: 1.25 !important;
+  line-height: 1.35 !important;
+  padding-top: 1px !important;
   white-space: nowrap !important;
   overflow: hidden !important;
   text-overflow: ellipsis !important;
   letter-spacing: -0.01em !important;
 }
 
-html[data-theme="light"] .approval-row-email,
+html:not([data-theme="dark"]) .approval-row-name,
+[data-theme="light"] .approval-row-name {
+  color: #0f172a !important;
+}
+
+html[data-theme="dark"] .approval-row-name,
+[data-theme="dark"] .approval-row-name,
+.dark .approval-row-name {
+  color: #f8fafc !important;
+}
+
 .approval-row-email {
   margin: 3px 0 0 0 !important;
-  font-size: 12px !important;
-  color: #64748b !important;
+  font-size: 12.5px !important;
   font-weight: 500 !important;
   white-space: nowrap !important;
   overflow: hidden !important;
   text-overflow: ellipsis !important;
 }
 
-html[data-theme="light"] .approval-card-top-actions,
+html:not([data-theme="dark"]) .approval-row-email,
+[data-theme="light"] .approval-row-email {
+  color: #64748b !important;
+}
+
+html[data-theme="dark"] .approval-row-email,
+[data-theme="dark"] .approval-row-email,
+.dark .approval-row-email {
+  color: #94a3b8 !important;
+}
+
 .approval-card-top-actions {
   display: flex !important;
   align-items: center !important;
@@ -1335,7 +1540,6 @@ html[data-theme="light"] .approval-card-top-actions,
 }
 
 /* Status Badges: Sunken indicator capsule */
-html[data-theme="light"] .approval-badge,
 .approval-badge {
   font-size: 11px !important;
   font-weight: 700 !important;
@@ -1346,12 +1550,42 @@ html[data-theme="light"] .approval-badge,
   gap: 6px !important;
   text-transform: uppercase !important;
   letter-spacing: 0.04em !important;
-  background: var(--neu-base) !important;
-  box-shadow: inset 2px 2px 4px var(--neu-dark), inset -2px -2px 4px var(--neu-light) !important;
-  border: 1px solid rgba(255, 255, 255, 0.85) !important;
 }
 
-html[data-theme="light"] .approval-badge-dot,
+html:not([data-theme="dark"]) .approval-badge-complete,
+[data-theme="light"] .approval-badge-complete {
+  background: #f0fdf4 !important;
+  color: #166534 !important;
+  box-shadow: inset 1.5px 1.5px 3.5px rgba(22, 163, 74, 0.2), inset -1.5px -1.5px 3.5px #ffffff !important;
+  border: 1px solid rgba(34, 197, 94, 0.35) !important;
+}
+
+html:not([data-theme="dark"]) .approval-badge-incomplete,
+[data-theme="light"] .approval-badge-incomplete {
+  background: #fffbeb !important;
+  color: #92400e !important;
+  box-shadow: inset 1.5px 1.5px 3.5px rgba(245, 158, 11, 0.2), inset -1.5px -1.5px 3.5px #ffffff !important;
+  border: 1px solid rgba(245, 158, 11, 0.35) !important;
+}
+
+html[data-theme="dark"] .approval-badge-complete,
+[data-theme="dark"] .approval-badge-complete,
+.dark .approval-badge-complete {
+  background: rgba(22, 163, 74, 0.12) !important;
+  color: #4ade80 !important;
+  box-shadow: inset 2px 2px 5px rgba(0, 0, 0, 0.7), inset -1.5px -1.5px 3px rgba(255, 255, 255, 0.05) !important;
+  border: 1px solid rgba(34, 197, 94, 0.32) !important;
+}
+
+html[data-theme="dark"] .approval-badge-incomplete,
+[data-theme="dark"] .approval-badge-incomplete,
+.dark .approval-badge-incomplete {
+  background: rgba(245, 158, 11, 0.12) !important;
+  color: #fbbf24 !important;
+  box-shadow: inset 2px 2px 5px rgba(0, 0, 0, 0.7), inset -1.5px -1.5px 3px rgba(255, 255, 255, 0.05) !important;
+  border: 1px solid rgba(245, 158, 11, 0.32) !important;
+}
+
 .approval-badge-dot {
   width: 7px !important;
   height: 7px !important;
@@ -1359,40 +1593,23 @@ html[data-theme="light"] .approval-badge-dot,
   flex-shrink: 0 !important;
 }
 
-html[data-theme="light"] .approval-badge-complete,
-.approval-badge-complete {
-  color: #059669 !important;
-}
-
-html[data-theme="light"] .approval-badge-complete .dot-complete,
 .approval-badge-complete .dot-complete {
-  background: #10b981 !important;
-  box-shadow: 0 0 6px rgba(16, 185, 129, 0.6) !important;
+  background: #22c55e !important;
+  box-shadow: 0 0 6px #22c55e, 0 0 10px rgba(34, 197, 94, 0.6) !important;
 }
 
-html[data-theme="light"] .approval-badge-incomplete,
-.approval-badge-incomplete {
-  color: #d97706 !important;
-}
-
-html[data-theme="light"] .approval-badge-incomplete .dot-incomplete,
 .approval-badge-incomplete .dot-incomplete {
   background: #f59e0b !important;
-  box-shadow: 0 0 6px rgba(245, 158, 11, 0.6) !important;
+  box-shadow: 0 0 6px #f59e0b, 0 0 10px rgba(245, 158, 11, 0.6) !important;
 }
 
 /* Details / Hide Toggle Button: Sculpted Tactile Neumorphic Pill */
-html[data-theme="light"] .approval-expand-btn.btn.small,
 .approval-expand-btn.btn.small {
   font-size: 12px !important;
   font-weight: 700 !important;
   padding: 6px 18px !important;
   min-height: 34px !important;
   border-radius: 9999px !important;
-  border: 1.5px solid rgba(255, 255, 255, 0.65) !important;
-  background: var(--neu-base) !important;
-  color: #334155 !important;
-  box-shadow: 4px 4px 10px var(--neu-dark), -4px -4px 10px var(--neu-light) !important;
   min-width: auto !important;
   cursor: pointer !important;
   transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1) !important;
@@ -1402,22 +1619,54 @@ html[data-theme="light"] .approval-expand-btn.btn.small,
   justify-content: center !important;
 }
 
-html[data-theme="light"] .approval-expand-btn.btn.small:hover,
-.approval-expand-btn.btn.small:hover {
+html:not([data-theme="dark"]) .approval-expand-btn.btn.small,
+[data-theme="light"] .approval-expand-btn.btn.small {
+  border: 1.5px solid rgba(255, 255, 255, 0.95) !important;
+  background: linear-gradient(145deg, #ffffff, #e6ecf2) !important;
+  color: #334155 !important;
+  box-shadow: 4px 4px 10px rgba(148, 163, 184, 0.3), -3px -3px 8px #ffffff !important;
+}
+
+html:not([data-theme="dark"]) .approval-expand-btn.btn.small:hover,
+[data-theme="light"] .approval-expand-btn.btn.small:hover {
   transform: translateY(-2px) !important;
-  box-shadow: 6px 6px 14px var(--neu-dark-strong), -5px -5px 12px var(--neu-light) !important;
+  box-shadow: 6px 6px 14px rgba(148, 163, 184, 0.4), -4px -4px 12px #ffffff !important;
   color: #0284c7 !important;
   border-color: #ffffff !important;
 }
 
-html[data-theme="light"] .approval-expand-btn.btn.small:active,
-.approval-expand-btn.btn.small:active {
+html:not([data-theme="dark"]) .approval-expand-btn.btn.small:active,
+[data-theme="light"] .approval-expand-btn.btn.small:active {
   transform: translateY(1px) !important;
-  box-shadow: inset 2.5px 2.5px 5px var(--neu-dark-strong), inset -2.5px -2.5px 5px var(--neu-light) !important;
+  box-shadow: inset 2.5px 2.5px 5px rgba(148, 163, 184, 0.3), inset -2.5px -2.5px 5px #ffffff !important;
+}
+
+html[data-theme="dark"] .approval-expand-btn.btn.small,
+[data-theme="dark"] .approval-expand-btn.btn.small,
+.dark .approval-expand-btn.btn.small {
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  background: linear-gradient(145deg, #222832, #1a1e26) !important;
+  color: #e2e8f0 !important;
+  box-shadow: 3px 3px 8px rgba(0, 0, 0, 0.6), -2px -2px 6px rgba(255, 255, 255, 0.05) !important;
+}
+
+html[data-theme="dark"] .approval-expand-btn.btn.small:hover,
+[data-theme="dark"] .approval-expand-btn.btn.small:hover,
+.dark .approval-expand-btn.btn.small:hover {
+  transform: translateY(-2px) !important;
+  color: #38bdf8 !important;
+  border-color: rgba(56, 189, 248, 0.4) !important;
+  box-shadow: 4px 4px 12px rgba(0, 0, 0, 0.75), -3px -3px 8px rgba(255, 255, 255, 0.08) !important;
+}
+
+html[data-theme="dark"] .approval-expand-btn.btn.small:active,
+[data-theme="dark"] .approval-expand-btn.btn.small:active,
+.dark .approval-expand-btn.btn.small:active {
+  transform: translateY(1px) !important;
+  box-shadow: inset 2px 2px 5px rgba(0, 0, 0, 0.7), inset -1.5px -1.5px 4px rgba(255, 255, 255, 0.05) !important;
 }
 
 /* Meta Pills: Molded recessed wells */
-html[data-theme="light"] .approval-meta-pill,
 .approval-meta-pill {
   display: inline-flex !important;
   align-items: center !important;
@@ -1425,40 +1674,76 @@ html[data-theme="light"] .approval-meta-pill,
   border-radius: 9999px !important;
   font-size: 11.5px !important;
   font-weight: 600 !important;
-  color: #475569 !important;
-  background: var(--neu-base) !important;
-  box-shadow: inset 1.5px 1.5px 3.5px var(--neu-dark), inset -1.5px -1.5px 3.5px var(--neu-light) !important;
-  border: 1px solid rgba(255, 255, 255, 0.8) !important;
   text-transform: uppercase !important;
   letter-spacing: 0.03em !important;
 }
 
-html[data-theme="light"] .approval-mentor-type-badge,
-.approval-mentor-type-badge {
-  box-shadow: inset 1.5px 1.5px 3.5px var(--neu-dark), inset -1.5px -1.5px 3.5px var(--neu-light) !important;
-  background: var(--neu-base) !important;
+html:not([data-theme="dark"]) .approval-meta-pill,
+[data-theme="light"] .approval-meta-pill {
+  color: #475569 !important;
+  background: var(--neu-base, #f0f4f8) !important;
+  box-shadow: inset 1.5px 1.5px 3.5px rgba(148, 163, 184, 0.25), inset -1.5px -1.5px 3.5px #ffffff !important;
   border: 1px solid rgba(255, 255, 255, 0.8) !important;
+}
+
+html[data-theme="dark"] .approval-meta-pill,
+[data-theme="dark"] .approval-meta-pill,
+.dark .approval-meta-pill {
+  color: #94a3b8 !important;
+  background: #15181e !important;
+  box-shadow: inset 2px 2px 4px rgba(0, 0, 0, 0.6), inset -1.5px -1.5px 3px rgba(255, 255, 255, 0.04) !important;
+  border: 1px solid rgba(255, 255, 255, 0.07) !important;
+}
+
+.approval-mentor-type-badge {
   font-size: 11px !important;
   padding: 3px 12px !important;
   border-radius: 9999px !important;
-  color: #0284c7 !important;
   font-weight: 700 !important;
 }
 
-html[data-theme="light"] .approval-mentor-type-missing,
+html:not([data-theme="dark"]) .approval-mentor-type-badge,
+[data-theme="light"] .approval-mentor-type-badge {
+  box-shadow: inset 1.5px 1.5px 3.5px rgba(148, 163, 184, 0.25), inset -1.5px -1.5px 3.5px #ffffff !important;
+  background: var(--neu-base, #f0f4f8) !important;
+  border: 1px solid rgba(255, 255, 255, 0.8) !important;
+  color: #0284c7 !important;
+}
+
+html[data-theme="dark"] .approval-mentor-type-badge,
+[data-theme="dark"] .approval-mentor-type-badge,
+.dark .approval-mentor-type-badge {
+  box-shadow: inset 2px 2px 4px rgba(0, 0, 0, 0.6), inset -1.5px -1.5px 3px rgba(255, 255, 255, 0.04) !important;
+  background: #15181e !important;
+  border: 1px solid rgba(56, 189, 248, 0.25) !important;
+  color: #38bdf8 !important;
+}
+
 .approval-mentor-type-missing {
-  box-shadow: inset 1.5px 1.5px 3.5px var(--neu-dark), inset -1.5px -1.5px 3.5px var(--neu-light) !important;
-  background: var(--neu-base) !important;
-  border: 1px solid rgba(245, 158, 11, 0.3) !important;
-  color: #b45309 !important;
   font-size: 11px !important;
   font-weight: 700 !important;
   padding: 3px 12px !important;
   border-radius: 9999px !important;
+}
+
+html:not([data-theme="dark"]) .approval-mentor-type-missing,
+[data-theme="light"] .approval-mentor-type-missing {
+  box-shadow: inset 1.5px 1.5px 3.5px rgba(148, 163, 184, 0.25), inset -1.5px -1.5px 3.5px #ffffff !important;
+  background: #fef3c7 !important;
+  border: 1px solid rgba(245, 158, 11, 0.3) !important;
+  color: #b45309 !important;
+}
+
+html[data-theme="dark"] .approval-mentor-type-missing,
+[data-theme="dark"] .approval-mentor-type-missing,
+.dark .approval-mentor-type-missing {
+  box-shadow: inset 2px 2px 4px rgba(0, 0, 0, 0.6), inset -1.5px -1.5px 3px rgba(255, 255, 255, 0.04) !important;
+  background: rgba(245, 158, 11, 0.1) !important;
+  border: 1px solid rgba(245, 158, 11, 0.3) !important;
+  color: #fbbf24 !important;
 }
 
 /* Card Footer & Decision Bar */
-html[data-theme="light"] .approval-card-footer,
 .approval-card-footer {
   display: flex !important;
   align-items: center !important;
@@ -1466,19 +1751,38 @@ html[data-theme="light"] .approval-card-footer,
   gap: 12px !important;
   padding-top: 14px !important;
   margin-top: 2px !important;
-  border-top: 1px solid rgba(255, 255, 255, 0.60) !important;
-  box-shadow: 0 -1px 0 rgba(166, 180, 200, 0.25) !important;
 }
 
-html[data-theme="light"] .approval-card-hint,
+html:not([data-theme="dark"]) .approval-card-footer,
+[data-theme="light"] .approval-card-footer {
+  border-top: 1px solid rgba(255, 255, 255, 0.8) !important;
+  box-shadow: 0 -1px 0 rgba(166, 180, 200, 0.2) !important;
+}
+
+html[data-theme="dark"] .approval-card-footer,
+[data-theme="dark"] .approval-card-footer,
+.dark .approval-card-footer {
+  border-top: 1px solid rgba(255, 255, 255, 0.06) !important;
+  box-shadow: 0 -1px 0 rgba(0, 0, 0, 0.5) !important;
+}
+
 .approval-card-hint {
   font-size: 12px !important;
-  color: #64748b !important;
   font-style: normal !important;
   font-weight: 500 !important;
 }
 
-html[data-theme="light"] .approval-card-decision-btns,
+html:not([data-theme="dark"]) .approval-card-hint,
+[data-theme="light"] .approval-card-hint {
+  color: #64748b !important;
+}
+
+html[data-theme="dark"] .approval-card-hint,
+[data-theme="dark"] .approval-card-hint,
+.dark .approval-card-hint {
+  color: #94a3b8 !important;
+}
+
 .approval-card-decision-btns {
   display: flex !important;
   align-items: center !important;
@@ -1486,44 +1790,64 @@ html[data-theme="light"] .approval-card-decision-btns,
   margin-left: auto !important;
 }
 
-/* Accept Button: Tactile convex sky-blue capsule */
-html[data-theme="light"] .approval-accept-btn.btn.small,
+/* Accept Button: Tactile convex emerald/green capsule */
 .approval-accept-btn.btn.small {
-  background: linear-gradient(145deg, #0ea5e9, #0284c7) !important;
-  border: 1px solid rgba(255, 255, 255, 0.45) !important;
-  color: #ffffff !important;
   font-weight: 700 !important;
   font-size: 12.5px !important;
   padding: 7px 22px !important;
   min-height: 34px !important;
   border-radius: 9999px !important;
-  box-shadow: 4px 4px 12px rgba(14, 165, 233, 0.42), -3px -3px 8px var(--neu-light) !important;
   cursor: pointer !important;
   transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1) !important;
   display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
+  color: #ffffff !important;
 }
 
-html[data-theme="light"] .approval-accept-btn.btn.small:hover,
-.approval-accept-btn.btn.small:hover {
-  transform: translateY(-2px) !important;
-  box-shadow: 6px 6px 16px rgba(14, 165, 233, 0.55), -4px -4px 10px var(--neu-light) !important;
+html:not([data-theme="dark"]) .approval-accept-btn.btn.small,
+[data-theme="light"] .approval-accept-btn.btn.small {
+  background: linear-gradient(145deg, #10b981, #059669) !important;
+  border: 1px solid rgba(255, 255, 255, 0.45) !important;
+  box-shadow: 3px 3px 9px rgba(16, 185, 129, 0.38), -2px -2px 6px #ffffff !important;
 }
 
-html[data-theme="light"] .approval-accept-btn.btn.small:active,
-.approval-accept-btn.btn.small:active {
+html:not([data-theme="dark"]) .approval-accept-btn.btn.small:hover,
+[data-theme="light"] .approval-accept-btn.btn.small:hover {
+  transform: translateY(-1.5px) !important;
+  box-shadow: 4px 4px 14px rgba(16, 185, 129, 0.5), -3px -3px 8px #ffffff !important;
+}
+
+html:not([data-theme="dark"]) .approval-accept-btn.btn.small:active,
+[data-theme="light"] .approval-accept-btn.btn.small:active {
   transform: translateY(1px) !important;
-  box-shadow: inset 2px 2px 6px rgba(2, 132, 199, 0.8), inset -2px -2px 6px rgba(255, 255, 255, 0.3) !important;
+  box-shadow: inset 2px 2px 5px rgba(4, 120, 87, 0.8), inset -2px -2px 5px rgba(255, 255, 255, 0.3) !important;
+}
+
+html[data-theme="dark"] .approval-accept-btn.btn.small,
+[data-theme="dark"] .approval-accept-btn.btn.small,
+.dark .approval-accept-btn.btn.small {
+  background: linear-gradient(145deg, #059669, #047857) !important;
+  border: 1px solid rgba(52, 211, 153, 0.35) !important;
+  box-shadow: 3px 3px 9px rgba(0, 0, 0, 0.55), -2px -2px 6px rgba(255, 255, 255, 0.05), 0 0 10px rgba(16, 185, 129, 0.2) !important;
+}
+
+html[data-theme="dark"] .approval-accept-btn.btn.small:hover,
+[data-theme="dark"] .approval-accept-btn.btn.small:hover,
+.dark .approval-accept-btn.btn.small:hover {
+  transform: translateY(-1.5px) !important;
+  box-shadow: 4px 4px 14px rgba(0, 0, 0, 0.7), -3px -3px 8px rgba(255, 255, 255, 0.08), 0 0 16px rgba(16, 185, 129, 0.38) !important;
+}
+
+html[data-theme="dark"] .approval-accept-btn.btn.small:active,
+[data-theme="dark"] .approval-accept-btn.btn.small:active,
+.dark .approval-accept-btn.btn.small:active {
+  transform: translateY(1px) !important;
+  box-shadow: inset 2px 2px 5px rgba(0, 0, 0, 0.6), inset -1.5px -1.5px 4px rgba(52, 211, 153, 0.25) !important;
 }
 
 /* Reject Button: Tactile extruded Soft UI crimson capsule */
-html[data-theme="light"] .approval-reject-btn.btn.small,
 .approval-reject-btn.btn.small {
-  background: var(--neu-base) !important;
-  color: #dc2626 !important;
-  border: 1.5px solid rgba(255, 255, 255, 0.65) !important;
-  box-shadow: 3px 3px 8px var(--neu-dark), -3px -3px 8px var(--neu-light) !important;
   font-weight: 700 !important;
   font-size: 12.5px !important;
   padding: 7px 20px !important;
@@ -1536,93 +1860,348 @@ html[data-theme="light"] .approval-reject-btn.btn.small,
   justify-content: center !important;
 }
 
-html[data-theme="light"] .approval-reject-btn.btn.small:hover,
-.approval-reject-btn.btn.small:hover {
-  transform: translateY(-2px) !important;
-  background: #fef2f2 !important;
-  color: #b91c1c !important;
-  border-color: #fca5a5 !important;
-  box-shadow: 5px 5px 12px var(--neu-dark-strong), -4px -4px 10px var(--neu-light) !important;
+html:not([data-theme="dark"]) .approval-reject-btn.btn.small,
+[data-theme="light"] .approval-reject-btn.btn.small {
+  background: linear-gradient(145deg, #ffffff, #fee2e2) !important;
+  color: #dc2626 !important;
+  border: 1.5px solid rgba(239, 68, 68, 0.35) !important;
+  box-shadow: 3px 3px 8px rgba(239, 68, 68, 0.15), -3px -3px 8px #ffffff !important;
 }
 
-html[data-theme="light"] .approval-reject-btn.btn.small:active,
-.approval-reject-btn.btn.small:active {
+html:not([data-theme="dark"]) .approval-reject-btn.btn.small:hover,
+[data-theme="light"] .approval-reject-btn.btn.small:hover {
+  transform: translateY(-1.5px) !important;
+  background: #fee2e2 !important;
+  border-color: #ef4444 !important;
+  box-shadow: 4px 4px 12px rgba(239, 68, 68, 0.25), -3px -3px 8px #ffffff !important;
+}
+
+html:not([data-theme="dark"]) .approval-reject-btn.btn.small:active,
+[data-theme="light"] .approval-reject-btn.btn.small:active {
   transform: translateY(1px) !important;
-  box-shadow: inset 2px 2px 5px var(--neu-dark), inset -2px -2px 5px var(--neu-light) !important;
+  box-shadow: inset 2px 2px 4px rgba(239, 68, 68, 0.25), inset -2px -2px 4px #ffffff !important;
+}
+
+html[data-theme="dark"] .approval-reject-btn.btn.small,
+[data-theme="dark"] .approval-reject-btn.btn.small,
+.dark .approval-reject-btn.btn.small {
+  background: linear-gradient(145deg, #23181b, #191315) !important;
+  color: #f87171 !important;
+  border: 1px solid rgba(239, 68, 68, 0.35) !important;
+  box-shadow: 3px 3px 8px rgba(0, 0, 0, 0.6), -2px -2px 6px rgba(255, 255, 255, 0.035) !important;
+}
+
+html[data-theme="dark"] .approval-reject-btn.btn.small:hover,
+[data-theme="dark"] .approval-reject-btn.btn.small:hover,
+.dark .approval-reject-btn.btn.small:hover {
+  transform: translateY(-1.5px) !important;
+  color: #fca5a5 !important;
+  border-color: rgba(239, 68, 68, 0.6) !important;
+  box-shadow: 4px 4px 12px rgba(0, 0, 0, 0.75), -3px -3px 8px rgba(255, 255, 255, 0.06), 0 0 14px rgba(239, 68, 68, 0.25) !important;
+}
+
+html[data-theme="dark"] .approval-reject-btn.btn.small:active,
+[data-theme="dark"] .approval-reject-btn.btn.small:active,
+.dark .approval-reject-btn.btn.small:active {
+  transform: translateY(1px) !important;
+  box-shadow: inset 2px 2px 5px rgba(0, 0, 0, 0.7), inset -1.5px -1.5px 4px rgba(239, 68, 68, 0.2) !important;
 }
 
 /* Expanded Verification & Details Drawer */
-html[data-theme="light"] .approval-row-secondary,
 .approval-row-secondary {
-  border-top: 1px solid rgba(255, 255, 255, 0.60) !important;
-  padding: 16px 18px !important;
-  margin: 0 14px 14px 14px !important;
-  background: #e2e8f0 !important;
-  border-radius: 20px !important;
-  box-shadow: inset 3px 3px 7px var(--neu-dark-strong), inset -3px -3px 7px var(--neu-light) !important;
-}
-
-html[data-theme="light"] .approval-document,
-.approval-document {
-  background: var(--neu-base) !important;
-  box-shadow: 3px 3px 8px var(--neu-dark), -3px -3px 8px var(--neu-light) !important;
-  border: 1px solid rgba(255, 255, 255, 0.65) !important;
+  padding: 18px 20px !important;
+  margin: 0 14px 18px 14px !important;
   border-radius: 18px !important;
-  padding: 12px !important;
+  display: grid !important;
+  grid-template-columns: 1.15fr 1fr !important;
+  gap: 16px !important;
 }
 
-html[data-theme="light"] .approval-document-preview,
-.approval-document-preview {
-  background: var(--neu-base) !important;
-  box-shadow: inset 2px 2px 4px var(--neu-dark), inset -2px -2px 4px var(--neu-light) !important;
-  border: 1px solid rgba(255, 255, 255, 0.8) !important;
+.approval-row-secondary.approval-row-secondary--no-docs {
+  grid-template-columns: 1fr !important;
+}
+
+html:not([data-theme="dark"]) .approval-row-secondary,
+[data-theme="light"] .approval-row-secondary {
+  background: #e8eef4 !important;
+  border: 1px solid rgba(255, 255, 255, 0.75) !important;
+  box-shadow: inset 3px 3px 8px rgba(148, 163, 184, 0.35), inset -3px -3px 8px #ffffff !important;
+}
+
+html[data-theme="dark"] .approval-row-secondary,
+[data-theme="dark"] .approval-row-secondary,
+.dark .approval-row-secondary {
+  background: #13161c !important;
+  border: 1px solid rgba(255, 255, 255, 0.05) !important;
+  box-shadow: inset 3px 3px 8px rgba(0, 0, 0, 0.75), inset -2px -2px 6px rgba(255, 255, 255, 0.035) !important;
+}
+
+.approval-subtle-label {
+  margin: 0 0 8px 0 !important;
+  font-size: 11px !important;
+  font-weight: 800 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.05em !important;
+}
+
+html:not([data-theme="dark"]) .approval-subtle-label,
+[data-theme="light"] .approval-subtle-label {
+  color: #475569 !important;
+}
+
+html[data-theme="dark"] .approval-subtle-label,
+[data-theme="dark"] .approval-subtle-label,
+.dark .approval-subtle-label {
+  color: #94a3b8 !important;
+}
+
+/* Detail Chip Grid & Individual Neumorphic Tiles */
+.approval-detail-chip-grid {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 10px !important;
+  margin-top: 8px !important;
+}
+
+.approval-detail-chip {
   border-radius: 14px !important;
+  padding: 10px 14px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 4px !important;
+  min-height: 52px !important;
+  justify-content: center !important;
+  transition: all 0.2s ease !important;
 }
 
-html[data-theme="light"] .approval-document-actions .btn,
+.approval-detail-chip.approval-detail-chip--full {
+  grid-column: 1 / -1 !important;
+}
+
+html:not([data-theme="dark"]) .approval-detail-chip,
+[data-theme="light"] .approval-detail-chip {
+  background: linear-gradient(145deg, #ffffff, #eef3f8) !important;
+  border: 1px solid rgba(255, 255, 255, 0.9) !important;
+  box-shadow: 3px 3px 8px rgba(148, 163, 184, 0.28), -2px -2px 6px #ffffff !important;
+}
+
+html[data-theme="dark"] .approval-detail-chip,
+[data-theme="dark"] .approval-detail-chip,
+.dark .approval-detail-chip {
+  background: linear-gradient(145deg, #1b1f27, #161920) !important;
+  border: 1px solid rgba(255, 255, 255, 0.07) !important;
+  box-shadow: 3px 3px 8px rgba(0, 0, 0, 0.55), -2px -2px 6px rgba(255, 255, 255, 0.035) !important;
+}
+
+.approval-detail-chip-label {
+  display: block !important;
+  font-size: 10.5px !important;
+  font-weight: 800 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.05em !important;
+}
+
+html:not([data-theme="dark"]) .approval-detail-chip-label,
+[data-theme="light"] .approval-detail-chip-label {
+  color: #0284c7 !important;
+}
+
+html[data-theme="dark"] .approval-detail-chip-label,
+[data-theme="dark"] .approval-detail-chip-label,
+.dark .approval-detail-chip-label {
+  color: #38bdf8 !important;
+}
+
+.approval-detail-chip-value {
+  display: block !important;
+  font-size: 13.5px !important;
+  font-weight: 600 !important;
+  line-height: 1.45 !important;
+  word-break: break-word !important;
+}
+
+html:not([data-theme="dark"]) .approval-detail-chip-value,
+[data-theme="light"] .approval-detail-chip-value {
+  color: #1e293b !important;
+}
+
+html[data-theme="dark"] .approval-detail-chip-value,
+[data-theme="dark"] .approval-detail-chip-value,
+.dark .approval-detail-chip-value {
+  color: #f1f5f9 !important;
+}
+
+.approval-detail-tags {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 6px !important;
+  margin-top: 4px !important;
+}
+
+.approval-detail-subtag {
+  display: inline-flex !important;
+  align-items: center !important;
+  padding: 3px 10px !important;
+  border-radius: 8px !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+}
+
+html:not([data-theme="dark"]) .approval-detail-subtag,
+[data-theme="light"] .approval-detail-subtag {
+  background: #e0f2fe !important;
+  color: #0369a1 !important;
+  border: 1px solid #bae6fd !important;
+}
+
+html[data-theme="dark"] .approval-detail-subtag,
+[data-theme="dark"] .approval-detail-subtag,
+.dark .approval-detail-subtag {
+  background: rgba(14, 165, 233, 0.14) !important;
+  color: #7dd3fc !important;
+  border: 1px solid rgba(56, 189, 248, 0.25) !important;
+}
+
+/* Document Previews */
+.approval-document {
+  border-radius: 16px !important;
+  padding: 12px !important;
+  display: flex !important;
+  gap: 12px !important;
+  align-items: center !important;
+  margin-top: 8px !important;
+}
+
+html:not([data-theme="dark"]) .approval-document,
+[data-theme="light"] .approval-document {
+  background: linear-gradient(145deg, #ffffff, #eaf0f6) !important;
+  box-shadow: 3px 3px 9px rgba(148, 163, 184, 0.28), -3px -3px 8px #ffffff !important;
+  border: 1px solid rgba(255, 255, 255, 0.9) !important;
+}
+
+html[data-theme="dark"] .approval-document,
+[data-theme="dark"] .approval-document,
+.dark .approval-document {
+  background: linear-gradient(145deg, #1d212a, #161920) !important;
+  box-shadow: 4px 4px 12px rgba(0, 0, 0, 0.6), -2px -2px 7px rgba(255, 255, 255, 0.035) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+
+.approval-document-preview {
+  width: 64px !important;
+  height: 64px !important;
+  border-radius: 12px !important;
+  overflow: hidden !important;
+  display: grid !important;
+  place-items: center !important;
+  flex-shrink: 0 !important;
+}
+
+html:not([data-theme="dark"]) .approval-document-preview,
+[data-theme="light"] .approval-document-preview {
+  background: #f0f4f8 !important;
+  box-shadow: inset 2px 2px 4px rgba(148, 163, 184, 0.25), inset -2px -2px 4px #ffffff !important;
+  border: 1px solid rgba(255, 255, 255, 0.8) !important;
+}
+
+html[data-theme="dark"] .approval-document-preview,
+[data-theme="dark"] .approval-document-preview,
+.dark .approval-document-preview {
+  background: #13161c !important;
+  box-shadow: inset 2px 2px 5px rgba(0, 0, 0, 0.75), inset -1.5px -1.5px 4px rgba(255, 255, 255, 0.04) !important;
+  border: 1px solid rgba(255, 255, 255, 0.06) !important;
+}
+
+.approval-document-name {
+  margin: 0 0 6px 0 !important;
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  word-break: break-all !important;
+}
+
+html:not([data-theme="dark"]) .approval-document-name,
+[data-theme="light"] .approval-document-name {
+  color: #0f172a !important;
+}
+
+html[data-theme="dark"] .approval-document-name,
+[data-theme="dark"] .approval-document-name,
+.dark .approval-document-name {
+  color: #f1f5f9 !important;
+}
+
 .approval-document-actions .btn {
   border-radius: 9999px !important;
   padding: 5px 16px !important;
   font-size: 11.5px !important;
   font-weight: 700 !important;
-  box-shadow: 3px 3px 7px var(--neu-dark), -3px -3px 7px var(--neu-light) !important;
-  border: 1px solid rgba(255, 255, 255, 0.65) !important;
-  background: var(--neu-base) !important;
-  color: #334155 !important;
   transition: all 0.2s ease !important;
   display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
 }
 
-html[data-theme="light"] .approval-document-actions .btn:hover,
-.approval-document-actions .btn:hover {
+html:not([data-theme="dark"]) .approval-document-actions .btn,
+[data-theme="light"] .approval-document-actions .btn {
+  box-shadow: 3px 3px 7px rgba(148, 163, 184, 0.3), -3px -3px 7px #ffffff !important;
+  border: 1px solid rgba(255, 255, 255, 0.85) !important;
+  background: var(--neu-base, #f0f4f8) !important;
+  color: #334155 !important;
+}
+
+html:not([data-theme="dark"]) .approval-document-actions .btn:hover,
+[data-theme="light"] .approval-document-actions .btn:hover {
   transform: translateY(-1.5px) !important;
-  box-shadow: 4px 4px 10px var(--neu-dark-strong), -3px -3px 8px var(--neu-light) !important;
+  box-shadow: 4px 4px 10px rgba(148, 163, 184, 0.4), -3px -3px 8px #ffffff !important;
   color: #0284c7 !important;
 }
 
-html[data-theme="light"] .approval-detail-chip,
-.approval-detail-chip {
-  background: var(--neu-base) !important;
-  box-shadow: inset 1.5px 1.5px 3.5px var(--neu-dark), inset -1.5px -1.5px 3.5px var(--neu-light) !important;
-  border: 1px solid rgba(255, 255, 255, 0.75) !important;
-  border-radius: 9999px !important;
-  padding: 4px 14px !important;
+html[data-theme="dark"] .approval-document-actions .btn,
+[data-theme="dark"] .approval-document-actions .btn,
+.dark .approval-document-actions .btn {
+  box-shadow: 3px 3px 7px rgba(0, 0, 0, 0.6), -2px -2px 6px rgba(255, 255, 255, 0.04) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  background: linear-gradient(145deg, #222731, #1a1e26) !important;
+  color: #e2e8f0 !important;
+}
+
+html[data-theme="dark"] .approval-document-actions .btn:hover,
+[data-theme="dark"] .approval-document-actions .btn:hover,
+.dark .approval-document-actions .btn:hover {
+  transform: translateY(-1.5px) !important;
+  color: #38bdf8 !important;
+  border-color: rgba(56, 189, 248, 0.4) !important;
+  box-shadow: 4px 4px 12px rgba(0, 0, 0, 0.75), -2px -2px 7px rgba(255, 255, 255, 0.06) !important;
 }
 
 /* Empty State Pod */
-html[data-theme="light"] .approvals-empty-state,
-html[data-theme="light"] .approval-empty-state,
 .approvals-empty-state,
 .approval-empty-state {
   padding: 36px 24px !important;
   text-align: center !important;
-  background: var(--neu-base) !important;
-  box-shadow: 8px 8px 20px var(--neu-dark-strong), -8px -8px 20px var(--neu-light) !important;
-  border: 1.5px solid rgba(255, 255, 255, 0.65) !important;
   border-radius: 20px !important;
+}
+
+html:not([data-theme="dark"]) .approvals-empty-state,
+html:not([data-theme="dark"]) .approval-empty-state,
+[data-theme="light"] .approvals-empty-state,
+[data-theme="light"] .approval-empty-state {
+  background: var(--neu-base, #f0f4f8) !important;
+  box-shadow: 8px 8px 20px rgba(148, 163, 184, 0.35), -8px -8px 20px #ffffff !important;
+  border: 1.5px solid rgba(255, 255, 255, 0.85) !important;
   color: #64748b !important;
+}
+
+html[data-theme="dark"] .approvals-empty-state,
+html[data-theme="dark"] .approval-empty-state,
+[data-theme="dark"] .approvals-empty-state,
+[data-theme="dark"] .approval-empty-state,
+.dark .approvals-empty-state,
+.dark .approval-empty-state {
+  background: linear-gradient(145deg, #1c2027, #161920) !important;
+  box-shadow: 8px 8px 22px rgba(0, 0, 0, 0.7), -6px -6px 18px rgba(255, 255, 255, 0.04) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  color: #94a3b8 !important;
 }
 
 /* ── 4e. User Management Console (Soft UI) ─────────────────────── */
@@ -4047,6 +4626,25 @@ html[data-theme="light"] .search-dropdown-item.active,
 
 /* ── 6. Neumorphic Buttons (Tactile Extruded Plastic) ─────────── */
 
+/* Universal button interactive baseline */
+button:not(:disabled),
+.btn:not(:disabled),
+[role="button"]:not([aria-disabled="true"]) {
+  cursor: pointer !important;
+}
+
+button:disabled,
+.btn:disabled,
+button[disabled],
+.btn[disabled],
+[aria-disabled="true"] {
+  cursor: not-allowed !important;
+  opacity: 0.55 !important;
+  box-shadow: none !important;
+  transform: none !important;
+  pointer-events: none;
+}
+
 /* Universal primary button (Extruded convex sky-blue plastic) */
 .btn:not(.secondary):not(.btn-secondary):not(.kasandigan-btn-secondary):not(.sidebar-logout-btn):not(.danger):not(.btn-danger):not(.approval-reject-btn):not(.btn-warning):not(.btn-success):not(.outline):not(.ghost),
 .btn.btn-primary,
@@ -4160,6 +4758,57 @@ html[data-theme="light"] .search-dropdown-item.active,
 
 .btn.small:active:not(:disabled) {
   box-shadow: var(--neu-pressed-sm) !important;
+}
+
+/* Universal danger button (Extruded soft red plastic) */
+.btn.danger,
+.btn.btn-danger,
+.btn-danger {
+  background: linear-gradient(145deg, #ef4444, #dc2626) !important;
+  border: 1px solid rgba(255, 255, 255, 0.3) !important;
+  border-radius: 14px !important;
+  color: #ffffff !important;
+  box-shadow: 4px 4px 12px rgba(239, 68, 68, 0.35), -3px -3px 8px var(--neu-light) !important;
+  transition: all 0.15s ease-out !important;
+}
+
+.btn.danger:hover:not(:disabled),
+.btn.btn-danger:hover:not(:disabled),
+.btn-danger:hover:not(:disabled) {
+  background: linear-gradient(145deg, #f87171, #dc2626) !important;
+  box-shadow: 6px 6px 16px rgba(239, 68, 68, 0.45), -4px -4px 10px var(--neu-light) !important;
+  transform: translateY(-1.5px) !important;
+}
+
+.btn.danger:active:not(:disabled),
+.btn.btn-danger:active:not(:disabled),
+.btn-danger:active:not(:disabled) {
+  box-shadow: inset 3px 3px 6px rgba(0, 0, 0, 0.4), inset -2px -2px 5px rgba(248, 113, 113, 0.35) !important;
+  transform: translateY(1px) !important;
+}
+
+[data-theme="dark"] .btn.danger,
+[data-theme="dark"] .btn.btn-danger,
+[data-theme="dark"] .btn-danger,
+.dark .btn.danger,
+.dark .btn.btn-danger,
+.dark .btn-danger {
+  background: linear-gradient(145deg, #b91c1c, #991b1b) !important;
+  border: 1px solid rgba(248, 113, 113, 0.35) !important;
+  color: #ffffff !important;
+  box-shadow: 5px 5px 14px rgba(0, 0, 0, 0.6), -2px -2px 6px rgba(255, 255, 255, 0.05) !important;
+}
+
+[data-theme="dark"] .btn.danger:hover:not(:disabled),
+[data-theme="dark"] .btn.btn-danger:hover:not(:disabled),
+[data-theme="dark"] .btn-danger:hover:not(:disabled),
+.dark .btn.danger:hover:not(:disabled),
+.dark .btn.btn-danger:hover:not(:disabled),
+.dark .btn-danger:hover:not(:disabled) {
+  background: linear-gradient(145deg, #dc2626, #991b1b) !important;
+  border-color: rgba(248, 113, 113, 0.6) !important;
+  box-shadow: 6px 6px 18px rgba(0, 0, 0, 0.75), -3px -3px 8px rgba(255, 255, 255, 0.08) !important;
+  transform: translateY(-1.5px) !important;
 }
 
 /* ── 7. Sunken Wells: Inputs, Search & Dropdowns ──────────────── */
