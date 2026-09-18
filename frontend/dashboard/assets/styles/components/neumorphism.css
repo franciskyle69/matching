@@ -67,6 +67,8 @@ html[data-theme="dark"],
 
 /* ── 2. Extruded Soft Fading Light Blue Header Banner ─────────── */
 
+/* ── 2. Modern Open-Canvas Header (Zero Container / Clean SaaS) ──── */
+
 html:not([data-theme="dark"]) .kasandigan-header,
 [data-theme="light"] .kasandigan-header,
 .kasandigan-header,
@@ -79,13 +81,20 @@ html:not([data-theme="dark"]) .cp-onboard-header,
 html:not([data-theme="dark"]) .newsfeed-header,
 [data-theme="light"] .newsfeed-header,
 .newsfeed-header {
-  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%) !important;
-  border-radius: 24px !important;
-  box-shadow: 4px 6px 18px rgba(148, 163, 184, 0.22), -4px -4px 14px rgba(255, 255, 255, 0.9) !important;
-  border: 1px solid rgba(203, 213, 225, 0.85) !important;
-  padding: 24px 28px !important;
+  background: transparent !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  border: none !important;
+  border-bottom: 1px solid rgba(226, 232, 240, 0.9) !important;
+  padding: 0 0 20px 0 !important;
+  margin-bottom: 24px !important;
+  display: flex !important;
+  align-items: flex-end !important;
+  justify-content: space-between !important;
+  gap: 16px !important;
+  flex-wrap: wrap !important;
   position: relative !important;
-  overflow: hidden !important;
+  overflow: visible !important;
 }
 
 [data-theme="light"] .kasandigan-header .kasandigan-title,
@@ -94,9 +103,13 @@ html:not([data-theme="dark"]) .newsfeed-header,
 .complete-profile-header .cp-title,
 .cp-onboard-header h1,
 .newsfeed-header h1 {
-  color: #0f2b48 !important;
-  font-weight: 900 !important;
-  letter-spacing: -0.025em !important;
+  color: #0f172a !important;
+  font-size: 1.65rem !important;
+  font-weight: 800 !important;
+  letter-spacing: -0.03em !important;
+  line-height: 1.2 !important;
+  margin: 4px 0 6px 0 !important;
+  text-wrap: balance !important;
 }
 
 [data-theme="light"] .kasandigan-header .kasandigan-subtitle,
@@ -105,55 +118,84 @@ html:not([data-theme="dark"]) .newsfeed-header,
 .complete-profile-header .cp-subtitle,
 .cp-onboard-header p,
 .newsfeed-header p {
-  color: #476282 !important;
-  font-weight: 500 !important;
+  color: #64748b !important;
+  font-size: 0.88rem !important;
+  font-weight: 450 !important;
+  line-height: 1.5 !important;
+  margin: 0 !important;
+  max-width: 680px !important;
 }
 
-/* Header badge pill (molded porcelain chip on soft light blue) */
+/* Header badge micro-tag (Clean modern indicator) */
 .kasandigan-badge {
-  background: rgba(255, 255, 255, 0.60) !important;
-  border-radius: 9999px !important;
-  box-shadow: 2px 2px 7px rgba(14, 165, 233, 0.14), -2px -2px 6px rgba(255, 255, 255, 0.75) !important;
-  border: 1px solid #ffffff !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  background: rgba(14, 165, 233, 0.08) !important;
+  border-radius: 6px !important;
+  box-shadow: none !important;
+  border: 1px solid rgba(14, 165, 233, 0.20) !important;
   color: #0284c7 !important;
-  padding: 4px 12px !important;
+  padding: 3px 10px !important;
+  font-size: 11px !important;
   font-weight: 700 !important;
+  letter-spacing: 0.05em !important;
+  text-transform: uppercase !important;
+  margin-bottom: 4px !important;
 }
 
 .kasandigan-badge-dot {
+  width: 6px !important;
+  height: 6px !important;
+  border-radius: 50% !important;
   background: #0ea5e9 !important;
-  box-shadow: 0 0 6px rgba(14, 165, 233, 0.6) !important;
+  box-shadow: 0 0 8px rgba(14, 165, 233, 0.7) !important;
 }
 
 .mentor-v2-status-pill {
-  background: rgba(255, 255, 255, 0.60) !important;
-  border-radius: 9999px !important;
-  box-shadow: 2px 2px 7px rgba(14, 165, 233, 0.14), -2px -2px 6px rgba(255, 255, 255, 0.75) !important;
-  border: 1px solid #ffffff !important;
+  background: rgba(241, 245, 249, 0.8) !important;
+  border-radius: 8px !important;
+  box-shadow: none !important;
+  border: 1px solid #e2e8f0 !important;
 }
 
 .kasandigan-header .btn,
 .complete-profile-header .btn,
 .cp-onboard-header .btn,
 .newsfeed-header .btn {
-  border-radius: 9999px !important;
+  border-radius: 8px !important;
+}
+
+/* Actions cluster */
+.kasandigan-header-actions {
+  display: flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+  flex-wrap: wrap !important;
 }
 
 .approvals-summary-pill {
-  background: rgba(255, 255, 255, 0.60) !important;
-  border-radius: 9999px !important;
-  box-shadow: 3px 3px 9px rgba(165, 185, 210, 0.25), -3px -3px 8px rgba(255, 255, 255, 0.75) !important;
-  border: 1.5px solid #ffffff !important;
-  color: #0f2b48 !important;
-  padding: 6px 14px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  background: #f1f5f9 !important;
+  border-radius: 8px !important;
+  box-shadow: none !important;
+  border: 1px solid #e2e8f0 !important;
+  color: #334155 !important;
+  padding: 7px 14px !important;
+  font-size: 13px !important;
   font-weight: 600 !important;
 }
 
 .approvals-summary-pill-count {
   background: #0ea5e9 !important;
   color: #ffffff !important;
-  box-shadow: 0 2px 5px rgba(14, 165, 233, 0.35) !important;
-  border-radius: 9999px !important;
+  box-shadow: 0 1px 3px rgba(14, 165, 233, 0.3) !important;
+  border-radius: 6px !important;
+  padding: 1px 7px !important;
+  font-weight: 800 !important;
+  font-size: 12px !important;
 }
 
 /* ── 3. Extruded Dashboard Cards & Containers ───────────────────── */
@@ -6000,66 +6042,173 @@ html[data-theme="dark"] .auth-password-toggle:hover,
 }
 
 /* ═══════════════════════════════════════════════════════════════════
-   11. Complete Profile & Onboarding
+   11. Complete Profile & Onboarding (Light Mode Neumorphism)
    ═══════════════════════════════════════════════════════════════════ */
 
 .complete-profile-page,
 .complete-profile-mentor-flow,
-.onboarding-page-shell {
+.onboarding-page-shell,
+.onboarding-page {
   background: transparent !important;
 }
 
 .complete-profile-section {
-  background: var(--neu-base) !important;
+  background: var(--neu-base, #ebf0f7) !important;
   border-radius: 24px !important;
-  border: var(--neu-rim) !important;
-  box-shadow: var(--neu-flat) !important;
+  border: 1.5px solid rgba(255, 255, 255, 0.85) !important;
+  box-shadow: 8px 8px 20px rgba(166, 180, 200, 0.45), -8px -8px 20px #ffffff !important;
   padding: 28px 32px !important;
   margin-bottom: 24px !important;
 }
 
 .complete-profile-section-title {
   color: #0f172a !important;
-  font-weight: 700 !important;
-  font-size: 1.25rem !important;
+  font-weight: 800 !important;
+  font-size: 1.3rem !important;
+  letter-spacing: -0.02em !important;
 }
 
 .complete-profile-section-help {
-  color: #475569 !important;
+  color: #64748b !important;
+  font-size: 0.9rem !important;
 }
 
 .complete-profile-expertise-option {
-  background: var(--neu-base) !important;
-  border: var(--neu-rim) !important;
-  box-shadow: var(--neu-flat-xs) !important;
+  background: var(--neu-base, #ebf0f7) !important;
+  border: 1px solid rgba(255, 255, 255, 0.8) !important;
+  box-shadow: 3px 3px 8px rgba(166, 180, 200, 0.4), -3px -3px 8px #ffffff !important;
   border-radius: 16px !important;
   color: #0f172a !important;
   transition: all 0.2s ease !important;
 }
 
 .complete-profile-expertise-option:hover {
-  box-shadow: var(--neu-flat-sm) !important;
+  box-shadow: 5px 5px 12px rgba(166, 180, 200, 0.5), -5px -5px 12px #ffffff !important;
   transform: translateY(-1.5px) !important;
 }
 
 .complete-profile-expertise-option.is-active {
-  box-shadow: var(--neu-pressed-sm) !important;
+  box-shadow: inset 2px 2px 5px rgba(14, 165, 233, 0.2), inset -2px -2px 5px #ffffff !important;
   border-color: #0284c7 !important;
   color: #0284c7 !important;
 }
 
 .complete-profile-expertise-value {
-  background: var(--neu-base) !important;
-  box-shadow: var(--neu-flat-xs) !important;
+  background: var(--neu-base, #ebf0f7) !important;
+  box-shadow: 2px 2px 5px rgba(166, 180, 200, 0.3), -2px -2px 5px #ffffff !important;
   color: #0284c7 !important;
 }
 
 .complete-profile-submit-btn {
-  background: linear-gradient(145deg, #0ea5e9, #0284c7) !important;
+  background: linear-gradient(180deg, #0ea5e9, #0284c7) !important;
   color: #ffffff !important;
-  box-shadow: 4px 4px 14px rgba(14, 165, 233, 0.4), -3px -3px 8px var(--neu-light) !important;
-  border: 1px solid rgba(255, 255, 255, 0.4) !important;
+  box-shadow: 0 4px 14px rgba(14, 165, 233, 0.4) !important;
+  border: 1px solid rgba(255, 255, 255, 0.3) !important;
   border-radius: 14px !important;
+}
+
+/* Onboarding Stepper & Wizard (Light Mode) */
+.onboarding-stepper {
+  gap: 12px !important;
+}
+
+.onboarding-stepper-item {
+  background: var(--neu-base, #ebf0f7) !important;
+  border: 1.5px solid rgba(255, 255, 255, 0.85) !important;
+  border-radius: 16px !important;
+  box-shadow: 4px 4px 10px rgba(166, 180, 200, 0.4), -4px -4px 10px #ffffff !important;
+  color: #64748b !important;
+  transition: all 0.2s ease !important;
+}
+
+.onboarding-stepper-item.is-current {
+  border-color: #0284c7 !important;
+  background: #f0f9ff !important;
+  box-shadow: inset 2px 2px 5px rgba(14, 165, 233, 0.2), inset -2px -2px 5px #ffffff !important;
+  color: #0f172a !important;
+}
+
+.onboarding-stepper-item.is-complete {
+  color: #0f172a !important;
+}
+
+.onboarding-stepper-index {
+  background: #ffffff !important;
+  color: #0284c7 !important;
+  border: 1.5px solid #cbd5e1 !important;
+  box-shadow: 2px 2px 5px rgba(166, 180, 200, 0.3), -2px -2px 5px #ffffff !important;
+}
+
+.onboarding-stepper-item.is-current .onboarding-stepper-index,
+.onboarding-stepper-item.is-complete .onboarding-stepper-index {
+  background: linear-gradient(135deg, #0ea5e9, #0284c7) !important;
+  border-color: transparent !important;
+  color: #ffffff !important;
+  box-shadow: 0 2px 6px rgba(14, 165, 233, 0.4) !important;
+}
+
+.onboarding-stepper-label {
+  font-weight: 700 !important;
+  color: inherit !important;
+}
+
+.onboarding-panel {
+  background: var(--neu-base, #ebf0f7) !important;
+  border: 1.5px solid rgba(255, 255, 255, 0.9) !important;
+  border-radius: 24px !important;
+  box-shadow: 10px 10px 24px rgba(166, 180, 200, 0.5), -10px -10px 24px #ffffff !important;
+  padding: 32px 36px !important;
+}
+
+.onboarding-eyebrow {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  padding: 3px 10px !important;
+  border-radius: 6px !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.06em !important;
+  text-transform: uppercase !important;
+  background: rgba(14, 165, 233, 0.10) !important;
+  color: #0284c7 !important;
+  border: 1px solid rgba(14, 165, 233, 0.25) !important;
+  margin-bottom: 8px !important;
+}
+
+.onboarding-welcome-title {
+  color: #0f172a !important;
+  font-weight: 800 !important;
+  letter-spacing: -0.025em !important;
+  margin-bottom: 10px !important;
+}
+
+.onboarding-welcome-copy {
+  color: #475569 !important;
+  font-size: 0.95rem !important;
+  line-height: 1.6 !important;
+}
+
+.onboarding-welcome-list {
+  color: #1e293b !important;
+  font-size: 0.92rem !important;
+  line-height: 1.6 !important;
+}
+
+.onboarding-actions .btn {
+  background: linear-gradient(180deg, #0ea5e9, #0284c7) !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 14px rgba(14, 165, 233, 0.35) !important;
+  border-radius: 12px !important;
+  font-weight: 700 !important;
+  padding: 10px 22px !important;
+}
+
+.onboarding-actions .btn.secondary {
+  background: var(--neu-base, #ebf0f7) !important;
+  color: #334155 !important;
+  border: 1px solid rgba(255, 255, 255, 0.8) !important;
+  box-shadow: 3px 3px 8px rgba(166, 180, 200, 0.4), -3px -3px 8px #ffffff !important;
 }
 
 /* ═══════════════════════════════════════════════════════════════════
@@ -12300,7 +12449,7 @@ html[data-theme="light"] .notifications-page .notifications-filter-tabs .MuiTab-
   color: #94a3b8 !important;
 }
 
-/* ── 2. Extruded Header Banners ─────────────────────────────────── */
+/* ── 2. Modern Open-Canvas Header Dark Mode (Zero Container / Clean SaaS) ──── */
 
 [data-theme="dark"] .kasandigan-header,
 [data-theme="dark"] .complete-profile-header,
@@ -12310,25 +12459,80 @@ html[data-theme="light"] .notifications-page .notifications-filter-tabs .MuiTab-
 .dark .complete-profile-header,
 .dark .cp-onboard-header,
 .dark .newsfeed-header {
-  background: #181b20 !important;
-  border-radius: 24px !important;
-  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.7) !important;
-  border: 1px solid rgba(255, 255, 255, 0.08) !important;
-  padding: 24px 28px !important;
+  background: transparent !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  border: none !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+  padding: 0 0 20px 0 !important;
+  margin-bottom: 24px !important;
+  display: flex !important;
+  align-items: flex-end !important;
+  justify-content: space-between !important;
+  gap: 16px !important;
+  flex-wrap: wrap !important;
 }
 
-.dark .kasandigan-badge {
-  background: #13161a !important;
-  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+[data-theme="dark"] .kasandigan-header .kasandigan-title,
+.dark .kasandigan-header .kasandigan-title {
+  color: #f8fafc !important;
+  font-size: 1.65rem !important;
+  font-weight: 800 !important;
+  letter-spacing: -0.03em !important;
+  line-height: 1.2 !important;
+  margin: 4px 0 6px 0 !important;
+}
+
+[data-theme="dark"] .kasandigan-header .kasandigan-subtitle,
+.dark .kasandigan-header .kasandigan-subtitle {
   color: #94a3b8 !important;
+  font-size: 0.88rem !important;
+  font-weight: 450 !important;
+  line-height: 1.5 !important;
+  margin: 0 !important;
+}
+
+.dark .kasandigan-badge,
+[data-theme="dark"] .kasandigan-badge {
+  background: rgba(56, 189, 248, 0.10) !important;
+  border: 1px solid rgba(56, 189, 248, 0.22) !important;
+  color: #38bdf8 !important;
   box-shadow: none !important;
+  border-radius: 6px !important;
+  padding: 3px 10px !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.05em !important;
+  text-transform: uppercase !important;
+  margin-bottom: 4px !important;
 }
 
 [data-theme="dark"] .kasandigan-badge-dot,
 .dark .kasandigan-badge-dot {
+  width: 6px !important;
+  height: 6px !important;
+  border-radius: 50% !important;
   background: #38bdf8 !important;
-  opacity: 0.8 !important;
+  opacity: 1 !important;
+  box-shadow: 0 0 8px rgba(56, 189, 248, 0.7) !important;
+}
+
+[data-theme="dark"] .approvals-summary-pill,
+.dark .approvals-summary-pill {
+  background: #181b20 !important;
+  border: 1px solid rgba(255, 255, 255, 0.10) !important;
+  color: #cbd5e1 !important;
   box-shadow: none !important;
+  border-radius: 8px !important;
+  padding: 7px 14px !important;
+}
+
+[data-theme="dark"] .approvals-summary-pill-count,
+.dark .approvals-summary-pill-count {
+  background: #0284c7 !important;
+  color: #ffffff !important;
+  box-shadow: 0 1px 4px rgba(2, 132, 199, 0.4) !important;
+  border-radius: 6px !important;
 }
 
 /* ── 3. Tactile Cards & Molded Panels ──────────────────────────── */
@@ -17426,4 +17630,143 @@ html[data-theme="dark"] .admin-neu-xai-summary,
 .dark .admin-neu-xai-summary {
   color: #94a3b8;
 }
+
+/* ═══════════════════════════════════════════════════════════════════
+   21. Complete Profile & Onboarding Dark Mode (Tactile Obsidian)
+   ═══════════════════════════════════════════════════════════════════ */
+
+[data-theme="dark"] .complete-profile-section,
+.dark .complete-profile-section {
+  background: #181b20 !important;
+  border-radius: 24px !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  box-shadow: 8px 8px 24px rgba(0, 0, 0, 0.65), -2px -2px 8px rgba(255, 255, 255, 0.02) !important;
+  padding: 28px 32px !important;
+  margin-bottom: 24px !important;
+}
+
+[data-theme="dark"] .complete-profile-section-title,
+.dark .complete-profile-section-title {
+  color: #f8fafc !important;
+  font-weight: 800 !important;
+  font-size: 1.3rem !important;
+}
+
+[data-theme="dark"] .complete-profile-section-help,
+.dark .complete-profile-section-help {
+  color: #94a3b8 !important;
+}
+
+[data-theme="dark"] .complete-profile-expertise-option,
+.dark .complete-profile-expertise-option {
+  background: #181b20 !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  box-shadow: 3px 3px 8px rgba(0, 0, 0, 0.55), -2px -2px 6px rgba(255, 255, 255, 0.02) !important;
+  border-radius: 16px !important;
+  color: #e2e8f0 !important;
+  transition: all 0.2s ease !important;
+}
+
+[data-theme="dark"] .complete-profile-expertise-option:hover,
+.dark .complete-profile-expertise-option:hover {
+  box-shadow: 5px 5px 12px rgba(0, 0, 0, 0.65) !important;
+  transform: translateY(-1.5px) !important;
+  border-color: rgba(56, 189, 248, 0.4) !important;
+}
+
+[data-theme="dark"] .complete-profile-expertise-option.is-active,
+.dark .complete-profile-expertise-option.is-active {
+  box-shadow: inset 2px 2px 5px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(56, 189, 248, 0.35) !important;
+  border-color: #38bdf8 !important;
+  color: #38bdf8 !important;
+}
+
+[data-theme="dark"] .complete-profile-expertise-value,
+.dark .complete-profile-expertise-value {
+  background: #13161a !important;
+  box-shadow: inset 1.5px 1.5px 3px rgba(0, 0, 0, 0.6) !important;
+  color: #38bdf8 !important;
+}
+
+/* Dark Mode Stepper & Panels */
+[data-theme="dark"] .onboarding-stepper-item,
+.dark .onboarding-stepper-item {
+  background: #181b20 !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: 16px !important;
+  box-shadow: 4px 4px 12px rgba(0, 0, 0, 0.6), -2px -2px 6px rgba(255, 255, 255, 0.02) !important;
+  color: #94a3b8 !important;
+}
+
+[data-theme="dark"] .onboarding-stepper-item.is-current,
+.dark .onboarding-stepper-item.is-current {
+  border-color: #38bdf8 !important;
+  background: rgba(56, 189, 248, 0.12) !important;
+  box-shadow: inset 2px 2px 5px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(56, 189, 248, 0.35) !important;
+  color: #f8fafc !important;
+}
+
+[data-theme="dark"] .onboarding-stepper-item.is-complete,
+.dark .onboarding-stepper-item.is-complete {
+  color: #f8fafc !important;
+}
+
+[data-theme="dark"] .onboarding-stepper-index,
+.dark .onboarding-stepper-index {
+  background: #13161a !important;
+  color: #38bdf8 !important;
+  border: 1px solid rgba(255, 255, 255, 0.10) !important;
+  box-shadow: inset 1px 1px 3px rgba(0, 0, 0, 0.5) !important;
+}
+
+[data-theme="dark"] .onboarding-stepper-item.is-current .onboarding-stepper-index,
+[data-theme="dark"] .onboarding-stepper-item.is-complete .onboarding-stepper-index,
+.dark .onboarding-stepper-item.is-current .onboarding-stepper-index,
+.dark .onboarding-stepper-item.is-complete .onboarding-stepper-index {
+  background: linear-gradient(135deg, #0ea5e9, #0284c7) !important;
+  border-color: transparent !important;
+  color: #ffffff !important;
+  box-shadow: 0 2px 8px rgba(14, 165, 233, 0.4) !important;
+}
+
+[data-theme="dark"] .onboarding-panel,
+.dark .onboarding-panel {
+  background: #181b20 !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: 24px !important;
+  box-shadow: 10px 10px 30px rgba(0, 0, 0, 0.7), -3px -3px 10px rgba(255, 255, 255, 0.02) !important;
+  color: #f8fafc !important;
+  padding: 32px 36px !important;
+}
+
+[data-theme="dark"] .onboarding-eyebrow,
+.dark .onboarding-eyebrow {
+  background: rgba(56, 189, 248, 0.10) !important;
+  color: #38bdf8 !important;
+  border: 1px solid rgba(56, 189, 248, 0.25) !important;
+}
+
+[data-theme="dark"] .onboarding-welcome-title,
+.dark .onboarding-welcome-title {
+  color: #f8fafc !important;
+}
+
+[data-theme="dark"] .onboarding-welcome-copy,
+.dark .onboarding-welcome-copy {
+  color: #94a3b8 !important;
+}
+
+[data-theme="dark"] .onboarding-welcome-list,
+.dark .onboarding-welcome-list {
+  color: #e2e8f0 !important;
+}
+
+[data-theme="dark"] .onboarding-actions .btn.secondary,
+.dark .onboarding-actions .btn.secondary {
+  background: #181b20 !important;
+  color: #cbd5e1 !important;
+  border: 1px solid rgba(255, 255, 255, 0.10) !important;
+  box-shadow: 3px 3px 8px rgba(0, 0, 0, 0.55), -2px -2px 6px rgba(255, 255, 255, 0.02) !important;
+}
+
 

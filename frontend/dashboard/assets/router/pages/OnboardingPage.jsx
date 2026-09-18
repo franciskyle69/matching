@@ -356,7 +356,9 @@ import CloudUploadOutlinedIcon from "@mui/icons-material/CloudUploadOutlined";
     const MuiTypography = Mui.Typography || "div";
     function chooseFile(candidate) {
       if (!candidate) return;
-      const validType = ["image/png", "image/jpeg"].includes(candidate.type);
+      const validType =
+        ["image/png", "image/jpeg", "image/jpg"].includes(candidate.type) ||
+        /\.(png|jpe?g)$/i.test(candidate.name || "");
       if (!validType || candidate.size > 5 * 1024 * 1024) {
         ctx.setError("Choose a PNG, JPG, or JPEG image up to 5 MB.");
         return;
@@ -365,85 +367,124 @@ import CloudUploadOutlinedIcon from "@mui/icons-material/CloudUploadOutlined";
       setPreview(URL.createObjectURL(candidate));
       ctx.setError("");
     }
+    function proceedToStep2() {
+      if (!file) {
+        ctx.setError("Please upload your profile photo or institutional ID to proceed.");
+        return;
+      }
+      ctx.setError("");
+      setStep(2);
+    }
     function submit() {
       if (!file) {
-        ctx.setError("Upload a profile photo or institutional ID image first.");
+        ctx.setError("Please upload your profile photo or institutional ID in Step 1 first.");
         setStep(1);
         return;
       }
+      const campus = (faculty ? "Main" : form.campus || "").trim();
+      if (!campus) {
+        ctx.setError("Please enter your campus location (e.g. Main).");
+        return;
+      }
+      const contact = (form.contact_no || "").trim();
+      if (!contact) {
+        ctx.setError("Please enter your mobile contact number (e.g. 09XXXXXXXXX).");
+        return;
+      }
+      const cleanPhone = contact.replace(/[\s-]/g, "");
+      if (!/^09\d{9}$/.test(cleanPhone) && !/^\+639\d{9}$/.test(cleanPhone)) {
+        ctx.setError(
+          "Please enter a valid 11-digit Philippine mobile number starting with 09 (e.g. 09123456789).",
+        );
+        return;
+      }
+      ctx.setError("");
       const body = new FormData();
       body.append("profile_photo", file);
       body.append(
         "metadata",
         JSON.stringify({
           ...form,
+          campus,
+          contact_no: cleanPhone,
           year_level: faculty ? 4 : Number(form.year_level),
         }),
       );
       ctx.handleOnboardingComplete(body);
     }
-    const setValue = (key) => (event) =>
+    const setValue = (key) => (event) => {
+      if (ctx.error) ctx.setError("");
       setForm((previous) => ({ ...previous, [key]: event.target.value }));
+    };
     return (
-      <MuiBox
-        sx={{ minHeight: "100vh", bgcolor: "#f4f7fb", p: { xs: 2, md: 5 } }}
-      >
-        <MuiPaper
-          sx={{
-            maxWidth: 860,
-            mx: "auto",
-            p: { xs: 3, md: 5 },
-            borderRadius: 3,
-          }}
-        >
-          <MuiStack spacing={3}>
-            <div>
-              <MuiTypography variant="overline" color="primary">
-                PeerLink onboarding
-              </MuiTypography>
-              <MuiTypography variant="h4" fontWeight={700}>
-                Complete Your BukSU Mentorship Profile
-              </MuiTypography>
+      <div className="cp-onboard">
+        <div className="cp-onboard-card">
+          <div className="cp-onboard-progress" aria-label="Setup progress">
+            <div className="cp-onboard-progress-meta">
+              <span>Step {step} of 2</span>
+              <span>
+                {step === 1 ? "Identity verification" : "Academic details"}
+              </span>
             </div>
-            {ctx.error && <Mui.Alert severity="error">{ctx.error}</Mui.Alert>}
-            <MuiTypography color="text.secondary">
-              Step {step} of 2
-            </MuiTypography>
-            {step === 1 ? (
-              <MuiStack spacing={2}>
-                <MuiTypography variant="h6">
-                  Profile photo or institutional ID
-                </MuiTypography>
-                <MuiBox
-                  component="label"
+            <div className="cp-onboard-progress-track">
+              <span className="cp-onboard-progress-fill is-current" />
+              <span
+                className={`cp-onboard-progress-fill ${step === 2 ? "is-current" : ""}`}
+              />
+            </div>
+          </div>
+
+          <header className="cp-onboard-header">
+            <p className="cp-onboard-eyebrow">PeerLink onboarding</p>
+            <h1 className="cp-onboard-title">
+              Complete Your BukSU Mentorship Profile
+            </h1>
+            <p className="cp-onboard-copy">
+              {step === 1
+                ? "Upload your profile photo or institutional ID to verify your BukSU affiliation."
+                : "Confirm your academic standing and subjects of interest for optimal peer matching."}
+            </p>
+          </header>
+
+          {ctx.error && (
+            <div className="cp-onboard-error-banner" style={{ marginBottom: 20 }}>
+              <p className="cp-onboard-error">{ctx.error}</p>
+            </div>
+          )}
+
+          {step === 1 ? (
+            <div className="cp-onboard-form">
+              <div className="cp-onboard-field">
+                <label>
+                  Profile photo or institutional ID <span style={{ color: "#ef4444" }}>*</span>
+                </label>
+                <label
                   htmlFor="onboarding-photo"
-                  sx={{
-                    border: "2px dashed",
-                    borderColor: "primary.main",
-                    borderRadius: 2,
-                    p: 4,
-                    textAlign: "center",
-                    cursor: "pointer",
-                  }}
+                  className="cp-onboard-dropzone"
                 >
                   {preview ? (
                     <img
                       src={preview}
                       alt="Selected profile preview"
-                      style={{
-                        width: 160,
-                        height: 160,
-                        objectFit: "cover",
-                        borderRadius: "50%",
-                      }}
+                      className="cp-onboard-preview-img"
                     />
                   ) : (
-                    <>
-                      <CloudUploadOutlinedIcon />
-                      <MuiTypography>
-                        Drop an image here or choose a file
-                      </MuiTypography>
-                    </>
+                    <div className="cp-onboard-dropzone-empty">
+                      <CloudUploadOutlinedIcon
+                        style={{ fontSize: 44, color: "var(--cp-accent)" }}
+                      />
+                      <p style={{ margin: "8px 0 0", fontWeight: 600 }}>
+                        Drop an image here or click to choose a file
+                      </p>
+                      <span
+                        style={{
+                          fontSize: "12px",
+                          color: "var(--cp-text-muted)",
+                        }}
+                      >
+                        PNG, JPG, or JPEG up to 5 MB
+                      </span>
+                    </div>
                   )}
                   <input
                     id="onboarding-photo"
@@ -452,60 +493,98 @@ import CloudUploadOutlinedIcon from "@mui/icons-material/CloudUploadOutlined";
                     accept=".png,.jpg,.jpeg,image/png,image/jpeg"
                     onChange={(event) => chooseFile(event.target.files?.[0])}
                   />
-                </MuiBox>
-                <MuiButton
-                  variant="contained"
-                  onClick={() => setStep(2)}
-                  disabled={!file}
+                </label>
+              </div>
+
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "flex-end",
+                  marginTop: 12,
+                }}
+              >
+                <button
+                  type="button"
+                  className="cp-onboard-submit"
+                  style={{ minWidth: 160 }}
+                  onClick={proceedToStep2}
                 >
-                  Continue
-                </MuiButton>
-              </MuiStack>
-            ) : (
-              <MuiStack spacing={2}>
-                <MuiTypography variant="h6">
-                  Academic profile and preferences
-                </MuiTypography>
-                <MuiTextField
-                  label="Course program"
-                  value="BSIT"
-                  InputProps={{ readOnly: true }}
-                  fullWidth
-                />
-                <MuiTextField
-                  select
-                  label="Year level"
-                  value={faculty ? 4 : form.year_level}
-                  onChange={setValue("year_level")}
-                  disabled={faculty}
-                  SelectProps={{ native: true }}
-                  fullWidth
-                >
-                  {faculty ? (
-                    <option value={4}>Faculty / Staff</option>
-                  ) : (
-                    <>
-                      <option value={1}>1st Year</option>
-                      <option value={3}>3rd Year</option>
-                      <option value={4}>4th Year</option>
-                    </>
-                  )}
-                </MuiTextField>
-                <MuiTextField
-                  label="Campus location"
-                  value={faculty ? "Main" : form.campus}
-                  onChange={setValue("campus")}
-                  fullWidth
-                />
-                <MuiTextField
-                  label="Mobile contact number"
-                  value={form.contact_no}
-                  onChange={setValue("contact_no")}
-                  fullWidth
-                  inputProps={{ inputMode: "tel" }}
-                />
-                <MuiTextField
-                  label="Subjects of interest (comma separated)"
+                  Continue →
+                </button>
+              </div>
+            </div>
+          ) : (
+            <form
+              className="cp-onboard-form"
+              onSubmit={(e) => {
+                e.preventDefault();
+                submit();
+              }}
+            >
+              <div className="cp-onboard-grid">
+                <div className="cp-onboard-field">
+                  <label>Course program</label>
+                  <p className="cp-onboard-locked">BSIT — Information Technology</p>
+                </div>
+
+                <div className="cp-onboard-field">
+                  <label htmlFor="cp-year-level">Year level</label>
+                  <select
+                    id="cp-year-level"
+                    value={faculty ? 4 : form.year_level}
+                    onChange={setValue("year_level")}
+                    disabled={faculty}
+                  >
+                    {faculty ? (
+                      <option value={4}>Faculty / Staff</option>
+                    ) : (
+                      <>
+                        <option value={1}>1st Year</option>
+                        <option value={2}>2nd Year</option>
+                        <option value={3}>3rd Year</option>
+                        <option value={4}>4th Year</option>
+                      </>
+                    )}
+                  </select>
+                </div>
+              </div>
+
+              <div className="cp-onboard-grid">
+                <div className="cp-onboard-field">
+                  <label htmlFor="cp-campus">
+                    Campus location <span style={{ color: "#ef4444" }}>*</span>
+                  </label>
+                  <input
+                    id="cp-campus"
+                    type="text"
+                    value={faculty ? "Main" : form.campus}
+                    onChange={setValue("campus")}
+                    placeholder="e.g. Main"
+                  />
+                </div>
+
+                <div className="cp-onboard-field">
+                  <label htmlFor="cp-contact">
+                    Mobile contact number <span style={{ color: "#ef4444" }}>*</span>
+                  </label>
+                  <input
+                    id="cp-contact"
+                    type="tel"
+                    inputMode="tel"
+                    value={form.contact_no}
+                    onChange={setValue("contact_no")}
+                    placeholder="09XXXXXXXXX"
+                  />
+                </div>
+              </div>
+
+              <div className="cp-onboard-field">
+                <label htmlFor="cp-subjects">
+                  Subjects of interest (comma separated)
+                </label>
+                <input
+                  id="cp-subjects"
+                  type="text"
                   value={form.subjects.join(", ")}
                   onChange={(event) =>
                     setForm((previous) => ({
@@ -516,25 +595,38 @@ import CloudUploadOutlinedIcon from "@mui/icons-material/CloudUploadOutlined";
                         .filter(Boolean),
                     }))
                   }
-                  fullWidth
+                  placeholder="e.g. IT 111, IT 112, Web Systems"
                 />
-                <MuiStack direction="row" spacing={2}>
-                  <MuiButton variant="outlined" onClick={() => setStep(1)}>
-                    Back
-                  </MuiButton>
-                  <MuiButton
-                    variant="contained"
-                    onClick={submit}
-                    disabled={ctx.onboardingSaving}
-                  >
-                    {ctx.onboardingSaving ? "Saving..." : "Complete onboarding"}
-                  </MuiButton>
-                </MuiStack>
-              </MuiStack>
-            )}
-          </MuiStack>
-        </MuiPaper>
-      </MuiBox>
+              </div>
+
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  marginTop: 12,
+                }}
+              >
+                <button
+                  type="button"
+                  className="cp-onboard-btn-secondary"
+                  onClick={() => setStep(1)}
+                >
+                  ← Back
+                </button>
+                <button
+                  type="submit"
+                  className="cp-onboard-submit"
+                  style={{ minWidth: 200 }}
+                  disabled={ctx.onboardingSaving}
+                >
+                  {ctx.onboardingSaving ? "Saving..." : "Complete onboarding"}
+                </button>
+              </div>
+            </form>
+          )}
+        </div>
+      </div>
     );
   }
 

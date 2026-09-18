@@ -381,7 +381,9 @@ import GroupsOutlined from "@mui/icons-material/GroupsOutlined";
       adminPairingsLoading,
       loadAdminPairings,
     } = ctx;
-    const isStaff = !!(user?.is_staff || user?.role === "staff");
+    const isStaff = !!(
+      user?.is_staff || String(user?.role || "").toLowerCase() === "staff"
+    );
     const [staffPairSearch, setStaffPairSearch] = useState("");
 
     useEffect(() => {
@@ -400,7 +402,7 @@ import GroupsOutlined from "@mui/icons-material/GroupsOutlined";
     const [matchSubjectFilter, setMatchSubjectFilter] = useState("");
     const [matchAvailabilityFilter, setMatchAvailabilityFilter] = useState("");
 
-    const isMentee = user.role === "mentee";
+    const isMentee = String(user?.role || "").toLowerCase() === "mentee";
     const menteeQuestionnaireCompleted = !!(
       user.mentee_questionnaire_completed ?? user.questionnaire_completed
     );

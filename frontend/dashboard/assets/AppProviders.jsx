@@ -712,7 +712,7 @@
     useEffect(() => {
       if (!authCheckDone || !user) return;
       if (user.is_onboarded === true && activeTab === "onboarding") {
-        setActiveTab("home");
+        setActiveTab("matching");
         return;
       }
       if (needsCompleteProfile(user)) {
@@ -1010,7 +1010,8 @@
         return result.data;
       }
       const requiredOnboardingTab =
-        (isMentee && !generalCompleted) || (isMentor && !mentorQCompleted)
+        !result.data.is_onboarded &&
+        (((isMentee && !generalCompleted) || (isMentor && !mentorQCompleted))
           ? "onboarding"
           : isMentee &&
               !(
@@ -1018,7 +1019,7 @@
                 result.data.questionnaire_completed
               )
             ? "onboarding"
-            : null;
+            : null);
       setActiveTab((prev) =>
         ["signin", "signup"].includes(prev)
           ? requiredOnboardingTab || "home"
@@ -2276,19 +2277,42 @@
         body: formData,
       });
       if (!result.ok) {
-        const message = result.data?.error || "Unable to complete onboarding.";
+        let message =
+          result.data?.error || result.data?.detail || result.data?.message;
+        if (!message && result.data && typeof result.data === "object") {
+          const values = Object.values(result.data).flat();
+          if (values.length > 0 && typeof values[0] === "string") {
+            message = values.join(" ");
+          }
+        }
+        if (!message && typeof result.data === "string") {
+          message = result.data;
+        }
+        if (!message) {
+          message =
+            "Unable to complete onboarding. Please verify your details and try again.";
+        }
         setError(message);
         addToast(message, "warning");
         setOnboardingSaving(false);
         return { ok: false, message };
       }
+      const updatedUser = {
+        ...(result.data?.user || {}),
+        is_onboarded: true,
+        is_profile_complete: true,
+        mentee_approved: true,
+        mentor_approved: true,
+      };
       setUser((previous) => ({
         ...(previous || {}),
-        ...(result.data.user || {}),
-        is_onboarded: true,
+        ...updatedUser,
       }));
       setOnboardingSaving(false);
-      setActiveTab("home");
+      await loadMe({ force: true });
+      addToast("Onboarding complete! Welcome to PeerLink Matching.", "success");
+      setActiveTab("matching");
+      replaceAppUrl("matching");
       return { ok: true, data: result.data.user };
     }
 

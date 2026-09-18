@@ -138,13 +138,16 @@ def _json_body(request):
         request: Django request object to parse.
     
     Returns:
-        Parsed JSON dict, or empty dict on decoding error.
+        Parsed JSON dict, or empty dict on decoding error or multipart data.
     """
-    if not request.body:
+    content_type = getattr(request, "content_type", "") or request.META.get("CONTENT_TYPE", "")
+    if "multipart/form-data" in content_type or "application/x-www-form-urlencoded" in content_type:
         return {}
     try:
+        if not request.body:
+            return {}
         return json.loads(request.body.decode("utf-8"))
-    except (json.JSONDecodeError, UnicodeDecodeError):
+    except Exception:
         return {}
 
 

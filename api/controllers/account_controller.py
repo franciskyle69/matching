@@ -94,6 +94,8 @@ from ..views import (
     get_subjects_list,
     get_mentor_approved,
     get_mentee_approved,
+    invalidate_approval_cache_mentor,
+    invalidate_approval_cache_mentee,
     logger,
 )
 from matching.models import Notification, Subject, Topic
@@ -1771,10 +1773,16 @@ def complete_onboarding(request):
         profile.skills = skills
         profile.topics = skills
         profile.expertise_level = support_need
+        profile.approved = True
         profile.save()
+        _sync_user_topic_preferences(request.user, "teach", subjects, skills)
+        invalidate_approval_cache_mentor(profile.id)
     else:
         profile.year_level = year_level
         profile.campus = str(metadata.get("campus") or payload.get("campus") or user_profile.campus or "Main").strip()[:100]
+        contact_no = str(metadata.get("contact_no") or payload.get("contact_no") or "").strip()[:11]
+        if contact_no:
+            profile.contact_no = contact_no
         if image_url:
             profile.avatar_url = image_url
         profile.availability = availability
@@ -1782,10 +1790,14 @@ def complete_onboarding(request):
         profile.skills = skills
         profile.topics = skills
         profile.difficulty_level = support_need
+        profile.approved = True
         profile.save()
+        _sync_user_topic_preferences(request.user, "support", subjects, skills)
+        invalidate_approval_cache_mentee(profile.id)
 
     user_profile.is_onboarded = True
-    user_profile.save(update_fields=["is_onboarded"])
+    user_profile.approval_status = "ACTIVE"
+    user_profile.save(update_fields=["is_onboarded", "approval_status"])
     mark_profile_complete(profile, True)
     _ensure_onboarding_state(request.user, True)
     _clear_me_cache(request.user.id)
@@ -1795,9 +1807,12 @@ def complete_onboarding(request):
         "user": {
             "id": request.user.id,
             "email": request.user.email,
-            "role": user_profile.role,
+            "role": _user_role(request.user),
             "is_onboarded": True,
-            "approval_status": user_profile.approval_status,
+            "is_profile_complete": True,
+            "mentee_approved": True if not isinstance(profile, MentorProfile) else False,
+            "mentor_approved": True if isinstance(profile, MentorProfile) else False,
+            "approval_status": "ACTIVE",
             "avatar_url": image_url or getattr(profile, "avatar_url", ""),
         },
     })

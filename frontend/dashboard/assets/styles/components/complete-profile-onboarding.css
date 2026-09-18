@@ -1,38 +1,96 @@
+/* ═══════════════════════════════════════════════════════════════════
+   PeerLink Onboarding & Complete Profile (Dual Theme Neumorphism)
+   ═══════════════════════════════════════════════════════════════════ */
+
+:root,
+html[data-theme="light"] {
+  --cp-bg: #ebf0f7;
+  --cp-surface: #ebf0f7;
+  --cp-surface-subtle: #f1f5f9;
+  --cp-surface-inset: #e8eef6;
+  --cp-border: rgba(255, 255, 255, 0.9);
+  --cp-border-subtle: #cbd5e1;
+  --cp-text-primary: #0f172a;
+  --cp-text-secondary: #475569;
+  --cp-text-muted: #64748b;
+  --cp-accent: #0ea5e9;
+  --cp-accent-hover: #0284c7;
+  --cp-accent-subtle: rgba(14, 165, 233, 0.12);
+  --cp-accent-border: rgba(14, 165, 233, 0.35);
+  --cp-shadow-extruded: 12px 12px 28px rgba(166, 180, 200, 0.55), -12px -12px 28px #ffffff;
+  --cp-shadow-card: 6px 6px 16px rgba(166, 180, 200, 0.45), -6px -6px 16px #ffffff;
+  --cp-shadow-chip: 3px 3px 8px rgba(166, 180, 200, 0.4), -3px -3px 8px #ffffff;
+  --cp-shadow-inset: inset 2.5px 2.5px 5px rgba(148, 163, 184, 0.28), inset -2.5px -2.5px 5px #ffffff;
+  --cp-shadow-inset-sm: inset 1.5px 1.5px 3.5px rgba(148, 163, 184, 0.25), inset -1.5px -1.5px 3.5px #ffffff;
+  --cp-input-bg: #f0f4f8;
+  --cp-input-border: #cbd5e1;
+  --cp-input-color: #0f172a;
+}
+
+[data-theme="dark"],
+.dark {
+  --cp-bg: #121519;
+  --cp-surface: #181b20;
+  --cp-surface-subtle: #14171c;
+  --cp-surface-inset: #13161a;
+  --cp-border: rgba(255, 255, 255, 0.08);
+  --cp-border-subtle: rgba(255, 255, 255, 0.12);
+  --cp-text-primary: #f8fafc;
+  --cp-text-secondary: #94a3b8;
+  --cp-text-muted: #64748b;
+  --cp-accent: #38bdf8;
+  --cp-accent-hover: #0ea5e9;
+  --cp-accent-subtle: rgba(56, 189, 248, 0.12);
+  --cp-accent-border: rgba(56, 189, 248, 0.35);
+  --cp-shadow-extruded: 12px 12px 32px rgba(0, 0, 0, 0.7), -4px -4px 16px rgba(255, 255, 255, 0.02);
+  --cp-shadow-card: 6px 6px 18px rgba(0, 0, 0, 0.65), -2px -2px 8px rgba(255, 255, 255, 0.02);
+  --cp-shadow-chip: 3px 3px 8px rgba(0, 0, 0, 0.55), -2px -2px 6px rgba(255, 255, 255, 0.02);
+  --cp-shadow-inset: inset 2.5px 2.5px 6px rgba(0, 0, 0, 0.75), inset -1px -1px 3px rgba(255, 255, 255, 0.02);
+  --cp-shadow-inset-sm: inset 1.5px 1.5px 4px rgba(0, 0, 0, 0.65), inset -1px -1px 2px rgba(255, 255, 255, 0.02);
+  --cp-input-bg: #13161a;
+  --cp-input-border: rgba(255, 255, 255, 0.12);
+  --cp-input-color: #f1f5f9;
+}
+
+/* ── Container Layout ─────────────────────────────────────────── */
+
 .cp-onboard {
   min-height: calc(100vh - 48px);
   display: flex;
   align-items: flex-start;
   justify-content: center;
-  padding: 24px 16px 48px;
+  padding: 32px 16px 56px;
+  background: transparent;
 }
 
+/* ── Tactile Neumorphic Onboarding Card ────────────────────────── */
+
 .cp-onboard-card {
-  width: min(100%, 720px);
-  padding: 28px 28px 24px;
-  border-radius: 20px;
-  background: rgba(24, 24, 27, 0.85);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow:
-    0 24px 64px rgba(0, 0, 0, 0.5),
-    inset 0 1px 0 rgba(255, 255, 255, 0.06);
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
-  color: #fff;
+  width: min(100%, 740px);
+  padding: 32px 34px 28px;
+  border-radius: 24px;
+  background: var(--cp-surface);
+  border: 1px solid var(--cp-border);
+  box-shadow: var(--cp-shadow-extruded);
+  color: var(--cp-text-primary);
+  transition: all 0.25s ease;
 }
+
+/* ── Progress Track ───────────────────────────────────────────── */
 
 .cp-onboard-progress {
   display: grid;
   gap: 8px;
-  margin-bottom: 22px;
+  margin-bottom: 24px;
 }
 
 .cp-onboard-progress-meta {
   display: flex;
   justify-content: space-between;
-  font-size: 12px;
+  font-size: 11.5px;
   font-weight: 700;
-  color: #7dd3fc;
-  letter-spacing: 0.04em;
+  color: var(--cp-accent);
+  letter-spacing: 0.06em;
   text-transform: uppercase;
 }
 
@@ -45,58 +103,83 @@
 .cp-onboard-progress-fill {
   height: 6px;
   border-radius: 999px;
-  background: rgba(148, 163, 184, 0.22);
+  background: var(--cp-surface-inset);
+  box-shadow: var(--cp-shadow-inset-sm);
+  transition: background 0.3s ease;
 }
 
 .cp-onboard-progress-fill.is-current {
   background: linear-gradient(90deg, #38bdf8, #0ea5e9);
-  box-shadow: 0 0 10px rgba(14, 165, 233, 0.6);
+  box-shadow: 0 0 10px rgba(14, 165, 233, 0.55);
+}
+
+/* ── Typography & Header ──────────────────────────────────────── */
+
+.cp-onboard-header {
+  margin-bottom: 20px;
 }
 
 .cp-onboard-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   margin: 0 0 6px;
-  font-size: 12px;
+  padding: 3px 10px;
+  border-radius: 6px;
+  font-size: 11px;
   font-weight: 700;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: #0ea5e9;
+  background: var(--cp-accent-subtle);
+  color: var(--cp-accent);
+  border: 1px solid var(--cp-accent-border);
 }
 
 .cp-onboard-title {
-  margin: 0 0 8px;
+  margin: 8px 0 6px;
   font-size: 1.65rem;
-  line-height: 1.2;
-  letter-spacing: -0.02em;
+  line-height: 1.25;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: var(--cp-text-primary) !important;
 }
 
 .cp-onboard-copy {
-  margin: 0 0 22px;
-  color: #94a3b8;
+  margin: 0 0 20px;
+  color: var(--cp-text-secondary) !important;
+  font-size: 0.9rem;
   line-height: 1.55;
+  font-weight: 450;
 }
+
+/* ── Identity Well (Sunken Neumorphic Pod) ─────────────────────── */
 
 .cp-onboard-identity {
   display: flex;
   align-items: center;
   gap: 14px;
-  padding: 14px;
-  margin-bottom: 22px;
-  border-radius: 14px;
-  background: rgba(39, 39, 42, 0.45);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 14px 16px;
+  margin-bottom: 24px;
+  border-radius: 16px;
+  background: var(--cp-surface-inset);
+  border: 1px solid var(--cp-border);
+  box-shadow: var(--cp-shadow-inset);
 }
 
 .cp-onboard-avatar {
-  width: 56px;
-  height: 56px;
-  border-radius: 999px;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
   overflow: hidden;
   flex-shrink: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   background: linear-gradient(135deg, #0ea5e9, #0284c7);
-  font-weight: 700;
+  color: #ffffff;
+  font-weight: 800;
+  font-size: 16px;
+  box-shadow: 0 2px 8px rgba(14, 165, 233, 0.4);
 }
 
 .cp-onboard-avatar img {
@@ -108,29 +191,33 @@
 .cp-onboard-identity-name {
   margin: 0;
   font-weight: 700;
+  font-size: 14.5px;
+  color: var(--cp-text-primary) !important;
 }
 
 .cp-onboard-identity-email,
 .cp-onboard-identity-meta {
   margin: 2px 0 0;
-  color: #94a3b8;
+  color: var(--cp-text-muted) !important;
   font-size: 13px;
 }
 
+/* ── Form Controls ────────────────────────────────────────────── */
+
 .cp-onboard-form {
   display: grid;
-  gap: 18px;
+  gap: 20px;
 }
 
 .cp-onboard-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 14px;
+  gap: 16px;
 }
 
 .cp-onboard-field {
   display: grid;
-  gap: 6px;
+  gap: 7px;
   margin: 0;
   padding: 0;
   border: 0;
@@ -138,27 +225,36 @@
 
 .cp-onboard-field label,
 .cp-onboard-field legend {
-  font-size: 13px;
+  font-size: 12.5px;
   font-weight: 700;
-  color: rgba(255, 255, 255, 0.92);
+  color: var(--cp-text-primary) !important;
+  letter-spacing: 0.01em;
 }
 
 .cp-onboard-field input,
 .cp-onboard-field select {
   min-height: 44px;
   border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  background: rgba(18, 18, 21, 0.6);
-  color: #fff;
-  padding: 0 12px;
-  font: inherit;
+  border: 1px solid var(--cp-input-border);
+  background: var(--cp-input-bg) !important;
+  color: var(--cp-input-color) !important;
+  box-shadow: var(--cp-shadow-inset-sm);
+  padding: 0 14px;
+  font-size: 13.5px;
+  font-family: inherit;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .cp-onboard-field input:focus,
 .cp-onboard-field select:focus {
   outline: none;
-  border-color: #0ea5e9;
-  box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.25);
+  border-color: var(--cp-accent);
+  box-shadow: var(--cp-shadow-inset-sm), 0 0 0 2px var(--cp-accent-subtle);
+}
+
+.cp-onboard-field select option {
+  background: var(--cp-surface);
+  color: var(--cp-text-primary);
 }
 
 .cp-onboard-locked {
@@ -166,42 +262,63 @@
   min-height: 44px;
   display: flex;
   align-items: center;
-  padding: 0 12px;
+  padding: 0 14px;
   border-radius: 12px;
-  background: rgba(14, 165, 233, 0.12);
-  border: 1px solid rgba(14, 165, 233, 0.28);
-  color: #0284c7;
-  font-weight: 600;
+  background: var(--cp-accent-subtle);
+  border: 1px solid var(--cp-accent-border);
+  color: var(--cp-accent) !important;
+  font-weight: 700;
+  font-size: 13.5px;
 }
+
+/* ── Role Selection Cards (Tactile Neumorphic Buttons) ────────── */
 
 .cp-onboard-role-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 10px;
+  gap: 12px;
 }
 
 .cp-onboard-role-card {
   text-align: left;
-  padding: 14px;
-  border-radius: 14px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(39, 39, 42, 0.35);
-  color: #e2e8f0;
+  padding: 16px;
+  border-radius: 16px;
+  border: 1px solid var(--cp-border);
+  background: var(--cp-surface);
+  box-shadow: var(--cp-shadow-card);
+  color: var(--cp-text-primary);
   cursor: pointer;
   display: grid;
   gap: 4px;
+  font-weight: 700;
+  font-size: 14px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.cp-onboard-role-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--cp-accent);
 }
 
 .cp-onboard-role-card span {
-  color: #94a3b8;
+  color: var(--cp-text-muted);
   font-size: 12px;
+  font-weight: 450;
+  line-height: 1.4;
 }
 
 .cp-onboard-role-card.is-active {
-  border-color: #0ea5e9;
-  background: rgba(14, 165, 233, 0.14);
-  box-shadow: 0 0 0 1px rgba(14, 165, 233, 0.35);
+  border-color: var(--cp-accent);
+  background: var(--cp-accent-subtle);
+  box-shadow: var(--cp-shadow-inset), 0 0 0 1px var(--cp-accent-border);
+  color: var(--cp-accent);
 }
+
+.cp-onboard-role-card.is-active span {
+  color: var(--cp-text-secondary);
+}
+
+/* ── Interest Chips (Neumorphic Pills) ────────────────────────── */
 
 .cp-onboard-chips {
   display: flex;
@@ -210,57 +327,146 @@
 }
 
 .cp-onboard-chip {
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  background: rgba(39, 39, 42, 0.35);
-  color: #e2e8f0;
+  border: 1px solid var(--cp-border);
+  background: var(--cp-surface);
+  color: var(--cp-text-primary);
+  box-shadow: var(--cp-shadow-chip);
   border-radius: 999px;
-  padding: 8px 12px;
-  font-size: 13px;
+  padding: 8px 14px;
+  font-size: 12.5px;
   font-weight: 600;
   cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.cp-onboard-chip:hover {
+  transform: translateY(-1px);
+  border-color: var(--cp-accent);
+  color: var(--cp-accent);
 }
 
 .cp-onboard-chip.is-active {
   background: linear-gradient(135deg, #0ea5e9, #0284c7);
   border-color: transparent;
-  color: #fff;
+  color: #ffffff;
+  box-shadow: 0 3px 10px rgba(14, 165, 233, 0.4);
+  transform: scale(1.02);
 }
+
+/* ── Error States ─────────────────────────────────────────────── */
 
 .cp-onboard-error {
   margin: 0;
-  color: #fca5a5;
-  font-size: 12px;
+  color: #ef4444;
+  font-size: 12.5px;
   font-weight: 600;
 }
 
+[data-theme="dark"] .cp-onboard-error {
+  color: #fca5a5;
+}
+
 .cp-onboard-error-banner {
-  padding: 10px 12px;
-  border-radius: 10px;
-  background: rgba(239, 68, 68, 0.12);
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: rgba(239, 68, 68, 0.10);
   border: 1px solid rgba(239, 68, 68, 0.35);
 }
+
+/* ── Submit Action ────────────────────────────────────────────── */
 
 .cp-onboard-submit {
   min-height: 48px;
   border: 0;
-  border-radius: 12px;
-  background: linear-gradient(135deg, #0ea5e9, #0284c7);
-  color: #fff;
+  border-radius: 14px;
+  background: linear-gradient(180deg, #0ea5e9, #0284c7);
+  color: #ffffff !important;
   font-weight: 700;
+  font-size: 14.5px;
   cursor: pointer;
-  box-shadow: 0 10px 24px rgba(14, 165, 233, 0.35);
+  box-shadow: 0 4px 14px rgba(14, 165, 233, 0.4);
   transition: transform 0.18s ease, box-shadow 0.18s ease;
+  margin-top: 6px;
 }
 
 .cp-onboard-submit:hover:not(:disabled) {
-  transform: translateY(-1px);
-  box-shadow: 0 14px 32px rgba(14, 165, 233, 0.45);
+  transform: translateY(-1.5px);
+  box-shadow: 0 6px 20px rgba(14, 165, 233, 0.55);
 }
 
 .cp-onboard-submit:disabled {
-  opacity: 0.7;
+  opacity: 0.65;
   cursor: wait;
 }
+
+/* ── Dropzone & Upload ────────────────────────────────────────── */
+
+.cp-onboard-dropzone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 180px;
+  padding: 28px 20px;
+  border-radius: 18px;
+  border: 2px dashed var(--cp-accent-border);
+  background: var(--cp-surface-inset);
+  box-shadow: var(--cp-shadow-inset);
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.cp-onboard-dropzone:hover {
+  border-color: var(--cp-accent);
+  background: var(--cp-accent-subtle);
+}
+
+.cp-onboard-dropzone-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  color: var(--cp-text-secondary);
+}
+
+.cp-onboard-preview-img {
+  width: 140px;
+  height: 140px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid var(--cp-accent);
+  box-shadow: var(--cp-shadow-card);
+}
+
+/* ── Secondary Neumorphic Button ──────────────────────────────── */
+
+.cp-onboard-btn-secondary {
+  min-height: 48px;
+  padding: 0 22px;
+  border-radius: 14px;
+  border: 1px solid var(--cp-border);
+  background: var(--cp-surface);
+  color: var(--cp-text-primary);
+  box-shadow: var(--cp-shadow-card);
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease, color 0.18s ease;
+}
+
+.cp-onboard-btn-secondary:hover {
+  transform: translateY(-1.5px);
+  border-color: var(--cp-accent);
+  color: var(--cp-accent);
+  box-shadow: var(--cp-shadow-extruded);
+}
+
+/* ── Responsive ───────────────────────────────────────────────── */
 
 @media (max-width: 720px) {
   .cp-onboard-grid,
@@ -269,6 +475,7 @@
   }
 
   .cp-onboard-card {
-    padding: 22px 16px 18px;
+    padding: 24px 18px 20px;
+    border-radius: 20px;
   }
 }
