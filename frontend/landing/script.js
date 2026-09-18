@@ -100,7 +100,10 @@ function delay(ms) {
             navLinks.forEach((l) => l.classList.remove("is-active"));
             link.classList.add("is-active");
             updateNavIndicator();
-            target.scrollIntoView({ behavior: "smooth", block: "start" });
+            const headerOffset = nav.getBoundingClientRect().height + 8;
+            const targetTop =
+              target.getBoundingClientRect().top + window.scrollY - headerOffset;
+            window.scrollTo({ top: Math.max(0, targetTop), behavior: "smooth" });
             if (window.history.pushState) {
               window.history.pushState(null, "", href);
             }

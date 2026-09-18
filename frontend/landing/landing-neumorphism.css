@@ -82,34 +82,35 @@ html.dark body {
 /* ── 2. Top Navigation ─────────────────────────────────────────── */
 
 .site-nav {
-  background-color: rgba(235, 240, 247, 0.88) !important;
-  backdrop-filter: blur(20px) !important;
-  -webkit-backdrop-filter: blur(20px) !important;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.85) !important;
-  box-shadow: 0 6px 20px rgba(166, 180, 200, 0.4), 0 1px 0 #ffffff inset !important;
+  background-color: transparent !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  border-bottom: 0 !important;
+  box-shadow: none !important;
 }
 
 .site-nav.site-nav--solid {
-  background-color: rgba(235, 240, 247, 0.96) !important;
-  border-bottom-color: rgba(166, 180, 200, 0.5) !important;
-  box-shadow: 0 8px 26px rgba(166, 180, 200, 0.55), 0 1px 0 #ffffff inset !important;
+  background-color: rgba(9, 11, 17, 0.9) !important;
+  border-bottom-color: rgba(56, 189, 248, 0.16) !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.32) !important;
 }
 
 .site-nav::after {
-  background: linear-gradient(90deg, transparent, rgba(14, 165, 233, 0.4), transparent) !important;
+  display: none !important;
 }
 
 /* Brand Text */
 .site-brand-title .brand-peer {
-  color: #0f172a !important;
+  color: #f8fafc !important;
 }
 
 .site-brand-title .brand-link {
-  color: #0284c7 !important;
+  color: #7dd3fc !important;
 }
 
 .site-brand-subtitle {
-  color: #0284c7 !important;
+  color: #7dd3fc !important;
+  font-weight: 600 !important;
 }
 
 /* Center Nav Pill Cluster (Sunken Molded Well with Smooth Sliding Pill Indicator) */
@@ -118,40 +119,26 @@ html.dark body {
   position: relative !important;
   display: inline-flex !important;
   align-items: center !important;
-  background: var(--neu-base) !important;
-  box-shadow: var(--neu-pressed-sm) !important;
-  border: var(--neu-rim) !important;
-  border-radius: 9999px !important;
-  padding: 4px 5px !important;
-  isolation: isolate !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  padding: 0 !important;
+  isolation: auto !important;
 }
 
 .nav-pill-indicator {
-  position: absolute !important;
-  top: 4px !important;
-  left: 0 !important;
-  height: calc(100% - 8px) !important;
-  background: var(--neu-base) !important;
-  border-radius: 9999px !important;
-  border: 1px solid rgba(255, 255, 255, 0.95) !important;
-  box-shadow: 3px 3px 8px rgba(166, 180, 200, 0.6), -3px -3px 8px #ffffff !important;
-  pointer-events: none !important;
-  z-index: 1 !important;
-  opacity: 0;
-  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1),
-              width 0.35s cubic-bezier(0.16, 1, 0.3, 1),
-              opacity 0.2s ease !important;
-  will-change: transform, width;
+  display: none !important;
 }
 
 .nav-link-pill {
   position: relative !important;
   z-index: 2 !important;
-  color: #475569 !important;
-  font-weight: 600 !important;
-  font-size: 14.5px !important;
-  padding: 6px 16px !important;
-  border-radius: 9999px !important;
+  color: #e2e8f0 !important;
+  font-weight: 700 !important;
+  font-size: 15px !important;
+  padding: 10px clamp(12px, 1.5vw, 22px) !important;
+  border-radius: 0 !important;
   background: transparent !important;
   box-shadow: none !important;
   border: 1px solid transparent !important;
@@ -162,15 +149,15 @@ html.dark body {
 }
 
 .nav-link-pill:hover {
-  color: #0f172a !important;
+  color: #ffffff !important;
   background: transparent !important;
 }
 
 .nav-link-pill.is-active {
-  color: #0284c7 !important;
+  color: #7dd3fc !important;
   font-weight: 700 !important;
   background: transparent !important;
-  box-shadow: none !important;
+  box-shadow: inset 0 -2px 0 #38bdf8 !important;
   border-color: transparent !important;
 }
 
@@ -611,6 +598,53 @@ article.card-hover-lift p {
   }
 }
 
+/* One shared animated background from the CTA through the copyright. */
+#footer-contact,
+#contact-section {
+  background-attachment: fixed !important;
+  background-repeat: no-repeat !important;
+  background-size: cover !important;
+  background-position: center top !important;
+}
+
+#footer-contact::before,
+#contact-section::after {
+  content: "" !important;
+  position: absolute !important;
+  inset: 0 !important;
+  z-index: -1 !important;
+  background:
+    radial-gradient(ellipse 70% 55% at 30% 25%, rgba(56, 189, 248, 0.25), transparent 62%),
+    radial-gradient(ellipse 65% 50% at 72% 38%, rgba(14, 165, 233, 0.2), transparent 60%),
+    radial-gradient(circle at 50% 75%, rgba(2, 132, 199, 0.2), transparent 55%) !important;
+  opacity: 0.72 !important;
+  mix-blend-mode: screen !important;
+  pointer-events: none !important;
+  animation: hero-glow-drift 10s ease-in-out infinite !important;
+}
+
+html[data-theme="light"] #footer-contact,
+html:not(.dark) #footer-contact,
+html[data-theme="light"] #contact-section,
+html:not(.dark) #contact-section {
+  background-color: #f5f5f7 !important;
+  background-image:
+    radial-gradient(ellipse 70% 55% at 30% 25%, rgba(186, 230, 253, 0.75), transparent 62%),
+    radial-gradient(ellipse 65% 50% at 72% 38%, rgba(125, 211, 252, 0.55), transparent 60%),
+    radial-gradient(circle at 50% 75%, rgba(224, 242, 254, 0.85), transparent 55%) !important;
+}
+
+html[data-theme="light"] #footer-contact::before,
+html:not(.dark) #footer-contact::before,
+html[data-theme="light"] #contact-section::after,
+html:not(.dark) #contact-section::after {
+  background:
+    radial-gradient(ellipse 70% 55% at 30% 25%, rgba(255, 255, 255, 0.32), transparent 62%),
+    radial-gradient(ellipse 65% 50% at 72% 38%, rgba(125, 211, 252, 0.25), transparent 60%) !important;
+  mix-blend-mode: normal !important;
+  opacity: 0.8 !important;
+}
+
 /* ── 6. Teams Section ──────────────────────────────────────────── */
 
 #teams {
@@ -653,48 +687,48 @@ article.card-hover-lift p {
 
 .team-card:hover,
 #teams article.card-hover-lift:hover {
-  transform: translateY(-6px) !important;
-  box-shadow: var(--neu-flat-hover), 0 0 20px rgba(14, 165, 233, 0.14) !important;
-  border-color: rgba(56, 189, 248, 0.5) !important;
+  background-attachment: fixed !important;
+  background-repeat: no-repeat !important;
+  background-size: cover !important;
+  background-position: center top !important;
 }
 
-/* Molded Portrait Frame */
-.team-photo-frame,
-#teams article .aspect-square {
-  width: 100% !important;
-  aspect-ratio: 1 / 1 !important;
-  border-radius: 20px !important;
-  overflow: hidden !important;
-  background: #f0f1f3 !important;
-  border: 1px solid rgba(0, 0, 0, 0.05) !important;
-  box-shadow: inset 2px 2px 5px rgba(100, 116, 139, 0.15), inset -2px -2px 5px rgba(255, 255, 255, 0.7) !important;
-  margin-bottom: 0 !important;
+#footer-contact::before,
+#contact-section::after {
+  content: "" !important;
+  position: absolute !important;
+  inset: 0 !important;
+  z-index: -1 !important;
+  background:
+    radial-gradient(ellipse 70% 55% at 30% 25%, rgba(56, 189, 248, 0.25), transparent 62%),
+    radial-gradient(ellipse 65% 50% at 72% 38%, rgba(14, 165, 233, 0.2), transparent 60%),
+    radial-gradient(circle at 50% 75%, rgba(2, 132, 199, 0.2), transparent 55%) !important;
+  opacity: 0.72 !important;
+  mix-blend-mode: screen !important;
+  pointer-events: none !important;
+  animation: hero-glow-drift 10s ease-in-out infinite !important;
 }
 
-.team-photo-frame img,
-#teams article .aspect-square img {
-  width: 100% !important;
-  height: 100% !important;
-  object-fit: cover !important;
-  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1) !important;
+html[data-theme="light"] #footer-contact,
+html:not(.dark) #footer-contact,
+html[data-theme="light"] #contact-section,
+html:not(.dark) #contact-section {
+  background-color: #f5f5f7 !important;
+  background-image:
+    radial-gradient(ellipse 70% 55% at 30% 25%, rgba(186, 230, 253, 0.75), transparent 62%),
+    radial-gradient(ellipse 65% 50% at 72% 38%, rgba(125, 211, 252, 0.55), transparent 60%),
+    radial-gradient(circle at 50% 75%, rgba(224, 242, 254, 0.85), transparent 55%) !important;
 }
 
-.team-card:hover .team-photo-frame img,
-#teams article.card-hover-lift:hover img {
-  transform: scale(1.05) !important;
-}
-
-/* Team Info Container */
-.team-info,
-#teams article .px-5.py-4 {
-  width: 100% !important;
-  background: transparent !important;
-  padding: 16px 4px 0 !important;
-  display: flex !important;
-  flex-direction: column !important;
-  align-items: center !important;
-  justify-content: space-between !important;
-  flex: 1 !important;
+html[data-theme="light"] #footer-contact::before,
+html:not(.dark) #footer-contact::before,
+html[data-theme="light"] #contact-section::after,
+html:not(.dark) #contact-section::after {
+  background:
+    radial-gradient(ellipse 70% 55% at 30% 25%, rgba(255, 255, 255, 0.32), transparent 62%),
+    radial-gradient(ellipse 65% 50% at 72% 38%, rgba(125, 211, 252, 0.25), transparent 60%) !important;
+  mix-blend-mode: normal !important;
+  opacity: 0.8 !important;
 }
 
 /* Member Name */
@@ -1056,39 +1090,46 @@ html.dark body {
 
 html[data-theme="dark"] .site-nav,
 html.dark .site-nav {
-  background-color: rgba(18, 22, 31, 0.92) !important;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.6), 0 1px 0 rgba(255, 255, 255, 0.04) inset !important;
+  background-color: transparent !important;
+  border-bottom: 0 !important;
+  box-shadow: none !important;
 }
 
 html[data-theme="dark"] .site-nav.site-nav--solid,
 html.dark .site-nav.site-nav--solid {
-  background-color: rgba(18, 22, 31, 0.98) !important;
+  background-color: rgba(9, 11, 17, 0.9) !important;
   border-bottom-color: rgba(255, 255, 255, 0.1) !important;
 }
 
 html[data-theme="dark"] .site-brand-title .brand-peer,
 html.dark .site-brand-title .brand-peer {
-  color: #f1f5f9 !important;
+  color: #ffffff !important;
+}
+
+html[data-theme="dark"] .site-brand-title .brand-link,
+html.dark .site-brand-title .brand-link,
+html[data-theme="dark"] .site-brand-subtitle,
+html.dark .site-brand-subtitle {
+  color: #7dd3fc !important;
 }
 
 html[data-theme="dark"] .nav-pill-track,
 html.dark .nav-pill-track {
-  background: #181b20 !important;
-  box-shadow: inset 2px 2px 5px rgba(0, 0, 0, 0.75) !important;
-  border-color: rgba(255, 255, 255, 0.08) !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  padding: 0 !important;
 }
 
 html[data-theme="dark"] .nav-pill-indicator,
 html.dark .nav-pill-indicator {
-  background: #232730 !important;
-  border-color: rgba(255, 255, 255, 0.12) !important;
-  box-shadow: 3px 3px 8px rgba(0, 0, 0, 0.6) !important;
+  display: none !important;
 }
 
 html[data-theme="dark"] .nav-link-pill,
 html.dark .nav-link-pill {
-  color: #94a3b8 !important;
+  color: #e2e8f0 !important;
 }
 
 html[data-theme="dark"] .nav-link-pill:hover,
@@ -1647,4 +1688,1069 @@ html.dark #footer-contact a.btn-motion:active {
 html[data-theme="dark"] #nav-links,
 html.dark #nav-links {
   background-color: rgba(18, 22, 31, 0.95) !important;
+}
+
+/* Mobile menu contrast */
+#nav-links a.text-xl,
+#nav-links a[href^="#"] {
+  color: #f8fafc !important;
+  font-weight: 700 !important;
+  text-shadow: 0 1px 12px rgba(0, 0, 0, 0.35) !important;
+}
+
+#nav-links .nav-btn-login {
+  color: #f8fafc !important;
+  background: rgba(255, 255, 255, 0.06) !important;
+  border-color: rgba(255, 255, 255, 0.28) !important;
+  box-shadow: none !important;
+}
+
+#nav-links .nav-btn-signup {
+  color: #ffffff !important;
+  background: #2563eb !important;
+  border-color: rgba(147, 197, 253, 0.6) !important;
+  box-shadow: 0 6px 18px rgba(37, 99, 235, 0.35) !important;
+}
+
+#nav-links #mobile-theme-toggle {
+  color: #f8fafc !important;
+  border-color: rgba(255, 255, 255, 0.8) !important;
+}
+
+#nav-links #close-menu {
+  color: #f8fafc !important;
+  background: rgba(255, 255, 255, 0.08) !important;
+  border: 1px solid rgba(255, 255, 255, 0.22) !important;
+  box-shadow: none !important;
+}
+
+html[data-theme="light"] #nav-links,
+html:not(.dark) #nav-links {
+  background: rgba(245, 247, 251, 0.98) !important;
+  color: #0f172a !important;
+}
+
+html[data-theme="light"] #nav-links a.text-xl,
+html[data-theme="light"] #nav-links a[href^="#"],
+html:not(.dark) #nav-links a.text-xl,
+html:not(.dark) #nav-links a[href^="#"] {
+  color: #0f172a !important;
+  text-shadow: none !important;
+}
+
+html[data-theme="light"] #nav-links .nav-btn-login,
+html:not(.dark) #nav-links .nav-btn-login {
+  color: #0f172a !important;
+  background: #ffffff !important;
+  border-color: #94a3b8 !important;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.12) !important;
+}
+
+html[data-theme="light"] #nav-links .nav-btn-signup,
+html:not(.dark) #nav-links .nav-btn-signup {
+  color: #ffffff !important;
+  background: #2563eb !important;
+  border-color: #1d4ed8 !important;
+}
+
+html[data-theme="light"] #nav-links #mobile-theme-toggle,
+html:not(.dark) #nav-links #mobile-theme-toggle {
+  color: #0f172a !important;
+  border-color: #334155 !important;
+}
+
+html[data-theme="light"] #nav-links #close-menu,
+html:not(.dark) #nav-links #close-menu {
+  color: #0f172a !important;
+  background: #ffffff !important;
+  border-color: #94a3b8 !important;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.14) !important;
+}
+
+/* Responsive landing layout: sections grow with content instead of using a fixed viewport size. */
+html,
+body {
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  overflow-x: clip !important;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box !important;
+}
+
+.site-nav,
+#hero,
+#features,
+#how,
+#teams,
+#footer-contact,
+#contact-section,
+#site-footer {
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  box-sizing: border-box !important;
+}
+
+#hero > div.relative,
+#features > div.mx-auto,
+#how > div.relative.mx-auto,
+#teams > div.mx-auto,
+#contact-section > div,
+#site-footer > div {
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  box-sizing: border-box !important;
+}
+
+#hero img,
+#features img,
+#how img,
+#teams img,
+#footer-contact img,
+#site-footer img {
+  max-width: 100%;
+}
+
+#hero {
+  min-height: clamp(540px, calc(100svh - 74px), 900px) !important;
+  padding-top: clamp(7rem, 14vh, 11rem) !important;
+  padding-bottom: clamp(3.5rem, 8vh, 7rem) !important;
+}
+
+#features,
+#how,
+#footer-contact {
+  min-height: 0 !important;
+  padding-top: clamp(4rem, 8vw, 8rem) !important;
+  padding-bottom: clamp(4rem, 8vw, 8rem) !important;
+}
+
+#features .font-banner,
+#how .font-banner {
+  font-size: clamp(4rem, 10vw, 10rem) !important;
+  line-height: 0.92 !important;
+}
+
+#features article.card-hover-lift {
+  min-height: clamp(220px, 20vw, 300px) !important;
+}
+
+#how .how-step-card {
+  min-height: clamp(240px, 22vw, 340px) !important;
+}
+
+#footer-contact {
+  display: block !important;
+}
+
+@media (max-width: 1023px) {
+  #hero {
+    min-height: clamp(520px, calc(100svh - 70px), 780px) !important;
+  }
+
+  #features,
+  #how,
+  #footer-contact {
+    padding-top: clamp(3.5rem, 9vw, 6rem) !important;
+    padding-bottom: clamp(3.5rem, 9vw, 6rem) !important;
+  }
+
+  #features .font-banner,
+  #how .font-banner {
+    font-size: clamp(3.75rem, 15vw, 8rem) !important;
+  }
+}
+
+/* Keep tablet and narrow desktop screens in one consistent responsive layout. */
+@media (max-width: 1100px) {
+  html,
+  body {
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow-x: hidden !important;
+  }
+
+  .site-nav > div {
+    width: 100% !important;
+    max-width: none !important;
+    padding-left: clamp(1rem, 4vw, 2.5rem) !important;
+    padding-right: clamp(1rem, 4vw, 2.5rem) !important;
+  }
+
+  .site-nav #nav-pill-track {
+    display: none !important;
+  }
+
+  .site-nav #menu-button {
+    display: inline-flex !important;
+  }
+
+  #hero,
+  #features,
+  #how,
+  #teams,
+  #footer-contact,
+  #contact-section,
+  #site-footer {
+    width: 100% !important;
+    max-width: none !important;
+    box-sizing: border-box !important;
+  }
+
+  #hero > div.relative,
+  #features > div.mx-auto,
+  #how > div.relative.mx-auto,
+  #teams > div.mx-auto {
+    width: 100% !important;
+    max-width: none !important;
+    box-sizing: border-box !important;
+  }
+
+  #features > div.mx-auto > div.grid {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  #features > div.mx-auto > div.grid > div:last-child {
+    width: 100% !important;
+    min-width: 0 !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  #how > div.relative.mx-auto > div.grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+@media (max-width: 640px) {
+  #hero {
+    min-height: 0 !important;
+    padding-top: 7rem !important;
+    padding-bottom: 4rem !important;
+  }
+
+  #features,
+  #how,
+  #footer-contact {
+    padding-left: 1rem !important;
+    padding-right: 1rem !important;
+    padding-top: 3.5rem !important;
+    padding-bottom: 3.5rem !important;
+  }
+
+  #features .font-banner,
+  #how .font-banner {
+    font-size: clamp(3.25rem, 17vw, 6rem) !important;
+  }
+
+  #features article.card-hover-lift,
+  #how .how-step-card {
+    min-height: 0 !important;
+  }
+
+  #features > div.mx-auto > div.grid > div:last-child {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* Final footer surface override */
+#footer-contact,
+#contact-section {
+  position: relative !important;
+  isolation: isolate !important;
+  background-color: transparent !important;
+  background-image: none !important;
+  color: #f8fafc !important;
+  border: 0 !important;
+  margin-top: 0 !important;
+}
+
+#footer-contact {
+  z-index: 0 !important;
+}
+
+#footer-contact::before {
+  content: "" !important;
+  position: absolute !important;
+  inset: 0 !important;
+  z-index: -1 !important;
+  background-color: #0c0618 !important;
+  background-image: url("/static/assets/hero-space-bg.png") !important;
+  background-size: cover !important;
+  background-position: center top !important;
+  background-repeat: no-repeat !important;
+  pointer-events: none !important;
+}
+
+#contact-section {
+  z-index: 1 !important;
+  background-color: #0c0618 !important;
+  background-image: url("/static/assets/hero-space-bg.png") !important;
+  background-size: cover !important;
+  background-position: center top !important;
+  background-repeat: no-repeat !important;
+}
+
+#contact-section::before {
+  display: none !important;
+}
+
+#footer-contact + #contact-section {
+  border-top: 0 !important;
+  margin-top: 0 !important;
+}
+
+#footer-contact > div,
+.footer-neu-card {
+  background: transparent !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+html[data-theme] #contact-section .footer-neu-card,
+html.dark #contact-section .footer-neu-card,
+html[data-theme] #footer-contact > div {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+#contact-section .site-footer-grid {
+  gap: clamp(2rem, 5vw, 5rem) !important;
+  max-width: 1200px !important;
+}
+
+#contact-section .footer-neu-card {
+  padding: 0 !important;
+  min-height: 0 !important;
+}
+
+#contact-section .site-footer-col-contact,
+#contact-section .site-footer-col-links {
+  border-left: 1px solid rgba(255, 255, 255, 0.2) !important;
+  padding-left: clamp(1.5rem, 4vw, 4rem) !important;
+}
+
+#footer-contact > div > img,
+#footer-contact > div > div.bg-black\/60 {
+  display: none !important;
+}
+
+#footer-contact h2,
+#footer-contact p,
+.footer-neu-card h3,
+.footer-neu-card p,
+.footer-neu-card ul,
+.footer-neu-card li,
+.brand-univ-name,
+.site-copyright {
+  color: #f8fafc !important;
+  text-shadow: 0 1px 10px rgba(0, 0, 0, 0.5) !important;
+}
+
+.footer-neu-card .site-brand-title .brand-peer,
+#footer-contact .site-brand-title .brand-peer {
+  color: #ffffff !important;
+}
+
+.footer-neu-card .site-brand-title .brand-link,
+.footer-neu-card .brand-unit-tag,
+#footer-contact .site-brand-title .brand-link,
+#footer-contact .site-brand-subtitle,
+.footer-neu-card a,
+.footer-neu-card svg {
+  color: #7dd3fc !important;
+}
+
+.footer-neu-card a:hover {
+  color: #bae6fd !important;
+}
+
+.site-copyright {
+  border-top-color: rgba(255, 255, 255, 0.24) !important;
+}
+
+html[data-theme="light"] #footer-contact h2,
+html:not(.dark) #footer-contact h2,
+html[data-theme="light"] #footer-contact p,
+html:not(.dark) #footer-contact p,
+html[data-theme="light"] #contact-section .footer-neu-card h3,
+html:not(.dark) #contact-section .footer-neu-card h3,
+html[data-theme="light"] #contact-section .footer-neu-card p,
+html:not(.dark) #contact-section .footer-neu-card p,
+html[data-theme="light"] #contact-section .footer-neu-card ul,
+html:not(.dark) #contact-section .footer-neu-card ul,
+html[data-theme="light"] #contact-section .footer-neu-card li,
+html:not(.dark) #contact-section .footer-neu-card li,
+html[data-theme="light"] #contact-section .brand-univ-name,
+html:not(.dark) #contact-section .brand-univ-name,
+html[data-theme="light"] #contact-section .site-copyright,
+html:not(.dark) #contact-section .site-copyright {
+  color: #f8fafc !important;
+  text-shadow: 0 1px 10px rgba(0, 0, 0, 0.5) !important;
+}
+
+html[data-theme="light"] #contact-section .site-brand-title .brand-peer,
+html:not(.dark) #contact-section .site-brand-title .brand-peer,
+html[data-theme="light"] #footer-contact .site-brand-title .brand-peer,
+html:not(.dark) #footer-contact .site-brand-title .brand-peer {
+  color: #ffffff !important;
+}
+
+html[data-theme="light"] #contact-section .site-brand-title .brand-link,
+html:not(.dark) #contact-section .site-brand-title .brand-link,
+html[data-theme="light"] #contact-section .brand-unit-tag,
+html:not(.dark) #contact-section .brand-unit-tag,
+html[data-theme="light"] #contact-section a,
+html:not(.dark) #contact-section a,
+html[data-theme="light"] #contact-section svg,
+html:not(.dark) #contact-section svg {
+  color: #7dd3fc !important;
+}
+
+/* Light mode footer matches the pale atmospheric Home background. */
+html[data-theme="light"] #footer-contact::before,
+html:not(.dark) #footer-contact::before {
+  background-color: #f5f5f7 !important;
+  background-image:
+    radial-gradient(ellipse 70% 55% at 30% 25%, rgba(186, 230, 253, 0.75), transparent 62%),
+    radial-gradient(ellipse 65% 50% at 72% 38%, rgba(125, 211, 252, 0.55), transparent 60%),
+    radial-gradient(circle at 50% 75%, rgba(224, 242, 254, 0.85), transparent 55%) !important;
+  background-size: cover !important;
+  background-position: center top !important;
+}
+
+html[data-theme="light"] #contact-section,
+html:not(.dark) #contact-section {
+  background-color: #f5f5f7 !important;
+  background-image:
+    radial-gradient(ellipse 70% 55% at 30% 25%, rgba(186, 230, 253, 0.75), transparent 62%),
+    radial-gradient(ellipse 65% 50% at 72% 38%, rgba(125, 211, 252, 0.55), transparent 60%),
+    radial-gradient(circle at 50% 75%, rgba(224, 242, 254, 0.85), transparent 55%) !important;
+  background-size: cover !important;
+  background-position: center top !important;
+}
+
+html[data-theme="light"] #footer-contact h2,
+html:not(.dark) #footer-contact h2,
+html[data-theme="light"] #footer-contact p,
+html:not(.dark) #footer-contact p,
+html[data-theme="light"] #contact-section .footer-neu-card h3,
+html:not(.dark) #contact-section .footer-neu-card h3,
+html[data-theme="light"] #contact-section .footer-neu-card p,
+html:not(.dark) #contact-section .footer-neu-card p,
+html[data-theme="light"] #contact-section .footer-neu-card ul,
+html:not(.dark) #contact-section .footer-neu-card ul,
+html[data-theme="light"] #contact-section .footer-neu-card li,
+html:not(.dark) #contact-section .footer-neu-card li,
+html[data-theme="light"] #contact-section .brand-univ-name,
+html:not(.dark) #contact-section .brand-univ-name,
+html[data-theme="light"] #contact-section .site-copyright,
+html:not(.dark) #contact-section .site-copyright {
+  color: #0f172a !important;
+  text-shadow: none !important;
+}
+
+html[data-theme="light"] #contact-section .site-brand-title .brand-peer,
+html:not(.dark) #contact-section .site-brand-title .brand-peer,
+html[data-theme="light"] #footer-contact .site-brand-title .brand-peer,
+html:not(.dark) #footer-contact .site-brand-title .brand-peer {
+  color: #0f172a !important;
+}
+
+html[data-theme="light"] #contact-section .site-brand-title .brand-link,
+html:not(.dark) #contact-section .site-brand-title .brand-link,
+html[data-theme="light"] #contact-section .brand-unit-tag,
+html:not(.dark) #contact-section .brand-unit-tag,
+html[data-theme="light"] #contact-section a,
+html:not(.dark) #contact-section a,
+html[data-theme="light"] #contact-section svg,
+html:not(.dark) #contact-section svg {
+  color: #0284c7 !important;
+}
+
+html[data-theme="light"] #contact-section .site-copyright,
+html:not(.dark) #contact-section .site-copyright {
+  border-top-color: rgba(100, 116, 139, 0.35) !important;
+}
+
+/* Dark footer matches Home and scales with the available viewport. */
+html[data-theme="dark"] #footer-contact::before,
+html.dark #footer-contact::before {
+  background-color: #0c0618 !important;
+  background-image: url("/static/assets/hero-space-bg.png") !important;
+  background-size: cover !important;
+  background-position: center top !important;
+}
+
+html[data-theme="dark"] #footer-contact,
+html.dark #footer-contact {
+  display: grid !important;
+  place-items: center !important;
+  min-height: clamp(480px, 70svh, 760px) !important;
+  padding-top: clamp(4rem, 8vw, 7rem) !important;
+  padding-bottom: clamp(4rem, 8vw, 7rem) !important;
+}
+
+html[data-theme="dark"] #contact-section,
+html.dark #contact-section {
+  min-height: 0 !important;
+  padding-top: clamp(3rem, 6vw, 6rem) !important;
+  padding-bottom: clamp(3rem, 6vw, 6rem) !important;
+}
+
+html[data-theme="dark"] #footer-contact > div,
+html.dark #footer-contact > div {
+  width: min(100%, 64rem) !important;
+  max-width: 64rem !important;
+}
+
+@media (max-width: 640px) {
+  html[data-theme="dark"] #footer-contact,
+  html.dark #footer-contact {
+    min-height: 0 !important;
+    padding-top: 4rem !important;
+    padding-bottom: 4rem !important;
+  }
+
+  html[data-theme="dark"] #contact-section,
+  html.dark #contact-section {
+    padding-top: 3rem !important;
+    padding-bottom: 3rem !important;
+  }
+}
+
+@media (max-width: 768px) {
+  #contact-section .site-footer-col-contact,
+  #contact-section .site-footer-col-links {
+    border-left: 0 !important;
+    border-top: 1px solid rgba(255, 255, 255, 0.2) !important;
+    padding-left: 0 !important;
+    padding-top: 1.5rem !important;
+  }
+}
+
+/* Keep both footer sections on the same background coordinate and motion cycle. */
+#footer-contact,
+#contact-section {
+  background-attachment: fixed !important;
+  background-repeat: no-repeat !important;
+  background-size: cover !important;
+  background-position: center top !important;
+}
+
+#footer-contact::before,
+#contact-section::after {
+  animation: hero-glow-drift 10s ease-in-out infinite !important;
+}
+
+/* Dark mode footer only: use the same flat surface as How It Works. */
+html[data-theme="dark"] #contact-section,
+html.dark #contact-section {
+  background-color: var(--neu-base) !important;
+  background-image: none !important;
+  background-attachment: initial !important;
+}
+
+html[data-theme="dark"] #contact-section::after,
+html.dark #contact-section::after {
+  display: none !important;
+  animation: none !important;
+}
+
+/* Light header contrast: dark text over Home, white text after scrolling. */
+html[data-theme="light"] .site-nav:not(.site-nav--solid) .site-brand-title .brand-peer,
+html:not(.dark) .site-nav:not(.site-nav--solid) .site-brand-title .brand-peer {
+  color: #0f172a !important;
+}
+
+html[data-theme="light"] .site-nav:not(.site-nav--solid) .site-brand-title .brand-link,
+html:not(.dark) .site-nav:not(.site-nav--solid) .site-brand-title .brand-link,
+html[data-theme="light"] .site-nav:not(.site-nav--solid) .site-brand-subtitle,
+html:not(.dark) .site-nav:not(.site-nav--solid) .site-brand-subtitle {
+  color: #0284c7 !important;
+}
+
+html[data-theme="light"] .site-nav:not(.site-nav--solid) .nav-link-pill,
+html:not(.dark) .site-nav:not(.site-nav--solid) .nav-link-pill {
+  color: #0f172a !important;
+}
+
+html[data-theme="light"] .site-nav:not(.site-nav--solid) .nav-link-pill:hover,
+html:not(.dark) .site-nav:not(.site-nav--solid) .nav-link-pill:hover {
+  color: #020617 !important;
+}
+
+html[data-theme="light"] .site-nav:not(.site-nav--solid) .nav-link-pill.is-active,
+html:not(.dark) .site-nav:not(.site-nav--solid) .nav-link-pill.is-active {
+  color: #0284c7 !important;
+}
+
+html[data-theme="light"] .site-nav.site-nav--solid .site-brand-title .brand-peer,
+html:not(.dark) .site-nav.site-nav--solid .site-brand-title .brand-peer,
+html[data-theme="light"] .site-nav.site-nav--solid .nav-link-pill,
+html:not(.dark) .site-nav.site-nav--solid .nav-link-pill {
+  color: #f8fafc !important;
+}
+
+html[data-theme="light"] .site-nav.site-nav--solid .landing-theme-toggle-btn,
+html:not(.dark) .site-nav.site-nav--solid .landing-theme-toggle-btn,
+html[data-theme="light"] .site-nav.site-nav--solid .nav-btn-login,
+html:not(.dark) .site-nav.site-nav--solid .nav-btn-login {
+  background: #181b20 !important;
+  color: #f8fafc !important;
+  border-color: rgba(255, 255, 255, 0.18) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.42) !important;
+}
+
+html[data-theme="light"] .site-nav.site-nav--solid .landing-theme-toggle-btn:hover,
+html:not(.dark) .site-nav.site-nav--solid .landing-theme-toggle-btn:hover,
+html[data-theme="light"] .site-nav.site-nav--solid .nav-btn-login:hover,
+html:not(.dark) .site-nav.site-nav--solid .nav-btn-login:hover {
+  background: #20242b !important;
+  color: #7dd3fc !important;
+  border-color: rgba(56, 189, 248, 0.55) !important;
+}
+
+html[data-theme="light"] #footer-contact h2,
+html:not(.dark) #footer-contact h2 {
+  color: #0f172a !important;
+  text-shadow: none !important;
+}
+
+html[data-theme="dark"] #footer-contact h2,
+html.dark #footer-contact h2 {
+  color: #f8fafc !important;
+  text-shadow: 0 2px 18px rgba(0, 0, 0, 0.42) !important;
+}
+
+html[data-theme="light"] #footer-contact > div h2,
+html:not(.dark) #footer-contact > div h2 {
+  color: #0f172a !important;
+}
+
+html[data-theme="dark"] #footer-contact > div h2,
+html.dark #footer-contact > div h2 {
+  color: #ffffff !important;
+}
+
+#footer-contact .footer-cta-accent {
+  color: #0284c7 !important;
+}
+
+html[data-theme="dark"] #footer-contact .footer-cta-accent,
+html.dark #footer-contact .footer-cta-accent {
+  color: #38bdf8 !important;
+  text-shadow: 0 0 18px rgba(56, 189, 248, 0.22) !important;
+}
+
+html[data-theme="light"] .site-nav.site-nav--solid .site-brand-title .brand-link,
+html:not(.dark) .site-nav.site-nav--solid .site-brand-title .brand-link,
+html[data-theme="light"] .site-nav.site-nav--solid .site-brand-subtitle,
+html:not(.dark) .site-nav.site-nav--solid .site-brand-subtitle,
+html[data-theme="light"] .site-nav.site-nav--solid .nav-link-pill.is-active,
+html:not(.dark) .site-nav.site-nav--solid .nav-link-pill.is-active {
+  color: #7dd3fc !important;
+}
+
+/* Teams section design pass */
+#teams {
+  padding-top: clamp(4rem, 8vw, 7rem) !important;
+  padding-bottom: clamp(5rem, 9vw, 8rem) !important;
+  background: #10151f !important;
+}
+
+#teams > div.mx-auto {
+  max-width: 92rem !important;
+}
+
+#teams > div.mx-auto > div:first-child {
+  align-items: center !important;
+  gap: clamp(1rem, 2vw, 1.5rem) !important;
+  margin-bottom: clamp(2rem, 5vw, 4rem) !important;
+}
+
+#teams > div.mx-auto > div:first-child > span {
+  width: clamp(0.45rem, 1vw, 0.75rem) !important;
+  min-height: clamp(4rem, 9vw, 8rem) !important;
+  border-radius: 999px !important;
+  box-shadow: 0 0 22px rgba(14, 165, 233, 0.35) !important;
+}
+
+#teams > div.mx-auto > div:first-child > p {
+  margin: 0 !important;
+  font-size: clamp(4rem, 10vw, 10rem) !important;
+  line-height: 0.82 !important;
+  letter-spacing: 0.02em !important;
+  color: #f8fafc !important;
+  text-shadow: 0 12px 26px rgba(0, 0, 0, 0.35) !important;
+}
+
+#teams > div.mx-auto > div:nth-child(2) > div {
+  gap: clamp(1rem, 2.2vw, 2rem) !important;
+}
+
+#teams .team-card,
+#teams article.card-hover-lift {
+  width: 100% !important;
+  max-width: 20rem !important;
+  padding: 0 0 1.25rem !important;
+  background: rgba(24, 29, 38, 0.92) !important;
+  border: 1px solid rgba(148, 163, 184, 0.18) !important;
+  border-radius: 1.25rem !important;
+  box-shadow: 0 16px 32px rgba(0, 0, 0, 0.24) !important;
+  overflow: hidden !important;
+}
+
+#teams .team-card:hover,
+#teams article.card-hover-lift:hover {
+  transform: translateY(-8px) !important;
+  border-color: rgba(56, 189, 248, 0.58) !important;
+  box-shadow: 0 22px 42px rgba(0, 0, 0, 0.34), 0 0 24px rgba(14, 165, 233, 0.14) !important;
+}
+
+#teams .team-photo-frame,
+#teams article .aspect-square {
+  width: 100% !important;
+  aspect-ratio: 4 / 4.7 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  background: #202733 !important;
+}
+
+#teams .team-photo-frame img,
+#teams article .aspect-square img {
+  filter: saturate(0.92) contrast(1.04) !important;
+  transition: transform 0.4s ease, filter 0.4s ease !important;
+}
+
+#teams .team-card:hover .team-photo-frame img,
+#teams article.card-hover-lift:hover img {
+  filter: saturate(1.08) contrast(1.06) !important;
+  transform: scale(1.045) !important;
+}
+
+#teams .team-info,
+#teams article .px-5.py-4 {
+  padding: 1.1rem 1rem 0 !important;
+  gap: 0.65rem !important;
+}
+
+#teams .team-name,
+#teams article p.font-card.font-bold {
+  min-height: 2.7rem !important;
+  margin: 0 !important;
+  color: #f8fafc !important;
+  font-size: clamp(0.9rem, 1.1vw, 1.05rem) !important;
+  line-height: 1.3 !important;
+}
+
+#teams .team-role-badge,
+#teams article p.font-card.font-medium {
+  padding: 0.35rem 0.85rem !important;
+  border-radius: 999px !important;
+  background: rgba(14, 165, 233, 0.08) !important;
+  border: 1px solid rgba(56, 189, 248, 0.42) !important;
+  box-shadow: none !important;
+  color: #7dd3fc !important;
+  font-size: 0.72rem !important;
+}
+
+@media (max-width: 640px) {
+  #teams > div.mx-auto > div:first-child {
+    align-items: flex-start !important;
+  }
+
+  #teams > div.mx-auto > div:first-child > p {
+    font-size: clamp(3.75rem, 18vw, 6rem) !important;
+  }
+
+  #teams .team-card,
+  #teams article.card-hover-lift {
+    max-width: 21rem !important;
+  }
+}
+
+html[data-theme="light"] #teams,
+html:not(.dark) #teams {
+  background: #eef2f7 !important;
+}
+
+html[data-theme="light"] #teams .team-card,
+html:not(.dark) #teams .team-card,
+html[data-theme="light"] #teams article.card-hover-lift,
+html:not(.dark) #teams article.card-hover-lift {
+  background: rgba(255, 255, 255, 0.9) !important;
+  border-color: rgba(100, 116, 139, 0.2) !important;
+  box-shadow: 0 16px 32px rgba(100, 116, 139, 0.18) !important;
+}
+
+html[data-theme="light"] #teams > div.mx-auto > div:first-child > p,
+html:not(.dark) #teams > div.mx-auto > div:first-child > p,
+html[data-theme="light"] #teams .team-name,
+html:not(.dark) #teams .team-name {
+  color: #0f172a !important;
+}
+
+html[data-theme="light"] #teams .team-info,
+html:not(.dark) #teams .team-info {
+  align-items: center !important;
+  justify-content: center !important;
+  text-align: center !important;
+}
+
+html[data-theme="light"] #teams .team-role-badge,
+html:not(.dark) #teams .team-role-badge,
+html[data-theme="light"] #teams article p.font-card.font-medium,
+html:not(.dark) #teams article p.font-card.font-medium {
+  background: #e0f2fe !important;
+  border-color: #38bdf8 !important;
+  color: #075985 !important;
+  box-shadow: 0 2px 8px rgba(14, 165, 233, 0.14) !important;
+}
+
+html[data-theme="light"] #teams .team-card:hover .team-role-badge,
+html:not(.dark) #teams .team-card:hover .team-role-badge {
+  background: #bae6fd !important;
+  color: #0c4a6e !important;
+}
+
+html[data-theme="dark"] #teams .team-info,
+html.dark #teams .team-info {
+  align-items: center !important;
+  justify-content: center !important;
+  text-align: center !important;
+}
+
+html[data-theme="dark"] #teams .team-name,
+html.dark #teams .team-name,
+html[data-theme="dark"] #teams .team-role-badge,
+html.dark #teams .team-role-badge {
+  text-align: center !important;
+  align-self: center !important;
+}
+
+/* Features section color pass */
+#features {
+  background: #10151f !important;
+}
+
+#features .font-banner,
+#features .font-display {
+  color: #f8fafc !important;
+  text-shadow: 0 10px 24px rgba(0, 0, 0, 0.3) !important;
+}
+
+#features .text-slate-300 {
+  color: #a9bad0 !important;
+}
+
+#features article.card-hover-lift {
+  background: rgba(24, 29, 38, 0.94) !important;
+  border: 1px solid rgba(148, 163, 184, 0.18) !important;
+  border-radius: 1.25rem !important;
+  box-shadow: 0 16px 32px rgba(0, 0, 0, 0.24) !important;
+}
+
+#features article.card-hover-lift:hover {
+  border-color: rgba(56, 189, 248, 0.58) !important;
+  box-shadow: 0 22px 42px rgba(0, 0, 0, 0.34), 0 0 24px rgba(14, 165, 233, 0.14) !important;
+}
+
+#features article.card-hover-lift h3 {
+  color: #f8fafc !important;
+}
+
+#features article.card-hover-lift p {
+  color: #a9bad0 !important;
+}
+
+#features .feature-card-icon {
+  background: rgba(14, 165, 233, 0.1) !important;
+  border: 1px solid rgba(56, 189, 248, 0.3) !important;
+  box-shadow: none !important;
+  color: #38bdf8 !important;
+}
+
+html[data-theme="light"] #features,
+html:not(.dark) #features {
+  background: #eef2f7 !important;
+}
+
+html[data-theme="light"] #features .font-banner,
+html:not(.dark) #features .font-banner,
+html[data-theme="light"] #features .font-display,
+html:not(.dark) #features .font-display {
+  color: #0f172a !important;
+  text-shadow: 0 8px 20px rgba(100, 116, 139, 0.18) !important;
+}
+
+html[data-theme="light"] #features .text-slate-300,
+html:not(.dark) #features .text-slate-300,
+html[data-theme="light"] #features article.card-hover-lift p,
+html:not(.dark) #features article.card-hover-lift p {
+  color: #475569 !important;
+}
+
+html[data-theme="light"] #features article.card-hover-lift,
+html:not(.dark) #features article.card-hover-lift {
+  background: rgba(255, 255, 255, 0.94) !important;
+  border-color: rgba(100, 116, 139, 0.2) !important;
+  box-shadow: 0 16px 32px rgba(100, 116, 139, 0.18) !important;
+}
+
+html[data-theme="light"] #features article.card-hover-lift h3,
+html:not(.dark) #features article.card-hover-lift h3 {
+  color: #0f172a !important;
+}
+
+html[data-theme="light"] #features .feature-card-icon,
+html:not(.dark) #features .feature-card-icon {
+  background: #e0f2fe !important;
+  border-color: #7dd3fc !important;
+  color: #0284c7 !important;
+}
+
+/* How It Works design pass */
+#how {
+  padding-top: clamp(4rem, 8vw, 7rem) !important;
+  padding-bottom: clamp(5rem, 9vw, 8rem) !important;
+  background: #10151f !important;
+}
+
+#how > div.relative.mx-auto {
+  max-width: 92rem !important;
+}
+
+#how > div.relative.mx-auto > p.font-banner {
+  margin-bottom: clamp(2.5rem, 5vw, 4.5rem) !important;
+  font-size: clamp(4rem, 10vw, 10rem) !important;
+  line-height: 0.82 !important;
+  letter-spacing: 0.02em !important;
+  color: #f8fafc !important;
+  -webkit-text-stroke: 0 !important;
+  text-shadow: 0 12px 26px rgba(0, 0, 0, 0.35) !important;
+}
+
+#how > div.relative.mx-auto > div.grid {
+  position: relative !important;
+  gap: clamp(1rem, 2.2vw, 2rem) !important;
+}
+
+#how > div.relative.mx-auto > div.grid::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 12%;
+  right: 12%;
+  height: 1px;
+  transform: translateY(-50%);
+  background: linear-gradient(90deg, transparent, rgba(56, 189, 248, 0.7), transparent);
+  pointer-events: none;
+}
+
+#how .how-step-card {
+  z-index: 1 !important;
+  min-height: clamp(230px, 20vw, 300px) !important;
+  padding: clamp(1.5rem, 2.5vw, 2.25rem) !important;
+  border-radius: 1.25rem !important;
+  background: rgba(24, 29, 38, 0.94) !important;
+  border: 1px solid rgba(148, 163, 184, 0.18) !important;
+  box-shadow: 0 16px 32px rgba(0, 0, 0, 0.24) !important;
+}
+
+#how .how-step-card:hover {
+  transform: translateY(-8px) !important;
+  border-color: rgba(56, 189, 248, 0.58) !important;
+  box-shadow: 0 22px 42px rgba(0, 0, 0, 0.34), 0 0 24px rgba(14, 165, 233, 0.14) !important;
+}
+
+#how .how-step-header {
+  margin-bottom: 1.5rem !important;
+  align-items: flex-start !important;
+}
+
+#how .how-step-num {
+  font-size: clamp(2.75rem, 4vw, 4rem) !important;
+  color: #38bdf8 !important;
+  text-shadow: 0 0 18px rgba(56, 189, 248, 0.18) !important;
+}
+
+#how .how-step-badge {
+  padding: 0.45rem 0.85rem !important;
+  background: rgba(14, 165, 233, 0.08) !important;
+  border: 1px solid rgba(56, 189, 248, 0.42) !important;
+  box-shadow: none !important;
+  color: #bae6fd !important;
+  font-size: 0.78rem !important;
+}
+
+#how .how-step-desc {
+  color: #a9bad0 !important;
+  font-size: clamp(0.9rem, 1.15vw, 1rem) !important;
+  line-height: 1.65 !important;
+}
+
+@media (max-width: 640px) {
+  #how > div.relative.mx-auto > p.font-banner {
+    font-size: clamp(3.5rem, 17vw, 6rem) !important;
+  }
+
+  #how > div.relative.mx-auto > div.grid::before {
+    display: none !important;
+  }
+
+  #how .how-step-card {
+    min-height: 0 !important;
+    padding: 1.5rem !important;
+  }
+}
+
+html[data-theme="light"] #how,
+html:not(.dark) #how {
+  background: #eef2f7 !important;
+}
+
+html[data-theme="light"] #how .how-step-card,
+html:not(.dark) #how .how-step-card {
+  background: rgba(255, 255, 255, 0.92) !important;
+  border-color: rgba(100, 116, 139, 0.2) !important;
+  box-shadow: 0 16px 32px rgba(100, 116, 139, 0.18) !important;
+}
+
+html[data-theme="light"] #how > div.relative.mx-auto > p.font-banner,
+html:not(.dark) #how > div.relative.mx-auto > p.font-banner {
+  color: #0f172a !important;
+}
+
+html[data-theme="light"] #how .how-step-desc,
+html:not(.dark) #how .how-step-desc {
+  color: #475569 !important;
+}
+
+html[data-theme="light"] #how .how-step-num,
+html:not(.dark) #how .how-step-num {
+  color: #0284c7 !important;
+  text-shadow: 0 0 18px rgba(2, 132, 199, 0.16) !important;
+}
+
+html[data-theme="light"] #how .how-step-badge,
+html:not(.dark) #how .how-step-badge {
+  background: #e0f2fe !important;
+  border-color: #38bdf8 !important;
+  color: #075985 !important;
+  box-shadow: 0 2px 8px rgba(14, 165, 233, 0.12) !important;
+}
+
+html[data-theme="light"] #how .how-step-card:hover .how-step-badge,
+html:not(.dark) #how .how-step-card:hover .how-step-badge {
+  background: #bae6fd !important;
+  color: #0c4a6e !important;
 }
