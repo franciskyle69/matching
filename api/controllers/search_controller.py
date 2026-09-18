@@ -28,6 +28,8 @@ def _user_role(user_obj):
     return "user"
 
 
+@login_required
+@require_GET
 def search(request):
     """
     Lightweight global search used by the dashboard topbar.

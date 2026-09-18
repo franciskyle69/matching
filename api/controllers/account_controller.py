@@ -1038,11 +1038,15 @@ def me(request):
     total_mentees = MenteeProfile.objects.count()
     accepted_pairings = MenteeMentorRequest.objects.filter(accepted=True).count()
 
+    user_prof = getattr(request.user, "profile", None)
+
     avatar_url = ""
     if mentor and getattr(mentor, "avatar_url", ""):
         avatar_url = mentor.avatar_url
     elif mentee and getattr(mentee, "avatar_url", ""):
         avatar_url = mentee.avatar_url
+    elif user_prof and getattr(user_prof, "avatar_url", ""):
+        avatar_url = user_prof.avatar_url
 
     cover_url = ""
     if mentor and getattr(mentor, "cover_url", ""):
@@ -1055,12 +1059,16 @@ def me(request):
         bio = mentor.bio
     elif mentee and getattr(mentee, "bio", ""):
         bio = mentee.bio
+    elif user_prof and getattr(user_prof, "bio", ""):
+        bio = user_prof.bio
 
     tags = []
     if mentor:
         tags = list(mentor.interest_tags.values_list("name", flat=True))
     elif mentee:
         tags = list(mentee.interest_tags.values_list("name", flat=True))
+    elif user_prof:
+        tags = list(user_prof.interest_tags.values_list("name", flat=True))
 
     # Questionnaire completion flags: treat questionnaire as completed when
     # key preference fields have been filled out.
@@ -1506,12 +1514,16 @@ def upload_avatar(request):
 
         mentor = getattr(request.user, "mentor_profile", None)
         mentee = getattr(request.user, "mentee_profile", None)
+        user_prof = getattr(request.user, "profile", None)
         if mentor:
             mentor.avatar_url = url
             mentor.save(update_fields=["avatar_url"])
         if mentee:
             mentee.avatar_url = url
             mentee.save(update_fields=["avatar_url"])
+        if user_prof:
+            user_prof.avatar_url = url
+            user_prof.save(update_fields=["avatar_url"])
 
         _clear_me_cache(request.user.id)
         audit_log(request.user, "update", "avatar", request.user.id)
@@ -2230,14 +2242,24 @@ def update_bio(request):
 
     mentor = getattr(request.user, "mentor_profile", None)
     mentee = getattr(request.user, "mentee_profile", None)
+    user_prof = getattr(request.user, "profile", None)
     if mentor:
         mentor.bio = bio
         mentor.save(update_fields=["bio"])
     elif mentee:
         mentee.bio = bio
         mentee.save(update_fields=["bio"])
+    elif user_prof:
+        user_prof.bio = bio
+        user_prof.save(update_fields=["bio"])
     else:
-        return JsonResponse({"error": "No profile found."}, status=404)
+        from accounts.models import get_user_profile
+        user_prof = get_user_profile(request.user, create_default=True)
+        if user_prof:
+            user_prof.bio = bio
+            user_prof.save(update_fields=["bio"])
+        else:
+            return JsonResponse({"error": "No profile found."}, status=404)
 
     _clear_me_cache(request.user.id)
     audit_log(request.user, "update", "bio", request.user.id)
@@ -2276,12 +2298,20 @@ def update_tags(request):
 
     mentor = getattr(request.user, "mentor_profile", None)
     mentee = getattr(request.user, "mentee_profile", None)
+    user_prof = getattr(request.user, "profile", None)
     if mentor:
         mentor.interest_tags.set(tag_objects)
     elif mentee:
         mentee.interest_tags.set(tag_objects)
+    elif user_prof:
+        user_prof.interest_tags.set(tag_objects)
     else:
-        return JsonResponse({"error": "No profile found."}, status=404)
+        from accounts.models import get_user_profile
+        user_prof = get_user_profile(request.user, create_default=True)
+        if user_prof:
+            user_prof.interest_tags.set(tag_objects)
+        else:
+            return JsonResponse({"error": "No profile found."}, status=404)
 
     _clear_me_cache(request.user.id)
     audit_log(request.user, "update", "interest_tags", request.user.id)

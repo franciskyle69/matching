@@ -261,9 +261,13 @@ def post_delete(request, post_id):
 @require_GET
 def gallery(request):
     """Return all image posts for a user (gallery view)."""
-    user_id = request.GET.get("user_id", request.user.id)
+    raw_uid = request.GET.get("user_id")
+    try:
+        user_id = int(raw_uid) if raw_uid is not None else request.user.id
+    except (TypeError, ValueError):
+        user_id = request.user.id
     posts = (
-        UserPost.objects.filter(author_id=int(user_id), shared_from__isnull=True)
+        UserPost.objects.filter(author_id=user_id, shared_from__isnull=True)
         .exclude(image="")
         .exclude(image__isnull=True)
         .select_related("author")
@@ -287,7 +291,11 @@ def gallery(request):
 @require_GET
 def profile_stats(request):
     """Return post/connection stats for the profile page."""
-    user_id = int(request.GET.get("user_id", request.user.id))
+    raw_uid = request.GET.get("user_id")
+    try:
+        user_id = int(raw_uid) if raw_uid is not None else request.user.id
+    except (TypeError, ValueError):
+        user_id = request.user.id
     posts_count = UserPost.objects.filter(author_id=user_id).count()
 
     connections = 0

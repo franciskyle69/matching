@@ -524,9 +524,10 @@ import {
                   autoComplete="username"
                   placeholder="you@example.com or username"
                   value={signInForm.identifier}
-                  onChange={(e) =>
-                    setSignInForm({ ...signInForm, identifier: e.target.value })
-                  }
+                  onChange={(e) => {
+                    setSignInForm({ ...signInForm, identifier: e.target.value });
+                    if (authAlert) setAuthAlert(null);
+                  }}
                 />
                 <p className="auth-field-helper">
                   Use your institutional email or username.
@@ -540,9 +541,10 @@ import {
                     type={showPassword ? "text" : "password"}
                     autoComplete="current-password"
                     value={signInForm.password}
-                    onChange={(e) =>
-                      setSignInForm({ ...signInForm, password: e.target.value })
-                    }
+                    onChange={(e) => {
+                      setSignInForm({ ...signInForm, password: e.target.value });
+                      if (authAlert) setAuthAlert(null);
+                    }}
                   />
                   <button
                     type="button"

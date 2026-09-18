@@ -438,7 +438,16 @@
     }, []);
 
     useEffect(() => {
-      if (!authAlert) clearLockoutCountdown();
+      if (!authAlert) {
+        clearLockoutCountdown();
+        return;
+      }
+      if (authAlert.severity === "error" && !authAlert.detail?.includes("AXES lockout")) {
+        const timer = setTimeout(() => {
+          setAuthAlert(null);
+        }, 5000);
+        return () => clearTimeout(timer);
+      }
     }, [authAlert]);
 
     useEffect(() => {

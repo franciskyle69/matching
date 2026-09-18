@@ -389,12 +389,33 @@ def mentee_choose_mentor(request):
                 status=409,
             )
 
+        active_mentee_pairings = MenteeMentorRequest.objects.filter(
+            mentee=mentee_profile,
+            accepted=True,
+        ).exclude(mentor=mentor).count()
+        if active_mentee_pairings >= 3:
+            return JsonResponse(
+                {
+                    "error": "You have reached the maximum allowed mentor pairings (3).",
+                    "code": "mentee_max_pairings_reached",
+                },
+                status=409,
+            )
+
         from django.utils import timezone
 
         req, _created = MenteeMentorRequest.objects.get_or_create(
             mentee=mentee_profile,
             mentor=mentor,
         )
+        if not _created and req.accepted:
+            return JsonResponse({
+                "status": "ok",
+                "message": "Already paired with this mentor.",
+                "accepted": True,
+                "accepted_at": req.accepted_at.isoformat() if req.accepted_at else None,
+            })
+
         if not req.accepted:
             req.accepted = True
             req.accepted_at = timezone.now()

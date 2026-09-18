@@ -400,9 +400,16 @@ def user_update(request, user_id):
         if "last_name" in payload:
             user.last_name = _get_str(payload, "last_name", default="")
         if "email" in payload:
-            user.email = _get_str(payload, "email", default="")
+            new_email = _get_str(payload, "email", default="").strip().lower()
+            if new_email and new_email != (user.email or "").lower():
+                if User.objects.filter(email__iexact=new_email).exclude(id=user.id).exists():
+                    return JsonResponse({"ok": False, "error": "This email is already registered to another account."}, status=400)
+                user.email = new_email
         if "is_staff" in payload:
-            user.is_staff = bool(payload.get("is_staff", False))
+            new_is_staff = bool(payload.get("is_staff", False))
+            if user.id == request.user.id and not new_is_staff:
+                return JsonResponse({"ok": False, "error": "You cannot revoke your own staff privileges."}, status=400)
+            user.is_staff = new_is_staff
         
         user.save()
         

@@ -225,5 +225,15 @@ def comment_create(request):
         return JsonResponse({"error": "Not allowed to comment on this announcement."}, status=403)
     comment = Comment.objects.create(author=request.user, announcement=ann, content=content)
 
+    if ann.mentor and ann.mentor.user and ann.mentor.user != request.user:
+        from matching.models import Notification
+        author_name = get_user_display_name(request.user) or request.user.username
+        snippet = content[:40] + ("..." if len(content) > 40 else "")
+        Notification.objects.create(
+            user=ann.mentor.user,
+            message=f"{author_name} commented on your announcement: \"{snippet}\"",
+            action_tab="announcements",
+        )
+
     audit_log(request.user, "create", "comment", comment.id)
     return JsonResponse({"comment": _serialize_comment(comment)})

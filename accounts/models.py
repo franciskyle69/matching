@@ -47,6 +47,13 @@ class UserProfile(models.Model):
 	campus = models.CharField(max_length=100, blank=True, default="")
 	program = models.CharField(max_length=100, blank=True, default="BSIT")
 	year_level = models.PositiveSmallIntegerField(null=True, blank=True)
+	bio = models.TextField(max_length=200, blank=True, default="")
+	avatar_url = models.URLField(max_length=500, blank=True, default="")
+	interest_tags = models.ManyToManyField(
+		"profiles.InterestTag",
+		blank=True,
+		related_name="user_profiles",
+	)
 
 	def save(self, *args, **kwargs):
 		if not self.pk and not self.approval_status:

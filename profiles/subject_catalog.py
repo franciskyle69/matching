@@ -431,7 +431,9 @@ def apply_curriculum(apps=None) -> dict[str, int]:
     topic_count = 0
     competency_count = 0
     for entry in CURRICULUM_MATRIX:
-        subject = Subject.objects.get(name=entry["name"])
+        subject = Subject.objects.filter(name=entry["name"]).first()
+        if not subject:
+            continue
         for topic_entry in entry["topics"]:
             topic = Topic.objects.create(
                 subject=subject,
