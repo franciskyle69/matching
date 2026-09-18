@@ -2700,3 +2700,105 @@ button {
     }
   }
 }
+
+/* Landing navigation and section sizing */
+.site-nav,
+.site-nav.site-nav--solid {
+  background-color: transparent !important;
+  box-shadow: none !important;
+}
+
+.site-nav.site-nav--solid {
+  background-color: rgba(6, 8, 12, 0.88) !important;
+}
+
+.nav-pill-track,
+html[data-theme="dark"] .nav-pill-track,
+html.dark .nav-pill-track {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+}
+
+.nav-pill-indicator,
+html[data-theme="dark"] .nav-pill-indicator,
+html.dark .nav-pill-indicator {
+  display: none !important;
+}
+
+.nav-link-pill,
+html[data-theme="dark"] .nav-link-pill,
+html.dark .nav-link-pill {
+  padding: 10px clamp(12px, 1.5vw, 22px) !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  border: 0 !important;
+  letter-spacing: 0 !important;
+}
+
+.nav-link-pill.is-active,
+.nav-link-pill:focus-visible,
+html[data-theme="dark"] .nav-link-pill.is-active,
+html.dark .nav-link-pill.is-active {
+  background: transparent !important;
+  box-shadow: inset 0 -2px 0 #38bdf8 !important;
+}
+
+.nav-btn-login,
+.nav-btn-signup {
+  min-height: 44px !important;
+  border-radius: 0 !important;
+}
+
+#features,
+#how,
+#footer-contact {
+  min-height: clamp(620px, 82vh, 980px) !important;
+  scroll-margin-top: 76px !important;
+}
+
+#features .font-banner,
+#how .font-banner {
+  font-size: clamp(4.25rem, 12vw, 11rem) !important;
+}
+
+#footer-contact {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding-top: clamp(4rem, 10vw, 9rem) !important;
+  padding-bottom: clamp(4rem, 10vw, 9rem) !important;
+}
+
+@media (max-width: 1023px) {
+  #features,
+  #how,
+  #footer-contact {
+    min-height: auto !important;
+  }
+
+  #features .font-banner,
+  #how .font-banner {
+    font-size: clamp(4rem, 18vw, 8rem) !important;
+  }
+}
+
+@media (max-width: 640px) {
+  #features,
+  #how,
+  #footer-contact {
+    padding-left: 1rem !important;
+    padding-right: 1rem !important;
+  }
+
+  #how .font-banner {
+    font-size: clamp(3.5rem, 17vw, 6rem) !important;
+    overflow-wrap: anywhere !important;
+  }
+
+  #footer-contact > div {
+    border-radius: 0 !important;
+  }
+}

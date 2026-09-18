@@ -160,26 +160,26 @@ body {
   position: relative;
   display: inline-flex;
   align-items: center;
-  padding: 8px 18px;
+  padding: 10px clamp(12px, 1.5vw, 22px);
   font-size: 15px;
   font-weight: 500;
-  letter-spacing: -0.01em;
+  letter-spacing: 0;
   color: #cbd5e1;
-  border-radius: 9999px;
+  border-radius: 0;
   text-decoration: none;
   transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .nav-link-pill:hover {
   color: #ffffff;
-  background-color: rgba(255, 255, 255, 0.07);
+  background-color: transparent;
 }
 
 .nav-link-pill.is-active,
 .nav-link-pill:focus-visible {
   color: #38bdf8;
-  background-color: rgba(56, 189, 248, 0.12);
-  box-shadow: 0 0 16px rgba(56, 189, 248, 0.15);
+  background-color: transparent;
+  box-shadow: inset 0 -2px 0 #38bdf8;
 }
 
 /* Header Buttons */
@@ -187,15 +187,15 @@ body {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  height: 42px;
-  padding: 0 22px;
+  min-height: 44px;
+  padding: 0 clamp(14px, 1.5vw, 22px);
   font-size: 14px;
   font-weight: 600;
   letter-spacing: -0.01em;
   color: #e2e8f0;
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 9999px;
+  border-radius: 0;
   backdrop-filter: blur(8px);
   text-decoration: none;
   transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
@@ -213,15 +213,15 @@ body {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  height: 42px;
-  padding: 0 24px;
+  min-height: 44px;
+  padding: 0 clamp(16px, 1.7vw, 24px);
   font-size: 14px;
   font-weight: 700;
   letter-spacing: -0.01em;
   color: #031326;
   background: linear-gradient(135deg, #7dd3fc 0%, #38bdf8 50%, #0284c7 100%);
   border: 1px solid rgba(255, 255, 255, 0.4);
-  border-radius: 9999px;
+  border-radius: 0;
   text-decoration: none;
   box-shadow: 0 4px 20px rgba(56, 189, 248, 0.35);
   transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
@@ -649,5 +649,80 @@ button {
 @media (prefers-reduced-motion: reduce) {
   .team-coverflow-slide {
     filter: none !important;
+  }
+}
+
+/* Landing navigation and section sizing */
+.site-nav {
+  background-color: transparent;
+  box-shadow: none;
+}
+
+.site-nav.site-nav--solid {
+  background-color: rgba(6, 8, 12, 0.88);
+}
+
+.nav-pill-track {
+  background: transparent;
+  border: 0;
+  padding: 0;
+}
+
+.nav-pill-indicator {
+  display: none;
+}
+
+#features,
+#how,
+#footer-contact {
+  min-height: clamp(620px, 82vh, 980px);
+  scroll-margin-top: 76px;
+}
+
+#features .font-banner,
+#how .font-banner {
+  font-size: clamp(4.25rem, 12vw, 11rem);
+}
+
+#footer-contact {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-top: clamp(4rem, 10vw, 9rem);
+  padding-bottom: clamp(4rem, 10vw, 9rem);
+}
+
+@media (max-width: 1023px) {
+  .site-nav {
+    background-color: rgba(9, 11, 17, 0.35);
+  }
+
+  #features,
+  #how,
+  #footer-contact {
+    min-height: auto;
+  }
+
+  #features .font-banner,
+  #how .font-banner {
+    font-size: clamp(4rem, 18vw, 8rem);
+  }
+}
+
+@media (max-width: 640px) {
+  #features,
+  #how,
+  #footer-contact {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+
+  #how .font-banner {
+    font-size: clamp(3.5rem, 17vw, 6rem);
+    overflow-wrap: anywhere;
+  }
+
+  #footer-contact > div {
+    border-radius: 0;
   }
 }

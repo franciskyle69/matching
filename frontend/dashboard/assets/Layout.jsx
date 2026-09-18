@@ -592,13 +592,6 @@ import "./components/Sidebar.jsx";
         <div className="app-main-shell">
           {!isAuthenticated && (
             <div className="auth-floating-topbar">
-              <a href="/landing/" className="auth-floating-back-btn" aria-label="Back to landing page">
-                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                  <line x1="19" y1="12" x2="5" y2="12" />
-                  <polyline points="12 19 5 12 12 5" />
-                </svg>
-                <span>Back to landing</span>
-              </a>
               <button
                 type="button"
                 className="sidebar-icon-btn app-topbar-theme-btn auth-floating-theme-btn"
