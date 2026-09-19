@@ -1826,7 +1826,7 @@ def _set_interest_tags(profile, names):
 
 
 @login_required
-@require_http_methods(["POST"])
+@require_http_methods(["POST", "PUT"])
 def complete_onboarding(request):
     payload = _get_payload(request)
     metadata = payload.get("metadata") if isinstance(payload.get("metadata"), dict) else {}
@@ -2005,6 +2005,62 @@ def complete_onboarding(request):
             "approval_status": "ACTIVE",
             "avatar_url": image_url or getattr(profile, "avatar_url", ""),
         },
+    })
+
+
+@login_required
+def user_preferences(request):
+    """Retrieve or save hierarchical preferences (Subject -> Topic -> Competency, availability, support need)."""
+    if request.method in ("PUT", "POST"):
+        return complete_onboarding(request)
+
+    if request.method != "GET":
+        return JsonResponse({"error": "Method not allowed"}, status=405)
+
+    user = request.user
+    user_profile = get_user_profile(user)
+    role = user_profile.role or _user_role(user)
+    profile = getattr(user, "mentor_profile", None) or getattr(user, "mentee_profile", None)
+
+    subjects = list(getattr(profile, "subjects", []) or [])
+    topics = list(getattr(profile, "topics", []) or getattr(profile, "skills", []) or [])
+
+    competencies = []
+    if profile and hasattr(profile, "competencies"):
+        competencies = list(profile.competencies.values_list("name", flat=True))
+    if not competencies and profile:
+        competencies = list(getattr(profile, "competency_ids", []) or [])
+
+    raw_avail = list(getattr(profile, "availability", []) or [])
+    availability_slots = []
+    day_map = {
+        "Mon": "Monday", "Tue": "Tuesday", "Wed": "Wednesday",
+        "Thu": "Thursday", "Fri": "Friday", "Sat": "Saturday", "Sun": "Sunday"
+    }
+    for slot in raw_avail:
+        if isinstance(slot, dict):
+            availability_slots.append(slot)
+        elif isinstance(slot, str):
+            if "|" in slot:
+                day_part, time_part = slot.split("|", 1)
+                full_day = day_map.get(day_part, day_part)
+                if "-" in time_part:
+                    start, end = time_part.split("-", 1)
+                    availability_slots.append({"day": full_day, "start_time": start, "end_time": end})
+            elif "-" in slot:
+                start, end = slot.split("-", 1)
+                availability_slots.append({"day": "Monday", "start_time": start, "end_time": end})
+
+    support_need = getattr(profile, "difficulty_level", None) or getattr(profile, "expertise_level", 3)
+
+    return JsonResponse({
+        "role": role,
+        "subjects": subjects,
+        "topics": topics,
+        "competencies": competencies,
+        "availability": availability_slots,
+        "availability_slots": availability_slots,
+        "support_need": support_need,
     })
 
 

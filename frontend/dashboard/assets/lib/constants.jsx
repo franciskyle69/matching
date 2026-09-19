@@ -77,6 +77,9 @@
   // Topbar-only tabs: routable but hidden from sidebar navigation.
   window.DashboardApp.HIDDEN_TABS = [
     { id: "notifications", label: "Notifications" },
+    { id: "preferences", label: "Preferences" },
+    { id: "mentee-preferences", label: "Mentee Preferences" },
+    { id: "mentor-preferences", label: "Mentor Preferences" },
   ];
   window.DashboardApp.MAIN_TABS = ROUTES.map(({ id, label }) => ({
     id,

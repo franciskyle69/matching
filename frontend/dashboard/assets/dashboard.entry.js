@@ -101,8 +101,11 @@ async function loadDashboardModules() {
 	await import("./router/pages/NewsfeedPage.jsx");
 	await import("./router/pages/MentorProfilePage.jsx");
 	await import("./router/pages/CompleteProfilePage.jsx");
+	await import("./components/SubjectSkillPreferences.jsx");
 	await import("./router/pages/MentoringPreferencesPage.jsx");
 	await import("./router/pages/MentorMatchingProfilePage.jsx");
+	await import("./router/pages/MenteePreferencesPage.jsx");
+	await import("./router/pages/MentorPreferencesPage.jsx");
 	await import("./router/pages/OnboardingPage.jsx");
 	await import("./router/pages/MenteesPage.jsx");
 	await import("./router/routes.jsx");

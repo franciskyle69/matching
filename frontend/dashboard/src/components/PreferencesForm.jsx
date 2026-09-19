@@ -1,11 +1,10 @@
-import React, { useState, useEffect, useMemo, useContext } from "react";
+import React, { useState, useMemo } from "react";
 import {
   Box,
   Button,
   Card,
   CardContent,
   CardHeader,
-  Chip,
   Divider,
   FormControl,
   Grid,
@@ -19,179 +18,21 @@ import {
   TextField,
   Typography,
   Alert,
-  Checkbox,
-  FormControlLabel,
-  Accordion,
-  AccordionSummary,
-  AccordionDetails,
 } from "@mui/material";
-import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import TuneIcon from "@mui/icons-material/Tune";
+import AccessTimeIcon from "@mui/icons-material/AccessTime";
+import SpeedIcon from "@mui/icons-material/Speed";
 
-export const ROLE_LIMITS = {
-  MENTEE: {
-    label: "Mentee",
-    roleLabel: "Mentees",
-    minSubjects: 1,
-    maxSubjects: 2,
-    minTopicsPerSubject: 1,
-    maxTopicsPerSubject: 2,
-    minCompetenciesPerTopic: 1,
-    maxCompetenciesPerTopic: 2,
-    minGlobalCompetencies: 1,
-    maxGlobalCompetencies: 5,
-    minAvailabilitySlots: 1,
-    maxAvailabilitySlots: 4,
-  },
-  STUDENT_MENTOR: {
-    label: "Student Mentor",
-    roleLabel: "Student Mentors",
-    minSubjects: 1,
-    maxSubjects: 3,
-    minTopicsPerSubject: 1,
-    maxTopicsPerSubject: 3,
-    minCompetenciesPerTopic: 1,
-    maxCompetenciesPerTopic: 3,
-    minGlobalCompetencies: 2,
-    maxGlobalCompetencies: 10,
-    minAvailabilitySlots: 2,
-    maxAvailabilitySlots: 6,
-  },
-  INSTRUCTOR_MENTOR: {
-    label: "Instructor Mentor",
-    roleLabel: "Instructor Mentors",
-    minSubjects: 1,
-    maxSubjects: 4,
-    minTopicsPerSubject: 1,
-    maxTopicsPerSubject: 3,
-    minCompetenciesPerTopic: 1,
-    maxCompetenciesPerTopic: 3,
-    minGlobalCompetencies: 2,
-    maxGlobalCompetencies: 10,
-    minAvailabilitySlots: 2,
-    maxAvailabilitySlots: 6,
-  },
-};
+import SubjectSkillPreferences, {
+  ROLE_LIMITS,
+  getRoleLimits,
+  CANONICAL_CURRICULUM,
+  NEU_STYLES,
+} from "./SubjectSkillPreferences.jsx";
 
-export function getRoleLimits(role) {
-  const norm = String(role || "").trim().toUpperCase();
-  if (norm === "MENTEE") return ROLE_LIMITS.MENTEE;
-  if (norm === "INSTRUCTOR_MENTOR" || norm === "INSTRUCTOR") return ROLE_LIMITS.INSTRUCTOR_MENTOR;
-  if (norm === "STUDENT_MENTOR" || norm === "MENTOR") return ROLE_LIMITS.STUDENT_MENTOR;
-  return ROLE_LIMITS.MENTEE;
-}
-
-export const CANONICAL_CURRICULUM = [
-  {
-    code: "IT 111",
-    name: "IT 111 - Introduction to Computing",
-    topics: [
-      {
-        name: "History & Hardware Evolution",
-        competencies: ["Computing Generations", "Processor Architecture", "Memory & Storage Types"],
-      },
-      {
-        name: "Digital Logic & Data Representation",
-        competencies: ["Binary/Octal/Hex Conversions", "Boolean Logic Gates", "Data Encoding (ASCII/Unicode)"],
-      },
-      {
-        name: "UI & Web Fundamentals",
-        competencies: ["Figma UI Design", "Flexbox & Grid", "HTML5 Semantic Structure"],
-      },
-      {
-        name: "Operating Systems & Architecture",
-        competencies: ["OS Fundamentals", "Process Management", "File Systems & Permissions"],
-      },
-    ],
-  },
-  {
-    code: "IT 112",
-    name: "IT 112 - Computer Programming 1",
-    topics: [
-      {
-        name: "Control Structures",
-        competencies: ["Loop Control", "Conditional Logic", "Iteration Patterns"],
-      },
-      {
-        name: "Data Structures",
-        competencies: ["Array Creation", "1D/2D Manipulation", "Linear/Binary Searching"],
-      },
-      {
-        name: "Functions & Methods",
-        competencies: ["Parameter Passing", "Return Types", "Variable Scope & Lifetime"],
-      },
-    ],
-  },
-
-  {
-    code: "IT 113",
-    name: "IT 113 - Computer Programming 2 (Data Structures)",
-    topics: [
-      {
-        name: "Object-Oriented Basics",
-        competencies: ["Classes & Objects", "Encapsulation & Access Modifiers", "Constructors"],
-      },
-      {
-        name: "Linear Data Structures",
-        competencies: ["Singly Linked Lists", "Stack Implementation (LIFO)", "Queue Implementation (FIFO)"],
-      },
-    ],
-  },
-  {
-    code: "IT 115",
-    name: "IT 115 - Information Management (Database Systems)",
-    topics: [
-      {
-        name: "Relational Modeling",
-        competencies: ["Entity-Relationship Diagrams", "Primary & Foreign Keys", "Normalization (1NF-3NF)"],
-      },
-      {
-        name: "SQL Queries",
-        competencies: ["SELECT & Filtering", "Table Joins (INNER/LEFT)", "Aggregation (GROUP BY)"],
-      },
-    ],
-  },
-  {
-    code: "IT 211",
-    name: "IT 211 - Data Structures and Algorithms",
-    topics: [
-      {
-        name: "Algorithm Analysis",
-        competencies: ["Big-O Asymptotic Notation", "Best/Worst Case Analysis", "Space Complexity"],
-      },
-      {
-        name: "Non-Linear Structures",
-        competencies: ["Binary Search Trees", "Tree Traversal", "Graph Representations"],
-      },
-    ],
-  },
-  {
-    code: "IT 212",
-    name: "IT 212 - Object-Oriented Programming",
-    topics: [
-      {
-        name: "OOP Pillars",
-        competencies: ["Inheritance & Polymorphism", "Abstract Classes & Interfaces", "Method Overriding/Overloading"],
-      },
-    ],
-  },
-  {
-    code: "IT 221",
-    name: "IT 221 - Web Systems and Technologies",
-    topics: [
-      {
-        name: "Frontend Fundamentals",
-        competencies: ["HTML5 Semantic Structure", "Flexbox & Grid Layouts", "Figma UI Design"],
-      },
-      {
-        name: "Client-Side Scripting",
-        competencies: ["DOM Manipulation", "ES6+ Modern Syntax", "Fetch API & Async/Await"],
-      },
-    ],
-  },
-];
+export { ROLE_LIMITS, getRoleLimits, CANONICAL_CURRICULUM, NEU_STYLES };
 
 export const DAYS_OF_WEEK = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
@@ -222,13 +63,12 @@ export default function PreferencesForm({
   });
 
   const [selectedTopics, setSelectedTopics] = useState(() => {
-    return initialData.topics || ["Control Structures", "UI & Web Fundamentals"];
+    return initialData.topics || ["UI & Web Fundamentals", "Control Structures"];
   });
 
   const [selectedCompetencies, setSelectedCompetencies] = useState(() => {
     return initialData.competencies || ["Loop Control", "Figma UI Design", "Flexbox & Grid"];
   });
-
 
   const [supportNeed, setSupportNeed] = useState(() => {
     return initialData.support_need || initialData.difficulty_level || 3;
@@ -244,119 +84,11 @@ export default function PreferencesForm({
     ];
   });
 
-  // Dynamic catalog state: start with canonical curriculum and optionally merge backend SelectionCatalog
-  const [curriculum, setCurriculum] = useState(CANONICAL_CURRICULUM);
-
-  useEffect(() => {
-    if (window.DashboardApp && window.DashboardApp.SelectionCatalog) {
-      window.DashboardApp.SelectionCatalog.load([])
-        .then((data) => {
-          if (data && data.topicGroups && data.topicGroups.length > 0) {
-            // merge if needed
-          }
-        })
-        .catch(() => {});
-    }
-  }, []);
-
-  // Filter curriculum to selected subjects
-  const activeSubjectObjects = useMemo(() => {
-    return curriculum.filter(
-      (sub) => selectedSubjects.includes(sub.code) || selectedSubjects.includes(sub.name),
-    );
-  }, [curriculum, selectedSubjects]);
-
-  // Handler: Toggle Subject
-  const handleToggleSubject = (subCode) => {
-    setErrorMessage("");
-    if (selectedSubjects.includes(subCode)) {
-      // Prune its topics & competencies
-      const subObj = curriculum.find((s) => s.code === subCode || s.name === subCode);
-      const subTopicNames = subObj ? subObj.topics.map((t) => t.name) : [];
-      const subCompNames = subObj
-        ? subObj.topics.flatMap((t) => (typeof t.competencies[0] === "string" ? t.competencies : t.competencies.map((c) => c.name)))
-        : [];
-
-      setSelectedSubjects(selectedSubjects.filter((s) => s !== subCode));
-      setSelectedTopics(selectedTopics.filter((t) => !subTopicNames.includes(t)));
-      setSelectedCompetencies(selectedCompetencies.filter((c) => !subCompNames.includes(c)));
-    } else {
-      if (selectedSubjects.length >= currentLimits.maxSubjects) {
-        setErrorMessage(`${currentLimits.roleLabel} cannot select more than ${currentLimits.maxSubjects} subjects.`);
-        return;
-      }
-      setSelectedSubjects([...selectedSubjects, subCode]);
-    }
-  };
-
-  // Handler: Toggle Topic
-  const handleToggleTopic = (topicName, subjectObj) => {
-    setErrorMessage("");
-    const isSelected = selectedTopics.includes(topicName);
-
-    if (isSelected) {
-      // Prune competencies under this topic
-      const topicObj = subjectObj.topics.find((t) => t.name === topicName);
-      const compNames = topicObj
-        ? typeof topicObj.competencies[0] === "string"
-          ? topicObj.competencies
-          : topicObj.competencies.map((c) => c.name)
-        : [];
-
-      setSelectedTopics(selectedTopics.filter((t) => t !== topicName));
-      setSelectedCompetencies(selectedCompetencies.filter((c) => !compNames.includes(c)));
-    } else {
-      // Check max topics for this subject
-      const topicsInThisSubject = subjectObj.topics.map((t) => t.name);
-      const currentSelectedInSubj = selectedTopics.filter((t) => topicsInThisSubject.includes(t));
-      if (currentSelectedInSubj.length >= currentLimits.maxTopicsPerSubject) {
-        setErrorMessage(
-          `${currentLimits.roleLabel} cannot select more than ${currentLimits.maxTopicsPerSubject} topics for ${subjectObj.code || subjectObj.name}.`,
-        );
-        return;
-      }
-      setSelectedTopics([...selectedTopics, topicName]);
-    }
-  };
-
-  // Handler: Toggle Competency
-  const handleToggleCompetency = (compName, topicObj) => {
-    setErrorMessage("");
-    const isSelected = selectedCompetencies.includes(compName);
-
-    if (isSelected) {
-      setSelectedCompetencies(selectedCompetencies.filter((c) => c !== compName));
-    } else {
-      // Check global cap
-      if (selectedCompetencies.length >= currentLimits.maxGlobalCompetencies) {
-        setErrorMessage(
-          `${currentLimits.roleLabel} cannot select more than ${currentLimits.maxGlobalCompetencies} competencies total.`,
-        );
-        return;
-      }
-
-      // Check per-topic cap
-      const compsInThisTopic = typeof topicObj.competencies[0] === "string"
-        ? topicObj.competencies
-        : topicObj.competencies.map((c) => c.name);
-      const currentSelectedInTopic = selectedCompetencies.filter((c) => compsInThisTopic.includes(c));
-      if (currentSelectedInTopic.length >= currentLimits.maxCompetenciesPerTopic) {
-        setErrorMessage(
-          `${currentLimits.roleLabel} cannot select more than ${currentLimits.maxCompetenciesPerTopic} competencies for topic '${topicObj.name}'.`,
-        );
-        return;
-      }
-
-      setSelectedCompetencies([...selectedCompetencies, compName]);
-    }
-  };
-
-
   // Availability handlers
   const handleAddSlot = () => {
     if (availabilitySlots.length >= currentLimits.maxAvailabilitySlots) {
       setErrorMessage(
-        `${currentLimits.roleLabel} cannot select more than ${currentLimits.maxAvailabilitySlots} availability slots.`,
+        `${currentLimits.roleLabel} cannot select more than ${currentLimits.maxAvailabilitySlots} availability slots.`
       );
       return;
     }
@@ -370,7 +102,7 @@ export default function PreferencesForm({
   const handleRemoveSlot = (index) => {
     if (availabilitySlots.length <= currentLimits.minAvailabilitySlots) {
       setErrorMessage(
-        `${currentLimits.roleLabel} must select at least ${currentLimits.minAvailabilitySlots} availability slot.`,
+        `${currentLimits.roleLabel} must select at least ${currentLimits.minAvailabilitySlots} availability slot.`
       );
       return;
     }
@@ -399,73 +131,30 @@ export default function PreferencesForm({
       return;
     }
 
-    // 2. Topics per subject validation
-    for (const sub of activeSubjectObjects) {
-      const topicsInSub = sub.topics.map((t) => t.name);
-      const selectedInSub = selectedTopics.filter((t) => topicsInSub.includes(t));
-      if (selectedInSub.length < currentLimits.minTopicsPerSubject) {
-        setErrorMessage(
-          `${currentLimits.roleLabel} must select at least ${currentLimits.minTopicsPerSubject} topic for ${sub.code || sub.name}.`,
-        );
-        return;
-      }
-      if (selectedInSub.length > currentLimits.maxTopicsPerSubject) {
-        setErrorMessage(
-          `${currentLimits.roleLabel} cannot select more than ${currentLimits.maxTopicsPerSubject} topics for ${sub.code || sub.name}.`,
-        );
-        return;
-      }
-    }
-
-    // 3. Competencies per topic validation
-    for (const sub of activeSubjectObjects) {
-      for (const topic of sub.topics) {
-        if (selectedTopics.includes(topic.name)) {
-          const compsInTopic = typeof topic.competencies[0] === "string"
-            ? topic.competencies
-            : topic.competencies.map((c) => c.name);
-          const selectedInTopic = selectedCompetencies.filter((c) => compsInTopic.includes(c));
-
-          if (selectedInTopic.length < currentLimits.minCompetenciesPerTopic) {
-            setErrorMessage(
-              `${currentLimits.roleLabel} must select at least ${currentLimits.minCompetenciesPerTopic} competency for topic '${topic.name}'.`,
-            );
-            return;
-          }
-          if (selectedInTopic.length > currentLimits.maxCompetenciesPerTopic) {
-            setErrorMessage(
-              `${currentLimits.roleLabel} cannot select more than ${currentLimits.maxCompetenciesPerTopic} competencies for topic '${topic.name}'.`,
-            );
-            return;
-          }
-        }
-      }
-    }
-
-    // 4. Global competencies total validation
+    // 2. Global competencies total validation
     if (selectedCompetencies.length < currentLimits.minGlobalCompetencies) {
       setErrorMessage(
-        `${currentLimits.roleLabel} must select at least ${currentLimits.minGlobalCompetencies} competency total.`,
+        `${currentLimits.roleLabel} must select at least ${currentLimits.minGlobalCompetencies} competency total.`
       );
       return;
     }
     if (selectedCompetencies.length > currentLimits.maxGlobalCompetencies) {
       setErrorMessage(
-        `${currentLimits.roleLabel} cannot select more than ${currentLimits.maxGlobalCompetencies} competencies total.`,
+        `${currentLimits.roleLabel} cannot select more than ${currentLimits.maxGlobalCompetencies} competencies total.`
       );
       return;
     }
 
-    // 5. Availability slots validation
+    // 3. Availability slots validation
     if (availabilitySlots.length < currentLimits.minAvailabilitySlots) {
       setErrorMessage(
-        `${currentLimits.roleLabel} must select at least ${currentLimits.minAvailabilitySlots} availability slot.`,
+        `${currentLimits.roleLabel} must select at least ${currentLimits.minAvailabilitySlots} availability slot.`
       );
       return;
     }
     if (availabilitySlots.length > currentLimits.maxAvailabilitySlots) {
       setErrorMessage(
-        `${currentLimits.roleLabel} cannot select more than ${currentLimits.maxAvailabilitySlots} availability slots.`,
+        `${currentLimits.roleLabel} cannot select more than ${currentLimits.maxAvailabilitySlots} availability slots.`
       );
       return;
     }
@@ -483,296 +172,68 @@ export default function PreferencesForm({
     }
   };
 
-  const isGlobalCompCapReached = selectedCompetencies.length >= currentLimits.maxGlobalCompetencies;
-  const isSubjectCapReached = selectedSubjects.length >= currentLimits.maxSubjects;
-
   return (
     <Card
-      elevation={2}
+      elevation={0}
       sx={{
-        borderRadius: 3,
-        boxShadow: "0 8px 24px rgba(0, 40, 85, 0.08)",
+        ...NEU_STYLES.elevatedCard,
+        p: { xs: 1, sm: 2 },
       }}
     >
       <CardHeader
-        avatar={<TuneIcon sx={{ color: "primary.main", fontSize: 32 }} />}
+        avatar={<TuneIcon sx={{ color: "#1976D2", fontSize: 32 }} />}
         title={
-          <Typography variant="h5" fontWeight={700} color="#002855">
+          <Typography variant="h5" fontWeight={700} color="#0D47A1">
             Subject & Skill Preferences
           </Typography>
         }
         subheader={`Role: ${currentLimits.label} — Feature Vector Sparsity Bounds Enforced`}
+        sx={{ px: 3, pt: 2.5 }}
       />
-      <Divider />
-      <CardContent sx={{ p: 4 }}>
+      <Divider sx={{ my: 1, borderColor: "rgba(148, 163, 184, 0.2)" }} />
+
+      <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
         <Stack spacing={4}>
           {errorMessage && (
-            <Alert severity="error" onClose={() => setErrorMessage("")}>
+            <Alert
+              severity="error"
+              onClose={() => setErrorMessage("")}
+              sx={{
+                borderRadius: "12px",
+                boxShadow: "inset 2px 2px 5px #c5d0e0, inset -2px -2px 5px #ffffff",
+                background: "#e6ecf5",
+              }}
+            >
               {errorMessage}
             </Alert>
           )}
 
-          {/* Core BSIT Subjects Multi-Select with Tracker */}
-          <Box>
-            <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1.5 }}>
-              <Box>
-                <Typography variant="subtitle1" fontWeight={600} color="#002855">
-                  Core BSIT Subjects
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Select subjects to configure topics and competencies:
-                </Typography>
-              </Box>
-              <Chip
-                color={selectedSubjects.length >= currentLimits.minSubjects ? "primary" : "warning"}
-                variant="outlined"
-                label={`Subjects: ${selectedSubjects.length} / ${currentLimits.maxSubjects} (Min ${currentLimits.minSubjects}, Max ${currentLimits.maxSubjects})`}
-              />
-            </Stack>
+          {/* ── Reusable Modular Hierarchy: Subject -> Topic -> Competency ── */}
+          <SubjectSkillPreferences
+            role={user?.role}
+            value={{
+              selectedSubjects,
+              selectedTopics,
+              selectedCompetencies,
+            }}
+            onChange={({ selectedSubjects: nextSubs, selectedTopics: nextTops, selectedCompetencies: nextComps }) => {
+              setSelectedSubjects(nextSubs);
+              setSelectedTopics(nextTops);
+              setSelectedCompetencies(nextComps);
+            }}
+            readOnly={loading}
+          />
 
-            <Grid container spacing={1.5}>
-              {curriculum.map((sub) => {
-                const isSelected = selectedSubjects.includes(sub.code) || selectedSubjects.includes(sub.name);
-                const isDisabled = !isSelected && isSubjectCapReached;
-                return (
-                  <Grid size={{ xs: 12, sm: 6 }} key={sub.code}>
-                    <Paper
-                      variant="outlined"
-                      onClick={() => !isDisabled && handleToggleSubject(sub.code)}
-                      sx={{
-                        p: 1.5,
-                        cursor: isDisabled ? "not-allowed" : "pointer",
-                        opacity: isDisabled ? 0.5 : 1,
-                        borderColor: isSelected ? "#002855" : "divider",
-                        backgroundColor: isSelected ? "rgba(0, 40, 85, 0.05)" : "transparent",
-                        display: "flex",
-                        alignItems: "center",
-                        transition: "all 0.2s",
-                        "&:hover": {
-                          borderColor: isDisabled ? "divider" : "#002855",
-                        },
-                      }}
-                    >
-                      <Checkbox
-                        checked={isSelected}
-                        disabled={isDisabled}
-                        inputProps={{ "aria-label": sub.code }}
-                        onChange={() => handleToggleSubject(sub.code)}
-                        onClick={(e) => e.stopPropagation()}
-                        size="small"
-                        sx={{ mr: 1, color: "#002855" }}
-                      />
-                      <Box>
-                        <Typography variant="body2" fontWeight={isSelected ? 600 : 400} color="#002855">
-                          {sub.code}
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary" display="block">
-                          {sub.name.replace(`${sub.code} - `, "")}
-                        </Typography>
-                      </Box>
-                    </Paper>
-                  </Grid>
-                );
-              })}
-            </Grid>
-          </Box>
+          <Divider sx={{ borderColor: "rgba(148, 163, 184, 0.2)" }} />
 
-          <Divider />
-
-          {/* Hierarchical Topics & Competency Selection with Sticky Counter */}
-          <Box>
-            <Typography variant="subtitle1" fontWeight={600} color="#002855" gutterBottom>
-              Competency & Skill Tags
-            </Typography>
-            {/* Sticky Tracker at the top of Competencies Section */}
-            <Box
-              sx={{
-                position: "sticky",
-                top: 16,
-                zIndex: 10,
-                backgroundColor: "rgba(255, 255, 255, 0.95)",
-                backdropFilter: "blur(8px)",
-                py: 1.5,
-                px: 2,
-                borderRadius: 2,
-                border: "1px solid",
-                borderColor: isGlobalCompCapReached ? "warning.main" : "primary.light",
-                boxShadow: "0 4px 12px rgba(0, 40, 85, 0.08)",
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                mb: 2.5,
-              }}
-            >
-              <Typography variant="subtitle2" fontWeight={700} color="#002855">
-                Hierarchy: Subject ➔ Topic ➔ Competency
+          {/* ── Support Need Rating Slider ── */}
+          <Box sx={{ ...NEU_STYLES.elevatedCard, p: { xs: 2.5, sm: 3 } }}>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1 }}>
+              <SpeedIcon sx={{ color: "#1976D2", fontSize: 24 }} />
+              <Typography variant="subtitle1" fontWeight={700} color="#0D47A1">
+                Support Need Rating Scale (1 to 5)
               </Typography>
-              <Stack direction="row" spacing={1}>
-                <Chip
-                  color={isGlobalCompCapReached ? "warning" : "primary"}
-                  label={`Competencies: ${selectedCompetencies.length} / ${currentLimits.maxGlobalCompetencies} (Max ${currentLimits.maxGlobalCompetencies})`}
-                  sx={{ fontWeight: 600 }}
-                />
-              </Stack>
             </Box>
-
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              Select up to {currentLimits.maxTopicsPerSubject} topics per subject, and up to {currentLimits.maxCompetenciesPerTopic} competencies per topic:
-            </Typography>
-
-            <Stack spacing={2.5}>
-              {activeSubjectObjects.map((subject) => {
-                const topicsInThisSub = subject.topics.map((t) => t.name);
-                const selectedTopicsInSub = selectedTopics.filter((t) => topicsInThisSub.includes(t));
-                const isTopicCapInSubReached = selectedTopicsInSub.length >= currentLimits.maxTopicsPerSubject;
-
-                return (
-                  <Paper
-                    key={subject.code}
-                    variant="outlined"
-                    sx={{ p: 2, borderRadius: 2, backgroundColor: "rgba(0,0,0,0.01)" }}
-                  >
-                    <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1.5 }}>
-                      <Typography variant="subtitle2" fontWeight={700} color="#002855">
-                        {subject.code} — {subject.name.replace(`${subject.code} - `, "")}
-                      </Typography>
-                      <Chip
-                        size="small"
-                        label={`Topics: ${selectedTopicsInSub.length} / ${currentLimits.maxTopicsPerSubject} (Max ${currentLimits.maxTopicsPerSubject})`}
-                        color={selectedTopicsInSub.length >= currentLimits.minTopicsPerSubject ? "default" : "warning"}
-                      />
-                    </Stack>
-
-                    <Stack spacing={1.5}>
-                      {subject.topics.map((topic) => {
-                        const isTopicSelected = selectedTopics.includes(topic.name);
-                        const isTopicDisabled = !isTopicSelected && isTopicCapInSubReached;
-
-                        const rawComps = typeof topic.competencies[0] === "string"
-                          ? topic.competencies
-                          : topic.competencies.map((c) => c.name);
-                        const selectedCompsInTopic = selectedCompetencies.filter((c) => rawComps.includes(c));
-                        const isTopicCompCapReached = selectedCompsInTopic.length >= currentLimits.maxCompetenciesPerTopic;
-
-                        return (
-                          <Accordion
-                            key={topic.name}
-                            expanded={isTopicSelected}
-                            onChange={() => !isTopicDisabled && handleToggleTopic(topic.name, subject)}
-                            disabled={isTopicDisabled}
-                            sx={{
-                              border: "1px solid",
-                              borderColor: isTopicSelected ? "primary.main" : "divider",
-                              borderRadius: "8px !important",
-                              "&:before": { display: "none" },
-                              opacity: isTopicDisabled ? 0.5 : 1,
-                            }}
-                          >
-                            <AccordionSummary
-                              expandIcon={isTopicSelected ? <ExpandMoreIcon /> : null}
-                              sx={{
-                                backgroundColor: isTopicSelected ? "rgba(0, 40, 85, 0.03)" : "transparent",
-                                borderRadius: "8px",
-                              }}
-                            >
-                              <FormControlLabel
-                                control={
-                                  <Checkbox
-                                    checked={isTopicSelected}
-                                    disabled={isTopicDisabled}
-                                    onChange={() => handleToggleTopic(topic.name, subject)}
-                                    onClick={(e) => e.stopPropagation()}
-                                    size="small"
-                                  />
-                                }
-                                label={
-                                  <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                                    <Typography variant="body2" fontWeight={isTopicSelected ? 600 : 400}>
-                                      {topic.name}
-                                    </Typography>
-                                    {isTopicSelected && (
-                                      <Chip
-                                        size="small"
-                                        label={`${selectedCompsInTopic.length}/${currentLimits.maxCompetenciesPerTopic} competencies`}
-                                        sx={{ height: 20, fontSize: "0.7rem" }}
-                                      />
-                                    )}
-                                  </Box>
-                                }
-                                onClick={(e) => e.stopPropagation()}
-                              />
-                            </AccordionSummary>
-
-                            <AccordionDetails sx={{ pt: 1, pb: 2, px: 3 }}>
-                              <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 1 }}>
-                                Specific Topic Competencies ({selectedCompsInTopic.length} / {currentLimits.maxCompetenciesPerTopic} max):
-                              </Typography>
-                              <Grid container spacing={1}>
-                                {rawComps.map((compName) => {
-                                  const isCompSelected = selectedCompetencies.includes(compName);
-                                  // Auto-disabling logic:
-                                  // 1. Global cap reached: disable all unchecked competencies
-                                  // 2. Per-topic cap reached: disable all unchecked competencies in this topic
-                                  const isCompDisabled =
-                                    !isCompSelected && (isGlobalCompCapReached || isTopicCompCapReached);
-
-                                  return (
-                                    <Grid size={{ xs: 12, sm: 6 }} key={compName}>
-                                      <FormControlLabel
-                                        control={
-                                          <Checkbox
-                                            checked={isCompSelected}
-                                            disabled={isCompDisabled}
-                                            onChange={() => handleToggleCompetency(compName, topic)}
-                                            size="small"
-                                            sx={{
-                                              color: "#002855",
-                                              "&.Mui-checked": { color: "#002855" },
-                                            }}
-                                          />
-                                        }
-                                        label={
-                                          <Typography
-                                            variant="body2"
-                                            sx={{
-                                              fontSize: "0.85rem",
-                                              color: isCompDisabled ? "text.disabled" : "text.primary",
-                                              fontWeight: isCompSelected ? 600 : 400,
-                                            }}
-                                          >
-                                            {compName}
-                                          </Typography>
-                                        }
-                                        sx={{
-                                          m: 0,
-                                          p: 0.5,
-                                          borderRadius: 1,
-                                          width: "100%",
-                                          backgroundColor: isCompSelected ? "rgba(0, 40, 85, 0.05)" : "transparent",
-                                        }}
-                                      />
-                                    </Grid>
-                                  );
-                                })}
-                              </Grid>
-                            </AccordionDetails>
-                          </Accordion>
-                        );
-                      })}
-                    </Stack>
-                  </Paper>
-                );
-              })}
-            </Stack>
-          </Box>
-
-          <Divider />
-
-          {/* Support Need Rating Slider */}
-          <Box>
-            <Typography variant="subtitle1" fontWeight={600} color="#002855" gutterBottom>
-              Support Need Rating Scale (1 to 5)
-            </Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
               Indicate the intensity of mentorship guidance needed:
             </Typography>
@@ -786,61 +247,87 @@ export default function PreferencesForm({
                 max={5}
                 valueLabelDisplay="auto"
                 sx={{
-                  color: "#002855",
+                  color: "#1976D2",
                   "& .MuiSlider-thumb": {
-                    width: 20,
-                    height: 20,
+                    width: 24,
+                    height: 24,
+                    background: "#e6ecf5",
+                    boxShadow: "3px 3px 6px #c5d0e0, -3px -3px 6px #ffffff",
+                    border: "2px solid #1976D2",
+                  },
+                  "& .MuiSlider-track": {
+                    height: 8,
+                    borderRadius: 4,
+                  },
+                  "& .MuiSlider-rail": {
+                    height: 8,
+                    borderRadius: 4,
+                    boxShadow: "inset 2px 2px 4px #c5d0e0, inset -2px -2px 4px #ffffff",
+                    background: "#e6ecf5",
                   },
                 }}
               />
             </Box>
           </Box>
 
-          <Divider />
+          <Divider sx={{ borderColor: "rgba(148, 163, 184, 0.2)" }} />
 
-          {/* Recurring Availability Picker with Tracker & Cap */}
-          <Box>
-            <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1.5 }}>
+          {/* ── Recurring Availability Picker with Neumorphic Slots ── */}
+          <Box sx={{ ...NEU_STYLES.elevatedCard, p: { xs: 2.5, sm: 3 } }}>
+            <Stack
+              direction={{ xs: "column", sm: "row" }}
+              justifyContent="space-between"
+              alignItems={{ xs: "flex-start", sm: "center" }}
+              spacing={1.5}
+              sx={{ mb: 2.5 }}
+            >
               <Box>
-                <Typography variant="subtitle1" fontWeight={600} color="#002855">
+                <Typography variant="subtitle1" fontWeight={700} color="#0D47A1" sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                  <AccessTimeIcon sx={{ color: "#1976D2", fontSize: 24 }} />
                   Recurring Availability Schedule
                 </Typography>
                 <Typography variant="caption" color="text.secondary">
                   Specify regular weekly time slots when you are available for sessions:
                 </Typography>
               </Box>
-              <Stack direction="row" spacing={1} alignItems="center">
-                <Chip
-                  color={availabilitySlots.length >= currentLimits.minAvailabilitySlots ? "primary" : "warning"}
-                  variant="outlined"
-                  label={`Availability Slots: ${availabilitySlots.length} / ${currentLimits.maxAvailabilitySlots} (Min ${currentLimits.minAvailabilitySlots}, Max ${currentLimits.maxAvailabilitySlots})`}
-                />
+
+              <Stack direction="row" spacing={1.5} alignItems="center" flexWrap="wrap">
+                <Box sx={NEU_STYLES.counterPill}>
+                  <Typography variant="caption" fontWeight={700} color={availabilitySlots.length >= currentLimits.minAvailabilitySlots ? "#0D47A1" : "#D32F2F"}>
+                    Availability Slots: {availabilitySlots.length} / {currentLimits.maxAvailabilitySlots} (Min {currentLimits.minAvailabilitySlots}, Max {currentLimits.maxAvailabilitySlots})
+                  </Typography>
+                </Box>
                 <Button
                   variant="outlined"
                   size="small"
                   startIcon={<AddCircleOutlineIcon />}
                   onClick={handleAddSlot}
                   disabled={availabilitySlots.length >= currentLimits.maxAvailabilitySlots}
-                  sx={{ textTransform: "none" }}
+                  sx={{
+                    ...NEU_STYLES.elevatedCard,
+                    textTransform: "none",
+                    fontWeight: 600,
+                    color: "#0D47A1",
+                    px: 2,
+                    "&:hover": { background: "#e6ecf5", transform: "translateY(-1px)" },
+                  }}
                 >
                   Add Day Slot
                 </Button>
               </Stack>
             </Stack>
 
-            <Stack spacing={1.5}>
+            <Stack spacing={2}>
               {availabilitySlots.map((slot, index) => (
                 <Paper
                   key={index}
-                  variant="outlined"
                   sx={{
+                    ...NEU_STYLES.topicContainer,
                     p: 2,
-                    borderRadius: 2,
-                    backgroundColor: "rgba(0,0,0,0.01)",
                   }}
                 >
                   <Grid container spacing={2} alignItems="center">
-                    <Grid size={{ xs: 12, sm: 4 }}>
+                    <Grid item xs={12} sm={4}>
                       <FormControl fullWidth size="small">
                         <InputLabel id={`day-select-label-${index}`}>Day of Week</InputLabel>
                         <Select
@@ -848,6 +335,11 @@ export default function PreferencesForm({
                           value={slot.day}
                           label="Day of Week"
                           onChange={(e) => handleSlotChange(index, "day", e.target.value)}
+                          sx={{
+                            background: "#e6ecf5",
+                            borderRadius: "12px",
+                            boxShadow: "inset 2px 2px 5px #c5d0e0, inset -2px -2px 5px #ffffff",
+                          }}
                         >
                           {DAYS_OF_WEEK.map((day) => (
                             <MenuItem key={day} value={day}>
@@ -857,7 +349,7 @@ export default function PreferencesForm({
                         </Select>
                       </FormControl>
                     </Grid>
-                    <Grid size={{ xs: 6, sm: 3.5 }}>
+                    <Grid item xs={6} sm={3.5}>
                       <TextField
                         label="Start Time"
                         type="time"
@@ -866,9 +358,16 @@ export default function PreferencesForm({
                         value={slot.start_time}
                         onChange={(e) => handleSlotChange(index, "start_time", e.target.value)}
                         InputLabelProps={{ shrink: true }}
+                        sx={{
+                          "& .MuiOutlinedInput-root": {
+                            background: "#e6ecf5",
+                            borderRadius: "12px",
+                            boxShadow: "inset 2px 2px 5px #c5d0e0, inset -2px -2px 5px #ffffff",
+                          },
+                        }}
                       />
                     </Grid>
-                    <Grid size={{ xs: 6, sm: 3.5 }}>
+                    <Grid item xs={6} sm={3.5}>
                       <TextField
                         label="End Time"
                         type="time"
@@ -877,14 +376,25 @@ export default function PreferencesForm({
                         value={slot.end_time}
                         onChange={(e) => handleSlotChange(index, "end_time", e.target.value)}
                         InputLabelProps={{ shrink: true }}
+                        sx={{
+                          "& .MuiOutlinedInput-root": {
+                            background: "#e6ecf5",
+                            borderRadius: "12px",
+                            boxShadow: "inset 2px 2px 5px #c5d0e0, inset -2px -2px 5px #ffffff",
+                          },
+                        }}
                       />
                     </Grid>
-                    <Grid size={{ xs: 12, sm: 1 }} sx={{ textAlign: "right" }}>
+                    <Grid item xs={12} sm={1} sx={{ textAlign: "right" }}>
                       <IconButton
                         color="error"
                         size="small"
                         onClick={() => handleRemoveSlot(index)}
                         disabled={availabilitySlots.length <= currentLimits.minAvailabilitySlots}
+                        sx={{
+                          boxShadow: "3px 3px 6px #c5d0e0, -3px -3px 6px #ffffff",
+                          background: "#e6ecf5",
+                        }}
                       >
                         <DeleteOutlineIcon fontSize="small" />
                       </IconButton>
@@ -895,16 +405,24 @@ export default function PreferencesForm({
             </Stack>
           </Box>
 
-          <Divider />
+          <Divider sx={{ borderColor: "rgba(148, 163, 184, 0.2)" }} />
 
-          {/* Navigation & Submit Buttons */}
-          <Box sx={{ display: "flex", justifyContent: "space-between", pt: 1 }}>
+          {/* ── Navigation & Submit Buttons ── */}
+          <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", pt: 1 }}>
             {onBack && (
               <Button
                 variant="outlined"
                 onClick={onBack}
                 disabled={loading}
-                sx={{ textTransform: "none" }}
+                sx={{
+                  ...NEU_STYLES.elevatedCard,
+                  textTransform: "none",
+                  fontWeight: 600,
+                  color: "#455A64",
+                  px: 3,
+                  py: 1,
+                  "&:hover": { background: "#e6ecf5" },
+                }}
               >
                 Back to Guidelines
               </Button>
@@ -916,11 +434,23 @@ export default function PreferencesForm({
               disabled={loading}
               sx={{
                 ml: "auto",
-                px: 4,
+                px: 5,
+                py: 1.4,
                 textTransform: "none",
-                fontWeight: 600,
-                backgroundColor: "#002855",
-                "&:hover": { backgroundColor: "#0b2545" },
+                fontWeight: 700,
+                fontSize: "1rem",
+                borderRadius: "24px",
+                background: "linear-gradient(135deg, #1976D2, #0D47A1)",
+                boxShadow: "6px 6px 14px #c5d0e0, -6px -6px 14px #ffffff",
+                color: "#ffffff",
+                "&:hover": {
+                  background: "linear-gradient(135deg, #1565C0, #0A387E)",
+                  boxShadow: "3px 3px 8px #c5d0e0, -3px -3px 8px #ffffff",
+                  transform: "translateY(-1px)",
+                },
+                "&:active": {
+                  boxShadow: "inset 3px 3px 6px rgba(0,0,0,0.3)",
+                },
               }}
             >
               Complete Onboarding

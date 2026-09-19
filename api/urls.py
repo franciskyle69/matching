@@ -26,6 +26,7 @@ from .controllers.account_controller import (
     update_mentor_profile,
     complete_profile,
     complete_onboarding,
+    user_preferences,
 )
 from .controllers.matching_controller import (
     run_matching,
@@ -136,6 +137,7 @@ urlpatterns = [
     path('me/cover/', upload_cover, name='api-me-cover'),
     path('me/complete-profile/', complete_profile, name='api-me-complete-profile'),
     path('user/complete-onboarding/', complete_onboarding, name='api-user-complete-onboarding'),
+    path('user/preferences/', user_preferences, name='api-user-preferences'),
     path('me/complete_profile/', complete_profile, name='api-me-complete-profile-alias'),
     path('me/mentee-profile/', update_mentee_profile, name='api-me-mentee-profile'),
     path('me/mentee-matching/', update_mentee_matching_profile, name='api-me-mentee-matching'),

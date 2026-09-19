@@ -1,5 +1,6 @@
 import Tab from "@mui/material/Tab";
 import Tabs from "@mui/material/Tabs";
+import MenteePreferencesPage from "./MenteePreferencesPage.jsx";
 
 (function () {
   "use strict";
@@ -12,8 +13,8 @@ import Tabs from "@mui/material/Tabs";
   const BIO_MAX = 200;
   const MAX_TAGS = 8;
   const OPEN_SECTION_STORAGE_KEY = "settings:open-section";
-  const TAB_IDS = ["account", "password", "academic"];
-  const LEGACY_SECTION_MAP = { general: "academic", bio: "account" };
+  const TAB_IDS = ["account", "password", "academic", "preferences"];
+  const LEGACY_SECTION_MAP = { general: "academic", bio: "account", matching: "preferences" };
 
   /** Reads the section from a "settings/<section>" hash so links can open one directly. */
   function sectionFromHash() {
@@ -704,6 +705,10 @@ import Tabs from "@mui/material/Tabs";
         label: "Academic & Personal Info",
       });
     }
+    settingsTabs.push({
+      id: "preferences",
+      label: "Matching Preferences",
+    });
 
     useEffect(() => {
       if (typeof setUnsavedChangesDirty === "function") {
@@ -1510,6 +1515,12 @@ import Tabs from "@mui/material/Tabs";
                 </span>
               )}
             </div>
+          </div>
+        )}
+
+        {activeTab === "preferences" && (
+          <div className="settings-tab-panel" style={{ padding: 0 }}>
+            <MenteePreferencesPage defaultRole={user.role === "mentor" ? "STUDENT_MENTOR" : "MENTEE"} />
           </div>
         )}
       </div>
