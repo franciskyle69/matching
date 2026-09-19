@@ -203,7 +203,7 @@ import "./components/Sidebar.jsx";
       notifications: "Notifications",
       "activity-logs": "Activity Logs",
       backup: "System Backup",
-      "mentoring-preferences": "Mentoring Preferences",
+      "mentoring-preferences": "Matching Profile",
       "mentor-matching-profile": "Matching Profile",
       onboarding: "Onboarding",
       "complete-profile": "Profile Setup",

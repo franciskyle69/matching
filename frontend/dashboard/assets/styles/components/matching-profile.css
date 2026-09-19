@@ -349,7 +349,8 @@
 
 /* ── Sticky summary sidebar ──────────────────────────────────── */
 
-.mentor-matching-profile-page .mp-preview {
+.mentor-matching-profile-page .mp-preview,
+.mentoring-preferences-page .mp-preview {
   position: sticky;
   top: 24px;
   display: grid;
@@ -357,7 +358,8 @@
   align-content: start;
 }
 
-.mentor-matching-profile-page .mp-preview-title {
+.mentor-matching-profile-page .mp-preview-title,
+.mentoring-preferences-page .mp-preview-title {
   color: var(--text-primary);
 }
 
@@ -403,14 +405,16 @@
   background: rgba(15, 23, 42, 0.1);
 }
 
-.mentor-matching-profile-page .mp-preview-row dt {
+.mentor-matching-profile-page .mp-preview-row dt,
+.mentoring-preferences-page .mp-preview-row dt {
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
   color: var(--text-secondary);
 }
 
-.mentor-matching-profile-page .mp-preview-row dd {
+.mentor-matching-profile-page .mp-preview-row dd,
+.mentoring-preferences-page .mp-preview-row dd {
   color: var(--text-primary);
 }
 
@@ -447,7 +451,8 @@
   justify-items: stretch;
 }
 
-.mentor-matching-profile-page .btn.mp-save-preferences {
+.mentor-matching-profile-page .btn.mp-save-preferences,
+.mentoring-preferences-page .btn.mp-save-preferences {
   width: 100%;
   background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
   border: 1px solid #38bdf8;
@@ -456,19 +461,22 @@
   box-shadow: 0 4px 14px rgba(14, 165, 233, 0.35);
 }
 
-.mentor-matching-profile-page .btn.mp-save-preferences:hover:not(:disabled) {
+.mentor-matching-profile-page .btn.mp-save-preferences:hover:not(:disabled),
+.mentoring-preferences-page .btn.mp-save-preferences:hover:not(:disabled) {
   background: linear-gradient(135deg, #38bdf8 0%, #0ea5e9 100%);
   border-color: #7dd3fc;
   box-shadow: 0 6px 20px rgba(14, 165, 233, 0.45);
   filter: none;
 }
 
-.mentor-matching-profile-page .btn.mp-save-preferences:disabled {
+.mentor-matching-profile-page .btn.mp-save-preferences:disabled,
+.mentoring-preferences-page .btn.mp-save-preferences:disabled {
   opacity: 0.55;
   cursor: not-allowed;
 }
 
-.mentor-matching-profile-page .btn.secondary.mp-preview-discard {
+.mentor-matching-profile-page .btn.secondary.mp-preview-discard,
+.mentoring-preferences-page .btn.secondary.mp-preview-discard {
   width: 100%;
   background: transparent;
   border: var(--card-border);
@@ -484,7 +492,8 @@
 }
 
 @media (max-width: 1024px) {
-  .mentor-matching-profile-page .mp-preview {
+  .mentor-matching-profile-page .mp-preview,
+  .mentoring-preferences-page .mp-preview {
     position: static;
   }
 }

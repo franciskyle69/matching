@@ -54,7 +54,7 @@
     { id: "complete-profile", label: "Complete profile", role: "any" },
     {
       id: "mentoring-preferences",
-      label: "Mentoring preferences",
+      label: "Mentee matching profile",
       role: "mentee",
     },
     {

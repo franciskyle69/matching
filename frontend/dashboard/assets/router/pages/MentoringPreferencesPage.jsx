@@ -1,11 +1,4 @@
-import AccessTimeIcon from "@mui/icons-material/AccessTime";
-import CalendarTodayIcon from "@mui/icons-material/CalendarToday";
-import DeleteIcon from "@mui/icons-material/Delete";
-import Button from "@mui/material/Button";
-import IconButton from "@mui/material/IconButton";
-import MenuItem from "@mui/material/MenuItem";
 import Slider from "@mui/material/Slider";
-import TextField from "@mui/material/TextField";
 
 (function () {
   "use strict";
@@ -36,167 +29,6 @@ import TextField from "@mui/material/TextField";
     formatSlotLabel,
     buildAvailabilityUpdate,
   } = Availability;
-
-  const CAMPUS_TZ_LABEL = "UTC+08:00 (Manila / Singapore)";
-  const WEEKDAYS = [
-    "Monday",
-    "Tuesday",
-    "Wednesday",
-    "Thursday",
-    "Friday",
-    "Saturday",
-  ];
-  const WEEKDAY_TO_TOKEN = WEEKDAYS.reduce((acc, label) => {
-    const token = DAY_ORDER.find((day) => DAY_LABELS[day] === label);
-    if (token) acc[label] = token;
-    return acc;
-  }, {});
-
-  function slotDateLabel(slot) {
-    const parsed = parseSlot(slot);
-    if (!parsed || !parsed.days.length) return "Every day";
-    if (parsed.days.length === 1) {
-      return `${DAY_LABELS[parsed.days[0]] || parsed.days[0]} (weekly)`;
-    }
-    return `${parsed.days.map((day) => DAY_LABELS[day] || day).join(", ")} (weekly)`;
-  }
-
-  function slotTimeLabel(slot) {
-    const parsed = parseSlot(slot);
-    if (!parsed) return formatSlotLabel(slot);
-    return `${formatTimeLabel(parsed.start)} – ${formatTimeLabel(parsed.end)}`;
-  }
-
-  function AvailabilitySection({
-    slots,
-    selectedDay,
-    startTime,
-    endTime,
-    error,
-    onSelectedDayChange,
-    onStartTimeChange,
-    onEndTimeChange,
-    onAddSlot,
-    onRemoveSlot,
-  }) {
-    return (
-      <>
-        <span className="pref-timezone pref-timezone--inline">
-          🌐 Local timezone: {CAMPUS_TZ_LABEL}
-        </span>
-        <div className="pref-avail-builder responsive-form-row">
-          <TextField
-            select
-            label="Select day"
-            value={selectedDay}
-            onChange={(event) => onSelectedDayChange(event.target.value)}
-            fullWidth
-            size="small"
-            className="pref-day-field"
-            slotProps={{
-              select: { displayEmpty: true },
-              inputLabel: { shrink: true },
-            }}
-          >
-            <MenuItem value="">
-              Select day
-            </MenuItem>
-            {WEEKDAYS.map((day) => (
-              <MenuItem key={day} value={day}>
-                {day}
-              </MenuItem>
-            ))}
-          </TextField>
-          {TimePickerField ? (
-            <>
-              <TimePickerField
-                id="pref-avail-start"
-                label="Start time"
-                value={startTime}
-                min={MIN_AVAILABLE_TIME}
-                max={MAX_AVAILABLE_TIME}
-                onChange={(event) => onStartTimeChange(event.target.value)}
-              />
-              <TimePickerField
-                id="pref-avail-end"
-                label="End time"
-                value={endTime}
-                min={MIN_AVAILABLE_TIME}
-                max={MAX_AVAILABLE_TIME}
-                onChange={(event) => onEndTimeChange(event.target.value)}
-              />
-            </>
-          ) : (
-            <>
-              <TextField
-                label="Start time"
-                type="time"
-                value={startTime}
-                onChange={(event) => onStartTimeChange(event.target.value)}
-                fullWidth
-                size="small"
-                slotProps={{ inputLabel: { shrink: true } }}
-                inputProps={{ min: MIN_AVAILABLE_TIME, max: MAX_AVAILABLE_TIME, step: 60 }}
-              />
-              <TextField
-                label="End time"
-                type="time"
-                value={endTime}
-                onChange={(event) => onEndTimeChange(event.target.value)}
-                fullWidth
-                size="small"
-                slotProps={{ inputLabel: { shrink: true } }}
-                inputProps={{ min: MIN_AVAILABLE_TIME, max: MAX_AVAILABLE_TIME, step: 60 }}
-              />
-            </>
-          )}
-          <Button
-            variant="contained"
-            className="pref-add-slot-btn mobile-full-width"
-            onClick={onAddSlot}
-            disabled={!selectedDay || !startTime || !endTime}
-          >
-            Add slot
-          </Button>
-        </div>
-        {error ? (
-          <p className="complete-profile-error" role="alert">
-            {error}
-          </p>
-        ) : null}
-        <div className="pref-avail-slot-list" aria-live="polite">
-          {!Array.isArray(slots) || slots.length === 0 ? (
-            <p className="pref-slot-empty">
-              No availability added yet. Select a weekday and time range above.
-            </p>
-          ) : (
-            slots.map((slot, index) => (
-              <div key={slot + "-" + index} className="availability-slot-row">
-                <div className="availability-slot-main">
-                  <span className="availability-slot-date">
-                    <CalendarTodayIcon className="availability-slot-icon" aria-hidden="true" />
-                    {slotDateLabel(slot)}
-                  </span>
-                  <span className="availability-slot-time">
-                    <AccessTimeIcon className="availability-slot-icon" aria-hidden="true" />
-                    {slotTimeLabel(slot)}
-                  </span>
-                </div>
-                <IconButton
-                  size="small"
-                  className="availability-slot-remove"
-                  aria-label="Remove availability slot"
-                  onClick={() => onRemoveSlot(index)}
-                >
-                  <DeleteIcon fontSize="small" />
-                </IconButton>
-              </div>
-            ))
-          )}
-        </div>
-      </>
-    );
-  }
 
   const DIFFICULTY_OPTIONS = [
     {
@@ -236,13 +68,74 @@ import TextField from "@mui/material/TextField";
 
   function SectionCard({ title, description, children }) {
     return (
-      <section className="mp-section pref-section-card preferences-card">
-        <h2 className="preferences-card-title">{title}</h2>
-        {description ? (
-          <p className="preferences-card-subtitle">{description}</p>
-        ) : null}
-        {children}
+      <section className="mp-section">
+        <div className="mp-section-head">
+          <h2 className="mp-section-title">{title}</h2>
+          {description ? (
+            <p className="mp-section-help">{description}</p>
+          ) : null}
+        </div>
+        <div className="mp-section-body">{children}</div>
       </section>
+    );
+  }
+
+  function DayPicker({ selectedDays, onToggle, onPreset }) {
+    const weekdaysSelected =
+      selectedDays.length === 5 &&
+      selectedDays.every((day) => day !== "Sat" && day !== "Sun");
+    const everyDaySelected = selectedDays.length === DAY_ORDER.length;
+
+    return (
+      <div className="mp-day-picker">
+        <div className="mp-day-picker-head">
+          <span className="mp-field-label" id="mp-day-picker-label">
+            Days
+          </span>
+          <div className="mp-day-presets">
+            <button
+              type="button"
+              className={
+                "mp-day-preset" + (weekdaysSelected ? " is-active" : "")
+              }
+              onClick={() => onPreset(["Mon", "Tue", "Wed", "Thu", "Fri"])}
+            >
+              Weekdays
+            </button>
+            <button
+              type="button"
+              className={
+                "mp-day-preset" + (everyDaySelected ? " is-active" : "")
+              }
+              onClick={() => onPreset([...DAY_ORDER])}
+            >
+              Every day
+            </button>
+          </div>
+        </div>
+        <div
+          className="mp-day-chips"
+          role="group"
+          aria-labelledby="mp-day-picker-label"
+        >
+          {DAY_ORDER.map((day) => {
+            const active = selectedDays.includes(day);
+            return (
+              <button
+                key={day}
+                type="button"
+                role="checkbox"
+                aria-checked={active}
+                aria-label={DAY_LABELS[day]}
+                className={"mp-day-chip" + (active ? " is-active" : "")}
+                onClick={() => onToggle(day)}
+              >
+                {day}
+              </button>
+            );
+          })}
+        </div>
+      </div>
     );
   }
 
@@ -251,9 +144,9 @@ import TextField from "@mui/material/TextField";
       subjects: profile.subjects || [],
       topics: profile.topics || [],
       competency_ids: profile.competency_ids || [],
-    competency_needs: profile.competency_needs || {},
+      competency_needs: profile.competency_needs || {},
       difficulty_level: profile.difficulty_level ?? null,
-    preferred_learning_style: profile.preferred_learning_style || "",
+      preferred_learning_style: profile.preferred_learning_style || "",
       availability: profile.availability || [],
     });
   }
@@ -280,10 +173,14 @@ import TextField from "@mui/material/TextField";
     const hasUserEditedRef = useRef(false);
     const [savedAt, setSavedAt] = useState(0);
     const [submitAttempted, setSubmitAttempted] = useState(false);
+    const [availabilityDraft, setAvailabilityDraft] = useState({
+      days: [],
+      start: "",
+      end: "",
+    });
+    const [availabilityEditingIndex, setAvailabilityEditingIndex] =
+      useState(null);
     const [availabilityError, setAvailabilityError] = useState("");
-    const [selectedDay, setSelectedDay] = useState("");
-    const [availStartTime, setAvailStartTime] = useState("09:00");
-    const [availEndTime, setAvailEndTime] = useState("10:00");
 
     const serializedPrefs = serializePreferences(menteeMatching);
     if (!hasUserEditedRef.current) {
@@ -355,13 +252,20 @@ import TextField from "@mui/material/TextField";
       });
       return map;
     }, [competencyMap]);
+
     const hasSelectedSubject = selectedMajorSubjects.length > 0;
     const needsTopics = topicOptions.length > 0;
     const needsCompetencies = selectedTopicIds.length > 0;
     const selectedTopicCount = selectedTopicIds.length;
     const selectedCompetencyCount = selectedCompetencyIds.length;
     const selectedTopicLookup = useMemo(
-      () => new Map((Array.isArray(topicOptions) ? topicOptions : []).map((topic) => [topic.id, topic])),
+      () =>
+        new Map(
+          (Array.isArray(topicOptions) ? topicOptions : []).map((topic) => [
+            topic.id,
+            topic,
+          ]),
+        ),
       [topicOptions],
     );
     const hasDifficulty =
@@ -405,7 +309,9 @@ import TextField from "@mui/material/TextField";
     function applySelectionOptions(options) {
       const uniqueTopics = Array.isArray(options.topics) ? options.topics : [];
       setTopicOptions(uniqueTopics);
-      setTopicGroups(Array.isArray(options.topicGroups) ? options.topicGroups : []);
+      setTopicGroups(
+        Array.isArray(options.topicGroups) ? options.topicGroups : [],
+      );
 
       const topicIds = uniqueTopics.map((topic) => topic.id).filter(Boolean);
       if (!topicIds.length) {
@@ -523,8 +429,51 @@ import TextField from "@mui/material/TextField";
       (!needsTopics || selectedTopicCount > 0) &&
       (!needsCompetencies || selectedCompetencyCount > 0) &&
       hasDifficulty;
+
+    const completionSteps = [
+      {
+        id: "subjects",
+        label: "Subjects",
+        done: selectedMajorSubjects.length > 0,
+        value: selectedMajorSubjects.length || "Not set",
+      },
+      {
+        id: "topics",
+        label: "Topics",
+        done: selectedTopicCount > 0,
+        value: selectedTopicCount || "Not set",
+      },
+      {
+        id: "competencies",
+        label: "Competencies",
+        done: selectedCompetencyCount > 0,
+        value: selectedCompetencyCount || "Not set",
+      },
+      {
+        id: "support_need",
+        label: "Support need",
+        done: hasDifficulty,
+        value: hasDifficulty
+          ? getGroupedSupportLabel(menteeMatching.difficulty_level)
+          : "Not set",
+      },
+      {
+        id: "availability",
+        label: "Availability",
+        done: selectedSlots.length > 0,
+        value: selectedSlots.length
+          ? `${selectedSlots.length} range${selectedSlots.length === 1 ? "" : "s"}`
+          : "Not set",
+      },
+    ];
+    const completedSteps = completionSteps.filter((step) => step.done).length;
+    const completionPercent = Math.round(
+      (completedSteps / completionSteps.length) * 100,
+    );
+
     const showSubjectError = submitAttempted && !hasSelectedSubject;
-    const showTopicError = submitAttempted && needsTopics && selectedTopicCount === 0;
+    const showTopicError =
+      submitAttempted && needsTopics && selectedTopicCount === 0;
     const showCompetencyError =
       submitAttempted && needsCompetencies && selectedCompetencyCount === 0;
     const showDifficultyError = submitAttempted && !hasDifficulty;
@@ -588,51 +537,41 @@ import TextField from "@mui/material/TextField";
       });
     }
 
-    function handleAddAvailabilitySlot() {
-      markDirty();
-      if (!selectedDay || !availStartTime || !availEndTime) {
-        setAvailabilityError("Select a day, start time, and end time.");
-        return;
-      }
-      const dayToken = WEEKDAY_TO_TOKEN[selectedDay];
-      if (!dayToken) {
-        setAvailabilityError("Select a valid weekday.");
-        return;
-      }
-      const update = buildAvailabilityUpdate(
-        selectedSlots,
-        { days: [dayToken], start: availStartTime, end: availEndTime },
-        null,
-      );
-      if (!update.next) {
-        setAvailabilityError(update.error || "Unable to add that slot.");
-        return;
-      }
-      setAvailabilityError("");
-      setMenteeMatching({ ...menteeMatching, availability: update.next });
-      setSelectedDay("");
-    }
-
-    function removeAvailabilitySlot(index) {
-      markDirty();
-      const next = selectedSlots.filter((_, itemIndex) => itemIndex !== index);
-      setMenteeMatching({ ...menteeMatching, availability: next });
-    }
-
     async function handleSave() {
       setSubmitAttempted(true);
-      const availability = Array.isArray(menteeMatching.availability)
+      let availability = Array.isArray(menteeMatching.availability)
         ? menteeMatching.availability
         : [];
+      if (
+        availabilityDraft.days.length > 0 &&
+        availabilityDraft.start &&
+        availabilityDraft.end
+      ) {
+        const { error, next } = buildAvailabilityUpdate(
+          availability,
+          availabilityDraft,
+          availabilityEditingIndex,
+        );
+        if (!next) {
+          setAvailabilityError(error);
+          return;
+        }
+        availability = next;
+        setAvailabilityError("");
+        setMenteeMatching({ ...menteeMatching, availability });
+        setAvailabilityDraft({ days: [], start: "", end: "" });
+        setAvailabilityEditingIndex(null);
+        markDirty();
+      }
       if (!canSave) return;
       const saved = await handleMenteeMatchingSave({ availability });
       if (saved) {
         hasUserEditedRef.current = false;
+        setSavedAt(Date.now());
         savedSnapshotRef.current = serializePreferences({
           ...menteeMatching,
           availability,
         });
-        setSavedAt(Date.now());
       }
     }
 
@@ -664,16 +603,19 @@ import TextField from "@mui/material/TextField";
           competency_ids: competencyIds,
           competency_needs: competencyNeeds,
           difficulty_level:
-            parsed.difficulty_level == null ? null : Number(parsed.difficulty_level),
+            parsed.difficulty_level == null
+              ? null
+              : Number(parsed.difficulty_level),
           preferred_learning_style: parsed.preferred_learning_style || "",
-          availability: Array.isArray(parsed.availability) ? parsed.availability : [],
+          availability: Array.isArray(parsed.availability)
+            ? parsed.availability
+            : [],
         });
         setSelectedTopicIds(Array.from(nextTopicIds));
         setSelectedCompetencyIds(competencyIds);
         hydrateSelectionRef.current = true;
-        setSelectedDay("");
-        setAvailStartTime("09:00");
-        setAvailEndTime("10:00");
+        setAvailabilityDraft({ days: [], start: "", end: "" });
+        setAvailabilityEditingIndex(null);
         setAvailabilityError("");
         setSubmitAttempted(false);
         hasUserEditedRef.current = false;
@@ -686,8 +628,8 @@ import TextField from "@mui/material/TextField";
 
     if (user.role !== "mentee") {
       return (
-        <div className="mentoring-preferences-page page-shell">
-          <h1 className="page-title">Mentoring Preferences</h1>
+        <div className="mentoring-preferences-page mentor-matching-profile-page page-shell">
+          <h1 className="page-title">Mentee Matching Profile</h1>
           <p className="page-subtitle">
             This page is available for student accounts only.
           </p>
@@ -698,7 +640,7 @@ import TextField from "@mui/material/TextField";
     return (
       <div
         className={
-          "mentoring-preferences-page page-shell" +
+          "mentoring-preferences-page mentor-matching-profile-page page-shell" +
           (embedded ? " is-embedded" : "")
         }
       >
@@ -707,95 +649,34 @@ import TextField from "@mui/material/TextField";
             <div className="kasandigan-header-content">
               <div className="kasandigan-badge">
                 <span className="kasandigan-badge-dot" />
-                <span>Academic Mentoring Unit • Preferences</span>
+                <span>Academic Mentoring Unit • Mentee Profile</span>
               </div>
-              <h1 className="kasandigan-title">Mentoring Preferences</h1>
+              <h1 className="kasandigan-title">Mentee Matching Profile</h1>
               <p className="kasandigan-subtitle">
-                Set the criteria, subjects, and topics we use to match you with mentors.
+                Keep your subjects, topics, competencies, support need, and availability up to date so we can recommend the right mentors for you.
               </p>
             </div>
             <div className="kasandigan-header-actions">
               <span className="kasandigan-badge kasandigan-badge--role">
-                <span className="kasandigan-badge-dot" />
+                <span
+                  className="kasandigan-badge-dot"
+                  style={{ background: "#0ea5e9" }}
+                />
                 <span>Student Mentee</span>
               </span>
             </div>
           </header>
         )}
 
-        <div className="pref-stack">
-          <SectionCard
-            title="Mentorship role & support need"
-            description="Tell us how much mentoring support you need so we can match you with the right mentor."
-          >
-            <div className="pref-role-row" role="group" aria-label="Mentorship role">
-              <span className="pref-role-pill is-active">Mentee (learning)</span>
-            </div>
-            <div className="pref-slider-label">
-              <span>Support need</span>
-              <span className="pref-slider-level">
-                {getGroupedSupportLabel(menteeMatching.difficulty_level)}
-              </span>
-            </div>
-            <Slider
-              className="pref-slider"
-              min={1}
-              max={5}
-              step={1}
-              marks={DIFFICULTY_OPTIONS.map((option) => ({
-                value: option.value,
-                label: String(option.value),
-              }))}
-              value={menteeMatching.difficulty_level || 1}
-              onChange={(_, value) => setSupportNeed(value)}
-              aria-label="Support need"
-              aria-valuetext={
-                selectedDifficulty
-                  ? `Level ${selectedDifficulty.value}, ${selectedDifficulty.label}`
-                  : "Support need not set"
-              }
-            />
-            <div
-              className="pref-support-levels"
-              role="list"
-              aria-label="Support level descriptions"
+        <div className="mp-layout">
+          <div className="mp-main">
+            <SectionCard
+              title="Subject"
+              description="Select every subject you need help with. Topics and competencies will load for each selected subject."
             >
-              {DIFFICULTY_OPTIONS.map((option) => {
-                const active =
-                  option.value === Number(menteeMatching.difficulty_level || 1);
-                return (
-                  <div
-                    key={option.value}
-                    className={
-                      "pref-support-level-item" + (active ? " is-active" : "")
-                    }
-                    role="listitem"
-                    aria-current={active ? "true" : undefined}
-                  >
-                    <span className="pref-support-level-num">{option.value}</span>
-                    <div className="pref-support-level-copy">
-                      <span className="pref-support-level-title">
-                        {option.label}
-                      </span>
-                      <p className="pref-support-level-desc">{option.helper}</p>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-            {showDifficultyError && (
-              <p className="complete-profile-error" role="alert">
-                Select a support need before saving.
-              </p>
-            )}
-          </SectionCard>
-
-          <SectionCard
-            title="Subject & competency alignment"
-            description="Browse and select the subjects, topics, and competencies you want help with."
-          >
-            <div className="pref-browse-section">
-              <p className="pref-field-label">Subjects</p>
+              <div className="mp-inline-meta" aria-live="polite">
+                {selectedMajorSubjects.length} selected
+              </div>
               {SubjectCategoryPicker ? (
                 <SubjectCategoryPicker
                   selectedSubjects={selectedSubjects}
@@ -805,34 +686,54 @@ import TextField from "@mui/material/TextField";
               ) : (
                 <p className="field-helper">Subject picker is unavailable.</p>
               )}
-            </div>
+              {showSubjectError && (
+                <p className="complete-profile-error" role="alert">
+                  Select a subject before continuing.
+                </p>
+              )}
+            </SectionCard>
 
             {hasSelectedSubject && (
-              <div className="pref-field-gap pref-browse-section">
-                <p className="pref-field-label">Topics</p>
+              <SectionCard
+                title="Topics"
+                description="Select the topics connected to your selected subjects."
+              >
+                <div className="mp-inline-meta" aria-live="polite">
+                  {selectedTopicCount} selected
+                </div>
                 {selectionLoading && (
-                  <p className="field-helper complete-profile-helper" role="status">
+                  <p
+                    className="field-helper complete-profile-helper"
+                    role="status"
+                  >
                     Loading topics for the selected subjects.
                   </p>
                 )}
                 {!selectionLoading && topicOptions.length === 0 ? (
-                  <p className="field-helper complete-profile-helper" role="status">
+                  <p
+                    className="field-helper complete-profile-helper"
+                    role="status"
+                  >
                     No topics are defined for these subjects yet.
                   </p>
                 ) : topicGroups.length > 0 ? (
                   <div className="mp-subject-accordions">
                     {topicGroups.map((group) => {
                       const groupTopics = group.topics || [];
-                      const groupKey = String(group.subjectId ?? group.subjectName);
+                      const groupKey = String(
+                        group.subjectId ?? group.subjectName,
+                      );
                       const selectedInGroup = groupTopics.filter((topic) =>
                         selectedTopicIds.includes(topic.id),
                       ).length;
                       const open = !collapsedSubjects.includes(groupKey);
-                      const panelId = `pref-topics-panel-${groupKey.replace(/\W+/g, "-")}`;
+                      const panelId = `mp-topics-panel-${groupKey.replace(/\W+/g, "-")}`;
                       return (
                         <section
                           key={groupKey}
-                          className={"mp-subject-accordion" + (open ? " is-open" : "")}
+                          className={
+                            "mp-subject-accordion" + (open ? " is-open" : "")
+                          }
                         >
                           <button
                             type="button"
@@ -841,7 +742,10 @@ import TextField from "@mui/material/TextField";
                             aria-controls={panelId}
                             onClick={() => toggleSubjectPanel(groupKey)}
                           >
-                            <span className="mp-subject-accordion-chevron" aria-hidden="true">
+                            <span
+                              className="mp-subject-accordion-chevron"
+                              aria-hidden="true"
+                            >
                               ▸
                             </span>
                             <span className="mp-subject-accordion-title">
@@ -859,20 +763,24 @@ import TextField from "@mui/material/TextField";
                               aria-label={`${group.subjectName} topics`}
                             >
                               {groupTopics.map((topic) => {
-                                const active = selectedTopicIds.includes(topic.id);
+                                const active = selectedTopicIds.includes(
+                                  topic.id,
+                                );
                                 return (
                                   <button
                                     key={topic.id}
                                     type="button"
                                     role="listitem"
-                                    className={"mp-pill" + (active ? " is-active" : "")}
+                                    className={
+                                      "mp-pill" + (active ? " is-active" : "")
+                                    }
                                     aria-pressed={active}
                                     onClick={() => toggleTopic(topic)}
                                   >
                                     {active ? (
                                       <span className="mp-chip-check">✓</span>
                                     ) : null}
-                                    {topic.name}
+                                    <span>{topic.name}</span>
                                   </button>
                                 );
                               })}
@@ -883,7 +791,11 @@ import TextField from "@mui/material/TextField";
                     })}
                   </div>
                 ) : (
-                  <div className="mp-chip-row" role="list" aria-label="Topic options">
+                  <div
+                    className="mp-chip-row"
+                    role="list"
+                    aria-label="Topic options"
+                  >
                     {topicOptions.map((topic) => {
                       const active = selectedTopicIds.includes(topic.id);
                       return (
@@ -895,8 +807,10 @@ import TextField from "@mui/material/TextField";
                           aria-pressed={active}
                           onClick={() => toggleTopic(topic)}
                         >
-                          {active ? <span className="mp-chip-check">✓</span> : null}
-                          {topic.name}
+                          {active ? (
+                            <span className="mp-chip-check">✓</span>
+                          ) : null}
+                          <span>{topic.name}</span>
                         </button>
                       );
                     })}
@@ -907,12 +821,17 @@ import TextField from "@mui/material/TextField";
                     Select at least one topic.
                   </p>
                 )}
-              </div>
+              </SectionCard>
             )}
 
             {selectedTopicCount > 0 && (
-              <div className="pref-field-gap pref-browse-section">
-                <p className="pref-field-label">Competencies</p>
+              <SectionCard
+                title="Competencies"
+                description="Select the specific competencies you want help with under each chosen topic."
+              >
+                <div className="mp-inline-meta" aria-live="polite">
+                  {selectedCompetencyCount} selected
+                </div>
                 <div className="mp-competency-groups">
                   {selectedTopicIds.map((topicId) => {
                     const topic = selectedTopicLookup.get(topicId);
@@ -920,7 +839,9 @@ import TextField from "@mui/material/TextField";
                     if (!topic) return null;
                     return (
                       <section key={topicId} className="mp-competency-group">
-                        <h3 className="mp-competency-group-title">{topic.name}</h3>
+                        <h3 className="mp-competency-group-title">
+                          {topic.name}
+                        </h3>
                         <div
                           className="mp-chip-row"
                           role="list"
@@ -936,9 +857,13 @@ import TextField from "@mui/material/TextField";
                                   key={competency.id}
                                   type="button"
                                   role="listitem"
-                                  className={"mp-pill" + (active ? " is-active" : "")}
+                                  className={
+                                    "mp-pill" + (active ? " is-active" : "")
+                                  }
                                   aria-pressed={active}
-                                  title={competency.description || competency.name}
+                                  title={
+                                    competency.description || competency.name
+                                  }
                                   onClick={() => toggleCompetency(competency)}
                                 >
                                   {active ? (
@@ -966,85 +891,397 @@ import TextField from "@mui/material/TextField";
                     Select at least one competency.
                   </p>
                 )}
-              </div>
+              </SectionCard>
             )}
-          </SectionCard>
 
-          <SectionCard
-            title="Availability"
-            description="Set your recurring weekly availability for mentoring sessions."
-          >
-            <AvailabilitySection
-              slots={selectedSlots}
-              selectedDay={selectedDay}
-              startTime={availStartTime}
-              endTime={availEndTime}
-              error={availabilityError}
-              onSelectedDayChange={setSelectedDay}
-              onStartTimeChange={setAvailStartTime}
-              onEndTimeChange={setAvailEndTime}
-              onAddSlot={handleAddAvailabilitySlot}
-              onRemoveSlot={removeAvailabilitySlot}
-            />
-          </SectionCard>
-        </div>
-
-        <div
-          className={
-            "mp-sticky-bar pref-save-bar" +
-            (justSaved && isPristine
-              ? " is-saved"
-              : !isPristine
-                ? " is-dirty"
-                : "")
-          }
-          role="status"
-        >
-          <div className="mp-sticky-meta">
-            <p className="mp-sticky-title">
-              {justSaved && isPristine
-                ? "Saved"
-                : !isPristine
-                  ? "Unsaved changes"
-                  : "Ready to save"}
-            </p>
-            <p className="mp-sticky-subtitle">
-              {justSaved && isPristine
-                ? "Your mentoring preferences were updated."
-                : "Save to keep these updates, or reset to the last saved version."}
-            </p>
-            {submitAttempted && !canSave && !isPristine && (
-              <p
-                className="complete-profile-error complete-profile-error-summary"
-                role="alert"
+            <SectionCard
+              title="Mentorship role & support need"
+              description="Tell us how much mentoring support you need so we can match you with the right mentor."
+            >
+              <div
+                className="pref-role-row"
+                role="group"
+                aria-label="Mentorship role"
               >
-                Finish subjects, topics, competencies, and support need before saving.
+                <span className="pref-role-pill is-active">
+                  Mentee (learning)
+                </span>
+              </div>
+              <div className="pref-slider-label">
+                <span>Support need</span>
+                <span className="pref-slider-level">
+                  {getGroupedSupportLabel(menteeMatching.difficulty_level)}
+                </span>
+              </div>
+              <Slider
+                className="pref-slider"
+                min={1}
+                max={5}
+                step={1}
+                marks={DIFFICULTY_OPTIONS.map((option) => ({
+                  value: option.value,
+                  label: String(option.value),
+                }))}
+                value={menteeMatching.difficulty_level || 1}
+                onChange={(_, value) => setSupportNeed(value)}
+                aria-label="Support need"
+                aria-valuetext={
+                  selectedDifficulty
+                    ? `Level ${selectedDifficulty.value}, ${selectedDifficulty.label}`
+                    : "Support need not set"
+                }
+              />
+              <div
+                className="pref-support-levels"
+                role="group"
+                aria-label="Support level options"
+              >
+                {DIFFICULTY_OPTIONS.map((option) => {
+                  const active =
+                    option.value ===
+                    Number(menteeMatching.difficulty_level || 1);
+                  return (
+                    <button
+                      key={option.value}
+                      type="button"
+                      className={
+                        "pref-support-level-item" + (active ? " is-active" : "")
+                      }
+                      aria-pressed={active}
+                      aria-current={active ? "true" : undefined}
+                      onClick={() => setSupportNeed(option.value)}
+                    >
+                      <span className="pref-support-level-num">
+                        {option.value}
+                      </span>
+                      <div className="pref-support-level-copy">
+                        <span className="pref-support-level-title">
+                          {option.label}
+                        </span>
+                        <p className="pref-support-level-desc">
+                          {option.helper}
+                        </p>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+              {showDifficultyError && (
+                <p className="complete-profile-error" role="alert">
+                  Select a support need before saving.
+                </p>
+              )}
+            </SectionCard>
+
+            <SectionCard
+              title="Available time"
+              description="Pick the days you can meet, then a time range between 7:00 AM and 10:00 PM."
+            >
+              <div className="mp-availability-composer">
+                <DayPicker
+                  selectedDays={availabilityDraft.days}
+                  onToggle={(day) => {
+                    setAvailabilityError("");
+                    setAvailabilityDraft((prev) => ({
+                      ...prev,
+                      days: prev.days.includes(day)
+                        ? prev.days.filter((item) => item !== day)
+                        : DAY_ORDER.filter(
+                            (item) => item === day || prev.days.includes(item),
+                          ),
+                    }));
+                  }}
+                  onPreset={(days) => {
+                    setAvailabilityError("");
+                    setAvailabilityDraft((prev) => {
+                      const same =
+                        prev.days.length === days.length &&
+                        days.every((day) => prev.days.includes(day));
+                      return { ...prev, days: same ? [] : days };
+                    });
+                  }}
+                />
+                <div className="time-range-row responsive-form-row">
+                  <TimePickerField
+                    id="mentee-matching-start"
+                    label="Start time"
+                    min={MIN_AVAILABLE_TIME}
+                    max={MAX_AVAILABLE_TIME}
+                    value={availabilityDraft.start}
+                    onChange={(e) => {
+                      setAvailabilityError("");
+                      setAvailabilityDraft({
+                        ...availabilityDraft,
+                        start: e.target.value,
+                      });
+                    }}
+                  />
+                  <TimePickerField
+                    id="mentee-matching-end"
+                    label="End time"
+                    min={MIN_AVAILABLE_TIME}
+                    max={MAX_AVAILABLE_TIME}
+                    value={availabilityDraft.end}
+                    onChange={(e) => {
+                      setAvailabilityError("");
+                      setAvailabilityDraft({
+                        ...availabilityDraft,
+                        end: e.target.value,
+                      });
+                    }}
+                  />
+                </div>
+              </div>
+              <div className="btn-row mp-availability-actions">
+                <button
+                  type="button"
+                  className="btn secondary small"
+                  disabled={
+                    availabilityDraft.days.length === 0 ||
+                    !availabilityDraft.start ||
+                    !availabilityDraft.end
+                  }
+                  onClick={() => {
+                    const { error, next } = buildAvailabilityUpdate(
+                      menteeMatching.availability,
+                      availabilityDraft,
+                      availabilityEditingIndex,
+                    );
+                    if (!next) {
+                      setAvailabilityError(error);
+                      return;
+                    }
+                    setAvailabilityError("");
+                    setMenteeMatching({
+                      ...menteeMatching,
+                      availability: next,
+                    });
+                    setAvailabilityDraft({ days: [], start: "", end: "" });
+                    setAvailabilityEditingIndex(null);
+                    markDirty();
+                  }}
+                >
+                  {availabilityEditingIndex != null
+                    ? "Update timeframe"
+                    : "Add timeframe"}
+                </button>
+                {availabilityEditingIndex != null && (
+                  <button
+                    type="button"
+                    className="btn ghost small"
+                    onClick={() => {
+                      setAvailabilityEditingIndex(null);
+                      setAvailabilityDraft({ days: [], start: "", end: "" });
+                      setAvailabilityError("");
+                    }}
+                  >
+                    Cancel edit
+                  </button>
+                )}
+              </div>
+              {availabilityError && (
+                <p className="complete-profile-error" role="alert">
+                  {availabilityError}
+                </p>
+              )}
+              <p className="field-helper">
+                You can add multiple ranges. We&apos;ll match you with mentors whose
+                days and times overlap yours.
               </p>
+              {Array.isArray(menteeMatching.availability) &&
+                menteeMatching.availability.length > 0 && (
+                  <div
+                    className="availability-list mp-availability-list"
+                    aria-live="polite"
+                  >
+                    {menteeMatching.availability.map((slot, idx) => (
+                      <div
+                        key={`${slot}-${idx}`}
+                        className={
+                          "availability-item mp-availability-item" +
+                          (availabilityEditingIndex === idx ? " is-editing" : "")
+                        }
+                      >
+                        <span className="availability-item-label">
+                          {formatSlotLabel(slot)}
+                        </span>
+                        <div className="availability-item-actions">
+                          <button
+                            type="button"
+                            className="availability-action-btn"
+                            onClick={() => {
+                              const parsed = parseSlot(slot);
+                              if (!parsed) return;
+                              setAvailabilityDraft({
+                                days: parsed.hasExplicitDays
+                                  ? [...parsed.days]
+                                  : [...DAY_ORDER],
+                                start: parsed.start,
+                                end: parsed.end,
+                              });
+                              setAvailabilityEditingIndex(idx);
+                              setAvailabilityError("");
+                            }}
+                          >
+                            Edit
+                          </button>
+                          <button
+                            type="button"
+                            className="availability-action-btn availability-action-btn--danger"
+                            onClick={() => {
+                              const next = menteeMatching.availability.filter(
+                                (_, i) => i !== idx,
+                              );
+                              setMenteeMatching({
+                                ...menteeMatching,
+                                availability: next,
+                              });
+                              if (availabilityEditingIndex === idx) {
+                                setAvailabilityEditingIndex(null);
+                                setAvailabilityDraft({
+                                  days: [],
+                                  start: "",
+                                  end: "",
+                                });
+                              } else if (
+                                availabilityEditingIndex != null &&
+                                availabilityEditingIndex > idx
+                              ) {
+                                setAvailabilityEditingIndex(
+                                  availabilityEditingIndex - 1,
+                                );
+                              }
+                              markDirty();
+                            }}
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+            </SectionCard>
+          </div>
+
+          <aside className="mp-preview matching-card">
+            <h3 className="mp-preview-title">Your Matching Profile</h3>
+
+            <div className="mp-progress">
+              <div className="mp-progress-head">
+                <span className="mp-progress-value">
+                  {completionPercent}% Complete
+                </span>
+                <span className="mp-progress-meta">
+                  {completedSteps} of {completionSteps.length}
+                </span>
+              </div>
+              <div
+                className="mp-progress-track"
+                role="progressbar"
+                aria-valuenow={completionPercent}
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-label="Profile completeness"
+              >
+                <div
+                  className="mp-progress-fill"
+                  style={{ width: `${completionPercent}%` }}
+                />
+              </div>
+            </div>
+
+            <dl className="mp-preview-list">
+              {completionSteps.map((step) => (
+                <div
+                  key={step.id}
+                  className={"mp-preview-row" + (step.done ? " is-done" : "")}
+                >
+                  <dt>
+                    <span className="mp-preview-check" aria-hidden="true">
+                      {step.done ? "✓" : "○"}
+                    </span>
+                    {step.label}
+                  </dt>
+                  <dd>{step.value}</dd>
+                </div>
+              ))}
+            </dl>
+
+            {selectedSlots.length > 0 && (
+              <ul className="mp-preview-slots">
+                {selectedSlots.map((slot, idx) => (
+                  <li key={`${slot}-${idx}`}>{formatSlotLabel(slot)}</li>
+                ))}
+              </ul>
             )}
-          </div>
-          <div className="mp-sticky-actions">
-            <Button
-              variant="text"
-              className="pref-save-reset"
-              onClick={handleReset}
-              disabled={menteeMatchingSaving || isPristine}
-            >
-              Reset to last saved
-            </Button>
-            <Button
-              variant="contained"
-              className="pref-save-primary"
-              onClick={handleSave}
-              disabled={menteeMatchingSaving}
-            >
-              {menteeMatchingSaving
-                ? "Saving..."
-                : embedded
-                  ? "Save & finish"
-                  : "Save preferences"}
-            </Button>
-          </div>
+
+            <div className="mp-preview-actions">
+              <button
+                type="button"
+                className="btn mp-save-preferences"
+                onClick={handleSave}
+                disabled={menteeMatchingSaving}
+              >
+                {menteeMatchingSaving
+                  ? "Saving…"
+                  : embedded
+                    ? "Save & finish"
+                    : "Save Preferences"}
+              </button>
+              {!isPristine && (
+                <button
+                  type="button"
+                  className="btn secondary small mp-preview-discard"
+                  onClick={handleReset}
+                  disabled={menteeMatchingSaving}
+                >
+                  Discard changes
+                </button>
+              )}
+              <p className="mp-preview-status" aria-live="polite">
+                {justSaved && isPristine
+                  ? "All changes saved."
+                  : isPristine
+                    ? "No unsaved changes."
+                    : "You have unsaved changes."}
+              </p>
+            </div>
+          </aside>
         </div>
+
+        {(!isPristine || justSaved) && (
+          <div
+            className={
+              "mp-sticky-bar" +
+              (justSaved && isPristine ? " is-saved" : " is-dirty")
+            }
+            role="status"
+          >
+            <div className="mp-sticky-meta">
+              <p className="mp-sticky-title">
+                {justSaved && isPristine ? "Saved" : "Unsaved changes"}
+              </p>
+              <p className="mp-sticky-subtitle">
+                {justSaved && isPristine
+                  ? "Your mentee matching profile was updated."
+                  : "Use Save Preferences in the summary panel to keep these updates."}
+              </p>
+              {submitAttempted && !canSave && !isPristine && (
+                <p
+                  className="complete-profile-error complete-profile-error-summary"
+                  role="alert"
+                >
+                  {needsTopics
+                    ? needsCompetencies
+                      ? "Select a subject, a topic, a competency, and a support need before saving."
+                      : "Select a subject, a topic, and a support need before saving."
+                    : "Select at least one subject and a support need before saving."}
+                </p>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     );
   }

@@ -6815,6 +6815,9 @@ html[data-theme="dark"] .auth-password-toggle:hover,
   font-weight: 600 !important;
   padding: 6px 14px !important;
   transition: all 0.2s ease !important;
+  white-space: normal !important;
+  overflow-wrap: break-word !important;
+  word-break: normal !important;
 }
 
 .pmc-chip--preview:hover {
@@ -6930,7 +6933,7 @@ html[data-theme="dark"] .auth-password-toggle:hover,
   padding-top: 18px !important;
   border-top: 1.5px solid rgba(255, 255, 255, 0.85) !important;
   box-shadow: 0 -1px 0 rgba(166, 180, 200, 0.25) !important;
-  margin-top: 18px !important;
+  margin-top: auto !important;
 }
 
 .pmc-cta.MuiButton-root,
@@ -17571,15 +17574,22 @@ html[data-theme="dark"] .neu-xai-tier--medium {
   border-color: rgba(239, 68, 68, 0.35);
 }
 
-/* Factor Items - 2-Column Balanced Grid */
+/* Factor Items - Default to 1-column stack in grid cards, 2-column in hero or admin shelf */
 .neu-xai-factors {
   display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+}
+
+.pmc-card--hero .neu-xai-factors,
+.admin-neu-xai-card .neu-xai-factors {
   grid-template-columns: repeat(2, 1fr);
   gap: 8px 16px;
 }
 
 @media (max-width: 680px) {
-  .neu-xai-factors {
+  .pmc-card--hero .neu-xai-factors,
+  .admin-neu-xai-card .neu-xai-factors {
     grid-template-columns: 1fr;
     gap: 8px;
   }
@@ -17596,11 +17606,13 @@ html[data-theme="dark"] .neu-xai-tier--medium {
   align-items: center;
   justify-content: space-between;
   font-size: 12px;
+  gap: 8px;
 }
 
 .neu-xai-factor-name {
   font-weight: 600;
   color: var(--text-primary, #1e293b);
+  min-width: 0;
 }
 
 html[data-theme="dark"] .neu-xai-factor-name,
@@ -17613,6 +17625,7 @@ html[data-theme="dark"] .neu-xai-factor-name,
   display: flex;
   align-items: center;
   gap: 8px;
+  flex-shrink: 0;
 }
 
 .neu-xai-factor-weight {
@@ -17622,12 +17635,16 @@ html[data-theme="dark"] .neu-xai-factor-name,
   background: rgba(100, 116, 139, 0.1);
   padding: 1px 6px;
   border-radius: 6px;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .neu-xai-factor-pct {
   font-weight: 700;
   font-size: 12px;
   color: var(--text-primary, #0f172a);
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 html[data-theme="dark"] .neu-xai-factor-pct,
@@ -17691,7 +17708,7 @@ html[data-theme="dark"] .neu-xai-factor-summary,
   color: #94a3b8;
 }
 
-/* Full-width Hero Match Breakdown Container & Balanced 3-Column Chip Grid */
+/* Match Breakdown Groups Grid: 1-column stack by default for grid cards, 3-column in hero cards */
 .pmc-hero-why-full {
   margin-top: 14px;
   width: 100%;
@@ -17699,13 +17716,20 @@ html[data-theme="dark"] .neu-xai-factor-summary,
 
 .pmc-why-groups-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
+  grid-template-columns: 1fr;
+  gap: 10px;
   margin-top: 10px;
 }
 
+.pmc-hero-why-full .pmc-why-groups-grid,
+.pmc-card--hero .pmc-why-groups-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
 @media (max-width: 820px) {
-  .pmc-why-groups-grid {
+  .pmc-hero-why-full .pmc-why-groups-grid,
+  .pmc-card--hero .pmc-why-groups-grid {
     grid-template-columns: 1fr;
     gap: 8px;
   }
