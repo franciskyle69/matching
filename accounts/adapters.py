@@ -46,6 +46,13 @@ from allauth.account.adapter import DefaultAccountAdapter
 class PeerLinkAccountAdapter(DefaultAccountAdapter):
     """Account adapter tailored for PeerLink's React frontend."""
 
+    def is_login_by_code_required(self, login) -> bool:
+        # Allauth's LoginByCodeStage can invoke get_adapter() without request,
+        # leaving self.request as None. Guard against AttributeError.
+        if not getattr(self, "request", None):
+            return False
+        return super().is_login_by_code_required(login)
+
     def add_message(
         self,
         request,
@@ -79,6 +86,54 @@ class RoleAwareSocialAccountAdapter(DefaultSocialAccountAdapter):
     def is_open_for_signup(self, request, sociallogin):
         # Strictly disable social account registration. All registrations must be manual.
         return False
+
+    def list_apps(self, request, provider=None, client_id=None):
+        """Blends database and settings apps, filtering out empty configs and deduplicating."""
+        from allauth.socialaccount.models import SocialApp
+        from django.db.models import Q
+
+        apps = super().list_apps(request, provider=provider, client_id=client_id)
+        if not apps:
+            db_apps = SocialApp.objects.all()
+            if provider:
+                db_apps = db_apps.filter(Q(provider=provider) | Q(provider_id=provider))
+            if client_id:
+                db_apps = db_apps.filter(client_id=client_id)
+            apps = list(db_apps)
+        valid_apps = [a for a in apps if getattr(a, "client_id", "").strip()]
+        if valid_apps:
+            apps = valid_apps
+        deduped = {}
+        for a in apps:
+            cid = a.client_id
+            if cid not in deduped or getattr(a, "pk", None):
+                deduped[cid] = a
+        return list(deduped.values())
+
+    def get_app(self, request, provider, client_id=None):
+        """Safely resolve SocialApp avoiding MultipleObjectsReturned."""
+        from django.core.exceptions import MultipleObjectsReturned
+        from allauth.socialaccount.models import SocialApp
+
+        try:
+            return super().get_app(request, provider, client_id=client_id)
+        except MultipleObjectsReturned:
+            apps = self.list_apps(request, provider=provider, client_id=client_id)
+            for app in apps:
+                if getattr(app, "pk", None) and getattr(app, "client_id", ""):
+                    return app
+            for app in apps:
+                if getattr(app, "client_id", ""):
+                    return app
+            return apps[0]
+        except SocialApp.DoesNotExist:
+            apps = self.list_apps(request, provider=provider)
+            if apps:
+                for app in apps:
+                    if getattr(app, "pk", None) and getattr(app, "client_id", ""):
+                        return app
+                return apps[0]
+            raise
 
     def pre_social_login(self, request, sociallogin: SocialLogin):
         selected_role = request.session.get(ROLE_SESSION_KEY)
@@ -140,8 +195,27 @@ class RoleAwareSocialAccountAdapter(DefaultSocialAccountAdapter):
 
         # Login (or continuing signup of a brand-new user): attach Google to a
         # matching local account when one already exists.
-        if email and not getattr(user, "pk", None) and existing_user:
-            sociallogin.user = existing_user
+        if email and existing_user:
+            if not getattr(user, "pk", None):
+                sociallogin.user = existing_user
+            # Ensure social account is linked and saved
+            from allauth.socialaccount.models import SocialAccount
+            if not SocialAccount.objects.filter(
+                provider=sociallogin.account.provider,
+                uid=sociallogin.account.uid,
+            ).exists():
+                sociallogin.account.user = existing_user
+                sociallogin.account.save()
+            # Ensure EmailAddress record is verified so verification stage never blocks user
+            from allauth.account.models import EmailAddress
+            email_obj, _ = EmailAddress.objects.get_or_create(
+                user=existing_user,
+                email__iexact=email,
+                defaults={"email": email, "verified": True, "primary": True},
+            )
+            if not email_obj.verified:
+                email_obj.verified = True
+                email_obj.save(update_fields=["verified"])
 
         # Update user reference after potential linking
         user = sociallogin.user

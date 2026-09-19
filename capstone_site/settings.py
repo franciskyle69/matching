@@ -300,7 +300,13 @@ ACCOUNT_SIGNUP_FIELDS = ['email*', 'password1*', 'password2*']
 SOCIALACCOUNT_LOGIN_ON_GET = False
 SOCIALACCOUNT_AUTO_SIGNUP = True
 # Allow linking Google accounts to existing email/password accounts
+SOCIALACCOUNT_EMAIL_AUTHENTICATION = True
 SOCIALACCOUNT_EMAIL_AUTHENTICATION_AUTO_CONNECT = True
+# Google OAuth emails are verified by Google; do not require secondary email verification
+SOCIALACCOUNT_EMAIL_VERIFICATION = 'none'
+
+_google_client_id = os.environ.get("GOOGLE_CLIENT_ID", "").strip()
+_google_client_secret = os.environ.get("GOOGLE_CLIENT_SECRET", "").strip()
 
 SOCIALACCOUNT_PROVIDERS = {
     "google": {
@@ -309,13 +315,14 @@ SOCIALACCOUNT_PROVIDERS = {
             "email",
         ],
         "AUTH_PARAMS": {"prompt": "select_account", "access_type": "offline"},
-        "APP": {
-            "client_id": os.environ.get("GOOGLE_CLIENT_ID", ""),
-            "secret": os.environ.get("GOOGLE_CLIENT_SECRET", ""),
-            "key": "",
-        },
     }
 }
+if _google_client_id:
+    SOCIALACCOUNT_PROVIDERS["google"]["APP"] = {
+        "client_id": _google_client_id,
+        "secret": _google_client_secret,
+        "key": "",
+    }
 
 ACCOUNT_ADAPTER = "accounts.adapters.PeerLinkAccountAdapter"
 SOCIALACCOUNT_ADAPTER = "accounts.adapters.RoleAwareSocialAccountAdapter"
