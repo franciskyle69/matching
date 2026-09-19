@@ -173,6 +173,10 @@ import "./components/Sidebar.jsx";
           return;
         }
       }
+      if (isStaff && tabId === "matching") {
+        finishNavigation("home");
+        return;
+      }
       finishNavigation(tabId);
     };
 
@@ -190,7 +194,7 @@ import "./components/Sidebar.jsx";
 
     const TAB_TITLES = {
       home: "Overview",
-      matching: isStaff ? "Pairings & Matching" : "Mentor Directory",
+      matching: "Matching",
       announcements: "Announcements",
       approvals: "User Approvals",
       users: "User Directory",
@@ -249,7 +253,7 @@ import "./components/Sidebar.jsx";
       if (tab.id === "users") return isStaff;
       if (tab.id === "activity-logs") return isStaff;
       if (tab.id === "backup") return isStaff;
-      // matching tab is available to both staff and students
+      if (tab.id === "matching") return !isStaff;
       if (tab.id === "approvals") return isStaff;
       if (tab.id === "complete-profile") {
         const unapprovedMentor =
@@ -260,15 +264,7 @@ import "./components/Sidebar.jsx";
       }
       return true;
     });
-    const tabsWithDynamicLabels = filteredTabs.map((tab) => {
-      if (tab.id === "matching") {
-        return {
-          ...tab,
-          label: isStaff ? "Pairings & Matching" : "Matching",
-        };
-      }
-      return tab;
-    });
+    const tabsWithDynamicLabels = filteredTabs;
     const dashboardTab = tabsWithDynamicLabels.find((tab) => tab.id === "home");
     const activityTabIds = new Set([
       "newsfeed",
@@ -313,7 +309,7 @@ import "./components/Sidebar.jsx";
             id: "matching",
             label: "Go to Matching",
             hint: "See mentor/mentee matches",
-            roles: ["mentor", "mentee", "staff"],
+            roles: ["mentor", "mentee"],
             type: "shortcut",
             actionTab: "matching",
           },

@@ -1,4 +1,5 @@
 import CloudUploadOutlinedIcon from "@mui/icons-material/CloudUploadOutlined";
+import OnboardingPreferences from "../../../src/components/Onboarding.jsx";
 
 (function () {
   "use strict";
@@ -630,7 +631,50 @@ import CloudUploadOutlinedIcon from "@mui/icons-material/CloudUploadOutlined";
     );
   }
 
+  function OnboardingRouterPage() {
+    const ctx = useContext(AppContext);
+    const user = ctx && ctx.user;
+    const setActiveTab = ctx && ctx.setActiveTab;
+
+    if (!ctx || !user) return null;
+
+    return (
+      <div className="onboarding-container-wrap">
+        <OnboardingPreferences
+          user={user}
+          onComplete={(data) => {
+            if (ctx.setUser) {
+              ctx.setUser((prev) => ({
+                ...(prev || {}),
+                ...(data?.user || {}),
+                is_onboarded: true,
+                is_profile_complete: true,
+                mentee_approved: true,
+                mentor_approved: true,
+              }));
+            }
+            if (ctx.addToast) {
+              ctx.addToast(
+                "Matching preferences saved! Welcome to PeerLink.",
+                "success",
+              );
+            }
+            if (ctx.loadMe) {
+              ctx.loadMe({ force: true });
+            }
+            if (setActiveTab) {
+              setActiveTab("matching");
+              if (window.DashboardApp && window.DashboardApp.replaceAppUrl) {
+                window.DashboardApp.replaceAppUrl("matching");
+              }
+            }
+          }}
+        />
+      </div>
+    );
+  }
+
   window.DashboardApp = window.DashboardApp || {};
   window.DashboardApp.Pages = window.DashboardApp.Pages || {};
-  window.DashboardApp.Pages.onboarding = UnifiedOnboardingPage;
+  window.DashboardApp.Pages.onboarding = OnboardingRouterPage;
 })();

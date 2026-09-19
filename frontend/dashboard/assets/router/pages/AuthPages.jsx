@@ -206,9 +206,9 @@ import {
       title: (authAlert && authAlert.title) || "No Account Found",
       message:
         (authAlert && authAlert.message) ||
-        "No account is registered with this Google email. Would you like to create a new account instead?",
-      primaryId: "signup_google",
-      primaryLabel: "Sign Up with Google",
+        "No account found with this email. Please complete the manual registration first.",
+      primaryId: "create_account",
+      primaryLabel: "Complete Manual Registration",
     };
   }
 
@@ -217,18 +217,9 @@ import {
       if (setAuthAlert) setAuthAlert(null);
       return;
     }
-    if (actionId === "create_account") {
-      const role = getPortalAuthRole();
-      if (role === "mentor" || role === "mentee") {
-        if (setAuthAlert) setAuthAlert(null);
-        navigateAuthTab(setActiveTab, "signup");
-        return;
-      }
-      window.location.href = "/portal/";
-      return;
-    }
-    if (actionId === "signup_google") {
-      window.location.href = getGoogleSignupUrl();
+    if (actionId === "create_account" || actionId === "signup_google") {
+      if (setAuthAlert) setAuthAlert(null);
+      navigateAuthTab(setActiveTab, "signup");
       return;
     }
     if (actionId === "go_login") {
@@ -344,7 +335,7 @@ import {
                 )
               }
             >
-              <GoogleMark />
+              {copy.primaryId === "login_google" && <GoogleMark />}
               {copy.primaryLabel}
             </button>
             <button
@@ -1271,25 +1262,6 @@ import {
                   )}
                 </button>
               </div>
-              {signupStep === 1 && (
-                <>
-                  <div className="auth-divider">
-                    <span>Or continue with</span>
-                  </div>
-                  <div className="auth-social">
-                    <button
-                      className="auth-social-btn"
-                      type="button"
-                      onClick={() => {
-                        window.location.href = getGoogleSignupUrl();
-                      }}
-                    >
-                      <GoogleMark />
-                      Sign up with Google
-                    </button>
-                  </div>
-                </>
-              )}
               <div className="auth-footer">
                 Already have an account?{" "}
                 <button
@@ -1425,24 +1397,6 @@ import {
               disabled={signUpLoading}
             >
               {signUpLoading ? "Creating account..." : "Continue to onboarding"}
-            </Button>
-            <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
-              <Box sx={{ flex: 1, height: "1px", bgcolor: "divider" }} />
-              <Typography variant="body2" color="text.secondary">
-                Or continue with
-              </Typography>
-              <Box sx={{ flex: 1, height: "1px", bgcolor: "divider" }} />
-            </Box>
-            <Button
-              type="button"
-              variant="outlined"
-              size="large"
-              startIcon={<GoogleMark />}
-              onClick={() => {
-                window.location.href = getGoogleSignupUrl();
-              }}
-            >
-              Sign up with Google
             </Button>
             <Button
               type="button"

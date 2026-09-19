@@ -36,16 +36,16 @@ describe("SignInPage", () => {
     expect(screen.getByRole("button", { name: /sign up/i })).toBeInTheDocument();
   });
 
-  it("shows a Google mismatch warning as a centered modal", async () => {
+  it("shows a Google mismatch warning as a centered modal prompting manual registration", async () => {
     const setAuthAlert = vi.fn();
     const ctx = {
       ...mockContext,
       authAlert: {
-        severity: "warning",
+        severity: "error",
         code: "no_account",
         title: "No Account Found",
         message:
-          "No account is registered with this Google email. Would you like to create a new account instead?",
+          "No account found with this email. Please complete the manual registration first.",
       },
       setAuthAlert,
     };
@@ -55,10 +55,10 @@ describe("SignInPage", () => {
       screen.getByRole("heading", { name: /no account found/i }),
     ).toBeInTheDocument();
     expect(
-      screen.getByText(/no account is registered with this google email/i),
+      screen.getByText(/no account found with this email/i),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: /sign up with google/i }),
+      screen.getByRole("button", { name: /complete manual registration/i }),
     ).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: /cancel \/ dismiss/i }),
@@ -77,7 +77,7 @@ describe("SignInPage", () => {
     const ctx = {
       ...mockContext,
       authAlert: {
-        severity: "warning",
+        severity: "error",
         code: "no_account",
       },
       setAuthAlert,
@@ -102,13 +102,13 @@ describe("SignUpPage", () => {
     setActiveTab: () => {},
   };
 
-  it("renders sign up form and title", () => {
+  it("renders sign up form and title without Google signup button", () => {
     render(withContext(React.createElement(SignUpPage), mockContext));
     expect(screen.getByRole("heading", { name: /sign up/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /continue/i })).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: /sign up with google/i }),
-    ).toBeInTheDocument();
+      screen.queryByRole("button", { name: /sign up with google/i }),
+    ).not.toBeInTheDocument();
   });
 
   it("shows Sign in link", () => {

@@ -70,44 +70,7 @@ export default function Register({ onRegisterSuccess, onNavigateToLogin }) {
   // UI state
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
-  const [googleNotice, setGoogleNotice] = useState("");
   const [approvalModalOpen, setApprovalModalOpen] = useState(false);
-
-  // Check URL parameters for Google OAuth auto-fill
-  useEffect(() => {
-    try {
-      const searchParams = new URLSearchParams(window.location.search);
-      const hashParams = new URLSearchParams(window.location.hash.includes("?") ? window.location.hash.split("?")[1] : "");
-      
-      const isRegistered = searchParams.get("is_registered") || hashParams.get("is_registered");
-      const googleEmail = searchParams.get("google_email") || hashParams.get("google_email");
-      const googleName = searchParams.get("google_name") || hashParams.get("google_name");
-
-      if (isRegistered === "false" || googleEmail) {
-        if (googleEmail) {
-          setEmail(googleEmail);
-          // Suggest role based on domain
-          if (googleEmail.endsWith("@buksu.edu.ph") && !googleEmail.endsWith("@student.buksu.edu.ph")) {
-            setRole("INSTRUCTOR_MENTOR");
-          } else {
-            setRole("MENTEE");
-          }
-        }
-        if (googleName) {
-          const parts = googleName.trim().split(/\s+/);
-          if (parts.length > 1) {
-            setFirstName(parts.slice(0, -1).join(" "));
-            setLastName(parts[parts.length - 1]);
-          } else {
-            setFirstName(googleName);
-          }
-        }
-        setGoogleNotice("Google account verified. Please complete your registration details.");
-      }
-    } catch (e) {
-      console.warn("Failed to parse Google query params:", e);
-    }
-  }, []);
 
   // Update default year level when role changes
   useEffect(() => {
@@ -332,11 +295,6 @@ export default function Register({ onRegisterSuccess, onNavigateToLogin }) {
           </Typography>
         </Box>
 
-        {googleNotice && (
-          <Alert severity="info" sx={{ mb: 3 }} onClose={() => setGoogleNotice("")}>
-            {googleNotice}
-          </Alert>
-        )}
 
         {errorMessage && (
           <Alert severity="error" sx={{ mb: 3 }}>

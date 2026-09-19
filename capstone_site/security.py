@@ -10,6 +10,8 @@ PUBLIC_API_PATHS = {
     "/api/health/",
     "/api/csrf/",
     "/api/auth/login/",
+    "/api/auth/google/",
+    "/api/auth/google/login/",
     "/api/auth/register/",
     "/api/auth/refresh/",
     "/api/auth/logout/",

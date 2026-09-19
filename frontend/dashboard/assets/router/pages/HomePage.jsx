@@ -1468,7 +1468,7 @@ import HourglassEmptyOutlined from "@mui/icons-material/HourglassEmptyOutlined";
           <div className="kasandigan-header-content">
             <div className="kasandigan-badge">
               <span className="kasandigan-badge-dot" />
-              <span>Signed in as {user.role || "staff"} • Matching Analytics Console</span>
+              <span>Signed in as {user.role || "staff"} • Administration Console</span>
             </div>
             <h1 className="home-hero-title kasandigan-title">
               Welcome back
@@ -1478,7 +1478,7 @@ import HourglassEmptyOutlined from "@mui/icons-material/HourglassEmptyOutlined";
                   ? `, ${user.username}`
                   : ""}
             </h1>
-            <p className="home-hero-sub kasandigan-subtitle">Campus-wide matching analytics, pairing completion rates, and platform capacity.</p>
+            <p className="home-hero-sub kasandigan-subtitle">Campus-wide user management, approval workflows, and system administration.</p>
           </div>
 
           <div className="kasandigan-header-actions">
@@ -1554,7 +1554,7 @@ import HourglassEmptyOutlined from "@mui/icons-material/HourglassEmptyOutlined";
               <h2>Administration shortcuts</h2>
             </div>
             <p className="mentee-muted" style={{ marginBottom: "16px" }}>
-              Quickly manage user accounts, run matching models, and review coordinator approvals.
+              Quickly manage user accounts, system activities, and review coordinator approvals.
             </p>
             <div className="mentee-quick-actions">
               <button
@@ -1564,14 +1564,6 @@ import HourglassEmptyOutlined from "@mui/icons-material/HourglassEmptyOutlined";
               >
                 <MenteeDashIcon name="users" size={18} />
                 <span>Manage users</span>
-              </button>
-              <button
-                type="button"
-                className="mentee-quick-action"
-                onClick={() => setActiveTab("matching")}
-              >
-                <MenteeDashIcon name="users" size={18} />
-                <span>Review active pairings</span>
               </button>
               <button
                 type="button"

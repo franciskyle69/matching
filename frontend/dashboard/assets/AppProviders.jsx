@@ -628,11 +628,11 @@
       } else if (oauthError === "no_account") {
         setActiveTab("signin");
         setAuthAlert({
-          severity: "warning",
+          severity: "error",
           code: "no_account",
           title: "No Account Found",
           message:
-            "No account is registered with this Google email. Would you like to create a new account instead?",
+            "No account found with this email. Please complete the manual registration first.",
         });
       } else if (oauthError === "account_exists") {
         setActiveTab("signup");
