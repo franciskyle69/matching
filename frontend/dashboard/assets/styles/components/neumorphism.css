@@ -5077,22 +5077,23 @@ html[data-theme="light"] .sidebar-theme-toggle .theme-toggle-thumb {
   display: none !important;
 }
 
-/* ── Auth Back Button (.auth-neu-back-btn) ───────────────────────── */
-.auth-neu-back-btn {
+/* ── Auth Top Bar Buttons (.auth-neu-back-btn, .auth-neu-theme-btn) ───────────────────────── */
+.auth-neu-back-btn,
+.auth-neu-theme-btn {
   position: fixed !important;
   top: 20px !important;
-  left: 24px !important;
   z-index: 1000 !important;
   display: inline-flex !important;
   align-items: center !important;
   gap: 8px !important;
   height: 38px !important;
-  padding: 0 14px !important;
-  border-radius: 0 !important;
+  padding: 0 16px !important;
+  border-radius: 999px !important;
   background-color: #ebf0f7 !important;
   color: #1e293b !important;
   border: 1px solid rgba(166, 180, 200, 0.6) !important;
   box-shadow: 0 2px 8px rgba(166, 180, 200, 0.45) !important;
+  font-family: inherit !important;
   font-size: 13px !important;
   font-weight: 700 !important;
   cursor: pointer !important;
@@ -5103,22 +5104,43 @@ html[data-theme="light"] .sidebar-theme-toggle .theme-toggle-thumb {
   user-select: none !important;
 }
 
-.auth-neu-back-btn:hover {
-  color: #0f172a !important;
+.auth-neu-back-btn {
+  left: 24px !important;
+  right: auto !important;
+}
+
+.auth-neu-theme-btn {
+  right: 24px !important;
+  left: auto !important;
+}
+
+.auth-neu-back-btn:hover,
+.auth-neu-theme-btn:hover {
+  color: #0284c7 !important;
   border-color: rgba(2, 132, 199, 0.5) !important;
   background-color: #f8fafc !important;
-  box-shadow: 0 5px 12px rgba(166, 180, 200, 0.6) !important;
+  box-shadow: 0 4px 12px rgba(166, 180, 200, 0.6) !important;
   transform: translateY(-1px) !important;
 }
 
-.auth-neu-back-btn:active {
+.auth-neu-back-btn:active,
+.auth-neu-theme-btn:active {
   transform: translateY(1px) !important;
   box-shadow: inset 1px 1px 3px rgba(166, 180, 200, 0.6) !important;
 }
 
-.auth-neu-back-btn svg {
-  width: 14px !important;
-  height: 14px !important;
+.auth-neu-back-btn:focus,
+.auth-neu-back-btn:focus-visible,
+.auth-neu-theme-btn:focus,
+.auth-neu-theme-btn:focus-visible {
+  outline: none !important;
+  box-shadow: 0 0 0 2.5px rgba(2, 132, 199, 0.4), 0 2px 8px rgba(166, 180, 200, 0.45) !important;
+}
+
+.auth-neu-back-btn svg,
+.auth-neu-theme-btn svg {
+  width: 15px !important;
+  height: 15px !important;
   flex-shrink: 0 !important;
   display: block !important;
   transition: transform 0.18s ease !important;
@@ -5128,7 +5150,16 @@ html[data-theme="light"] .sidebar-theme-toggle .theme-toggle-thumb {
   transform: translateX(-2px) !important;
 }
 
-.auth-neu-back-btn span {
+.auth-neu-theme-icon-sun {
+  color: #f59e0b !important;
+}
+
+.auth-neu-theme-icon-moon {
+  color: #0284c7 !important;
+}
+
+.auth-neu-back-btn span,
+.auth-neu-theme-btn span {
   white-space: nowrap !important;
 }
 
@@ -5258,6 +5289,80 @@ html[data-theme="light"] .sidebar-theme-toggle .theme-toggle-thumb {
 
 .auth-left-points li::before {
   background: #0284c7 !important;
+}
+
+/* ── Auth Feature Info Pods (Light Mode) ────────────────────────── */
+.auth-feature-list {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 14px !important;
+  margin-top: 18px !important;
+  margin-bottom: 22px !important;
+  width: 100% !important;
+}
+
+.auth-feature-item {
+  display: flex !important;
+  align-items: flex-start !important;
+  gap: 13px !important;
+  padding: 8px 10px !important;
+  border-radius: 14px !important;
+  transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.22s ease !important;
+}
+
+.auth-feature-item:hover {
+  transform: translateX(4px) !important;
+  background: rgba(14, 165, 233, 0.05) !important;
+}
+
+.auth-feature-icon-pod {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 38px !important;
+  height: 38px !important;
+  min-width: 38px !important;
+  min-height: 38px !important;
+  border-radius: 12px !important;
+  background: #f8fafc !important;
+  border: 1px solid #e2e8f0 !important;
+  box-shadow: inset 1px 1px 3px rgba(166, 180, 200, 0.35), inset -1px -1px 3px #ffffff, 0 1px 3px rgba(0, 0, 0, 0.04) !important;
+  color: #0284c7 !important;
+  flex-shrink: 0 !important;
+  transition: all 0.22s ease !important;
+}
+
+.auth-feature-item:hover .auth-feature-icon-pod {
+  color: #0369a1 !important;
+  box-shadow: inset 1px 1px 2px rgba(166, 180, 200, 0.4), inset -1px -1px 2px #ffffff, 0 0 12px rgba(14, 165, 233, 0.25) !important;
+  border-color: rgba(56, 189, 248, 0.5) !important;
+}
+
+.auth-feature-svg {
+  width: 19px !important;
+  height: 19px !important;
+}
+
+.auth-feature-text {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 2px !important;
+}
+
+.auth-feature-title {
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif !important;
+  font-size: 14px !important;
+  font-weight: 700 !important;
+  color: #0f172a !important;
+  line-height: 1.25 !important;
+  letter-spacing: -0.01em !important;
+}
+
+.auth-feature-desc {
+  font-size: 12.5px !important;
+  font-weight: 450 !important;
+  color: #475569 !important;
+  line-height: 1.4 !important;
 }
 
 .auth-page .auth-field label,
@@ -5635,7 +5740,10 @@ html[data-theme="light"] .sidebar-theme-toggle .theme-toggle-thumb {
    ═══════════════════════════════════════════════════════════════════ */
 html[data-theme="dark"] .auth-neu-back-btn,
 [data-theme="dark"] .auth-neu-back-btn,
-.dark .auth-neu-back-btn {
+.dark .auth-neu-back-btn,
+html[data-theme="dark"] .auth-neu-theme-btn,
+[data-theme="dark"] .auth-neu-theme-btn,
+.dark .auth-neu-theme-btn {
   background-color: #181b20 !important;
   color: #cbd5e1 !important;
   border: 1px solid rgba(255, 255, 255, 0.08) !important;
@@ -5644,7 +5752,10 @@ html[data-theme="dark"] .auth-neu-back-btn,
 
 html[data-theme="dark"] .auth-neu-back-btn:hover,
 [data-theme="dark"] .auth-neu-back-btn:hover,
-.dark .auth-neu-back-btn:hover {
+.dark .auth-neu-back-btn:hover,
+html[data-theme="dark"] .auth-neu-theme-btn:hover,
+[data-theme="dark"] .auth-neu-theme-btn:hover,
+.dark .auth-neu-theme-btn:hover {
   color: #38bdf8 !important;
   border-color: rgba(56, 189, 248, 0.4) !important;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.8) !important;
@@ -5653,9 +5764,24 @@ html[data-theme="dark"] .auth-neu-back-btn:hover,
 
 html[data-theme="dark"] .auth-neu-back-btn:active,
 [data-theme="dark"] .auth-neu-back-btn:active,
-.dark .auth-neu-back-btn:active {
+.dark .auth-neu-back-btn:active,
+html[data-theme="dark"] .auth-neu-theme-btn:active,
+[data-theme="dark"] .auth-neu-theme-btn:active,
+.dark .auth-neu-theme-btn:active {
   box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.6) !important;
   transform: translateY(0) !important;
+}
+
+html[data-theme="dark"] .auth-neu-back-btn:focus,
+html[data-theme="dark"] .auth-neu-back-btn:focus-visible,
+[data-theme="dark"] .auth-neu-back-btn:focus,
+[data-theme="dark"] .auth-neu-back-btn:focus-visible,
+html[data-theme="dark"] .auth-neu-theme-btn:focus,
+html[data-theme="dark"] .auth-neu-theme-btn:focus-visible,
+[data-theme="dark"] .auth-neu-theme-btn:focus,
+[data-theme="dark"] .auth-neu-theme-btn:focus-visible {
+  outline: none !important;
+  box-shadow: 0 0 0 2.5px rgba(56, 189, 248, 0.5), 0 2px 8px rgba(0, 0, 0, 0.6) !important;
 }
 
 html[data-theme="dark"] .auth-page,
@@ -5744,6 +5870,42 @@ html[data-theme="dark"] .auth-left-points li::before,
 [data-theme="dark"] .auth-left-points li::before,
 .dark .auth-left-points li::before {
   background: #38bdf8 !important;
+}
+
+/* ── Auth Feature Info Pods (Dark Mode) ─────────────────────────── */
+html[data-theme="dark"] .auth-feature-item:hover,
+[data-theme="dark"] .auth-feature-item:hover,
+.dark .auth-feature-item:hover {
+  background: rgba(56, 189, 248, 0.08) !important;
+}
+
+html[data-theme="dark"] .auth-feature-icon-pod,
+[data-theme="dark"] .auth-feature-icon-pod,
+.dark .auth-feature-icon-pod {
+  background: #12161f !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
+  box-shadow: inset 2px 2px 5px rgba(0, 0, 0, 0.75), inset -1px -1px 3px rgba(255, 255, 255, 0.03) !important;
+  color: #38bdf8 !important;
+}
+
+html[data-theme="dark"] .auth-feature-item:hover .auth-feature-icon-pod,
+[data-theme="dark"] .auth-feature-item:hover .auth-feature-icon-pod,
+.dark .auth-feature-item:hover .auth-feature-icon-pod {
+  color: #7dd3fc !important;
+  border-color: rgba(56, 189, 248, 0.45) !important;
+  box-shadow: inset 2px 2px 5px rgba(0, 0, 0, 0.8), 0 0 14px rgba(56, 189, 248, 0.25) !important;
+}
+
+html[data-theme="dark"] .auth-feature-title,
+[data-theme="dark"] .auth-feature-title,
+.dark .auth-feature-title {
+  color: #f1f5f9 !important;
+}
+
+html[data-theme="dark"] .auth-feature-desc,
+[data-theme="dark"] .auth-feature-desc,
+.dark .auth-feature-desc {
+  color: #94a3b8 !important;
 }
 
 html[data-theme="dark"] .auth-page .auth-field label,

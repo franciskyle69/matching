@@ -317,6 +317,7 @@ SOCIALACCOUNT_PROVIDERS = {
     }
 }
 
+ACCOUNT_ADAPTER = "accounts.adapters.PeerLinkAccountAdapter"
 SOCIALACCOUNT_ADAPTER = "accounts.adapters.RoleAwareSocialAccountAdapter"
 
 # REST framework: Django session auth for API (public views must opt out explicitly)

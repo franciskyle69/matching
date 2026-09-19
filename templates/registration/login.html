@@ -1,9 +1,14 @@
 {% extends "registration/base.html" %}
 {% load socialaccount %}
 {% block title %}Log in{% endblock %}
-{% block public_header %}{% endblock %}
+{% block body_class %} auth-login-page{% endblock %}
 {% block extra_css %}
   <style>
+    body.auth-login-page .main {
+      max-width: 980px;
+      padding: 2rem 1rem;
+      margin: 0 auto;
+    }
     .login-back-button {
       width: 36px;
       height: 36px;
@@ -29,15 +34,50 @@
 <div class="auth-shell">
   <section class="auth-panel-left">
     <div>
-      <h1>Welcome back to MentorMatch</h1>
+      <h1>Welcome back to PeerLink</h1>
       <p>
-        Access your personalized mentoring dashboard and continue your journey with your official mentor.
+        Access your personalized learning dashboard and continue your journey with expert mentors.
       </p>
-      <ul>
-        <li>Secure authentication</li>
-        <li>Track progress and sessions</li>
-        <li>Connect with mentors anytime</li>
-      </ul>
+      <div class="auth-feature-list">
+        <div class="auth-feature-item">
+          <div class="auth-feature-icon-pod" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="auth-feature-svg">
+              <path d="M12 2a4 4 0 0 1 4 4c0 1.1-.5 2.1-1.2 2.8L12 18l-2.8-9.2A4 4 0 0 1 12 2z"></path>
+              <circle cx="12" cy="6" r="1.5"></circle>
+              <path d="M4.5 15.5c1.2-1.2 3.3-1.2 4.5 0"></path>
+              <path d="M15 15.5c1.2-1.2 3.3-1.2 4.5 0"></path>
+            </svg>
+          </div>
+          <div class="auth-feature-text">
+            <div class="auth-feature-title">AI-Powered Matching</div>
+            <div class="auth-feature-desc">Intelligent XGBoost pairing based on academic expertise &amp; goals.</div>
+          </div>
+        </div>
+        <div class="auth-feature-item">
+          <div class="auth-feature-icon-pod" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="auth-feature-svg">
+              <path d="M3 3v18h18"></path>
+              <path d="m19 9-5 5-4-4-3 3"></path>
+            </svg>
+          </div>
+          <div class="auth-feature-text">
+            <div class="auth-feature-title">Milestones &amp; Analytics</div>
+            <div class="auth-feature-desc">Track study sessions, goals, and academic growth in real-time.</div>
+          </div>
+        </div>
+        <div class="auth-feature-item">
+          <div class="auth-feature-icon-pod" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="auth-feature-svg">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+              <path d="m9 12 2 2 4-4"></path>
+            </svg>
+          </div>
+          <div class="auth-feature-text">
+            <div class="auth-feature-title">Verified AMU Platform</div>
+            <div class="auth-feature-desc">Accredited BukSU Academic Mentoring platform with coordinator oversight.</div>
+          </div>
+        </div>
+      </div>
     </div>
   </section>
 
