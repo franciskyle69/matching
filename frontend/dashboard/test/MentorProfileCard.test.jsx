@@ -126,4 +126,49 @@ describe("MentorProfileCard", () => {
     expect(photo.tagName).toBe("IMG");
     expect(photo).toHaveAttribute("src", "https://cdn.example/marian.jpg");
   });
+
+  it("renders exclusively 1 Time Match when candidate only overlaps in schedule", () => {
+    const timeOnlyMentor = {
+      ...mentor,
+      display_name: "Ada Lovelace",
+      subjects: ["Intro to Computing"],
+      topics: ["Digital Logic & Data Representation"],
+      availability: ["Wed|15:00-17:00"],
+    };
+
+    render(
+      React.createElement(MentorProfileCard, {
+        person: timeOnlyMentor,
+        displayName: "Ada Lovelace",
+        score: 0.17,
+        matchDetails: {
+          common_subjects: [],
+          common_topics: [],
+          common_competencies: [],
+        },
+        menteeMatching: {
+          subjects: ["Computer Programming", "IT Fundamentals"],
+          topics: ["Data Structures", "Modular Programming"],
+          availability: ["Wed|15:00-17:00"],
+        },
+        variant: "detail",
+        kind: "mentor",
+      }),
+    );
+
+    // Should NOT show false course or skill counts
+    expect(screen.queryByText(/Course/i)).toBeNull();
+    expect(screen.queryByText(/Skill/i)).toBeNull();
+    expect(screen.getByText("1 Time Match")).toBeInTheDocument();
+
+    // Expand match details
+    fireEvent.click(screen.getByRole("button", { name: /view match breakdown/i }));
+
+    // Courses and skills groups should not be displayed when empty
+    expect(screen.queryByText("Courses / Subjects")).toBeNull();
+    expect(screen.queryByText("Skills & Topics")).toBeNull();
+    expect(screen.getByText("Schedule Overlap")).toBeInTheDocument();
+    expect(screen.getByText("Wed • 3:00 PM - 5:00 PM")).toBeInTheDocument();
+  });
 });
+

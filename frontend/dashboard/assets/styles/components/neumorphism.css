@@ -7853,10 +7853,26 @@ html[data-theme="dark"] .auth-password-toggle:hover,
   padding: 14px 18px !important;
   align-items: center !important;
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  cursor: pointer !important;
+  width: 100% !important;
+  text-align: left !important;
+  font: inherit !important;
+  color: inherit !important;
+  user-select: none !important;
+  -webkit-appearance: none !important;
+  appearance: none !important;
+  outline: none !important;
 }
 
 [data-theme="light"] .mentoring-preferences-page .pref-support-level-item:hover {
-  border-color: rgba(14, 165, 233, 0.35) !important;
+  border-color: rgba(14, 165, 233, 0.5) !important;
+  transform: translateY(-2px) !important;
+  box-shadow: 4px 4px 12px rgba(166, 180, 200, 0.45), -3px -3px 10px rgba(255, 255, 255, 0.9) !important;
+}
+
+[data-theme="light"] .mentoring-preferences-page .pref-support-level-item:active {
+  transform: translateY(0) scale(0.995) !important;
+  box-shadow: inset 3px 3px 8px rgba(166, 180, 200, 0.55), inset -2px -2px 6px rgba(255, 255, 255, 0.9) !important;
 }
 
 [data-theme="light"] .mentoring-preferences-page .pref-support-level-item.is-active {
@@ -7907,11 +7923,28 @@ html[data-theme="dark"] .auth-password-toggle:hover,
   padding: 14px 18px !important;
   align-items: center !important;
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  cursor: pointer !important;
+  width: 100% !important;
+  text-align: left !important;
+  font: inherit !important;
+  color: inherit !important;
+  user-select: none !important;
+  -webkit-appearance: none !important;
+  appearance: none !important;
+  outline: none !important;
 }
 
 [data-theme="dark"] .mentoring-preferences-page .pref-support-level-item:hover:not(.is-active),
 .dark .mentoring-preferences-page .pref-support-level-item:hover:not(.is-active) {
-  border-color: rgba(56, 189, 248, 0.25) !important;
+  border-color: rgba(56, 189, 248, 0.45) !important;
+  transform: translateY(-2px) !important;
+  box-shadow: 0 4px 16px rgba(14, 165, 233, 0.22), inset 1px 1px 3px rgba(255, 255, 255, 0.05) !important;
+}
+
+[data-theme="dark"] .mentoring-preferences-page .pref-support-level-item:active,
+.dark .mentoring-preferences-page .pref-support-level-item:active {
+  transform: translateY(0) scale(0.995) !important;
+  box-shadow: inset 3px 3px 8px rgba(0, 0, 0, 0.9) !important;
 }
 
 [data-theme="dark"] .mentoring-preferences-page .pref-support-level-item.is-active,
@@ -13206,11 +13239,28 @@ html[data-theme="dark"] .app-topbar-quick-btn:active,
   background: #13161a !important;
   border: 1px solid rgba(255, 255, 255, 0.07) !important;
   box-shadow: inset 2px 2px 5px rgba(0, 0, 0, 0.7) !important;
+  cursor: pointer !important;
+  width: 100% !important;
+  text-align: left !important;
+  font: inherit !important;
+  color: inherit !important;
+  user-select: none !important;
+  -webkit-appearance: none !important;
+  appearance: none !important;
+  outline: none !important;
 }
 
 [data-theme="dark"] .mentoring-preferences-page .pref-support-level-item:hover,
 .dark .mentoring-preferences-page .pref-support-level-item:hover {
-  border-color: rgba(56, 189, 248, 0.35) !important;
+  border-color: rgba(56, 189, 248, 0.45) !important;
+  transform: translateY(-2px) !important;
+  box-shadow: 0 4px 14px rgba(14, 165, 233, 0.22), inset 1px 1px 3px rgba(255, 255, 255, 0.05) !important;
+}
+
+[data-theme="dark"] .mentoring-preferences-page .pref-support-level-item:active,
+.dark .mentoring-preferences-page .pref-support-level-item:active {
+  transform: translateY(0) scale(0.995) !important;
+  box-shadow: inset 3px 3px 8px rgba(0, 0, 0, 0.9) !important;
 }
 
 [data-theme="dark"] .mentoring-preferences-page .pref-support-level-item.is-active,

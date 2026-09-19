@@ -757,20 +757,22 @@ import TextField from "@mui/material/TextField";
             />
             <div
               className="pref-support-levels"
-              role="list"
-              aria-label="Support level descriptions"
+              role="group"
+              aria-label="Support level options"
             >
               {DIFFICULTY_OPTIONS.map((option) => {
                 const active =
                   option.value === Number(menteeMatching.difficulty_level || 1);
                 return (
-                  <div
+                  <button
                     key={option.value}
+                    type="button"
                     className={
                       "pref-support-level-item" + (active ? " is-active" : "")
                     }
-                    role="listitem"
+                    aria-pressed={active}
                     aria-current={active ? "true" : undefined}
+                    onClick={() => setSupportNeed(option.value)}
                   >
                     <span className="pref-support-level-num">{option.value}</span>
                     <div className="pref-support-level-copy">
@@ -779,7 +781,7 @@ import TextField from "@mui/material/TextField";
                       </span>
                       <p className="pref-support-level-desc">{option.helper}</p>
                     </div>
-                  </div>
+                  </button>
                 );
               })}
             </div>

@@ -247,9 +247,24 @@ def _filter_mentors_for_mentee(
     if not capacity_filtered:
         return MentorFilterResult(mentors=[], empty_reason="all_full", suggested_time_slots=[])
 
+    # Enforce mandatory academic prerequisite: mentor must share at least 1 Subject or Topic with mentee
+    mentee_subjects = _to_set(getattr(mentee, "subjects", None)) or _to_set(getattr(mentee, "skills", None))
+    mentee_topics = _to_set(getattr(mentee, "topics", None)) or _to_set(getattr(mentee, "skills", None))
+    academic_filtered: List[MentorProfile] = []
+    for mentor in capacity_filtered:
+        mentor_subjects = _to_set(getattr(mentor, "subjects", None)) or _to_set(getattr(mentor, "skills", None))
+        mentor_topics = _to_set(getattr(mentor, "topics", None)) or _to_set(getattr(mentor, "skills", None))
+        has_subject_overlap = bool(mentee_subjects and mentor_subjects and (mentee_subjects & mentor_subjects))
+        has_topic_overlap = bool(mentee_topics and mentor_topics and (mentee_topics & mentor_topics))
+        if has_subject_overlap or has_topic_overlap:
+            academic_filtered.append(mentor)
+
+    if not academic_filtered:
+        return MentorFilterResult(mentors=[], empty_reason="no_academic_overlap", suggested_time_slots=[])
+
     mentee_slots = _normalise_slots(getattr(mentee, "availability", []))
     time_filtered: List[MentorProfile] = []
-    for mentor in capacity_filtered:
+    for mentor in academic_filtered:
         mentor_slots = _normalise_slots(getattr(mentor, "availability", []))
         if _slots_overlap(mentor_slots, mentee_slots):
             time_filtered.append(mentor)
@@ -259,7 +274,7 @@ def _filter_mentors_for_mentee(
 
     suggested: List[Slot] = []
     seen_slots: Set[Slot] = set()
-    for mentor in capacity_filtered:
+    for mentor in academic_filtered:
         for slot in _normalise_slots(getattr(mentor, "availability", [])):
             if slot in seen_slots:
                 continue
@@ -433,13 +448,23 @@ def compute_score_breakdown(mentor: MentorProfile, mentee: MenteeProfile) -> Dic
     shared_topics = sorted(list(mentor_topics & mentee_topics))
     subj_jaccard = _jaccard(mentor_subjects, mentee_subjects)
     top_jaccard = _jaccard(mentor_topics, mentee_topics)
-    academic_pct = max(10, min(100, round((0.6 * subj_jaccard + 0.4 * top_jaccard) * 100))) if (mentor_subjects or mentee_subjects) else 60
+    if not shared_subjects and not shared_topics:
+        academic_pct = 0
+        academic_summary = "No shared subjects"
+    else:
+        academic_pct = min(100, round((0.6 * subj_jaccard + 0.4 * top_jaccard) * 100))
+        academic_summary = f"{len(shared_subjects)} shared subject(s), {len(shared_topics)} topic(s)"
 
     mentor_comp_ids = set(mentor.competencies.values_list("id", flat=True)) if hasattr(mentor, "competencies") else set()
     mentee_comp_ids = set(mentee.competencies.values_list("id", flat=True)) if hasattr(mentee, "competencies") else set()
     shared_comp_ids = mentor_comp_ids & mentee_comp_ids
     comp_jaccard = _jaccard(mentor_comp_ids, mentee_comp_ids)
-    competency_pct = max(15, min(100, round(comp_jaccard * 100))) if (mentor_comp_ids or mentee_comp_ids) else academic_pct
+    if not shared_comp_ids:
+        competency_pct = 0
+        competency_summary = "No shared competencies"
+    else:
+        competency_pct = min(100, round(comp_jaccard * 100))
+        competency_summary = f"{len(shared_comp_ids)} verified competency matches"
 
     mentor_level = getattr(mentor, "expertise_level", None)
     mentee_level = getattr(mentee, "difficulty_level", None)
@@ -461,9 +486,15 @@ def compute_score_breakdown(mentor: MentorProfile, mentee: MenteeProfile) -> Dic
     is_ml = model_score is not None
     final_score = model_score if is_ml else _heuristic_score(mentor, mentee)
     final_score = max(0.0, min(1.0, float(final_score)))
-    overall_pct = max(1, min(100, round(final_score * 100)))
+    overall_pct = max(0, min(100, round(final_score * 100)))
 
-    if overall_pct >= 88:
+    # In relaxed fallback mode or zero-overlap scenarios, if there is no academic overlap,
+    # overall fit cannot be positive
+    if not shared_subjects and not shared_topics:
+        final_score = 0.0
+        overall_pct = 0
+        tier, label = "low", "No Fit"
+    elif overall_pct >= 88:
         tier, label = "high", "Exceptional Fit"
     elif overall_pct >= 75:
         tier, label = "high", "Strong Fit"
@@ -485,14 +516,14 @@ def compute_score_breakdown(mentor: MentorProfile, mentee: MenteeProfile) -> Dic
                 "weight_pct": 40,
                 "shared_subjects": shared_subjects,
                 "shared_topics": shared_topics,
-                "summary": f"{len(shared_subjects)} shared subject(s), {len(shared_topics)} topic(s)" if (shared_subjects or shared_topics) else "General curriculum alignment",
+                "summary": academic_summary,
             },
             "competency": {
                 "label": "Competency Alignment",
                 "score": competency_pct,
                 "weight_pct": 25,
                 "shared_count": len(shared_comp_ids),
-                "summary": f"{len(shared_comp_ids)} verified competency matches" if shared_comp_ids else "Complementary curriculum skillset",
+                "summary": competency_summary,
             },
             "difficulty": {
                 "label": "Experience & Difficulty Balance",
@@ -515,6 +546,13 @@ def compute_score_breakdown(mentor: MentorProfile, mentee: MenteeProfile) -> Dic
 
 
 def compute_score(mentor: MentorProfile, mentee: MenteeProfile) -> float:
+    mentor_subjects = _to_set(mentor.subjects) or _to_set(mentor.skills)
+    mentee_subjects = _to_set(mentee.subjects) or _to_set(mentee.skills)
+    mentor_topics = _to_set(mentor.topics) or _to_set(mentor.skills)
+    mentee_topics = _to_set(mentee.topics) or _to_set(mentee.skills)
+    if not (mentor_subjects & mentee_subjects) and not (mentor_topics & mentee_topics):
+        return 0.0
+
     model_score = _score_with_model(mentor, mentee)
     if model_score is not None:
         return model_score

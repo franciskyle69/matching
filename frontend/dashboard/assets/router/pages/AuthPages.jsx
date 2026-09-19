@@ -686,8 +686,21 @@ import {
     const portalRoleLabel = getPortalRoleLabel();
     const portalAuthRole = getPortalAuthRole();
     const isAuthLoading = signUpLoading;
-    const isMentorSignup =
-      portalAuthRole === "mentor" || signUpForm.role === "mentor";
+    const activeRole =
+      portalAuthRole === "mentor" || portalAuthRole === "mentee"
+        ? portalAuthRole
+        : signUpForm.role || "mentor";
+    const isMentorSignup = activeRole === "mentor";
+
+    useEffect(() => {
+      const pRole = getPortalAuthRole();
+      if (pRole && (pRole === "mentor" || pRole === "mentee")) {
+        if (signUpForm.role !== pRole) {
+          setSignUpForm((prev) => ({ ...prev, role: pRole }));
+        }
+      }
+    }, [portalAuthRole, setSignUpForm]);
+
     const MENTOR_TYPE_OPTIONS = [
       {
         value: "Senior IT Student",
@@ -706,18 +719,32 @@ import {
     }
 
     function goToSignupStep(step) {
-      setAuthAlert(null);
+      if (typeof setAuthAlert === "function") {
+        setAuthAlert(null);
+      }
       setSignupStep(step);
     }
 
     function goToSignupStep2() {
+      const pRole = getPortalAuthRole();
+      if (pRole && (pRole === "mentor" || pRole === "mentee")) {
+        if (signUpForm.role !== pRole) {
+          setSignUpForm((prev) => ({ ...prev, role: pRole }));
+        }
+      }
+      const safeAlert = (payload) => {
+        if (typeof setAuthAlert === "function") {
+          setAuthAlert(payload);
+        }
+      };
       const firstName = String(signUpForm.first_name || "").trim();
+
       const lastName = String(signUpForm.last_name || "").trim();
       const email = String(signUpForm.email || "").trim();
       const password1 = String(signUpForm.password1 || "");
       const password2 = String(signUpForm.password2 || "");
       if (!firstName) {
-        setAuthAlert({
+        safeAlert({
           severity: "error",
           title: "First name required",
           message: "Enter your first name to continue.",
@@ -725,7 +752,7 @@ import {
         return;
       }
       if (!lastName) {
-        setAuthAlert({
+        safeAlert({
           severity: "error",
           title: "Last name required",
           message: "Enter your last name to continue.",
@@ -733,7 +760,7 @@ import {
         return;
       }
       if (!email) {
-        setAuthAlert({
+        safeAlert({
           severity: "error",
           title: "Email required",
           message: "Enter your email address to continue.",
@@ -741,7 +768,7 @@ import {
         return;
       }
       if (!password1) {
-        setAuthAlert({
+        safeAlert({
           severity: "error",
           title: "Password required",
           message: "Create a password to continue.",
@@ -749,7 +776,7 @@ import {
         return;
       }
       if (!password2) {
-        setAuthAlert({
+        safeAlert({
           severity: "error",
           title: "Confirm password required",
           message: "Confirm your password to continue.",
@@ -757,7 +784,7 @@ import {
         return;
       }
       if (password1 !== password2) {
-        setAuthAlert({
+        safeAlert({
           severity: "error",
           title: "Passwords do not match",
           message: "Make sure both password fields are the same.",
@@ -766,6 +793,7 @@ import {
       }
       goToSignupStep(2);
     }
+
 
     return (
       <div className="auth-page">
@@ -876,7 +904,8 @@ import {
                     <p className="auth-field-label">Role</p>
                     <p className="auth-role-locked">
                       {portalRoleLabel ||
-                        (signUpForm.role === "mentee" ? "Mentee" : "Mentor")}
+                        (activeRole === "mentee" ? "Mentee" : "Mentor")}
+
                     </p>
                     <small className="auth-field-helper">
                       This role was selected when you started creating your

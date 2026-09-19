@@ -100,7 +100,9 @@ describe("SignUpPage", () => {
     setSignUpForm: () => {},
     handleSignUp: () => {},
     setActiveTab: () => {},
+    setAuthAlert: () => {},
   };
+
 
   it("renders sign up form and title without Google signup button", () => {
     render(withContext(React.createElement(SignUpPage), mockContext));
@@ -138,4 +140,77 @@ describe("SignUpPage", () => {
       screen.getByRole("button", { name: /cancel \/ dismiss/i }),
     ).toBeInTheDocument();
   });
+
+  it("does not render Mentor type when portal role is mentee", () => {
+    sessionStorage.setItem("portalRole", "mentee");
+    sessionStorage.setItem("portalRoleLabel", "Mentee");
+
+    const menteeForm = {
+      role: "mentee",
+      first_name: "John",
+      last_name: "Doe",
+      email: "johndoe@student.buksu.edu.ph",
+      password1: "Password123!",
+      password2: "Password123!",
+      student_verification_documents: [],
+    };
+
+    render(
+      withContext(React.createElement(SignUpPage), {
+        ...mockContext,
+        signUpForm: menteeForm,
+      }),
+    );
+
+    // Advance to Step 2
+    fireEvent.click(screen.getByRole("button", { name: /continue/i }));
+
+    // Verify Mentee role is shown
+    expect(screen.getByText("Mentee")).toBeInTheDocument();
+    // Mentor type should NOT be present
+    expect(screen.queryByText(/mentor type/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/student mentor or instructor/i)).not.toBeInTheDocument();
+    // Academic mentoring application form should be present
+    expect(screen.getByText(/academic mentoring application form/i)).toBeInTheDocument();
+
+    sessionStorage.removeItem("portalRole");
+    sessionStorage.removeItem("portalRoleLabel");
+  });
+
+  it("renders Mentor type when portal role is mentor", () => {
+    sessionStorage.setItem("portalRole", "mentor");
+    sessionStorage.setItem("portalRoleLabel", "Mentor");
+
+    const mentorForm = {
+      role: "mentor",
+      first_name: "Jane",
+      last_name: "Smith",
+      email: "janesmith@buksu.edu.ph",
+      password1: "Password123!",
+      password2: "Password123!",
+      mentor_role: "",
+      letter_of_intent: [],
+      study_load: [],
+      grade: [],
+      student_verification_documents: [],
+    };
+
+    render(
+      withContext(React.createElement(SignUpPage), {
+        ...mockContext,
+        signUpForm: mentorForm,
+      }),
+    );
+
+    // Advance to Step 2
+    fireEvent.click(screen.getByRole("button", { name: /continue/i }));
+
+    // Mentor type SHOULD be present
+    expect(screen.getByText(/mentor type \*/i)).toBeInTheDocument();
+    expect(screen.getByText(/student mentor or instructor/i)).toBeInTheDocument();
+
+    sessionStorage.removeItem("portalRole");
+    sessionStorage.removeItem("portalRoleLabel");
+  });
 });
+
