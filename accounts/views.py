@@ -96,7 +96,7 @@ def select_google_role(request, role: str):
         return redirect("/app/signin?role_required=1")
     request.session[ROLE_SESSION_KEY] = role
     request.session[GOOGLE_OAUTH_ROLE_SESSION_KEY] = role
-    request.session[INTENT_SESSION_KEY] = SIGNUP_INTENT
+    request.session[INTENT_SESSION_KEY] = "login"
     request.session.save()
     return render(
         request,
@@ -106,20 +106,13 @@ def select_google_role(request, role: str):
 
 
 def start_google_oauth(request, intent: str):
-    """Store login vs signup intent, then POST the user to Google (allauth)."""
+    """Google OAuth is strictly login-only. Redirect any signup attempts to manual registration."""
     normalized = normalize_oauth_intent(intent)
-    request.session[INTENT_SESSION_KEY] = normalized
     if normalized == SIGNUP_INTENT:
-        role = (
-            request.GET.get("role") or request.session.get(ROLE_SESSION_KEY) or ""
-        ).strip().lower()
-        if role not in ("mentor", "mentee"):
-            return redirect("/portal/")
-        request.session[ROLE_SESSION_KEY] = role
-        request.session[GOOGLE_OAUTH_ROLE_SESSION_KEY] = role
-        next_url = "/app/complete-profile?oauth=google"
-    else:
-        next_url = "/app/?oauth=google"
+        messages.info(request, "Google sign up is disabled. Please complete the manual registration.")
+        return redirect("/app/signup")
+    request.session[INTENT_SESSION_KEY] = "login"
+    next_url = "/app/?oauth=google"
     request.session.save()
     return render(
         request,

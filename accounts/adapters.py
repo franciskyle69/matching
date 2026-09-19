@@ -77,8 +77,8 @@ class RoleAwareSocialAccountAdapter(DefaultSocialAccountAdapter):
     """
 
     def is_open_for_signup(self, request, sociallogin):
-        intent = normalize_oauth_intent(request.session.get(INTENT_SESSION_KEY))
-        return intent == SIGNUP_INTENT
+        # Strictly disable social account registration. All registrations must be manual.
+        return False
 
     def pre_social_login(self, request, sociallogin: SocialLogin):
         selected_role = request.session.get(ROLE_SESSION_KEY)
@@ -92,10 +92,20 @@ class RoleAwareSocialAccountAdapter(DefaultSocialAccountAdapter):
             try:
                 validate_institutional_email(email)
             except forms.ValidationError as e:
+                if request.headers.get("x-requested-with") == "XMLHttpRequest" or "application/json" in request.headers.get("accept", ""):
+                    from django.http import JsonResponse
+                    raise ImmediateHttpResponse(
+                        JsonResponse({"error": str(e)}, status=400)
+                    )
                 raise ImmediateHttpResponse(
                     redirect("/app/signin?oauth_error=institutional_email")
                 )
         else:
+            if request.headers.get("x-requested-with") == "XMLHttpRequest" or "application/json" in request.headers.get("accept", ""):
+                from django.http import JsonResponse
+                raise ImmediateHttpResponse(
+                    JsonResponse({"error": "Google account email could not be read."}, status=400)
+                )
             raise ImmediateHttpResponse(redirect("/app/signin?oauth_error=missing_email"))
 
         existing_user = User.objects.filter(email__iexact=email).first()
@@ -107,26 +117,21 @@ class RoleAwareSocialAccountAdapter(DefaultSocialAccountAdapter):
         intent = normalize_oauth_intent(request.session.get(INTENT_SESSION_KEY))
         gate = resolve_google_oauth_gate(intent, account_exists)
         if gate == NO_ACCOUNT:
-            from urllib.parse import urlencode
-            account = getattr(sociallogin, "account", None)
-            extra = getattr(account, "extra_data", None) or {}
-            google_name = extra.get("name") or getattr(user, "first_name", "") or ""
-            if request.headers.get("x-requested-with") == "XMLHttpRequest" or "application/json" in request.headers.get("accept", ""):
-                from django.http import JsonResponse
-                raise ImmediateHttpResponse(
-                    JsonResponse({
-                        "is_registered": False,
-                        "google_email": email,
-                        "google_name": google_name,
-                    })
-                )
-            params = {
-                "is_registered": "false",
-                "google_email": email,
-                "google_name": google_name,
+            error_payload = {
+                "error": "No account found with this email. Please complete the manual registration first."
             }
+            if (
+                request.headers.get("x-requested-with") == "XMLHttpRequest"
+                or "application/json" in request.headers.get("accept", "")
+            ):
+                from django.http import JsonResponse
+                raise ImmediateHttpResponse(JsonResponse(error_payload, status=401))
+            messages.error(
+                request,
+                "No account found with this email. Please complete the manual registration first.",
+            )
             raise ImmediateHttpResponse(
-                redirect(f"/app/?{urlencode(params)}#signup")
+                redirect("/app/signin?oauth_error=no_account")
             )
         if gate == ACCOUNT_EXISTS:
             raise ImmediateHttpResponse(
@@ -140,8 +145,14 @@ class RoleAwareSocialAccountAdapter(DefaultSocialAccountAdapter):
 
         # Update user reference after potential linking
         user = sociallogin.user
-        is_mentor = hasattr(user, "mentor_profile")
-        is_mentee = hasattr(user, "mentee_profile")
+        is_mentor = hasattr(user, "mentor_profile") or (
+            hasattr(user, "profile")
+            and getattr(user.profile, "role", "") in ("STUDENT_MENTOR", "INSTRUCTOR_MENTOR", "mentor")
+        )
+        is_mentee = hasattr(user, "mentee_profile") or (
+            hasattr(user, "profile")
+            and getattr(user.profile, "role", "") in ("MENTEE", "mentee")
+        )
         actual_role = "mentor" if is_mentor else "mentee" if is_mentee else None
 
         # Existing users must match the role selected for this OAuth attempt.

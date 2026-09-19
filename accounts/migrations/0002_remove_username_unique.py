@@ -3,6 +3,7 @@ from django.db import migrations
 
 SQLITE_FORWARD = """
 PRAGMA foreign_keys=off;
+PRAGMA legacy_alter_table=on;
 ALTER TABLE auth_user RENAME TO auth_user_old;
 CREATE TABLE auth_user (
     id integer NOT NULL PRIMARY KEY AUTOINCREMENT,
@@ -44,11 +45,13 @@ SELECT
     date_joined
 FROM auth_user_old;
 DROP TABLE auth_user_old;
+PRAGMA legacy_alter_table=off;
 PRAGMA foreign_keys=on;
 """
 
 SQLITE_REVERSE = """
 PRAGMA foreign_keys=off;
+PRAGMA legacy_alter_table=on;
 ALTER TABLE auth_user RENAME TO auth_user_old;
 CREATE TABLE auth_user (
     id integer NOT NULL PRIMARY KEY AUTOINCREMENT,
@@ -90,6 +93,7 @@ SELECT
     date_joined
 FROM auth_user_old;
 DROP TABLE auth_user_old;
+PRAGMA legacy_alter_table=off;
 PRAGMA foreign_keys=on;
 """
 

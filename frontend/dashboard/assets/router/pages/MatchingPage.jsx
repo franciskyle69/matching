@@ -377,20 +377,24 @@ import GroupsOutlined from "@mui/icons-material/GroupsOutlined";
       setViewedMentorProfile,
       setMentorProfileHashId,
       loadUserProfile,
-      adminPairings,
-      adminPairingsLoading,
-      loadAdminPairings,
     } = ctx;
     const isStaff = !!(
       user?.is_staff || String(user?.role || "").toLowerCase() === "staff"
     );
-    const [staffPairSearch, setStaffPairSearch] = useState("");
-
-    useEffect(() => {
-      if (isStaff && typeof loadAdminPairings === "function") {
-        loadAdminPairings();
-      }
-    }, [user]);
+    if (isStaff) {
+      return (
+        <div className="card matching-page page-shell">
+          <header className="kasandigan-header">
+            <div className="kasandigan-header-content">
+              <h1 className="page-title kasandigan-title">Access restricted</h1>
+              <p className="page-subtitle kasandigan-subtitle">
+                Matching is only available for mentors and mentees.
+              </p>
+            </div>
+          </header>
+        </div>
+      );
+    }
     const Spinner = LoadingSpinner;
     const MatchingLoading = MatchingLoadingAnimation;
     const didAutoLoadRecsRef = useRef(false);
@@ -606,376 +610,19 @@ import GroupsOutlined from "@mui/icons-material/GroupsOutlined";
               <span>AMU Mentorship • Matching</span>
             </div>
             <h1 className="page-title kasandigan-title" style={{ fontSize: "1.75rem" }}>
-              {isStaff
-                ? "Pairings & Matching"
-                : isMentee
-                  ? "Matching"
-                  : "Assigned Mentees"}
+              {isMentee ? "Matching" : "Assigned Mentees"}
               {isMentee && menteeRecUpdating && (
                 <span className="matching-updating-badge" style={{ marginLeft: "10px", fontSize: "11px" }}>Updating…</span>
               )}
             </h1>
             <p className="page-subtitle kasandigan-subtitle">
-              {isStaff
-                ? "Inspect confirmed mentor–mentee pairings, compatibility scores, and detailed reasons why they matched."
-                : isMentee
-                  ? "Personalized mentor recommendations based on your mentoring preferences. Choose a mentor to request a pairing—we match you by subjects and topics you care about."
-                  : "View your official mentees. New mentee requests are auto-accepted when you have available slots."}
+              {isMentee
+                ? "Personalized mentor recommendations based on your mentoring preferences. Choose a mentor to request a pairing—we match you by subjects and topics you care about."
+                : "View your official mentees. New mentee requests are auto-accepted when you have available slots."}
             </p>
           </div>
         </header>
-        {isStaff && (
-          <div className="admin-matching-console-wrap">
-            <section className="dashboard-card kasandigan-card admin-matched-pairs-card" style={{ marginTop: "0" }}>
-              <div className="kasandigan-card-head admin-pairs-head">
-                <div className="kasandigan-card-head-title">
-                  <span className="mentee-dash-icon-wrap" style={{ marginRight: "10px" }}>
-                    <GroupsOutlined fontSize="inherit" />
-                  </span>
-                  <div>
-                    <h2>Active Mentor–Mentee Pairings</h2>
-                    <p className="mentee-muted" style={{ fontSize: "13px", marginTop: "2px" }}>
-                      Real-time confirmed student pairings in the system with full diagnostic reasons why they matched.
-                    </p>
-                  </div>
-                </div>
-                <div className="admin-pairs-head-actions">
-                  <span className="kasandigan-card-badge">
-                    {(adminPairings || []).length} { (adminPairings || []).length === 1 ? "Pair" : "Pairs" }
-                  </span>
-                  <button
-                    type="button"
-                    className="btn kasandigan-btn-secondary"
-                    style={{ marginLeft: "8px", fontSize: "12px", padding: "6px 12px" }}
-                    onClick={() => typeof loadAdminPairings === "function" && loadAdminPairings()}
-                    disabled={adminPairingsLoading}
-                  >
-                    {adminPairingsLoading ? "Refreshing..." : "Refresh"}
-                  </button>
-                </div>
-              </div>
 
-              {/* Search and filter bar */}
-              <div className="admin-pairs-filter-bar">
-                <div className="admin-pairs-search-wrap">
-                  <input
-                    type="text"
-                    className="admin-pairs-search-input"
-                    placeholder="Filter by mentor, mentee, program, or subject..."
-                    value={staffPairSearch}
-                    onChange={(e) => setStaffPairSearch(e.target.value)}
-                  />
-                </div>
-              </div>
-
-              {adminPairingsLoading && (adminPairings || []).length === 0 ? (
-                <div className="admin-pairs-loading" style={{ padding: "36px", textAlign: "center" }}>
-                  <div className="mentee-muted">Loading confirmed pairings...</div>
-                </div>
-              ) : (() => {
-                const pairs = Array.isArray(adminPairings) ? adminPairings : [];
-                const q = staffPairSearch.trim().toLowerCase();
-                const filtered = q
-                  ? pairs.filter((p) => {
-                      const mName = String(p.mentor_display_name || p.mentor_username || "").toLowerCase();
-                      const eName = String(p.mentee_display_name || p.mentee_username || "").toLowerCase();
-                      const mProg = String(p.mentor?.program || "").toLowerCase();
-                      const eProg = String(p.mentee?.program || "").toLowerCase();
-                      const subjs = (p.match_details?.common_subjects || []).join(" ").toLowerCase();
-                      const topcs = (p.match_details?.common_topics || []).join(" ").toLowerCase();
-                      return (
-                        mName.includes(q) ||
-                        eName.includes(q) ||
-                        mProg.includes(q) ||
-                        eProg.includes(q) ||
-                        subjs.includes(q) ||
-                        topcs.includes(q)
-                      );
-                    })
-                  : pairs;
-
-                if (filtered.length === 0) {
-                  return (
-                    <div className="mentee-empty" style={{ padding: "36px 20px" }}>
-                      <p style={{ fontWeight: 600, fontSize: "15px", marginBottom: "6px" }}>
-                        {staffPairSearch ? "No pairs match your search query." : "No confirmed pairings yet."}
-                      </p>
-                      <p className="mentee-muted" style={{ fontSize: "13px", marginBottom: "16px" }}>
-                        {staffPairSearch
-                          ? "Try searching for a different name, subject, or clear the search field."
-                          : "When a mentor accepts a mentee request, their confirmed match and details will automatically appear here."}
-                      </p>
-                      {staffPairSearch && (
-                        <button
-                          type="button"
-                          className="btn kasandigan-btn-secondary"
-                          onClick={() => setStaffPairSearch("")}
-                        >
-                          Clear Filter
-                        </button>
-                      )}
-                    </div>
-                  );
-                }
-
-                return (
-                  <div className="admin-pairs-list">
-                    {filtered.map((pair, idx) => {
-                      const mentor = pair.mentor || {};
-                      const mentee = pair.mentee || {};
-                      const d = pair.match_details || {};
-                      const commonSubjects = d.common_subjects || [];
-                      const commonTopics = d.common_topics || [];
-                      const commonCompetencies = d.common_competencies || [];
-                      const breakdown = getAdminEffectiveBreakdown(pair);
-                      const scoreFmt = formatMatchScore
-                        ? formatMatchScore(pair.score)
-                        : { percentage: Math.round((pair.score || 0.85) * 100), label: "Strong Fit", tier: "high" };
-                      const acceptedDate = pair.accepted_at
-                        ? new Date(pair.accepted_at).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })
-                        : "Active";
-
-                      const mentorName = pair.mentor_display_name || pair.mentor_username || "Mentor";
-                      const menteeName = pair.mentee_display_name || pair.mentee_username || "Mentee";
-
-                      return (
-                        <div key={pair.id || idx} className="admin-pair-card">
-                          {/* Card Top */}
-                          <div className="admin-pair-top">
-                            <div className="admin-pair-index">
-                              <span className="admin-pair-badge">Pair #{idx + 1}</span>
-                              <span className="admin-pair-date mentee-muted">
-                                Matched on {acceptedDate}
-                              </span>
-                            </div>
-                            <div className="admin-pair-score-wrap">
-                              <span className={"mentee-match-badge match-score-tier-" + scoreFmt.tier}>
-                                {scoreFmt.percentage}% · {scoreFmt.label}
-                              </span>
-                              <span className="admin-pair-status-tag">Active Match</span>
-                            </div>
-                          </div>
-
-                          {/* Entities bridge */}
-                          <div className="admin-pair-entities">
-                            {/* Mentor */}
-                            <div className="admin-pair-entity mentor-side">
-                              <div className="admin-pair-avatar-row">
-                                <MatchPersonAvatar name={mentorName} url={mentor.avatar_url} className="match-column-avatar" />
-                                <div className="admin-pair-entity-meta">
-                                  <span className="admin-pair-role-label">Mentor</span>
-                                  <h4 className="admin-pair-name">{mentorName}</h4>
-                                  <span className="mentee-muted" style={{ fontSize: "12px" }}>@{pair.mentor_username}</span>
-                                </div>
-                              </div>
-                              <div className="admin-pair-academic-info">
-                                {mentor.role && (
-                                  <span className="admin-pair-subtag">{mentor.role === "instructor" ? "Instructor Mentor" : "Student Mentor"}</span>
-                                )}
-                                {mentor.program && (
-                                  <span className="mentee-muted" style={{ fontSize: "12px" }}>{mentor.program}{mentor.year_level ? ` • Year ${mentor.year_level}` : ""}</span>
-                                )}
-                              </div>
-                              {mentor.email && (
-                                <a
-                                  href={gmailComposeUrl(mentor.email)}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="admin-pair-contact-link"
-                                >
-                                  <span>✉ {mentor.email}</span>
-                                </a>
-                              )}
-                            </div>
-
-                            {/* Connector bridge */}
-                            <div className="admin-pair-connector">
-                              <div className="admin-connector-line" />
-                              <div className="admin-connector-icon">
-                                ✓
-                              </div>
-                              <div className="admin-connector-line" />
-                            </div>
-
-                            {/* Mentee */}
-                            <div className="admin-pair-entity mentee-side">
-                              <div className="admin-pair-avatar-row">
-                                <MatchPersonAvatar name={menteeName} url={mentee.avatar_url} className="match-column-avatar" />
-                                <div className="admin-pair-entity-meta">
-                                  <span className="admin-pair-role-label">Mentee</span>
-                                  <h4 className="admin-pair-name">{menteeName}</h4>
-                                  <span className="mentee-muted" style={{ fontSize: "12px" }}>@{pair.mentee_username}</span>
-                                </div>
-                              </div>
-                              <div className="admin-pair-academic-info">
-                                <span className="admin-pair-subtag">Student Mentee</span>
-                                {mentee.program && (
-                                  <span className="mentee-muted" style={{ fontSize: "12px" }}>{mentee.program}{mentee.year_level ? ` • Year ${mentee.year_level}` : ""}</span>
-                                )}
-                              </div>
-                              {mentee.email && (
-                                <a
-                                  href={gmailComposeUrl(mentee.email)}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="admin-pair-contact-link"
-                                >
-                                  <span>✉ {mentee.email}</span>
-                                </a>
-                              )}
-                            </div>
-                          </div>
-
-                          {/* Why this match / Diagnostics Shelf */}
-                          <div className="admin-pair-matching-shelf">
-                            {/* Explainable AI Diagnostics */}
-                            <AdminPairXaiBreakdown breakdown={breakdown} />
-
-                            <div className="admin-shelf-section">
-                              <span className="admin-shelf-title">Overlapping Subjects:</span>
-                              <div className="admin-shelf-tags">
-                                {commonSubjects.length > 0 ? (
-                                  commonSubjects.map((s) => (
-                                    <span key={s} className="admin-tag-subject">{s}</span>
-                                  ))
-                                ) : (
-                                  <span className="mentee-muted" style={{ fontSize: "12px" }}>No overlapping subjects — general academic compatibility</span>
-                                )}
-                              </div>
-                            </div>
-
-                            {/* Individual subjects when no overlap or partial overlap */}
-                            {(() => {
-                              const mentorSubjs = d.mentor_subjects || mentor.subjects || [];
-                              const menteeSubjs = d.mentee_subjects || mentee.subjects || [];
-                              if (!mentorSubjs.length && !menteeSubjs.length) return null;
-                              return (
-                                <div className="admin-shelf-section">
-                                  <span className="admin-shelf-title">All Enrolled Subjects:</span>
-                                  <div className="admin-shelf-dual-column">
-                                    <div className="admin-shelf-col">
-                                      <span className="admin-shelf-col-label">Mentor:</span>
-                                      <div className="admin-shelf-tags">
-                                        {mentorSubjs.length > 0
-                                          ? mentorSubjs.map((s) => (
-                                              <span key={s} className="admin-tag-subject-dim">{s}</span>
-                                            ))
-                                          : <span className="mentee-muted" style={{ fontSize: "12px" }}>None listed</span>
-                                        }
-                                      </div>
-                                    </div>
-                                    <div className="admin-shelf-col">
-                                      <span className="admin-shelf-col-label">Mentee:</span>
-                                      <div className="admin-shelf-tags">
-                                        {menteeSubjs.length > 0
-                                          ? menteeSubjs.map((s) => (
-                                              <span key={s} className="admin-tag-subject-dim">{s}</span>
-                                            ))
-                                          : <span className="mentee-muted" style={{ fontSize: "12px" }}>None listed</span>
-                                        }
-                                      </div>
-                                    </div>
-                                  </div>
-                                </div>
-                              );
-                            })()}
-
-                            {/* Topics & Competencies */}
-                            <div className="admin-shelf-section">
-                              <span className="admin-shelf-title">Matched Topics &amp; Competencies:</span>
-                              <div className="admin-shelf-tags">
-                                {[...commonTopics, ...commonCompetencies].length > 0 ? (
-                                  [...commonTopics, ...commonCompetencies].map((t, cIdx) => (
-                                    <span key={t + cIdx} className="admin-tag-competency">{t}</span>
-                                  ))
-                                ) : (
-                                  <span className="mentee-muted" style={{ fontSize: "12px" }}>No shared topics or competencies detected</span>
-                                )}
-                              </div>
-                            </div>
-
-                            {/* Availability — shared overlap + fallback to individual */}
-                            {(() => {
-                              const mentorAvail = Array.isArray(mentor.availability) ? mentor.availability : [];
-                              const menteeAvail = Array.isArray(mentee.availability) ? mentee.availability : [];
-                              const shared = intersectSlots && mentorAvail.length && menteeAvail.length
-                                ? intersectSlots(menteeAvail, mentorAvail)
-                                : [];
-                              return (
-                                <div className="admin-shelf-section">
-                                  <span className="admin-shelf-title">
-                                    {shared.length > 0 ? "Shared Meeting Windows:" : "Individual Schedules:"}
-                                  </span>
-                                  {shared.length > 0 ? (
-                                    <div className="admin-shelf-tags">
-                                      {shared.map((slot) => (
-                                        <span key={slot} className="admin-tag-schedule">
-                                          <span>🕒 {formatSlotLabel(slot)}</span>
-                                        </span>
-                                      ))}
-                                    </div>
-                                  ) : (
-                                    <div className="admin-shelf-dual-column">
-                                      <div className="admin-shelf-col">
-                                        <span className="admin-shelf-col-label">Mentor Hours:</span>
-                                        <div className="admin-shelf-tags">
-                                          {mentorAvail.length > 0
-                                            ? mentorAvail.map((slot) => (
-                                                <span key={slot} className="admin-tag-schedule-dim">
-                                                  {formatSlotLabel(slot)}
-                                                </span>
-                                              ))
-                                            : <span className="mentee-muted" style={{ fontSize: "12px" }}>Not set</span>
-                                          }
-                                        </div>
-                                      </div>
-                                      <div className="admin-shelf-col">
-                                        <span className="admin-shelf-col-label">Mentee Hours:</span>
-                                        <div className="admin-shelf-tags">
-                                          {menteeAvail.length > 0
-                                            ? menteeAvail.map((slot) => (
-                                                <span key={slot} className="admin-tag-schedule-dim">
-                                                  {formatSlotLabel(slot)}
-                                                </span>
-                                              ))
-                                            : <span className="mentee-muted" style={{ fontSize: "12px" }}>Not set</span>
-                                          }
-                                        </div>
-                                      </div>
-                                    </div>
-                                  )}
-                                </div>
-                              );
-                            })()}
-
-                            {/* Learning style & difficulty */}
-                            {(mentee.preferred_learning_style || mentee.difficulty_level) && (
-                              <div className="admin-shelf-section">
-                                <span className="admin-shelf-title">Mentee Learning Preferences:</span>
-                                <div className="admin-shelf-tags">
-                                  {mentee.preferred_learning_style && (
-                                    <span className="admin-tag-competency">
-                                      🎯 {mentee.preferred_learning_style}
-                                    </span>
-                                  )}
-                                  {mentee.difficulty_level && (
-                                    <span className="admin-tag-competency">
-                                      📊 Difficulty: {mentee.difficulty_level}
-                                    </span>
-                                  )}
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                );
-              })()}
-            </section>
-          </div>
-        )}
 
         {isMentee && !menteeQuestionnaireCompleted && (
           <div className="matching-empty">

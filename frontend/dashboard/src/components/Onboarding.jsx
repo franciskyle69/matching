@@ -153,12 +153,15 @@ export default function Onboarding({ user, onComplete }) {
         availability: availabilitySlots,
       };
 
-      const token = localStorage.getItem("accessToken") || localStorage.getItem("token");
-      const headers = {
-        "Content-Type": "application/json",
+      const getCookie = (name) => {
+        const value = `; ${document.cookie}`;
+        const parts = value.split(`; ${name}=`);
+        if (parts.length === 2) return parts.pop().split(";").shift();
+        return "";
       };
-      if (token) {
-        headers["Authorization"] = `Bearer ${token}`;
+      const csrf = getCookie("csrftoken");
+      if (csrf) {
+        headers["X-CSRFToken"] = csrf;
       }
 
       const response = await fetch("/api/user/complete-onboarding/", {

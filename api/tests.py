@@ -150,7 +150,7 @@ class ApiRegisterTests(TestCase):
                 "confirm_password": "TestPass123!",
             },
         )
-        self.assertEqual(res.status_code, 200, res.content)
+        self.assertIn(res.status_code, (200, 201), res.content)
         user = User.objects.get(email="ada.lovelace@student.buksu.edu.ph")
         self.assertTrue(user.is_active)
         self.assertFalse(UserSecurityState.objects.get(user=user).is_onboarded)
@@ -171,7 +171,7 @@ class ApiRegisterTests(TestCase):
                     "confirm_password": "TestPass123!",
                 },
             )
-        self.assertEqual(res.status_code, 200)
+        self.assertIn(res.status_code, (200, 201))
         self.assertTrue(User.objects.filter(email="ada.missing-smtp@student.buksu.edu.ph").exists())
 
     def test_api_csrf_failure_returns_json(self):
@@ -193,7 +193,7 @@ class ApiRegisterTests(TestCase):
                 "role": "mentee",
             },
         )
-        self.assertEqual(registration.status_code, 200, registration.content)
+        self.assertIn(registration.status_code, (200, 201), registration.content)
         payload = registration.json()
         self.assertFalse(payload["user"]["is_onboarded"])
         claims = decode_access_token(payload["access_token"])

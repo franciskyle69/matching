@@ -59,4 +59,10 @@ describe("Register Component", () => {
 
     expect(screen.getByText(/Student accounts require an @student\.buksu\.edu\.ph email address\./i)).toBeInTheDocument();
   });
+
+  it("strictly excludes Google signup button and enforces manual registration", () => {
+    render(<Register />);
+    expect(screen.queryByRole("button", { name: /Google/i })).not.toBeInTheDocument();
+    expect(screen.queryByText(/Google account verified/i)).not.toBeInTheDocument();
+  });
 });
