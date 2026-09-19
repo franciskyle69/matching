@@ -40,6 +40,35 @@ def _social_email(sociallogin):
     return extra.get("email")
 
 
+from allauth.account.adapter import DefaultAccountAdapter
+
+
+class PeerLinkAccountAdapter(DefaultAccountAdapter):
+    """Account adapter tailored for PeerLink's React frontend."""
+
+    def add_message(
+        self,
+        request,
+        level,
+        message_template=None,
+        message_context=None,
+        extra_tags="",
+        message=None,
+    ):
+        # The React SPA provides its own welcome and notifications; suppress
+        # server template session messages that would linger unconsumed.
+        if message_template == "account/messages/logged_in.txt":
+            return
+        super().add_message(
+            request,
+            level,
+            message_template=message_template,
+            message_context=message_context,
+            extra_tags=extra_tags,
+            message=message,
+        )
+
+
 class RoleAwareSocialAccountAdapter(DefaultSocialAccountAdapter):
     """
     Enforce role selection for Google login and create the appropriate
@@ -63,12 +92,10 @@ class RoleAwareSocialAccountAdapter(DefaultSocialAccountAdapter):
             try:
                 validate_institutional_email(email)
             except forms.ValidationError as e:
-                messages.error(request, str(e))
                 raise ImmediateHttpResponse(
                     redirect("/app/signin?oauth_error=institutional_email")
                 )
         else:
-            messages.error(request, "Google account email could not be read.")
             raise ImmediateHttpResponse(redirect("/app/signin?oauth_error=missing_email"))
 
         existing_user = User.objects.filter(email__iexact=email).first()
@@ -102,7 +129,6 @@ class RoleAwareSocialAccountAdapter(DefaultSocialAccountAdapter):
                 redirect(f"/app/?{urlencode(params)}#signup")
             )
         if gate == ACCOUNT_EXISTS:
-            messages.warning(request, SIGNUP_EXISTS_MESSAGE)
             raise ImmediateHttpResponse(
                 redirect("/app/signup?oauth_error=account_exists")
             )

@@ -182,6 +182,31 @@
     html.dark .footer-links a {
       color: #38bdf8 !important;
     }
+    [data-theme="dark"] .auth-feature-item:hover,
+    html.dark .auth-feature-item:hover {
+      background: rgba(56, 189, 248, 0.08) !important;
+    }
+    [data-theme="dark"] .auth-feature-icon-pod,
+    html.dark .auth-feature-icon-pod {
+      background: #12161f !important;
+      border-color: rgba(255, 255, 255, 0.08) !important;
+      box-shadow: inset 2px 2px 5px rgba(0, 0, 0, 0.75), inset -1px -1px 3px rgba(255, 255, 255, 0.03) !important;
+      color: #38bdf8 !important;
+    }
+    [data-theme="dark"] .auth-feature-item:hover .auth-feature-icon-pod,
+    html.dark .auth-feature-item:hover .auth-feature-icon-pod {
+      color: #7dd3fc !important;
+      border-color: rgba(56, 189, 248, 0.45) !important;
+      box-shadow: inset 2px 2px 5px rgba(0, 0, 0, 0.8), 0 0 12px rgba(56, 189, 248, 0.3) !important;
+    }
+    [data-theme="dark"] .auth-feature-title,
+    html.dark .auth-feature-title {
+      color: #f1f5f9 !important;
+    }
+    [data-theme="dark"] .auth-feature-desc,
+    html.dark .auth-feature-desc {
+      color: #94a3b8 !important;
+    }
     [data-theme="dark"] .login-back-button,
     [data-theme="dark"] .signup-back-button,
     html.dark .login-back-button,
@@ -495,6 +520,197 @@
       border-radius: 8px;
       margin-bottom: 1rem;
     }
+    .django-messages-container {
+      width: min(980px, 100%);
+      margin: 0 auto 1.25rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.65rem;
+      box-sizing: border-box;
+    }
+    .alert-banner {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.85rem 1.15rem;
+      border-radius: 12px;
+      font-size: 0.875rem;
+      font-weight: 500;
+      line-height: 1.45;
+      box-sizing: border-box;
+      box-shadow: var(--shadow);
+    }
+    .alert-banner-icon {
+      flex-shrink: 0;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .alert-banner-text {
+      flex: 1;
+    }
+    .alert-banner--error {
+      background: var(--error-bg);
+      border: 1px solid rgba(220, 38, 38, 0.35);
+      color: var(--error);
+    }
+    .alert-banner--warning {
+      background: rgba(245, 158, 11, 0.12);
+      border: 1px solid rgba(245, 158, 11, 0.35);
+      color: #b45309;
+    }
+    [data-theme="dark"] .alert-banner--warning {
+      background: rgba(245, 158, 11, 0.16);
+      border-color: rgba(245, 158, 11, 0.45);
+      color: #fbbf24;
+    }
+    .alert-banner--success {
+      background: rgba(34, 197, 94, 0.12);
+      border: 1px solid rgba(34, 197, 94, 0.35);
+      color: #15803d;
+    }
+    [data-theme="dark"] .alert-banner--success {
+      background: rgba(34, 197, 94, 0.16);
+      border-color: rgba(34, 197, 94, 0.45);
+      color: #4ade80;
+    }
+    .alert-banner--info {
+      background: var(--accent-light);
+      border: 1px solid var(--border);
+      color: var(--text);
+    }
+    /* Toast Notification System */
+    .toast-container {
+      position: fixed;
+      top: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 999999;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      width: min(480px, calc(100vw - 32px));
+      pointer-events: none;
+    }
+    .toast-item {
+      pointer-events: auto;
+      width: 100%;
+      box-sizing: border-box;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 18px;
+      border-radius: 12px;
+      font-size: 0.875rem;
+      font-weight: 600;
+      line-height: 1.45;
+      box-shadow: 0 12px 30px -4px rgba(0, 0, 0, 0.18), 0 4px 12px -2px rgba(0, 0, 0, 0.08);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      animation: toastSlideDown 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      transition: transform 0.25s ease, opacity 0.25s ease;
+    }
+    .toast-item.toast-hiding {
+      animation: toastSlideUp 0.3s cubic-bezier(0.4, 0, 1, 1) forwards;
+    }
+    @keyframes toastSlideDown {
+      from {
+        opacity: 0;
+        transform: translateY(-20px) scale(0.96);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+    @keyframes toastSlideUp {
+      from {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+      to {
+        opacity: 0;
+        transform: translateY(-16px) scale(0.96);
+      }
+    }
+    .toast-item--error {
+      background: rgba(254, 242, 242, 0.96);
+      border: 1px solid rgba(239, 68, 68, 0.45);
+      color: #991b1b;
+    }
+    [data-theme="dark"] .toast-item--error {
+      background: rgba(45, 18, 22, 0.96);
+      border-color: rgba(248, 113, 113, 0.45);
+      color: #fca5a5;
+    }
+    .toast-item--warning {
+      background: rgba(254, 252, 232, 0.96);
+      border: 1px solid rgba(245, 158, 11, 0.45);
+      color: #92400e;
+    }
+    [data-theme="dark"] .toast-item--warning {
+      background: rgba(48, 30, 12, 0.96);
+      border-color: rgba(245, 158, 11, 0.5);
+      color: #fde047;
+    }
+    .toast-item--success {
+      background: rgba(240, 253, 244, 0.96);
+      border: 1px solid rgba(34, 197, 94, 0.45);
+      color: #166534;
+    }
+    [data-theme="dark"] .toast-item--success {
+      background: rgba(16, 40, 25, 0.96);
+      border-color: rgba(74, 222, 128, 0.45);
+      color: #86efac;
+    }
+    .toast-item--info {
+      background: rgba(238, 242, 255, 0.96);
+      border: 1px solid rgba(99, 102, 241, 0.45);
+      color: #3730a3;
+    }
+    [data-theme="dark"] .toast-item--info {
+      background: rgba(24, 28, 50, 0.96);
+      border-color: rgba(129, 140, 248, 0.45);
+      color: #c7d2fe;
+    }
+    .toast-icon {
+      flex-shrink: 0;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .toast-message {
+      flex: 1;
+      word-break: break-word;
+    }
+    .toast-close {
+      background: none;
+      border: none;
+      color: currentColor;
+      opacity: 0.6;
+      cursor: pointer;
+      padding: 2px 6px;
+      font-size: 1.25rem;
+      line-height: 1;
+      border-radius: 6px;
+      transition: opacity 0.15s ease, background-color 0.15s ease;
+    }
+    .toast-close:hover {
+      opacity: 1;
+      background: rgba(0, 0, 0, 0.06);
+    }
+    [data-theme="dark"] .toast-close:hover {
+      background: rgba(255, 255, 255, 0.1);
+    }
+    /* Hide raw ul.errorlist so bullets never show */
+    ul.errorlist {
+      display: none !important;
+    }
+    .input-has-error {
+      border-color: #ef4444 !important;
+      box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.25) !important;
+    }
     .helptext {
       font-size: .8125rem;
       color: var(--text-muted);
@@ -564,6 +780,18 @@
     .divider { margin: 1rem 0; color: var(--text-muted); }
 
     /* Split auth layout (welcome panel + form panel) */
+    body.auth-page {
+      display: flex !important;
+      flex-direction: column !important;
+      min-height: 100vh !important;
+      margin: 0 !important;
+    }
+    body.auth-page > .main {
+      flex: 1 0 auto !important;
+      width: 100% !important;
+      max-width: 980px !important;
+      box-sizing: border-box !important;
+    }
     .auth-shell {
       max-width: 980px;
       margin: 3rem auto;
@@ -604,6 +832,70 @@
     }
     .auth-panel-left li + li {
       margin-top: .25rem;
+    }
+    /* ── Auth Feature Info Pods ─────────────────────── */
+    .auth-feature-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-top: 14px;
+      margin-bottom: 8px;
+      width: 100%;
+    }
+    .auth-feature-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 6px 8px;
+      border-radius: 12px;
+      transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.22s ease;
+    }
+    .auth-feature-item:hover {
+      transform: translateX(4px);
+      background: rgba(14, 165, 233, 0.06);
+    }
+    .auth-feature-icon-pod {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 36px;
+      height: 36px;
+      min-width: 36px;
+      min-height: 36px;
+      border-radius: 11px;
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      box-shadow: inset 1px 1px 3px rgba(166, 180, 200, 0.35), inset -1px -1px 3px #ffffff, 0 1px 3px rgba(0, 0, 0, 0.04);
+      color: #0284c7;
+      flex-shrink: 0;
+      transition: all 0.22s ease;
+    }
+    .auth-feature-item:hover .auth-feature-icon-pod {
+      color: #0369a1;
+      box-shadow: inset 1px 1px 2px rgba(166, 180, 200, 0.4), inset -1px -1px 2px #ffffff, 0 0 10px rgba(14, 165, 233, 0.25);
+      border-color: rgba(56, 189, 248, 0.5);
+    }
+    .auth-feature-svg {
+      width: 18px;
+      height: 18px;
+    }
+    .auth-feature-text {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .auth-feature-title {
+      font-size: 0.88rem;
+      font-weight: 700;
+      color: #0f172a;
+      line-height: 1.25;
+      letter-spacing: -0.01em;
+    }
+    .auth-feature-desc {
+      font-size: 0.78rem;
+      font-weight: 450;
+      color: #475569;
+      line-height: 1.4;
     }
     .auth-panel-right {
       padding: 2.25rem 2.5rem;
@@ -692,6 +984,7 @@
   </style>
 </head>
 <body class="{% if not user.is_authenticated %}auth-page{% endif %}{% block body_class %}{% endblock %}">
+  <div id="toast-container" class="toast-container" aria-live="polite" aria-atomic="true"></div>
   {% if user.is_authenticated %}
   <div class="app-shell">
     <aside class="sidebar">
@@ -760,11 +1053,9 @@
   {% endif %}
   <main class="{% if user.is_authenticated %}app-content with-sidebar {% else %}main {% endif %}{% block main_class %}{% endblock %}">
     {% if messages %}
-      <div style="margin-bottom: 1rem;">
+      <div id="django-messages-data" style="display:none;" aria-hidden="true">
         {% for message in messages %}
-          <div class="errornote" style="margin-bottom:.5rem;{% if message.tags == 'info' %}background:var(--accent-light);color:var(--accent);border:1px solid var(--border);{% endif %}">
-            {{ message }}
-          </div>
+          <div data-message="{{ message }}" data-tags="{% if 'error' in message.tags %}error{% elif 'warning' in message.tags %}warning{% elif 'success' in message.tags %}success{% else %}info{% endif %}"></div>
         {% endfor %}
       </div>
     {% endif %}
@@ -865,14 +1156,165 @@
       });
     })();
 
+    /* ── Toast Notification & Form Error Engine ─────────── */
     (function() {
-      const overlay = document.getElementById("loading-overlay");
-      function showLoading() {
-        if (overlay) overlay.classList.add("active");
+      var container = document.getElementById("toast-container");
+      function getContainer() {
+        if (!container) {
+          container = document.getElementById("toast-container");
+          if (!container) {
+            container = document.createElement("div");
+            container.id = "toast-container";
+            container.className = "toast-container";
+            container.setAttribute("aria-live", "polite");
+            container.setAttribute("aria-atomic", "true");
+            document.body.appendChild(container);
+          }
+        }
+        return container;
       }
-      document.querySelectorAll("form").forEach((form) => {
-        form.addEventListener("submit", () => showLoading());
-      });
+
+      window.showToast = function(message, type, duration) {
+        if (!message) return;
+        type = type || "info";
+        duration = duration || 4000;
+
+        var c = getContainer();
+        var item = document.createElement("div");
+        item.className = "toast-item toast-item--" + type;
+        item.setAttribute("role", "alert");
+
+        var iconSvg = "";
+        if (type === "error") {
+          iconSvg = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>';
+        } else if (type === "warning") {
+          iconSvg = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>';
+        } else if (type === "success") {
+          iconSvg = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>';
+        } else {
+          iconSvg = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>';
+        }
+
+        var iconSpan = document.createElement("span");
+        iconSpan.className = "toast-icon";
+        iconSpan.innerHTML = iconSvg;
+
+        var msgSpan = document.createElement("span");
+        msgSpan.className = "toast-message";
+        msgSpan.textContent = message;
+
+        var closeBtn = document.createElement("button");
+        closeBtn.type = "button";
+        closeBtn.className = "toast-close";
+        closeBtn.setAttribute("aria-label", "Close");
+        closeBtn.innerHTML = "&times;";
+
+        item.appendChild(iconSpan);
+        item.appendChild(msgSpan);
+        item.appendChild(closeBtn);
+
+        var dismissTimer;
+        function dismiss() {
+          if (item.classList.contains("toast-hiding")) return;
+          item.classList.add("toast-hiding");
+          setTimeout(function() {
+            if (item.parentNode) item.parentNode.removeChild(item);
+          }, 320);
+        }
+
+        closeBtn.addEventListener("click", function(e) {
+          e.stopPropagation();
+          clearTimeout(dismissTimer);
+          dismiss();
+        });
+
+        item.addEventListener("mouseenter", function() {
+          clearTimeout(dismissTimer);
+        });
+        item.addEventListener("mouseleave", function() {
+          dismissTimer = setTimeout(dismiss, 1600);
+        });
+
+        c.appendChild(item);
+        dismissTimer = setTimeout(dismiss, duration);
+      };
+
+      function initPageToasts() {
+        // 1. Flush server session messages
+        var msgData = document.getElementById("django-messages-data");
+        if (msgData) {
+          var children = msgData.children;
+          for (var i = 0; i < children.length; i++) {
+            var msg = children[i].getAttribute("data-message");
+            var tags = children[i].getAttribute("data-tags") || "info";
+            if (msg) {
+              window.showToast(msg, tags, 4500);
+            }
+          }
+        }
+
+        // 2. Scan form errorlists and convert to toast popups
+        document.querySelectorAll("ul.errorlist").forEach(function(ul) {
+          var group = ul.closest(".form-group") || ul.parentElement;
+          if (group) {
+            var inp = group.querySelector("input, select, textarea");
+            if (inp) {
+              inp.classList.add("input-has-error");
+              inp.addEventListener("input", function() {
+                inp.classList.remove("input-has-error");
+              }, { once: true });
+            }
+          }
+          ul.querySelectorAll("li").forEach(function(li) {
+            var errText = li.textContent.trim();
+            if (errText) {
+              window.showToast(errText, "error", 4500);
+            }
+          });
+          ul.style.display = "none";
+        });
+
+        // 3. Scan standalone errornotes
+        document.querySelectorAll(".errornote:not(.alert-banner)").forEach(function(note) {
+          var txt = note.textContent.trim();
+          if (txt) {
+            window.showToast(txt, "error", 4500);
+            note.style.display = "none";
+          }
+        });
+
+        // 4. Form submit validation and loading management
+        var overlay = document.getElementById("loading-overlay");
+        document.querySelectorAll("form").forEach(function(form) {
+          form.addEventListener("submit", function(e) {
+            var requiredInputs = form.querySelectorAll("input[required], input[name='email']");
+            for (var i = 0; i < requiredInputs.length; i++) {
+              var input = requiredInputs[i];
+              if (!input.value || !input.value.trim()) {
+                e.preventDefault();
+                e.stopImmediatePropagation();
+                input.classList.add("input-has-error");
+                input.focus();
+                var label = form.querySelector("label[for='" + input.id + "']");
+                var name = label ? label.textContent.replace(/[*:]/g, "").trim() : "This field";
+                window.showToast(name + " is required.", "warning", 3800);
+                input.addEventListener("input", function() {
+                  input.classList.remove("input-has-error");
+                }, { once: true });
+                if (overlay) overlay.classList.remove("active");
+                return false;
+              }
+            }
+            if (overlay) overlay.classList.add("active");
+          });
+        });
+      }
+
+      if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", initPageToasts);
+      } else {
+        initPageToasts();
+      }
     })();
   </script>
   {% block extra_js %}{% endblock %}

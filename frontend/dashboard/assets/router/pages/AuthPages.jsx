@@ -152,6 +152,49 @@ import {
     );
   }
 
+  function NeuThemeToggle({ theme, toggleTheme }) {
+    const isDark = theme === "dark";
+    return (
+      <button
+        type="button"
+        className="auth-neu-theme-btn"
+        onClick={toggleTheme}
+        aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
+        title={isDark ? "Switch to light mode" : "Switch to dark mode"}
+      >
+        {isDark ? (
+          <svg
+            className="auth-neu-theme-icon-sun"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <circle cx="12" cy="12" r="4" />
+            <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41" />
+          </svg>
+        ) : (
+          <svg
+            className="auth-neu-theme-icon-moon"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+          </svg>
+        )}
+        <span>{isDark ? "Light" : "Dark"}</span>
+      </button>
+    );
+  }
+
   function getGoogleLoginUrl() {
     return "/accounts/google/start/login/";
   }
@@ -370,6 +413,16 @@ import {
   }
 
   function AuthAlertBanner({ authAlert, setAuthAlert, defaultTitle }) {
+    useEffect(() => {
+      if (!authAlert || isOauthMismatchAlert(authAlert)) return;
+      const timer = setTimeout(() => {
+        if (typeof setAuthAlert === "function") {
+          setAuthAlert(null);
+        }
+      }, 4500);
+      return () => clearTimeout(timer);
+    }, [authAlert, setAuthAlert]);
+
     if (!authAlert || isOauthMismatchAlert(authAlert)) return null;
     const body = (
       <div className="auth-alert-content">
@@ -415,6 +468,51 @@ import {
     );
   }
 
+  function AuthFeatureInfoList() {
+    return (
+      <div className="auth-feature-list">
+        <div className="auth-feature-item">
+          <div className="auth-feature-icon-pod" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="auth-feature-svg">
+              <path d="M12 2a4 4 0 0 1 4 4c0 1.1-.5 2.1-1.2 2.8L12 18l-2.8-9.2A4 4 0 0 1 12 2z" />
+              <circle cx="12" cy="6" r="1.5" />
+              <path d="M4.5 15.5c1.2-1.2 3.3-1.2 4.5 0" />
+              <path d="M15 15.5c1.2-1.2 3.3-1.2 4.5 0" />
+            </svg>
+          </div>
+          <div className="auth-feature-text">
+            <div className="auth-feature-title">AI-Powered Matching</div>
+            <div className="auth-feature-desc">Intelligent XGBoost pairing based on academic expertise &amp; goals.</div>
+          </div>
+        </div>
+        <div className="auth-feature-item">
+          <div className="auth-feature-icon-pod" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="auth-feature-svg">
+              <path d="M3 3v18h18" />
+              <path d="m19 9-5 5-4-4-3 3" />
+            </svg>
+          </div>
+          <div className="auth-feature-text">
+            <div className="auth-feature-title">Milestones &amp; Analytics</div>
+            <div className="auth-feature-desc">Track study sessions, goals, and academic growth in real-time.</div>
+          </div>
+        </div>
+        <div className="auth-feature-item">
+          <div className="auth-feature-icon-pod" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="auth-feature-svg">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+              <path d="m9 12 2 2 4-4" />
+            </svg>
+          </div>
+          <div className="auth-feature-text">
+            <div className="auth-feature-title">Verified AMU Platform</div>
+            <div className="auth-feature-desc">Accredited BukSU Academic Mentoring platform with coordinator oversight.</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   function SignInPage() {
     const ctx = useContext(AppContext);
     if (!ctx) return null;
@@ -428,6 +526,8 @@ import {
       authAlert,
       setAuthAlert,
       user,
+      theme,
+      toggleTheme,
     } = ctx;
     const queryParams = new URLSearchParams(window.location.search || "");
     const roleRequired = ["1", "true", "yes", "on"].includes(
@@ -456,6 +556,7 @@ import {
           </div>
         )}
         <NeuBackButton onClick={goBackToLanding} label="Back to Home" />
+        <NeuThemeToggle theme={theme} toggleTheme={toggleTheme} />
         <div className="auth-card">
           <div className="auth-card-left">
             <div className="auth-left-top">
@@ -478,11 +579,7 @@ import {
                 Access your personalized learning dashboard and continue your
                 journey with expert mentors.
               </p>
-              <ul className="auth-left-points">
-                <li>Secure authentication</li>
-                <li>Track your progress</li>
-                <li>Connect with mentors</li>
-              </ul>
+              <AuthFeatureInfoList />
             </div>
             {window.DashboardApp.AmuFooter ? (
               <window.DashboardApp.AmuFooter compact />
@@ -691,6 +788,8 @@ import {
       signUpLoading,
       authAlert,
       setAuthAlert,
+      theme,
+      toggleTheme,
     } = ctx;
     const portalRoleLabel = getPortalRoleLabel();
     const portalAuthRole = getPortalAuthRole();
@@ -798,6 +897,7 @@ import {
           }}
           label={signupStep === 2 ? "Back to Step 1" : "Back to Home"}
         />
+        <NeuThemeToggle theme={theme} toggleTheme={toggleTheme} />
         <div className="auth-card">
           <div className="auth-card-left">
             <div className="auth-left-top">
@@ -820,11 +920,7 @@ import {
                 Access your personalized learning dashboard and continue your
                 journey with expert mentors.
               </p>
-              <ul className="auth-left-points">
-                <li>Secure authentication</li>
-                <li>Track your progress</li>
-                <li>Connect with mentors</li>
-              </ul>
+              <AuthFeatureInfoList />
             </div>
             {window.DashboardApp.AmuFooter ? (
               <window.DashboardApp.AmuFooter compact />

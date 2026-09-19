@@ -156,6 +156,93 @@
       margin-top: .25rem;
     }
 
+    /* ── Auth Feature Info Pods ─────────────────────── */
+    .auth-feature-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-top: 14px;
+      margin-bottom: 8px;
+      width: 100%;
+    }
+    .auth-feature-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 6px 8px;
+      border-radius: 12px;
+      transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.22s ease;
+    }
+    .auth-feature-item:hover {
+      transform: translateX(4px);
+      background: rgba(14, 165, 233, 0.08);
+    }
+    .auth-feature-icon-pod {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 36px;
+      height: 36px;
+      min-width: 36px;
+      min-height: 36px;
+      border-radius: 11px;
+      background: rgba(2, 6, 23, 0.6);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      box-shadow: inset 1px 1px 3px rgba(0, 0, 0, 0.6), 0 1px 2px rgba(0, 0, 0, 0.3);
+      color: #38bdf8;
+      flex-shrink: 0;
+      transition: all 0.22s ease;
+    }
+    .auth-feature-item:hover .auth-feature-icon-pod {
+      color: #7dd3fc;
+      box-shadow: inset 1px 1px 2px rgba(0, 0, 0, 0.8), 0 0 12px rgba(56, 189, 248, 0.3);
+      border-color: rgba(56, 189, 248, 0.5);
+    }
+    .auth-feature-svg {
+      width: 18px;
+      height: 18px;
+    }
+    .auth-feature-text {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .auth-feature-title {
+      font-size: 0.88rem;
+      font-weight: 700;
+      color: var(--signup-text);
+      line-height: 1.25;
+      letter-spacing: -0.01em;
+    }
+    .auth-feature-desc {
+      font-size: 0.78rem;
+      font-weight: 450;
+      color: var(--signup-muted);
+      line-height: 1.4;
+    }
+
+    /* Light mode overrides for auth feature pods */
+    html:not([data-theme="dark"]):not(.dark) .auth-feature-item:hover {
+      background: rgba(14, 165, 233, 0.06);
+    }
+    html:not([data-theme="dark"]):not(.dark) .auth-feature-icon-pod {
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      box-shadow: inset 1px 1px 3px rgba(166, 180, 200, 0.35), inset -1px -1px 3px #ffffff, 0 1px 3px rgba(0, 0, 0, 0.04);
+      color: #0284c7;
+    }
+    html:not([data-theme="dark"]):not(.dark) .auth-feature-item:hover .auth-feature-icon-pod {
+      color: #0369a1;
+      box-shadow: inset 1px 1px 2px rgba(166, 180, 200, 0.4), inset -1px -1px 2px #ffffff, 0 0 10px rgba(14, 165, 233, 0.25);
+      border-color: rgba(56, 189, 248, 0.5);
+    }
+    html:not([data-theme="dark"]):not(.dark) .auth-feature-title {
+      color: #0f172a;
+    }
+    html:not([data-theme="dark"]):not(.dark) .auth-feature-desc {
+      color: #475569;
+    }
+
     .auth-signup-page .auth-panel-left h1,
     .auth-signup-page .auth-panel-right h2,
     .auth-signup-page .form-group label {
@@ -653,11 +740,46 @@
           <p>
             Get matched with expert mentors using our matching system designed for first‑year IT students.
           </p>
-          <ul>
-            <li>XGBoost-based matching algorithm</li>
-            <li>Personalized learning goals</li>
-            <li>Smart session scheduling</li>
-          </ul>
+          <div class="auth-feature-list">
+            <div class="auth-feature-item">
+              <div class="auth-feature-icon-pod" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="auth-feature-svg">
+                  <path d="M12 2a4 4 0 0 1 4 4c0 1.1-.5 2.1-1.2 2.8L12 18l-2.8-9.2A4 4 0 0 1 12 2z"></path>
+                  <circle cx="12" cy="6" r="1.5"></circle>
+                  <path d="M4.5 15.5c1.2-1.2 3.3-1.2 4.5 0"></path>
+                  <path d="M15 15.5c1.2-1.2 3.3-1.2 4.5 0"></path>
+                </svg>
+              </div>
+              <div class="auth-feature-text">
+                <div class="auth-feature-title">AI-Powered Matching</div>
+                <div class="auth-feature-desc">Intelligent XGBoost pairing based on academic expertise &amp; goals.</div>
+              </div>
+            </div>
+            <div class="auth-feature-item">
+              <div class="auth-feature-icon-pod" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="auth-feature-svg">
+                  <path d="M3 3v18h18"></path>
+                  <path d="m19 9-5 5-4-4-3 3"></path>
+                </svg>
+              </div>
+              <div class="auth-feature-text">
+                <div class="auth-feature-title">Milestones &amp; Analytics</div>
+                <div class="auth-feature-desc">Track study sessions, goals, and academic growth in real-time.</div>
+              </div>
+            </div>
+            <div class="auth-feature-item">
+              <div class="auth-feature-icon-pod" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="auth-feature-svg">
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                  <path d="m9 12 2 2 4-4"></path>
+                </svg>
+              </div>
+              <div class="auth-feature-text">
+                <div class="auth-feature-title">Verified AMU Platform</div>
+                <div class="auth-feature-desc">Accredited BukSU Academic Mentoring platform with coordinator oversight.</div>
+              </div>
+            </div>
+          </div>
         </div>
         <div class="signup-brand-footer">
           <strong>Bukidnon State University — AMU</strong>
