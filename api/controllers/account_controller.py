@@ -50,7 +50,7 @@ from accounts.models import (
     MentorDocument,
     get_user_profile,
 )
-from ..serializers import upload_to_cloudinary
+from ..serializers import upload_to_cloudinary, OnboardingPreferenceSerializer
 from accounts.views import (
     ROLE_SESSION_KEY,
     PASSWORD_CHANGE_CODE_SESSION_KEY,
@@ -1836,22 +1836,52 @@ def complete_onboarding(request):
         except Exception:
             metadata = {}
 
-    subjects = payload.get("subjects") or metadata.get("subjects") or []
-    skills = payload.get("skills") or payload.get("topics") or metadata.get("skills") or metadata.get("topics") or []
-    availability = payload.get("availability") or metadata.get("availability") or []
-    support_need = payload.get("support_need") or metadata.get("support_need") or payload.get("difficulty_level") or metadata.get("difficulty_level")
-    try:
-        support_need = int(support_need) if support_need is not None else 3
-    except (ValueError, TypeError):
-        support_need = 3
+    val_payload = dict(payload)
+    if "subjects" not in val_payload and "subjects" in metadata:
+        val_payload["subjects"] = metadata["subjects"]
+    if "topics" not in val_payload and "topics" in metadata:
+        val_payload["topics"] = metadata["topics"]
+    if "competencies" not in val_payload and "competencies" in metadata:
+        val_payload["competencies"] = metadata["competencies"]
+    if "competency_ids" not in val_payload and "competency_ids" in metadata:
+        val_payload["competency_ids"] = metadata["competency_ids"]
+    if "skills" not in val_payload and "skills" in metadata:
+        val_payload["skills"] = metadata["skills"]
+    if "availability_slots" not in val_payload and "availability_slots" in metadata:
+        val_payload["availability_slots"] = metadata["availability_slots"]
+    if "availability" not in val_payload and "availability" in metadata:
+        val_payload["availability"] = metadata["availability"]
 
-    if not isinstance(subjects, list):
-        subjects = [s.strip() for s in str(subjects).split(",") if s.strip()]
-    if not isinstance(skills, list):
-        skills = [s.strip() for s in str(skills).split(",") if s.strip()]
-    if isinstance(availability, list):
+    # Validate against strict role-based min-max bounds and hierarchy integrity
+    serializer = OnboardingPreferenceSerializer(data=val_payload, context={"request": request})
+    if not serializer.is_valid():
+        first_field = next(iter(serializer.errors))
+        first_err = serializer.errors[first_field]
+        if isinstance(first_err, list) and first_err:
+            msg = str(first_err[0])
+        elif isinstance(first_err, dict):
+            sub_k = next(iter(first_err))
+            sub_val = first_err[sub_k]
+            msg = str(sub_val[0]) if isinstance(sub_val, list) and sub_val else str(sub_val)
+        else:
+            msg = str(first_err)
+        return JsonResponse({
+            "error": msg,
+            "detail": msg,
+            "errors": serializer.errors,
+        }, status=400)
+
+    validated = serializer.validated_data
+    subjects = validated["subject_names"]
+    topics = validated["topic_names"]
+    competency_objs = validated["resolved_competencies"]
+    competency_ids = validated["competency_ids"]
+    raw_availability = validated["availability_slots"]
+    support_need = validated.get("support_need", 3)
+
+    if isinstance(raw_availability, list):
         norm_slots = []
-        for s in availability:
+        for s in raw_availability:
             if isinstance(s, dict):
                 d = str(s.get("day", "")).strip()[:3]
                 start = str(s.get("start_time", "09:00")).strip()
@@ -1914,12 +1944,20 @@ def complete_onboarding(request):
             profile.avatar_url = image_url
         profile.availability = availability
         profile.subjects = subjects
-        profile.skills = skills
-        profile.topics = skills
+        profile.skills = topics
+        profile.topics = topics
         profile.expertise_level = support_need
         profile.approved = True
         profile.save()
-        _sync_user_topic_preferences(request.user, "teach", subjects, skills)
+        if competency_objs:
+            profile.competencies.set(competency_objs)
+            for comp in competency_objs:
+                MentorCompetency.objects.update_or_create(
+                    mentor=profile,
+                    competency=comp,
+                    defaults={"proficiency_level": support_need},
+                )
+        _sync_user_topic_preferences(request.user, "teach", subjects, topics)
         invalidate_approval_cache_mentor(profile.id)
     else:
         profile.year_level = year_level
@@ -1931,12 +1969,20 @@ def complete_onboarding(request):
             profile.avatar_url = image_url
         profile.availability = availability
         profile.subjects = subjects
-        profile.skills = skills
-        profile.topics = skills
+        profile.skills = topics
+        profile.topics = topics
         profile.difficulty_level = support_need
         profile.approved = True
         profile.save()
-        _sync_user_topic_preferences(request.user, "support", subjects, skills)
+        if competency_objs:
+            profile.competencies.set(competency_objs)
+            for comp in competency_objs:
+                MenteeCompetencyNeed.objects.update_or_create(
+                    mentee=profile,
+                    competency=comp,
+                    defaults={"need_level": support_need},
+                )
+        _sync_user_topic_preferences(request.user, "support", subjects, topics)
         invalidate_approval_cache_mentee(profile.id)
 
     user_profile.is_onboarded = True

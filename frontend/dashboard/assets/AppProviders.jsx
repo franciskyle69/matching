@@ -179,7 +179,8 @@
       display_name: "",
       password: "",
       confirm_password: "",
-      role: "mentor",
+      role: getPortalAuthRole() || "mentor",
+
       mentor_role: "",
       gender: "",
       year_level: "",

@@ -162,11 +162,11 @@ import ExpandLess from "@mui/icons-material/ExpandLess";
         wanted.has(String(item).trim().toLowerCase()),
       );
     }
-    if (!subjects.length) {
-      subjects = personSubjects.slice(0, extras.chipLimit);
-    }
-    if (!competencies.length && topics.length) competencies = topics;
-    else if (topics.length) {
+    // Strict intersection: Do NOT fall back to personSubjects when intersection is 0!
+
+    if (!competencies.length && topics.length) {
+      competencies = topics;
+    } else if (topics.length) {
       const seen = new Set(
         competencies.map((item) => String(item).trim().toLowerCase()),
       );
@@ -177,12 +177,7 @@ import ExpandLess from "@mui/icons-material/ExpandLess";
         competencies.push(item);
       });
     }
-    if (!competencies.length) {
-      competencies = (Array.isArray(person.topics) ? person.topics : []).slice(
-        0,
-        extras.chipLimit,
-      );
-    }
+    // Strict intersection: Do NOT fall back to person.topics when intersection is 0!
 
     const menteeSlots = menteeMatching?.availability || [];
     const personSlots = person.availability || [];
@@ -191,11 +186,7 @@ import ExpandLess from "@mui/icons-material/ExpandLess";
       const shared = intersectSlots(menteeSlots, personSlots);
       scheduleChips = shared.slice(0, extras.chipLimit).map(formatSlotLabel);
     }
-    if (!scheduleChips.length) {
-      scheduleChips = (personSlots || [])
-        .slice(0, extras.chipLimit)
-        .map(formatSlotLabel);
-    }
+    // Strict intersection: Do NOT fall back to personSlots when shared time is 0!
 
     return {
       subjects: subjects.slice(0, extras.chipLimit),
@@ -234,6 +225,9 @@ import ExpandLess from "@mui/icons-material/ExpandLess";
     const commonSubjs = Array.isArray(matchDetails?.common_subjects) ? matchDetails.common_subjects : [];
     const commonTopics = Array.isArray(matchDetails?.common_topics) ? matchDetails.common_topics : [];
     const commonComps = Array.isArray(matchDetails?.common_competencies) ? matchDetails.common_competencies : [];
+    const hasAcademic = Boolean(commonSubjs.length || commonTopics.length);
+    const hasCompetency = Boolean(commonComps.length);
+
     return {
       overall_score: Number(score),
       overall_percentage: overallPct,
@@ -243,22 +237,22 @@ import ExpandLess from "@mui/icons-material/ExpandLess";
       factors: {
         academic: {
           label: "Academic & Subject Fit",
-          score: Math.min(100, Math.max(35, overallPct + 2)),
+          score: hasAcademic ? Math.min(100, Math.max(35, overallPct + 2)) : 0,
           weight_pct: 40,
           shared_subjects: commonSubjs,
           shared_topics: commonTopics,
-          summary: (commonSubjs.length || commonTopics.length)
+          summary: hasAcademic
             ? `${commonSubjs.length} shared course(s), ${commonTopics.length} topic(s)`
-            : "Curriculum alignment & course relevance",
+            : "No shared subjects",
         },
         competency: {
           label: "Competency Alignment",
-          score: Math.min(100, Math.max(30, overallPct - 2)),
+          score: hasCompetency ? Math.min(100, Math.max(30, overallPct - 2)) : 0,
           weight_pct: 25,
           shared_count: commonComps.length,
-          summary: commonComps.length
+          summary: hasCompetency
             ? `${commonComps.length} verified competency match(es)`
-            : "Complementary academic skillset",
+            : "No shared competencies",
         },
         difficulty: {
           label: "Experience & Difficulty Balance",

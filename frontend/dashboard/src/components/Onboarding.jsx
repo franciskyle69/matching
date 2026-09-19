@@ -33,6 +33,7 @@ import MenuBookIcon from "@mui/icons-material/MenuBook";
 import HandshakeIcon from "@mui/icons-material/Handshake";
 import AccessTimeIcon from "@mui/icons-material/AccessTime";
 import TuneIcon from "@mui/icons-material/Tune";
+import PreferencesForm from "./PreferencesForm.jsx";
 
 export const CORE_BSIT_SUBJECTS = [
   { code: "IT 111", name: "IT 111 - Introduction to Computing" },
@@ -127,30 +128,19 @@ export default function Onboarding({ user, onComplete }) {
     setAvailabilitySlots(updated);
   };
 
-  const handleCompleteOnboarding = async () => {
+  const handleCompleteOnboarding = async (formData) => {
     setErrorMessage("");
-
-    if (selectedSubjects.length === 0) {
-      setErrorMessage("Please select at least one core BSIT subject.");
-      return;
-    }
-    if (selectedSkills.length === 0) {
-      setErrorMessage("Please select at least one skill or competency.");
-      return;
-    }
-    if (availabilitySlots.length === 0) {
-      setErrorMessage("Please add at least one recurring availability slot.");
-      return;
-    }
-
     setLoading(true);
 
     try {
       const payload = {
-        subjects: selectedSubjects,
-        skills: selectedSkills,
-        support_need: supportNeed,
-        availability: availabilitySlots,
+        subjects: formData?.subjects || selectedSubjects,
+        topics: formData?.topics || [],
+        competencies: formData?.competencies || selectedSkills,
+        skills: formData?.skills || selectedSkills,
+        support_need: formData?.support_need !== undefined ? formData.support_need : supportNeed,
+        availability: formData?.availability || availabilitySlots,
+        availability_slots: formData?.availability_slots || availabilitySlots,
       };
 
       const getCookie = (name) => {
@@ -159,6 +149,7 @@ export default function Onboarding({ user, onComplete }) {
         if (parts.length === 2) return parts.pop().split(";").shift();
         return "";
       };
+      const headers = { "Content-Type": "application/json" };
       const csrf = getCookie("csrftoken");
       if (csrf) {
         headers["X-CSRFToken"] = csrf;
@@ -173,14 +164,9 @@ export default function Onboarding({ user, onComplete }) {
       const data = await response.json();
 
       if (!response.ok) {
-        setErrorMessage(data.error || "Failed to save onboarding preferences.");
+        setErrorMessage(data.error || data.detail || "Failed to save onboarding preferences.");
         setLoading(false);
         return;
-      }
-
-      // Update app context if available
-      if (window.DashboardApp && window.DashboardApp.AppContext) {
-        // AppContext handler if any
       }
 
       if (onComplete) {
@@ -195,6 +181,7 @@ export default function Onboarding({ user, onComplete }) {
       setLoading(false);
     }
   };
+
 
   return (
     <Container maxWidth="md" sx={{ py: 4 }}>
@@ -216,7 +203,7 @@ export default function Onboarding({ user, onComplete }) {
         </Step>
       </Stepper>
 
-      {errorMessage && (
+      {activeStep === 0 && errorMessage && (
         <Alert severity="error" sx={{ mb: 3 }} onClose={() => setErrorMessage("")}>
           {errorMessage}
         </Alert>
@@ -296,272 +283,18 @@ export default function Onboarding({ user, onComplete }) {
         </Card>
       )}
 
-      {/* Step 2: Subject & Skill Preferences (XGBoost Matching Input) */}
+      {/* Step 2: Subject, Competency & Availability Preferences (PreferencesForm) */}
       {activeStep === 1 && (
-        <Card
-          elevation={2}
-          sx={{
-            borderRadius: 3,
-            boxShadow: "0 8px 24px rgba(0, 40, 85, 0.08)",
-          }}
-        >
-          <CardHeader
-            avatar={<TuneIcon sx={{ color: "primary.main", fontSize: 32 }} />}
-            title={
-              <Typography variant="h5" fontWeight={700} color="#002855">
-                Subject & Skill Preferences
-              </Typography>
-            }
-            subheader="Input your learning vectors for XGBoost recommendation pairing"
-          />
-          <Divider />
-          <CardContent sx={{ p: 4 }}>
-            <Stack spacing={4}>
-              {/* Core BSIT Subjects Multi-Select */}
-              <Box>
-                <Typography variant="subtitle1" fontWeight={600} color="#002855" gutterBottom>
-                  Core BSIT Subjects
-                </Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
-                  Select the courses where you require mentorship support or specialize in:
-                </Typography>
-                <FormControl fullWidth size="small">
-                  <InputLabel id="subjects-select-label">Selected Subjects</InputLabel>
-                  <Select
-                    labelId="subjects-select-label"
-                    multiple
-                    value={selectedSubjects}
-                    onChange={(e) => setSelectedSubjects(typeof e.target.value === "string" ? e.target.value.split(",") : e.target.value)}
-                    input={<OutlinedInput label="Selected Subjects" />}
-                    renderValue={(selected) => (
-                      <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>
-                        {selected.map((val) => (
-                          <Chip key={val} label={val} size="small" color="primary" variant="outlined" />
-                        ))}
-                      </Box>
-                    )}
-                  >
-                    {CORE_BSIT_SUBJECTS.map((sub) => (
-                      <MenuItem key={sub.code} value={sub.code}>
-                        {sub.name}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Box>
-
-              <Divider />
-
-              {/* Skill Tag Selectors */}
-              <Box>
-                <Typography variant="subtitle1" fontWeight={600} color="#002855" gutterBottom>
-                  Competency & Skill Tags
-                </Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
-                  Click to select specific competencies, or type a custom skill tag:
-                </Typography>
-
-                <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1, mb: 2 }}>
-                  {SUGGESTED_SKILLS.map((skill) => {
-                    const isSelected = selectedSkills.includes(skill);
-                    return (
-                      <Chip
-                        key={skill}
-                        label={skill}
-                        clickable
-                        color={isSelected ? "primary" : "default"}
-                        variant={isSelected ? "filled" : "outlined"}
-                        onClick={() => handleToggleSkill(skill)}
-                        sx={{
-                          fontWeight: isSelected ? 600 : 400,
-                          backgroundColor: isSelected ? "#002855" : "transparent",
-                          borderColor: isSelected ? "#002855" : "divider",
-                        }}
-                      />
-                    );
-                  })}
-                </Box>
-
-                {/* Custom Skill Input */}
-                <Stack direction="row" spacing={1}>
-                  <TextField
-                    size="small"
-                    placeholder="Add custom skill (e.g., Recursion, React Hooks)..."
-                    value={customSkillInput}
-                    onChange={(e) => setCustomSkillInput(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        e.preventDefault();
-                        handleAddCustomSkill();
-                      }
-                    }}
-                    sx={{ maxWidth: 360 }}
-                  />
-                  <Button
-                    variant="outlined"
-                    size="small"
-                    startIcon={<AddCircleOutlineIcon />}
-                    onClick={handleAddCustomSkill}
-                    sx={{ textTransform: "none" }}
-                  >
-                    Add Tag
-                  </Button>
-                </Stack>
-              </Box>
-
-              <Divider />
-
-              {/* Support Need Rating Slider */}
-              <Box>
-                <Typography variant="subtitle1" fontWeight={600} color="#002855" gutterBottom>
-                  Support Need Rating Scale (1 to 5)
-                </Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                  Indicate the intensity of mentorship guidance needed:
-                </Typography>
-                <Box sx={{ px: 2, pt: 1 }}>
-                  <Slider
-                    value={supportNeed}
-                    onChange={(_, val) => setSupportNeed(val)}
-                    step={1}
-                    marks={NEED_SLIDER_MARKS}
-                    min={1}
-                    max={5}
-                    valueLabelDisplay="auto"
-                    sx={{
-                      color: "#002855",
-                      "& .MuiSlider-thumb": {
-                        width: 20,
-                        height: 20,
-                      },
-                    }}
-                  />
-                </Box>
-              </Box>
-
-              <Divider />
-
-              {/* Recurring Availability Picker */}
-              <Box>
-                <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1.5 }}>
-                  <Box>
-                    <Typography variant="subtitle1" fontWeight={600} color="#002855">
-                      Recurring Availability Schedule
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      Specify regular weekly time slots when you are available for sessions:
-                    </Typography>
-                  </Box>
-                  <Button
-                    variant="outlined"
-                    size="small"
-                    startIcon={<AddCircleOutlineIcon />}
-                    onClick={handleAddSlot}
-                    sx={{ textTransform: "none" }}
-                  >
-                    Add Day Slot
-                  </Button>
-                </Stack>
-
-                <Stack spacing={1.5}>
-                  {availabilitySlots.map((slot, index) => (
-                    <Paper
-                      key={index}
-                      variant="outlined"
-                      sx={{
-                        p: 2,
-                        borderRadius: 2,
-                        backgroundColor: "rgba(0,0,0,0.01)",
-                      }}
-                    >
-                      <Grid container spacing={2} alignItems="center">
-                        <Grid size={{ xs: 12, sm: 4 }}>
-                          <FormControl fullWidth size="small">
-                            <InputLabel id={`day-select-label-${index}`}>Day of Week</InputLabel>
-                            <Select
-                              labelId={`day-select-label-${index}`}
-                              value={slot.day}
-                              label="Day of Week"
-                              onChange={(e) => handleSlotChange(index, "day", e.target.value)}
-                            >
-                              {DAYS_OF_WEEK.map((day) => (
-                                <MenuItem key={day} value={day}>
-                                  {day}
-                                </MenuItem>
-                              ))}
-                            </Select>
-                          </FormControl>
-                        </Grid>
-                        <Grid size={{ xs: 6, sm: 3.5 }}>
-                          <TextField
-                            label="Start Time"
-                            type="time"
-                            size="small"
-                            fullWidth
-                            value={slot.start_time}
-                            onChange={(e) => handleSlotChange(index, "start_time", e.target.value)}
-                            InputLabelProps={{ shrink: true }}
-                          />
-                        </Grid>
-                        <Grid size={{ xs: 6, sm: 3.5 }}>
-                          <TextField
-                            label="End Time"
-                            type="time"
-                            size="small"
-                            fullWidth
-                            value={slot.end_time}
-                            onChange={(e) => handleSlotChange(index, "end_time", e.target.value)}
-                            InputLabelProps={{ shrink: true }}
-                          />
-                        </Grid>
-                        <Grid size={{ xs: 12, sm: 1 }} sx={{ textAlign: "right" }}>
-                          <IconButton
-                            color="error"
-                            size="small"
-                            onClick={() => handleRemoveSlot(index)}
-                            disabled={availabilitySlots.length <= 1}
-                          >
-                            <DeleteOutlineIcon fontSize="small" />
-                          </IconButton>
-                        </Grid>
-                      </Grid>
-                    </Paper>
-                  ))}
-                </Stack>
-              </Box>
-
-              <Divider />
-
-              {/* Navigation & Submit Buttons */}
-              <Box sx={{ display: "flex", justifyContent: "space-between", pt: 1 }}>
-                <Button
-                  variant="outlined"
-                  onClick={() => setActiveStep(0)}
-                  disabled={loading}
-                  sx={{ textTransform: "none" }}
-                >
-                  Back to Guidelines
-                </Button>
-                <Button
-                  variant="contained"
-                  size="large"
-                  onClick={handleCompleteOnboarding}
-                  disabled={loading}
-                  sx={{
-                    px: 4,
-                    textTransform: "none",
-                    fontWeight: 600,
-                    backgroundColor: "#002855",
-                    "&:hover": { backgroundColor: "#0b2545" },
-                  }}
-                >
-                  {loading ? <CircularProgress size={24} color="inherit" /> : "Complete Onboarding"}
-                </Button>
-              </Box>
-            </Stack>
-          </CardContent>
-        </Card>
+        <PreferencesForm
+          user={user}
+          onSubmit={handleCompleteOnboarding}
+          loading={loading}
+          errorMessage={errorMessage}
+          setErrorMessage={setErrorMessage}
+          onBack={() => setActiveStep(0)}
+        />
       )}
+
     </Container>
   );
 }

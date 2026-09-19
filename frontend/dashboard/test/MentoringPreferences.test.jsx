@@ -65,4 +65,18 @@ describe("Mentoring preferences availability", () => {
 
     expect(screen.getByText("Friday (weekly)")).toBeInTheDocument();
   });
+
+  it("allows selecting a support need by clicking on a selection card", () => {
+    render(React.createElement(Harness));
+
+    const card4 = screen.getByRole("button", {
+      name: /4 Intensive Support You need consistent, structured support to keep progressing\./i,
+    });
+    expect(card4).toHaveAttribute("aria-pressed", "false");
+
+    fireEvent.click(card4);
+
+    expect(card4).toHaveAttribute("aria-pressed", "true");
+    expect(card4).toHaveClass("is-active");
+  });
 });
