@@ -1,7 +1,4 @@
 import Slider from "@mui/material/Slider";
-import TextField from "@mui/material/TextField";
-import MenuItem from "@mui/material/MenuItem";
-import Button from "@mui/material/Button";
 
 (function () {
   "use strict";
@@ -33,34 +30,6 @@ import Button from "@mui/material/Button";
     buildAvailabilityUpdate,
   } = Availability;
 
-  const WEEKDAYS = [
-    "Monday",
-    "Tuesday",
-    "Wednesday",
-    "Thursday",
-    "Friday",
-    "Saturday",
-  ];
-  const WEEKDAY_TO_TOKEN = WEEKDAYS.reduce((acc, label) => {
-    const token = DAY_ORDER.find((day) => DAY_LABELS[day] === label);
-    if (token) acc[label] = token;
-    return acc;
-  }, {});
-
-  function slotDateLabel(slot) {
-    const parsed = parseSlot(slot);
-    if (!parsed || !parsed.days.length) return "Every day";
-    if (parsed.days.length === 1) {
-      return `${DAY_LABELS[parsed.days[0]] || parsed.days[0]} (weekly)`;
-    }
-    return `${parsed.days.map((day) => DAY_LABELS[day] || day).join(", ")} (weekly)`;
-  }
-
-  function slotTimeLabel(slot) {
-    const parsed = parseSlot(slot);
-    if (!parsed) return formatSlotLabel(slot);
-    return `${formatTimeLabel(parsed.start)} – ${formatTimeLabel(parsed.end)}`;
-  }
 
   const DIFFICULTY_OPTIONS = [
     {
@@ -213,37 +182,7 @@ import Button from "@mui/material/Button";
     const [availabilityEditingIndex, setAvailabilityEditingIndex] =
       useState(null);
     const [availabilityError, setAvailabilityError] = useState("");
-    const [selectedDay, setSelectedDay] = useState("");
-    const [availStartTime, setAvailStartTime] = useState("09:00");
-    const [availEndTime, setAvailEndTime] = useState("10:00");
 
-    function handleAddAvailabilitySlot() {
-      markDirty();
-      if (!selectedDay || !availStartTime || !availEndTime) {
-        setAvailabilityError("Select a day, start time, and end time.");
-        return;
-      }
-      const dayToken = WEEKDAY_TO_TOKEN[selectedDay];
-      if (!dayToken) {
-        setAvailabilityError("Select a valid weekday.");
-        return;
-      }
-      const currentAvailability = Array.isArray(menteeMatching.availability)
-        ? menteeMatching.availability
-        : [];
-      const update = buildAvailabilityUpdate(
-        currentAvailability,
-        { days: [dayToken], start: availStartTime, end: availEndTime },
-        null,
-      );
-      if (!update.next) {
-        setAvailabilityError(update.error || "Unable to add that slot.");
-        return;
-      }
-      setAvailabilityError("");
-      setMenteeMatching({ ...menteeMatching, availability: update.next });
-      setSelectedDay("");
-    }
 
     const serializedPrefs = serializePreferences(menteeMatching);
     if (!hasUserEditedRef.current) {
@@ -1037,68 +976,9 @@ import Button from "@mui/material/Button";
             </SectionCard>
 
             <SectionCard
-              title="Availability"
-              description="Set your recurring weekly availability for mentoring sessions."
+              title="Available time"
+              description="Pick the days you can meet, then a time range between 7:00 AM and 10:00 PM."
             >
-              <div className="pref-avail-builder responsive-form-row" style={{ display: "flex", gap: "1rem", alignItems: "center", marginBottom: "1rem", flexWrap: "wrap" }}>
-                <TextField
-                  select
-                  label="Select day"
-                  value={selectedDay}
-                  onChange={(event) => setSelectedDay(event.target.value)}
-                  size="small"
-                  className="pref-day-field"
-                  sx={{ minWidth: 160 }}
-                  slotProps={{
-                    select: { displayEmpty: true },
-                    inputLabel: { shrink: true },
-                  }}
-                >
-                  <MenuItem value="">Select day</MenuItem>
-                  {WEEKDAYS.map((day) => (
-                    <MenuItem key={day} value={day}>
-                      {day}
-                    </MenuItem>
-                  ))}
-                </TextField>
-                <TextField
-                  label="Start time"
-                  type="time"
-                  value={availStartTime}
-                  onChange={(event) => setAvailStartTime(event.target.value)}
-                  size="small"
-                  slotProps={{ inputLabel: { shrink: true } }}
-                  inputProps={{ min: MIN_AVAILABLE_TIME, max: MAX_AVAILABLE_TIME, step: 60 }}
-                />
-                <TextField
-                  label="End time"
-                  type="time"
-                  value={availEndTime}
-                  onChange={(event) => setAvailEndTime(event.target.value)}
-                  size="small"
-                  slotProps={{ inputLabel: { shrink: true } }}
-                  inputProps={{ min: MIN_AVAILABLE_TIME, max: MAX_AVAILABLE_TIME, step: 60 }}
-                />
-                <Button
-                  variant="contained"
-                  className="pref-add-slot-btn"
-                  onClick={handleAddAvailabilitySlot}
-                  disabled={!selectedDay || !availStartTime || !availEndTime}
-                >
-                  Add slot
-                </Button>
-              </div>
-
-              <div className="pref-avail-slot-list" aria-live="polite" style={{ marginBottom: "1rem" }}>
-                {Array.isArray(menteeMatching.availability) &&
-                  menteeMatching.availability.map((slot, index) => (
-                    <div key={`${slot}-${index}`} className="availability-slot-row" style={{ display: "flex", gap: "1rem", alignItems: "center", margin: "4px 0" }}>
-                      <span className="availability-slot-date">{slotDateLabel(slot)}</span>
-                      <span className="availability-slot-time">{slotTimeLabel(slot)}</span>
-                    </div>
-                  ))}
-              </div>
-
               <div className="mp-availability-composer">
                 <DayPicker
                   selectedDays={availabilityDraft.days}

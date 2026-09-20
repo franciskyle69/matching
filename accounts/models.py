@@ -24,12 +24,19 @@ class UserProfile(models.Model):
 	]
 
 	STATUS_ACTIVE = "ACTIVE"
+	STATUS_PENDING = "PENDING"
 	STATUS_PENDING_APPROVAL = "PENDING_APPROVAL"
 	STATUS_REJECTED = "REJECTED"
-	APPROVAL_STATUS_CHOICES = [
-		(STATUS_ACTIVE, "Active"),
-		(STATUS_PENDING_APPROVAL, "Pending Approval"),
+	APPROVAL_CHOICES = [
+		(STATUS_PENDING, "Pending Approval"),
+		(STATUS_ACTIVE, "Active / Approved"),
 		(STATUS_REJECTED, "Rejected"),
+	]
+	APPROVAL_STATUS_CHOICES = [
+		(STATUS_PENDING, "Pending Approval"),
+		(STATUS_ACTIVE, "Active / Approved"),
+		(STATUS_REJECTED, "Rejected"),
+		(STATUS_PENDING_APPROVAL, "Pending Approval"),
 	]
 
 	user = models.OneToOneField(
@@ -40,11 +47,15 @@ class UserProfile(models.Model):
 	role = models.CharField(max_length=20, choices=ROLE_CHOICES)
 	approval_status = models.CharField(
 		max_length=20,
-		choices=APPROVAL_STATUS_CHOICES,
-		default=STATUS_ACTIVE,
+		choices=APPROVAL_CHOICES,
+		default=STATUS_PENDING,
 	)
 	is_onboarded = models.BooleanField(default=False)
-	campus = models.CharField(max_length=100, blank=True, default="")
+	student_id_no = models.CharField(max_length=20, blank=True, default="")
+	contact_no = models.CharField(max_length=11, blank=True, default="")
+	admission_type = models.CharField(max_length=100, blank=True, default="")
+	sex = models.CharField(max_length=10, blank=True, default="")
+	campus = models.CharField(max_length=100, blank=True, default="Main")
 	program = models.CharField(max_length=100, blank=True, default="BSIT")
 	year_level = models.PositiveSmallIntegerField(null=True, blank=True)
 	bio = models.TextField(max_length=200, blank=True, default="")
@@ -57,10 +68,10 @@ class UserProfile(models.Model):
 
 	def save(self, *args, **kwargs):
 		if not self.pk and not self.approval_status:
-			if self.role in (self.ROLE_STUDENT_MENTOR, self.ROLE_INSTRUCTOR_MENTOR):
-				self.approval_status = self.STATUS_PENDING_APPROVAL
-			else:
+			if self.role == self.ROLE_COORDINATOR or (self.user_id and getattr(self.user, "is_staff", False)):
 				self.approval_status = self.STATUS_ACTIVE
+			else:
+				self.approval_status = self.STATUS_PENDING
 		super().save(*args, **kwargs)
 		# Keep UserSecurityState.is_onboarded in sync
 		try:
@@ -116,8 +127,8 @@ def get_user_profile(user, create_default=True):
 	if not create_default:
 		return None
 	role = UserProfile.ROLE_MENTEE
-	approval_status = UserProfile.STATUS_ACTIVE
-	if getattr(user, "is_staff", False):
+	approval_status = UserProfile.STATUS_PENDING
+	if getattr(user, "is_staff", False) or getattr(user, "is_superuser", False):
 		role = UserProfile.ROLE_COORDINATOR
 		approval_status = UserProfile.STATUS_ACTIVE
 	elif hasattr(user, "mentor_profile"):
@@ -126,11 +137,11 @@ def get_user_profile(user, create_default=True):
 			user.email and user.email.lower().endswith("@buksu.edu.ph") and not user.email.lower().endswith("@student.buksu.edu.ph")
 		)
 		role = UserProfile.ROLE_INSTRUCTOR_MENTOR if is_inst else UserProfile.ROLE_STUDENT_MENTOR
-		approval_status = UserProfile.STATUS_ACTIVE if getattr(m, "approved", False) else UserProfile.STATUS_PENDING_APPROVAL
+		approval_status = UserProfile.STATUS_ACTIVE if getattr(m, "approved", False) else UserProfile.STATUS_PENDING
 	elif hasattr(user, "mentee_profile"):
 		m = user.mentee_profile
 		role = UserProfile.ROLE_MENTEE
-		approval_status = UserProfile.STATUS_ACTIVE if getattr(m, "approved", False) else UserProfile.STATUS_PENDING_APPROVAL
+		approval_status = UserProfile.STATUS_ACTIVE if getattr(m, "approved", False) else UserProfile.STATUS_PENDING
 
 	sec = getattr(user, "security_state", None)
 	is_onboarded = bool(sec and sec.is_onboarded)
@@ -175,3 +186,46 @@ def set_must_change_password(user, value=True):
 	state.must_change_password = bool(value)
 	state.save(update_fields=["must_change_password"])
 	return state
+
+
+from django.contrib.auth import get_user_model
+_UserModel = get_user_model()
+
+if not hasattr(_UserModel, "approval_status"):
+	def _user_get_approval_status(self):
+		profile = getattr(self, "profile", None)
+		if profile is not None and getattr(profile, "approval_status", None):
+			return profile.approval_status
+		if getattr(self, "is_staff", False) or getattr(self, "is_superuser", False):
+			return UserProfile.STATUS_ACTIVE
+		if hasattr(self, "mentor_profile") and getattr(self.mentor_profile, "approved", False):
+			return UserProfile.STATUS_ACTIVE
+		if hasattr(self, "mentee_profile") and getattr(self.mentee_profile, "approved", False):
+			return UserProfile.STATUS_ACTIVE
+		return UserProfile.STATUS_PENDING
+
+	def _user_set_approval_status(self, value):
+		profile = getattr(self, "profile", None)
+		if profile is not None:
+			profile.approval_status = value
+			try:
+				profile.save(update_fields=["approval_status"])
+			except Exception:
+				pass
+
+	_UserModel.approval_status = property(_user_get_approval_status, _user_set_approval_status)
+
+if not hasattr(_UserModel, "is_onboarded"):
+	def _user_get_is_onboarded(self):
+		profile = getattr(self, "profile", None)
+		if profile is not None:
+			return bool(profile.is_onboarded)
+		return False
+
+	def _user_set_is_onboarded(self, value):
+		profile = getattr(self, "profile", None)
+		if profile is not None:
+			profile.is_onboarded = bool(value)
+
+	_UserModel.is_onboarded = property(_user_get_is_onboarded, _user_set_is_onboarded)
+

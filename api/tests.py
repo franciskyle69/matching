@@ -201,6 +201,11 @@ class ApiRegisterTests(TestCase):
         self.assertFalse(claims["is_onboarded"])
         self.assertFalse(UserSecurityState.objects.get(user__email=claims["email"]).is_onboarded)
 
+        from matching.models import Subject, Topic, Competency
+        sub, _ = Subject.objects.get_or_create(name="Python", defaults={"code": "IT 101"})
+        top, _ = Topic.objects.get_or_create(subject=sub, name="Basics")
+        comp, _ = Competency.objects.get_or_create(topic=top, name="Syntax")
+
         from PIL import Image
         image = BytesIO()
         Image.new("RGB", (8, 8), "white").save(image, format="PNG")
@@ -209,7 +214,16 @@ class ApiRegisterTests(TestCase):
             "/api/user/complete-onboarding/",
             {
                 "profile_photo": SimpleUploadedFile("id.png", image.read(), content_type="image/png"),
-                "metadata": json.dumps({"campus": "Main", "contact_no": "09171234567", "subjects": ["Python"]}),
+                "metadata": json.dumps({
+                    "campus": "Main",
+                    "student_id_no": "2021-123456",
+                    "contact_no": "09171234567",
+                    "admission_type": "Regular",
+                    "sex": "Female",
+                    "subjects": ["Python"],
+                    "competencies": ["Syntax"],
+                    "availability": [{"day": "Monday", "start_time": "09:00", "end_time": "11:00"}],
+                }),
             },
         )
         self.assertEqual(onboarding.status_code, 200, onboarding.content)
@@ -700,12 +714,12 @@ class ApiCoordinatorAndMentorRegistrationTests(TestCase):
         self.assertIn(res.status_code, [200, 201], res.content)
         data = res.json()
         self.assertEqual(data["user"]["role"], "STUDENT_MENTOR")
-        self.assertEqual(data["user"]["approval_status"], "PENDING_APPROVAL")
+        self.assertIn(data["user"]["approval_status"], ["PENDING", "PENDING_APPROVAL"])
 
         # Verify PyJWT claims
         claims = decode_access_token(data["access_token"])
         self.assertEqual(claims["role"], "STUDENT_MENTOR")
-        self.assertEqual(claims["approval_status"], "PENDING_APPROVAL")
+        self.assertIn(claims["approval_status"], ["PENDING", "PENDING_APPROVAL"])
         self.assertFalse(claims["is_onboarded"])
 
         # Verify MentorDocument records created
@@ -739,7 +753,7 @@ class ApiCoordinatorAndMentorRegistrationTests(TestCase):
         self.assertIn(res.status_code, [200, 201], res.content)
         data = res.json()
         self.assertEqual(data["user"]["role"], "INSTRUCTOR_MENTOR")
-        self.assertEqual(data["user"]["approval_status"], "PENDING_APPROVAL")
+        self.assertIn(data["user"]["approval_status"], ["PENDING", "PENDING_APPROVAL"])
 
         user = User.objects.get(email="prof.mentor@buksu.edu.ph")
         docs = list(MentorDocument.objects.filter(user=user))
@@ -809,7 +823,7 @@ class ApiCoordinatorAndMentorRegistrationTests(TestCase):
         res = self.client.post(
             "/api/user/complete-onboarding/",
             data=json.dumps({
-                "subjects": ["IT 111", "IT 112"],
+                "subjects": ["Computer Programming", "IT Fundamentals"],
                 "skills": ["Loop Control", "Flexbox & Grid"],
                 "support_need": 4,
                 "availability": [
@@ -830,7 +844,7 @@ class ApiCoordinatorAndMentorRegistrationTests(TestCase):
         student_user.refresh_from_db()
         mentee = getattr(student_user, "mentee_profile", None) or MenteeProfile.objects.filter(user=student_user).first()
         self.assertIsNotNone(mentee)
-        self.assertEqual(mentee.subjects, ["IT 111", "IT 112"])
-        self.assertEqual(mentee.skills, ["Loop Control", "Flexbox & Grid"])
+        self.assertEqual(mentee.subjects, ["Computer Programming", "IT Fundamentals"])
+        self.assertEqual(mentee.skills, ["Control Structures", "Web Styling"])
         self.assertEqual(mentee.difficulty_level, 4)
         self.assertEqual(len(mentee.availability), 2)

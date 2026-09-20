@@ -144,3 +144,115 @@ class GoogleOAuthEndpointTests(TestCase):
             google_data.get("user", {}).get("email"),
             "francis.delacruz@student.buksu.edu.ph",
         )
+
+
+class PasswordResetTests(TestCase):
+    def setUp(self):
+        from accounts.models import UserProfile
+        from profiles.models import MenteeProfile
+
+        self.user = User.objects.create_user(
+            username="kyle_test",
+            email="2301102820@student.buksu.edu.ph",
+            password="InitialSecurePassword123!",
+            first_name="Kyle",
+            last_name="Arranchado",
+        )
+        self.profile = UserProfile.objects.create(
+            user=self.user,
+            role=UserProfile.ROLE_MENTEE,
+            student_id_no="2301-102820",
+        )
+        self.mentee_profile = MenteeProfile.objects.create(
+            user=self.user,
+            student_id_no="2301-102820",
+            year_level=1,
+        )
+
+    def test_form_resolves_by_email(self):
+        from accounts.forms import PeerLinkPasswordResetForm
+        from django.core import mail
+
+        form = PeerLinkPasswordResetForm(data={"email_or_username": "2301102820@student.buksu.edu.ph"})
+        self.assertTrue(form.is_valid())
+        sent = form.save()
+        self.assertEqual(sent, 1)
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertIn("2301102820@student.buksu.edu.ph", mail.outbox[0].to)
+        self.assertIn("Reset your PeerLink password", mail.outbox[0].subject)
+
+    def test_form_resolves_by_username(self):
+        from accounts.forms import PeerLinkPasswordResetForm
+        from django.core import mail
+
+        form = PeerLinkPasswordResetForm(data={"email_or_username": "kyle_test"})
+        self.assertTrue(form.is_valid())
+        sent = form.save()
+        self.assertEqual(sent, 1)
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertIn("2301102820@student.buksu.edu.ph", mail.outbox[0].to)
+
+    def test_form_resolves_by_student_id(self):
+        from accounts.forms import PeerLinkPasswordResetForm
+        from django.core import mail
+
+        form = PeerLinkPasswordResetForm(data={"email_or_username": "2301-102820"})
+        self.assertTrue(form.is_valid())
+        sent = form.save()
+        self.assertEqual(sent, 1)
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertIn("2301102820@student.buksu.edu.ph", mail.outbox[0].to)
+
+    def test_form_invalid_account_raises_validation_error(self):
+        from accounts.forms import PeerLinkPasswordResetForm
+
+        form = PeerLinkPasswordResetForm(data={"email_or_username": "nonexistent@gmail.com"})
+        self.assertFalse(form.is_valid())
+        self.assertIn("No active account found", str(form.errors))
+
+    def test_web_view_password_reset_success(self):
+        from django.core import mail
+
+        response = self.client.post(
+            "/accounts/password_reset/",
+            data={"email_or_username": "2301102820@student.buksu.edu.ph"},
+            follow=True,
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Check your email")
+        self.assertContains(response, "2301102820@student.buksu.edu.ph")
+        self.assertEqual(len(mail.outbox), 1)
+
+    def test_web_view_password_reset_error(self):
+        response = self.client.post(
+            "/accounts/password_reset/",
+            data={"email_or_username": "unknown_account"},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "No active account found for &#x27;unknown_account&#x27;")
+
+    def test_api_forgot_password_success(self):
+        from django.core import mail
+
+        response = self.client.post(
+            "/api/auth/forgot-password/",
+            data=json.dumps({"identifier": "kyle_test"}),
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data.get("status"), "ok")
+        self.assertEqual(data.get("email"), "2301102820@student.buksu.edu.ph")
+        self.assertEqual(len(mail.outbox), 1)
+
+    def test_api_forgot_password_invalid(self):
+        response = self.client.post(
+            "/api/auth/forgot-password/",
+            data=json.dumps({"identifier": "unknown_user"}),
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 400)
+        data = response.json()
+        self.assertIn("error", data)
+        self.assertIn("No active account found", data["error"])
+

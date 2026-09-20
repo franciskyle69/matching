@@ -247,6 +247,7 @@ class OnboardingPreferenceSerializerTestCase(TestCase):
         from django.core.management import call_command
         from io import StringIO
         from django.contrib.auth import authenticate
+        from django.test.client import RequestFactory
 
         out = StringIO()
         call_command("seed_users", "--seed", "42", stdout=out)
@@ -268,9 +269,10 @@ class OnboardingPreferenceSerializerTestCase(TestCase):
         self.assertTrue(all(up.is_onboarded and up.approval_status == "ACTIVE" for up in UserProfile.objects.all()))
 
         # Verify password prefix authentication
-        test_user = authenticate(username="mentor1", password="mentor1")
+        rf = RequestFactory().get("/")
+        test_user = authenticate(rf, username="mentor1", password="mentor1")
         self.assertIsNotNone(test_user)
-        test_mentee = authenticate(username="mentee1", password="mentee1")
+        test_mentee = authenticate(rf, username="mentee1", password="mentee1")
         self.assertIsNotNone(test_mentee)
 
         # Verify Mentee competencies bounds

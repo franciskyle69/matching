@@ -34,6 +34,17 @@ from ..views import (
     audit_log,
     logger,
 )
+from ..permissions import IsApprovedByCoordinator
+
+
+def _require_coordinator_approval(request):
+    if not IsApprovedByCoordinator().has_permission(request):
+        return JsonResponse(
+            {"error": "Account pending approval by coordinator."},
+            status=403,
+        )
+    return None
+
 
 
 def _recommendations_empty_message(empty_reason: str) -> str:
@@ -161,6 +172,9 @@ def run_matching(request):
     role_error = _require_role(request)
     if role_error:
         return role_error
+    approval_error = _require_coordinator_approval(request)
+    if approval_error:
+        return approval_error
     mentor = getattr(request.user, "mentor_profile", None)
     mentee = getattr(request.user, "mentee_profile", None)
     if mentor and not get_mentor_approved(mentor) and not request.user.is_staff:
@@ -266,6 +280,9 @@ def mentee_recommendations(request):
     mentee_profile, error = _require_mentee(request)
     if error:
         return error
+    approval_error = _require_coordinator_approval(request)
+    if approval_error:
+        return approval_error
     if not get_mentee_approved(mentee_profile):
         return JsonResponse(
             {"error": "Mentee account pending approval by coordinator."},
@@ -349,6 +366,9 @@ def mentee_choose_mentor(request):
     mentee_profile, error = _require_mentee(request)
     if error:
         return error
+    approval_error = _require_coordinator_approval(request)
+    if approval_error:
+        return approval_error
     payload = _get_payload(request)
     mentor_id = _get_int(payload, "mentor_id")
     if not mentor_id:
@@ -480,6 +500,9 @@ def mentor_requests(request):
     mentor_profile = getattr(request.user, "mentor_profile", None)
     if not mentor_profile:
         return JsonResponse({"error": "Mentor profile required."}, status=403)
+    approval_error = _require_coordinator_approval(request)
+    if approval_error:
+        return approval_error
     if not get_mentor_approved(mentor_profile) and not request.user.is_staff:
         return JsonResponse(
             {"error": "Mentor account pending approval."},
@@ -600,6 +623,9 @@ def my_mentor(request):
     mentee_profile, error = _require_mentee(request)
     if error:
         return error
+    approval_error = _require_coordinator_approval(request)
+    if approval_error:
+        return approval_error
     req = (
         MenteeMentorRequest.objects.filter(mentee=mentee_profile, accepted=True)
         .select_related("mentor", "mentor__user", "mentee")

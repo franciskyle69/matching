@@ -73,11 +73,10 @@ import "./components/Sidebar.jsx";
   }
 
   function getPendingApprovalLandingTab(userData) {
-    if (!userData) return "settings";
-    if (userData.role === "mentee" || userData.role === "mentor") {
-      return "onboarding";
-    }
-    return "settings";
+    if (!userData) return "pending-approval";
+    if (userData.approval_status === "REJECTED") return "account-rejected";
+    if (userData.is_onboarded === false) return "onboarding";
+    return "pending-approval";
   }
 
   function Layout() {
@@ -161,16 +160,23 @@ import "./components/Sidebar.jsx";
         }
       }
       if (isPendingApproval) {
-        const allowedPendingTabs = new Set([
-          "onboarding",
-          "complete-profile",
-          "mentoring-preferences",
-          "mentor-matching-profile",
-          "settings",
-        ]);
-        if (!allowedPendingTabs.has(tabId)) {
-          finishNavigation(getPendingApprovalLandingTab(user));
-          return;
+        if (user && user.is_onboarded === false) {
+          if (tabId !== "onboarding") {
+            finishNavigation("onboarding");
+            return;
+          }
+        } else {
+          const allowedPendingTabs = new Set([
+            "pending-approval",
+            "account-pending",
+            "account-rejected",
+            "profile",
+            "settings",
+          ]);
+          if (!allowedPendingTabs.has(tabId)) {
+            finishNavigation(getPendingApprovalLandingTab(user));
+            return;
+          }
         }
       }
       if (isStaff && tabId === "matching") {
@@ -207,6 +213,9 @@ import "./components/Sidebar.jsx";
       "mentor-matching-profile": "Matching Profile",
       onboarding: "Onboarding",
       "complete-profile": "Profile Setup",
+      "pending-approval": "Account Under Review",
+      "account-pending": "Account Under Review",
+      "account-rejected": "Account Application Rejected",
     };
     const currentPageTitle = TAB_TITLES[activeTab] || "Dashboard";
 
@@ -221,10 +230,10 @@ import "./components/Sidebar.jsx";
         return tab.id === "complete-profile";
       }
       if (isPendingApproval) {
-        return (
-          tab.id === "onboarding" ||
-          tab.id === "settings"
-        );
+        if (user && user.is_onboarded === false) {
+          return tab.id === "onboarding" || tab.id === "settings";
+        }
+        return tab.id === "settings";
       }
       if (tab.id === "onboarding") {
         if (!(user?.role === "mentor" || user?.role === "mentee")) return false;
@@ -887,20 +896,35 @@ import "./components/Sidebar.jsx";
                 </div>
               ) : (
                 <div className="app-topbar-right">
-                  <div className="btn-row" style={{ margin: 0 }}>
+                  <div className="btn-row" style={{ margin: 0, alignItems: "center", gap: "8px" }}>
                     <button
                       type="button"
-                      className="btn"
-                      onClick={() => goTo(pendingPrimaryTab)}
+                      className="sidebar-icon-btn app-topbar-theme-btn"
+                      onClick={toggleTheme}
+                      aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+                      title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
                     >
-                      {pendingPrimaryLabel}
+                      {theme === "dark" ? (
+                        <LightModeOutlinedIcon fontSize="small" aria-hidden="true" />
+                      ) : (
+                        <DarkModeOutlinedIcon fontSize="small" aria-hidden="true" />
+                      )}
                     </button>
+                    {user && user.is_onboarded === false && (
+                      <button
+                        type="button"
+                        className="btn primary small"
+                        onClick={() => goTo("onboarding")}
+                      >
+                        Continue Onboarding
+                      </button>
+                    )}
                     <button
                       type="button"
-                      className="btn secondary"
-                      onClick={() => goTo("settings")}
+                      className="btn secondary small"
+                      onClick={handleLogout}
                     >
-                      Account settings
+                      Log Out
                     </button>
                   </div>
                 </div>

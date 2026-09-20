@@ -43,27 +43,36 @@ function Harness() {
 }
 
 describe("Mentoring preferences availability", () => {
-  it("uses a recurring weekday dropdown instead of a calendar date", () => {
+  it("allows selecting days and a time range to add availability timeframes", () => {
     render(React.createElement(Harness));
 
+    expect(screen.getByText("Available time")).toBeInTheDocument();
     expect(
       screen.getByText(
-        "Set your recurring weekly availability for mentoring sessions.",
+        "Pick the days you can meet, then a time range between 7:00 AM and 10:00 PM.",
       ),
     ).toBeInTheDocument();
     expect(document.querySelector('input[type="date"]')).toBeNull();
 
-    const dayField = screen.getByLabelText("Select day");
-    fireEvent.mouseDown(dayField);
+    // Select Friday
+    const friChip = screen.getByRole("checkbox", { name: "Friday" });
+    fireEvent.click(friChip);
 
-    expect(screen.getByRole("option", { name: "Monday" })).toBeInTheDocument();
-    expect(screen.getByRole("option", { name: "Saturday" })).toBeInTheDocument();
-    expect(screen.queryByRole("option", { name: "Sunday" })).not.toBeInTheDocument();
+    // Set start and end times
+    const startInput = screen.getByLabelText("Start time");
+    const endInput = screen.getByLabelText("End time");
+    fireEvent.change(startInput, { target: { value: "09:00" } });
+    fireEvent.change(endInput, { target: { value: "11:00" } });
 
-    fireEvent.click(screen.getByRole("option", { name: "Friday" }));
-    fireEvent.click(screen.getByRole("button", { name: /add slot/i }));
+    // Click Add timeframe
+    const addBtn = screen.getByRole("button", { name: /add timeframe/i });
+    expect(addBtn).not.toBeDisabled();
+    fireEvent.click(addBtn);
 
-    expect(screen.getByText("Friday (weekly)")).toBeInTheDocument();
+    // Verify timeframe item is rendered
+    expect(screen.getAllByText("Fri • 9:00 AM - 11:00 AM").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByRole("button", { name: "Edit" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Remove" })).toBeInTheDocument();
   });
 
   it("allows selecting a support need by clicking on a selection card", () => {

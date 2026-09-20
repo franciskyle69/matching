@@ -296,6 +296,25 @@ export default function Login({ onLoginSuccess, onNavigateRegister }) {
               }}
             />
 
+            <Box sx={{ display: "flex", justifyContent: "flex-end", mt: -1.5 }}>
+              <Button
+                variant="text"
+                size="small"
+                href="/accounts/password_reset/"
+                sx={{
+                  fontWeight: 600,
+                  textTransform: "none",
+                  p: 0,
+                  minWidth: "auto",
+                  color: "#002855",
+                  fontSize: "0.875rem",
+                  "&:hover": { textDecoration: "underline", backgroundColor: "transparent" },
+                }}
+              >
+                Forgot password?
+              </Button>
+            </Box>
+
             <Button
               type="submit"
               variant="contained"

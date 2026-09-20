@@ -109,6 +109,7 @@ async function loadDashboardModules() {
 	await import("./router/pages/MenteePreferencesPage.jsx");
 	await import("./router/pages/MentorPreferencesPage.jsx");
 	await import("./router/pages/OnboardingPage.jsx");
+	await import("./router/pages/PendingApprovalPage.jsx");
 	await import("./router/pages/MenteesPage.jsx");
 	await import("./router/routes.jsx");
 	await import("./ErrorBoundary.jsx");

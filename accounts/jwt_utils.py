@@ -30,8 +30,13 @@ def issue_access_token(user) -> str:
     ttl = int(getattr(settings, "JWT_ACCESS_TTL_SECONDS", 1800))
     from accounts.models import get_user_profile
     profile = get_user_profile(user)
-    role = profile.role if profile else ("COORDINATOR" if user.is_staff else "MENTEE")
-    approval_status = profile.approval_status if profile else ("ACTIVE" if user.is_staff else "ACTIVE")
+    is_admin = bool(getattr(user, "is_staff", False) or getattr(user, "is_superuser", False))
+    role = profile.role if profile else ("COORDINATOR" if is_admin else "MENTEE")
+    approval_status = (
+        profile.approval_status
+        if profile and profile.approval_status
+        else ("ACTIVE" if is_admin else "PENDING")
+    )
     is_onboarded = bool(profile.is_onboarded if profile else False)
     payload = {
         "typ": "access",
@@ -54,8 +59,13 @@ def issue_refresh_token(user) -> str:
     ttl = _refresh_ttl()
     from accounts.models import get_user_profile
     profile = get_user_profile(user)
-    role = profile.role if profile else ("COORDINATOR" if user.is_staff else "MENTEE")
-    approval_status = profile.approval_status if profile else ("ACTIVE" if user.is_staff else "ACTIVE")
+    is_admin = bool(getattr(user, "is_staff", False) or getattr(user, "is_superuser", False))
+    role = profile.role if profile else ("COORDINATOR" if is_admin else "MENTEE")
+    approval_status = (
+        profile.approval_status
+        if profile and profile.approval_status
+        else ("ACTIVE" if is_admin else "PENDING")
+    )
     is_onboarded = bool(profile.is_onboarded if profile else False)
     payload = {
         "typ": "refresh",

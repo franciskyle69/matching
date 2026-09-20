@@ -649,23 +649,24 @@ import OnboardingPreferences from "../../../src/components/Onboarding.jsx";
                 ...(data?.user || {}),
                 is_onboarded: true,
                 is_profile_complete: true,
-                mentee_approved: true,
-                mentor_approved: true,
+                mentee_approved: false,
+                mentor_approved: false,
+                approval_status: data?.user?.approval_status || "PENDING_APPROVAL",
               }));
             }
             if (ctx.addToast) {
               ctx.addToast(
-                "Matching preferences saved! Welcome to PeerLink.",
-                "success",
+                "Onboarding submitted for review! Your account is pending coordinator approval.",
+                "info",
               );
             }
             if (ctx.loadMe) {
               ctx.loadMe({ force: true });
             }
             if (setActiveTab) {
-              setActiveTab("matching");
+              setActiveTab("pending-approval");
               if (window.DashboardApp && window.DashboardApp.replaceAppUrl) {
-                window.DashboardApp.replaceAppUrl("matching");
+                window.DashboardApp.replaceAppUrl("pending-approval");
               }
             }
           }}

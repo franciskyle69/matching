@@ -13,18 +13,21 @@
   function getIsPendingApproval(userData) {
     return !!(
       userData &&
-      ((userData.role === "mentor" && userData.mentor_approved === false) ||
+      !userData.is_staff &&
+      userData.role !== "coordinator" &&
+      userData.role !== "staff" &&
+      (userData.approval_status === "PENDING" ||
+        userData.approval_status === "PENDING_APPROVAL" ||
+        (userData.role === "mentor" && userData.mentor_approved === false) ||
         (userData.role === "mentee" && userData.mentee_approved === false))
     );
   }
   function getPendingApprovalLandingTab(userData) {
-    if (!userData) return "settings";
+    if (!userData) return "pending-approval";
+    if (userData.approval_status === "REJECTED") return "account-rejected";
     if (userData.must_change_password) return "settings";
     if (needsCompleteProfile(userData)) return "onboarding";
-    if (userData.role === "mentee" || userData.role === "mentor") {
-      return "onboarding";
-    }
-    return "settings";
+    return "pending-approval";
   }
 
   function needsCompleteProfile(userData) {
@@ -84,7 +87,9 @@
 
   /** Hashes may carry a sub-path (e.g. "settings/password"); the tab is the first segment. */
   function resolveTabFromHash(rawHash) {
-    const value = String(rawHash || "").replace(/^#/, "");
+    const value = String(rawHash || "")
+      .replace(/^#\/?/, "")
+      .replace(/^\//, "");
     if (!value) return null;
     const base = value.split("/")[0];
     if (MAIN_TABS.some((tab) => tab.id === base)) return base;
@@ -315,9 +320,35 @@
 
     function requestTabChange(tabId) {
       if (!tabId || tabId === activeTab) return;
+      let targetTab = tabId;
+      if (
+        user &&
+        !user.is_staff &&
+        user.role !== "coordinator" &&
+        user.role !== "staff"
+      ) {
+        if (needsCompleteProfile(user) && targetTab !== "onboarding") {
+          targetTab = "onboarding";
+        } else if (
+          user.approval_status === "REJECTED" &&
+          targetTab !== "account-rejected"
+        ) {
+          targetTab = "account-rejected";
+        } else if (getIsPendingApproval(user)) {
+          const allowed = new Set([
+            "pending-approval",
+            "account-pending",
+            "profile",
+            "settings",
+          ]);
+          if (!allowed.has(targetTab)) {
+            targetTab = "pending-approval";
+          }
+        }
+      }
       requestLeave({
         type: "tab",
-        run: () => setActiveTab(tabId),
+        run: () => setActiveTab(targetTab),
       });
     }
 
@@ -453,7 +484,7 @@
 
     useEffect(() => {
       signInPathRef.current = isSignInPathFlow();
-      const raw = window.location.hash.replace("#", "");
+      const raw = window.location.hash.replace(/^#\/?/, "");
       if (raw.startsWith("profile/mentor")) {
         setActiveTab("profile");
         const m = raw.match(/profile\/mentor\/(\d+)/);
@@ -463,11 +494,24 @@
       } else if (isSignInPathFlow()) {
         setActiveTab("signin");
       }
+
+      const onHashChange = () => {
+        const hashStr = window.location.hash.replace(/^#\/?/, "");
+        if (hashStr.startsWith("profile/mentor")) {
+          setActiveTab("profile");
+          const m = hashStr.match(/profile\/mentor\/(\d+)/);
+          setMentorProfileHashId(m ? parseInt(m[1], 10) : null);
+        } else if (resolveTabFromHash(hashStr)) {
+          setActiveTab(resolveTabFromHash(hashStr));
+        }
+      };
+      window.addEventListener("hashchange", onHashChange);
+      return () => window.removeEventListener("hashchange", onHashChange);
     }, []);
 
     useEffect(() => {
       if (!authCheckDone) return;
-      const hash = window.location.hash.replace("#", "");
+      const hash = window.location.hash.replace(/^#\/?/, "");
       const validTabs = [
         ...MAIN_TABS.map((t) => t.id),
         ...((window.DashboardApp && window.DashboardApp.HIDDEN_TABS) || []).map(
@@ -498,6 +542,41 @@
         setActiveTab(resolveTabFromHash(hash));
       }
     }, [authCheckDone, user]);
+
+    useEffect(() => {
+      if (!authCheckDone || !user) return;
+      if (user.is_staff || user.role === "staff" || user.role === "coordinator") return;
+
+      if (needsCompleteProfile(user)) {
+        if (activeTab !== "onboarding") {
+          setActiveTab("onboarding");
+          replaceAppUrl("onboarding");
+        }
+        return;
+      }
+
+      if (user.approval_status === "REJECTED") {
+        if (activeTab !== "account-rejected") {
+          setActiveTab("account-rejected");
+          replaceAppUrl("account-rejected");
+        }
+        return;
+      }
+
+      if (getIsPendingApproval(user)) {
+        const allowedTabs = new Set([
+          "pending-approval",
+          "account-pending",
+          "profile",
+          "settings",
+        ]);
+        if (!allowedTabs.has(activeTab)) {
+          setActiveTab("pending-approval");
+          replaceAppUrl("pending-approval");
+        }
+        return;
+      }
+    }, [authCheckDone, user, activeTab]);
 
     useEffect(() => {
       if (!authCheckDone) return;

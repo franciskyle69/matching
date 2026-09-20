@@ -80,6 +80,8 @@
     { id: "preferences", label: "Preferences" },
     { id: "mentee-preferences", label: "Mentee Preferences" },
     { id: "mentor-preferences", label: "Mentor Preferences" },
+    { id: "pending-approval", label: "Account Under Review" },
+    { id: "account-rejected", label: "Account Rejected" },
   ];
   window.DashboardApp.MAIN_TABS = ROUTES.map(({ id, label }) => ({
     id,

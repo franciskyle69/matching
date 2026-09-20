@@ -507,11 +507,64 @@ def auth_login(request):
                 "email": user.email,
                 "role": _user_role(user),
                 "is_onboarded": _user_is_onboarded(user),
+                "approval_status": getattr(user, "approval_status", "PENDING"),
             },
         }
     )
     set_refresh_cookie(response, refresh_token)
     return response
+
+
+@require_http_methods(["POST"])
+def auth_forgot_password(request):
+    """API endpoint to request password reset via email, username, or student ID."""
+    from accounts.forms import PeerLinkPasswordResetForm
+
+    payload = _get_payload(request)
+    identifier = (
+        _get_str(payload, "identifier")
+        or _get_str(payload, "email")
+        or _get_str(payload, "username")
+        or _get_str(payload, "email_or_username")
+    )
+
+    if not identifier:
+        return JsonResponse(
+            {"error": "Please enter your registered email address or username."},
+            status=400,
+        )
+
+    form = PeerLinkPasswordResetForm(data={"email_or_username": identifier})
+    if form.is_valid():
+        try:
+            sent_count = form.save(request=request)
+            matching_users = form.cleaned_data.get("matching_users", [])
+            dest_email = matching_users[0].email if matching_users else identifier
+            return JsonResponse({
+                "status": "ok",
+                "message": f"Password reset instructions have been sent to {dest_email}.",
+                "email": dest_email,
+                "sent_count": sent_count,
+            })
+        except Exception as exc:
+            logger.exception("api_forgot_password_failed", extra={"identifier": identifier, "error": str(exc)})
+            err_msg = str(exc)
+            if "mail server" in err_msg.lower() or "connection" in err_msg.lower():
+                return JsonResponse(
+                    {"error": "Unable to send reset email due to a mail server connection error. Please try again shortly."},
+                    status=500,
+                )
+            return JsonResponse(
+                {"error": "Failed to send password reset email. Please try again later."},
+                status=500,
+            )
+    else:
+        error_msg = (
+            form.errors.get("email_or_username", [None])[0]
+            or (form.non_field_errors()[0] if form.non_field_errors() else None)
+            or "Invalid email or username."
+        )
+        return JsonResponse({"error": str(error_msg)}, status=400)
 
 
 @require_http_methods(["POST"])
@@ -635,7 +688,7 @@ def auth_google(request):
                 "username": user.username,
                 "role": profile.role if profile else _user_role(user),
                 "is_onboarded": profile.is_onboarded if profile else _user_is_onboarded(user),
-                "approval_status": profile.approval_status if profile else "ACTIVE",
+                "approval_status": profile.approval_status if profile else ("ACTIVE" if getattr(user, "is_staff", False) else "PENDING"),
                 "avatar_url": getattr(profile, "avatar_url", "") if profile else "",
             },
         }
@@ -1047,11 +1100,11 @@ def unified_auth_register(request):
                 is_staff=(role == UserProfile.ROLE_COORDINATOR),
             )
 
-            # Determine initial approval status
-            if role in (UserProfile.ROLE_STUDENT_MENTOR, UserProfile.ROLE_INSTRUCTOR_MENTOR):
-                approval_status = UserProfile.STATUS_PENDING_APPROVAL
-            else:
+            # Determine initial approval status - strictly PENDING for all newly registered accounts
+            if role == UserProfile.ROLE_COORDINATOR or user.is_staff:
                 approval_status = UserProfile.STATUS_ACTIVE
+            else:
+                approval_status = UserProfile.STATUS_PENDING
 
             user_profile = UserProfile.objects.create(
                 user=user,
@@ -1080,7 +1133,7 @@ def unified_auth_register(request):
                     program=program,
                     year_level=1,
                     campus=campus,
-                    approved=True,  # Mentees are ACTIVE immediately
+                    approved=False,  # Mentees strictly default to pending Coordinator approval
                     is_profile_complete=False,
                 )
 
@@ -1345,6 +1398,7 @@ def me(request):
         "full_name": get_user_display_name(request.user),
         "display_name": get_user_display_name(request.user),
         "is_onboarded": _user_is_onboarded(request.user),
+        "approval_status": getattr(request.user, "approval_status", "PENDING"),
         "is_staff": request.user.is_staff,
         "must_change_password": must_change_password(request.user),
         "role": "mentor"
@@ -1934,12 +1988,30 @@ def complete_onboarding(request):
                 campus=user_profile.campus or "Main",
             )
 
+    student_id_no = str(metadata.get("student_id_no") or payload.get("student_id_no") or getattr(user_profile, "student_id_no", "") or "").strip()[:20]
+    contact_no = str(metadata.get("contact_no") or payload.get("contact_no") or getattr(user_profile, "contact_no", "") or "").strip()[:11]
+    admission_type = str(metadata.get("admission_type") or payload.get("admission_type") or getattr(user_profile, "admission_type", "") or "").strip()[:100]
+    raw_sex = str(metadata.get("sex") or metadata.get("gender") or payload.get("sex") or payload.get("gender") or getattr(user_profile, "sex", "") or "").strip().lower()
+    sex = raw_sex if raw_sex in ("male", "female") else ("male" if "male" in raw_sex else ("female" if "female" in raw_sex else ""))
+    campus = str(metadata.get("campus") or payload.get("campus") or getattr(user_profile, "campus", "") or "Main").strip()[:100]
+    program = str(metadata.get("program") or payload.get("program") or getattr(user_profile, "program", "") or "BSIT").strip()[:100]
+
     year_level = int(metadata.get("year_level") or payload.get("year_level") or user_profile.year_level or 1)
     is_faculty = request.user.email.lower().endswith("@buksu.edu.ph") or user_profile.role == "INSTRUCTOR_MENTOR"
 
     if isinstance(profile, MentorProfile):
         profile.year_level = 4 if is_faculty else (year_level if year_level in (3, 4) else 3)
         profile.role = "Instructor" if is_faculty else "Senior IT Student"
+        if student_id_no:
+            profile.student_id_no = student_id_no
+        if contact_no:
+            profile.contact_no = contact_no
+        if admission_type:
+            profile.admission_type = admission_type
+        if campus:
+            profile.campus = campus
+        if sex:
+            profile.gender = sex
         if image_url:
             profile.avatar_url = image_url
         profile.availability = availability
@@ -1947,7 +2019,7 @@ def complete_onboarding(request):
         profile.skills = topics
         profile.topics = topics
         profile.expertise_level = support_need
-        profile.approved = True
+        profile.approved = False
         profile.save()
         if competency_objs:
             profile.competencies.set(competency_objs)
@@ -1961,10 +2033,16 @@ def complete_onboarding(request):
         invalidate_approval_cache_mentor(profile.id)
     else:
         profile.year_level = year_level
-        profile.campus = str(metadata.get("campus") or payload.get("campus") or user_profile.campus or "Main").strip()[:100]
-        contact_no = str(metadata.get("contact_no") or payload.get("contact_no") or "").strip()[:11]
+        profile.program = program or "BSIT"
+        profile.campus = campus or "Main"
+        if student_id_no:
+            profile.student_id_no = student_id_no
         if contact_no:
             profile.contact_no = contact_no
+        if admission_type:
+            profile.admission_type = admission_type
+        if sex:
+            profile.sex = sex
         if image_url:
             profile.avatar_url = image_url
         profile.availability = availability
@@ -1972,7 +2050,7 @@ def complete_onboarding(request):
         profile.skills = topics
         profile.topics = topics
         profile.difficulty_level = support_need
-        profile.approved = True
+        profile.approved = False
         profile.save()
         if competency_objs:
             profile.competencies.set(competency_objs)
@@ -1985,25 +2063,40 @@ def complete_onboarding(request):
         _sync_user_topic_preferences(request.user, "support", subjects, topics)
         invalidate_approval_cache_mentee(profile.id)
 
+    user_profile.student_id_no = student_id_no or user_profile.student_id_no
+    user_profile.contact_no = contact_no or user_profile.contact_no
+    user_profile.admission_type = admission_type or user_profile.admission_type
+    user_profile.sex = sex or user_profile.sex
+    user_profile.campus = campus or user_profile.campus
+    user_profile.program = program or user_profile.program
+    user_profile.year_level = profile.year_level
     user_profile.is_onboarded = True
-    user_profile.approval_status = "ACTIVE"
-    user_profile.save(update_fields=["is_onboarded", "approval_status"])
+    user_profile.approval_status = UserProfile.STATUS_PENDING
+    user_profile.save()
     mark_profile_complete(profile, True)
     _ensure_onboarding_state(request.user, True)
     _clear_me_cache(request.user.id)
     audit_log(request.user, "update", "complete_onboarding", request.user.id)
     return JsonResponse({
         "status": "ok",
+        "is_onboarded": True,
+        "approval_status": user_profile.approval_status,
         "user": {
             "id": request.user.id,
             "email": request.user.email,
             "role": _user_role(request.user),
             "is_onboarded": True,
             "is_profile_complete": True,
-            "mentee_approved": True if not isinstance(profile, MentorProfile) else False,
-            "mentor_approved": True if isinstance(profile, MentorProfile) else False,
-            "approval_status": "ACTIVE",
+            "mentee_approved": False,
+            "mentor_approved": False,
+            "approval_status": user_profile.approval_status,
             "avatar_url": image_url or getattr(profile, "avatar_url", ""),
+            "student_id_no": user_profile.student_id_no,
+            "contact_no": user_profile.contact_no,
+            "admission_type": user_profile.admission_type,
+            "sex": user_profile.sex,
+            "campus": user_profile.campus,
+            "program": user_profile.program,
         },
     })
 

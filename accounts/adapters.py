@@ -343,6 +343,8 @@ class RoleAwareSocialAccountAdapter(DefaultSocialAccountAdapter):
             request.session.pop(GOOGLE_OAUTH_ROLE_SESSION_KEY, None)
         else:
             self._apply_google_avatar(user, picture)
+        from accounts.models import get_user_profile
+        get_user_profile(user)
         return user
 
     def _apply_google_avatar(self, user, picture):

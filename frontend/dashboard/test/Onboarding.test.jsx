@@ -6,6 +6,26 @@ import { ThemeProvider, createTheme } from "@mui/material/styles";
 import Onboarding from "../src/components/Onboarding.jsx";
 import { getNeumorphicStyle, getNeuStyles } from "../assets/theme/neumorphism.js";
 
+const defaultValidUser = {
+  role: "mentee",
+  email: "student@student.buksu.edu.ph",
+  student_id_no: "2021-123456",
+  contact_no: "09171234567",
+  admission_type: "Regular",
+  sex: "Male",
+  campus: "Main",
+  program: "BSIT",
+  year_level: 1,
+};
+
+function goToStep3(customUser = {}) {
+  const user = { ...defaultValidUser, ...customUser };
+  const rendered = render(<Onboarding user={user} />);
+  fireEvent.click(screen.getByRole("button", { name: /I Understand & Accept — Continue/i }));
+  fireEvent.click(screen.getByRole("button", { name: /Continue to Preferences/i }));
+  return rendered;
+}
+
 describe("Onboarding Component", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -24,11 +44,50 @@ describe("Onboarding Component", () => {
     expect(screen.queryByText(/Profile photo or institutional ID/i)).not.toBeInTheDocument();
   });
 
-  it("advances to Step 2: Subject, Competency & Availability Preferences", () => {
+  it("Step 2: enforces mandatory personal fields (Student ID, 11-digit Contact No, Admission Type, Sex) and blocks progression", () => {
     render(<Onboarding user={{ role: "mentee", email: "student@student.buksu.edu.ph" }} />);
     
-    const continueButton = screen.getByRole("button", { name: /I Understand & Accept — Continue/i });
-    fireEvent.click(continueButton);
+    // Advance to Step 2
+    fireEvent.click(screen.getByRole("button", { name: /I Understand & Accept — Continue/i }));
+    expect(screen.getByRole("heading", { name: /Personal & Academic Profile/i })).toBeInTheDocument();
+
+    // Read-only institutional defaults
+    expect(screen.getByText("Campus")).toBeInTheDocument();
+    expect(screen.getByText("Main")).toBeInTheDocument();
+    expect(screen.getByText("Course / Program")).toBeInTheDocument();
+    expect(screen.getByText("BSIT")).toBeInTheDocument();
+    expect(screen.getByText("Year Level")).toBeInTheDocument();
+
+    // Click continue with empty fields -> should show validation errors and stay on Step 2
+    const continueBtn = screen.getByRole("button", { name: /Continue to Preferences/i });
+    fireEvent.click(continueBtn);
+
+    expect(screen.getByText(/Student ID No\. is required/i)).toBeInTheDocument();
+    expect(screen.getByText(/Contact No\. is required/i)).toBeInTheDocument();
+    expect(screen.getByText(/Please select your biological sex/i)).toBeInTheDocument();
+
+    // Try invalid contact number
+    const contactInput = screen.getByPlaceholderText("09171234567");
+    fireEvent.change(contactInput, { target: { value: "12345" } });
+    fireEvent.click(continueBtn);
+    expect(screen.getByText(/Enter a valid 11-digit Philippines mobile number/i)).toBeInTheDocument();
+
+    // Fill valid data
+    const studentIdInput = screen.getByPlaceholderText("2021-123456");
+    fireEvent.change(studentIdInput, { target: { value: "2021-123456" } });
+    fireEvent.change(contactInput, { target: { value: "09171234567" } });
+
+    // Select Sex
+    const sexInput = screen.getByTestId("sex-select-input");
+    fireEvent.change(sexInput, { target: { value: "Male" } });
+
+    // Now continue to Step 3
+    fireEvent.click(continueBtn);
+    expect(screen.getByRole("heading", { name: /Subject & Skill Preferences/i })).toBeInTheDocument();
+  });
+
+  it("advances to Step 3: Subject, Competency & Availability Preferences", () => {
+    goToStep3();
 
     // Subject preferences
     expect(screen.getByRole("heading", { name: /Subject & Skill Preferences/i })).toBeInTheDocument();
@@ -54,8 +113,7 @@ describe("Onboarding Component", () => {
   });
 
   it("Mentee Test: enforces max 5 competencies global cap by disabling remaining checkboxes and blocks submission with 0 competencies", () => {
-    render(<Onboarding user={{ role: "mentee", email: "student@student.buksu.edu.ph" }} />);
-    fireEvent.click(screen.getByRole("button", { name: /I Understand & Accept — Continue/i }));
+    goToStep3({ role: "mentee" });
 
     // Verify visual counter chip
     expect(screen.getByText(/Competencies: \d+ \/ 5 \(Max 5\)/i)).toBeInTheDocument();
@@ -85,10 +143,8 @@ describe("Onboarding Component", () => {
     expect(compGenBox).toBeChecked();
   });
 
-
   it("Mentor Test: student mentor has max 10 competencies cap, up to 3 subjects, and requires at least 2 availability slots", () => {
-    render(<Onboarding user={{ role: "student_mentor", email: "mentor@student.buksu.edu.ph" }} />);
-    fireEvent.click(screen.getByRole("button", { name: /I Understand & Accept — Continue/i }));
+    goToStep3({ role: "student_mentor" });
 
     // Verify limits reflected in visual trackers
     expect(screen.getByText(/Subjects: \d+ \/ 3 \(Min 1, Max 3\)/i)).toBeInTheDocument();
@@ -98,7 +154,6 @@ describe("Onboarding Component", () => {
     // Try to remove an availability slot down to 1 (min is 2 for mentors)
     const deleteButtons = screen.getAllByTestId("DeleteOutlineIcon");
     expect(deleteButtons.length).toBeGreaterThan(0);
-    // Delete buttons should be disabled because slots count (2) is at min (2)
     const firstDeleteBtn = deleteButtons[0].closest("button");
     expect(firstDeleteBtn).toBeDisabled();
 
@@ -110,8 +165,7 @@ describe("Onboarding Component", () => {
   });
 
   it("Validation before submit: shows alert and blocks submit if requirements not met", () => {
-    render(<Onboarding user={{ role: "mentee", email: "student@student.buksu.edu.ph" }} />);
-    fireEvent.click(screen.getByRole("button", { name: /I Understand & Accept — Continue/i }));
+    goToStep3({ role: "mentee" });
 
     // Uncheck currently selected competencies
     const loopBox = screen.getByRole("checkbox", { name: /Loop Control/i });
@@ -157,9 +211,9 @@ describe("Onboarding Component", () => {
     expect(screen.getByText(/Configure your academic preferences/i)).toBeInTheDocument();
 
     // Orientation card and guidelines in dark mode
-    expect(screen.getByText(/1. How the Smart Matching System Works/i)).toBeInTheDocument();
-    expect(screen.getByText(/2. Mentorship Meeting Schedules/i)).toBeInTheDocument();
-    expect(screen.getByText(/3. Code of Conduct & Academic Integrity/i)).toBeInTheDocument();
+    expect(screen.getByText(/1\. How the Smart Matching System Works/i)).toBeInTheDocument();
+    expect(screen.getByText(/2\. Mentorship Meeting Schedules/i)).toBeInTheDocument();
+    expect(screen.getByText(/3\. Code of Conduct & Academic Integrity/i)).toBeInTheDocument();
 
     // Verify outer canvas container has dark background
     const outerBox = container.firstChild;
@@ -192,4 +246,3 @@ describe("Onboarding Component", () => {
     expect(neuLight.bgBase).toBe("#E6ECF5");
   });
 });
-

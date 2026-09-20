@@ -12,7 +12,12 @@ from django.contrib.auth import get_user_model
 import secrets
 import time
 
-from .forms import RegisterForm, AccountSettingsForm, PasswordChangeWithCodeForm
+from .forms import (
+    RegisterForm,
+    AccountSettingsForm,
+    PasswordChangeWithCodeForm,
+    PeerLinkPasswordResetForm,
+)
 from .email_utils import email_backend_can_send, send_activation_email
 from .models import must_change_password, set_must_change_password
 from .oauth_gate import INTENT_SESSION_KEY, SIGNUP_INTENT, normalize_oauth_intent
@@ -376,4 +381,39 @@ def settings_view(request):
             "form": form,
             "password_form": password_form,
         },
+    )
+
+
+from django.contrib.auth import views as auth_views
+from django.urls import reverse_lazy
+
+
+class PeerLinkPasswordResetView(auth_views.PasswordResetView):
+    """Custom password reset view supporting username or email lookup and rich feedback."""
+
+    template_name = "registration/password_reset_form.html"
+    email_template_name = "registration/password_reset_email.html"
+    html_email_template_name = "registration/password_reset_email_html.html"
+    subject_template_name = "registration/password_reset_subject.txt"
+    form_class = PeerLinkPasswordResetForm
+    success_url = reverse_lazy("password_reset_done")
+
+    def form_valid(self, form):
+        dest_email = None
+        users = form.cleaned_data.get("matching_users") or []
+        if users and users[0].email:
+            dest_email = users[0].email
+        elif form.cleaned_data.get("email_or_username") and "@" in form.cleaned_data.get("email_or_username"):
+            dest_email = form.cleaned_data.get("email_or_username")
+        if dest_email:
+            self.request.session["password_reset_dest_email"] = dest_email
+        return super().form_valid(form)
+
+
+def password_reset_done_view(request):
+    dest_email = request.session.pop("password_reset_dest_email", None)
+    return render(
+        request,
+        "registration/password_reset_done.html",
+        {"reset_email": dest_email},
     )

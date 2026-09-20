@@ -1,4 +1,5 @@
 from django import forms
+from django.contrib.auth import get_user_model
 from django.contrib.auth.models import User
 from django.contrib.auth.password_validation import validate_password
 
@@ -403,3 +404,183 @@ class PasswordChangeUpdateForm(forms.Form):
             except forms.ValidationError as exc:
                 self.add_error("new_password2", exc)
         return cleaned_data
+
+
+class PeerLinkPasswordResetForm(forms.Form):
+    """Robust password reset form supporting email, username, or student ID lookup."""
+
+    email_or_username = forms.CharField(
+        label="Email or Username",
+        max_length=254,
+        required=True,
+        widget=forms.TextInput(
+            attrs={
+                "id": "id_email_or_username",
+                "autocomplete": "username",
+                "placeholder": "you@student.buksu.edu.ph or username",
+                "class": "form-control",
+                "autofocus": True,
+            }
+        ),
+    )
+
+    def clean_email_or_username(self):
+        query = (self.cleaned_data.get("email_or_username") or "").strip()
+        if not query:
+            raise forms.ValidationError("Please enter your registered email address or username.")
+        return query
+
+    def get_users(self, query):
+        User = get_user_model()
+        # 1. Match by email (case-insensitive)
+        users = list(User.objects.filter(email__iexact=query, is_active=True))
+        if users:
+            return users
+
+        # 2. Match by username (case-insensitive)
+        users = list(User.objects.filter(username__iexact=query, is_active=True))
+        if users:
+            return users
+
+        # 3. Match by student ID number in UserProfile or MenteeProfile
+        users = list(User.objects.filter(profile__student_id_no__iexact=query, is_active=True))
+        if users:
+            return users
+        users = list(User.objects.filter(mentee_profile__student_id_no__iexact=query, is_active=True))
+        if users:
+            return users
+
+        # 4. Check allauth EmailAddress table
+        try:
+            from allauth.account.models import EmailAddress
+
+            ea = EmailAddress.objects.filter(email__iexact=query).select_related("user").first()
+            if ea and ea.user and ea.user.is_active:
+                return [ea.user]
+        except Exception:
+            pass
+
+        # 5. Dev fallback: if query matches EMAIL_HOST_USER, link to dev/superuser account
+        from django.conf import settings
+
+        host_user = (getattr(settings, "EMAIL_HOST_USER", "") or "").strip().lower()
+        if host_user and query.lower() == host_user:
+            dev_user = (
+                User.objects.filter(username="franciskylearranchado").first()
+                or User.objects.filter(is_superuser=True).first()
+            )
+            if dev_user:
+                return [dev_user]
+
+        return []
+
+    def clean(self):
+        cleaned_data = super().clean()
+        query = cleaned_data.get("email_or_username")
+        if query:
+            matching_users = self.get_users(query)
+            if not matching_users:
+                raise forms.ValidationError(
+                    f"No active account found for '{query}'. Please check your spelling or verify your BukSU institutional email."
+                )
+            cleaned_data["matching_users"] = matching_users
+        return cleaned_data
+
+    def save(
+        self,
+        domain_override=None,
+        subject_template_name="registration/password_reset_subject.txt",
+        email_template_name="registration/password_reset_email.html",
+        use_https=False,
+        token_generator=None,
+        from_email=None,
+        request=None,
+        html_email_template_name="registration/password_reset_email_html.html",
+        extra_email_context=None,
+    ):
+        import logging
+        from django.contrib.auth.tokens import default_token_generator
+        from django.core.mail import EmailMultiAlternatives
+        from django.template.loader import render_to_string
+        from django.utils.encoding import force_bytes
+        from django.utils.http import urlsafe_base64_encode
+        from capstone_site.site_utils import public_host, public_protocol, sync_site_from_env
+
+        logger = logging.getLogger(__name__)
+        token_gen = token_generator or default_token_generator
+        query = self.cleaned_data.get("email_or_username")
+        users = self.cleaned_data.get("matching_users") or self.get_users(query)
+        if not users:
+            logger.warning("password_reset_no_users", extra={"query": query})
+            return 0
+
+        sync_site_from_env()
+        domain = domain_override or public_host(request)
+        protocol = "https" if use_https else public_protocol(request)
+
+        from django.conf import settings
+
+        sender_email = (
+            from_email
+            or getattr(settings, "DEFAULT_FROM_EMAIL", None)
+            or getattr(settings, "EMAIL_HOST_USER", None)
+        )
+
+        sent_count = 0
+        for user in users:
+            dest_email = user.email
+            if not dest_email and query and "@" in query:
+                dest_email = query
+
+            if not dest_email:
+                continue
+
+            context = {
+                "email": dest_email,
+                "domain": domain,
+                "site_name": "PeerLink",
+                "uid": urlsafe_base64_encode(force_bytes(user.pk)),
+                "user": user,
+                "token": token_gen.make_token(user),
+                "protocol": protocol,
+                **(extra_email_context or {}),
+            }
+
+            subject = "Reset your PeerLink password"
+            try:
+                text_content = render_to_string(email_template_name, context)
+            except Exception:
+                text_content = (
+                    f"Hi {user.get_full_name() or user.username},\n\n"
+                    f"Click the link below to reset your PeerLink password:\n"
+                    f"{protocol}://{domain}/accounts/reset/{context['uid']}/{context['token']}/\n\n"
+                    f"If you did not request this, you can safely ignore this email.\n"
+                )
+
+            html_content = None
+            if html_email_template_name:
+                try:
+                    html_content = render_to_string(html_email_template_name, context)
+                except Exception as exc:
+                    logger.warning("password_reset_html_render_failed", extra={"error": str(exc)})
+
+            msg = EmailMultiAlternatives(
+                subject=subject,
+                body=text_content,
+                from_email=sender_email,
+                to=[dest_email],
+            )
+            if html_content:
+                msg.attach_alternative(html_content, "text/html")
+
+            try:
+                msg.send(fail_silently=False)
+                sent_count += 1
+                logger.info("password_reset_sent", extra={"user_id": user.id, "email": dest_email})
+            except Exception as exc:
+                logger.exception("password_reset_send_failed", extra={"user_id": user.id, "email": dest_email, "error": str(exc)})
+                raise forms.ValidationError(
+                    f"Unable to send reset email to {dest_email} due to a mail server connection error. Please try again shortly."
+                )
+
+        return sent_count

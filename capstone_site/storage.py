@@ -8,9 +8,17 @@ _SKIP_POSTPROCESS_NAMES = {
 
 
 class WhiteNoiseStaticFilesStorage(CompressedManifestStaticFilesStorage):
-    """Do not fail collectstatic when a CSS/JS reference is missing from disk."""
+    """Do not fail collectstatic or template rendering when a static file is missing from disk."""
 
     manifest_strict = False
+
+    def stored_name(self, name):
+        try:
+            return super().stored_name(name)
+        except ValueError:
+            if not self.manifest_strict:
+                return name
+            raise
 
     def post_process(self, paths, dry_run=False, **kwargs):
         kept = {

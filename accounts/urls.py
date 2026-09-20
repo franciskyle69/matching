@@ -5,12 +5,13 @@ from . import views
 urlpatterns = [
     path(
         "password_reset/",
-        auth_views.PasswordResetView.as_view(
-            template_name="registration/password_reset_form.html",
-            email_template_name="registration/password_reset_email.html",
-            html_email_template_name="registration/password_reset_email_html.html",
-        ),
+        views.PeerLinkPasswordResetView.as_view(),
         name="password_reset",
+    ),
+    path(
+        "password_reset/done/",
+        views.password_reset_done_view,
+        name="password_reset_done",
     ),
     path("register/", views.register, name="register"),
     path("matching/", views.matching_dashboard, name="matching_dashboard"),
