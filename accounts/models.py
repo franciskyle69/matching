@@ -147,12 +147,20 @@ def get_user_profile(user, create_default=True):
 
 	sec = getattr(user, "security_state", None)
 	is_onboarded = bool(sec and sec.is_onboarded)
+	is_email_verified = bool(getattr(user, "is_staff", False) or getattr(user, "is_superuser", False))
+	if not is_email_verified:
+		try:
+			from allauth.account.models import EmailAddress
+			is_email_verified = EmailAddress.objects.filter(user=user, verified=True).exists()
+		except Exception:
+			pass
 	profile, _ = UserProfile.objects.get_or_create(
 		user=user,
 		defaults={
 			"role": role,
 			"approval_status": approval_status,
 			"is_onboarded": is_onboarded,
+			"is_email_verified": is_email_verified,
 		},
 	)
 	return profile
