@@ -11,7 +11,6 @@ Usage:
 from django.core.management.base import BaseCommand, CommandError
 from django.contrib.auth import get_user_model
 from axes.models import AccessAttempt, AccessLog
-from django.utils import timezone
 
 User = get_user_model()
 

@@ -17,7 +17,7 @@ Usage:
 from __future__ import annotations
 
 import random
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List
 
 from django.contrib.auth.models import User
 from django.contrib.sessions.models import Session

@@ -26,7 +26,6 @@ from profiles.subject_catalog import (  # noqa: E402
     MAJOR_SUBJECT_NAMES,
     SUBJECT_CATALOG,
     competencies_for_subjects,
-    is_minor_subject,
     topics_for_competencies,
 )
 

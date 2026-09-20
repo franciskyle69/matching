@@ -2,7 +2,7 @@ import json
 from django.test import TestCase, Client
 from django.contrib.auth import get_user_model
 from accounts.models import UserProfile
-from profiles.models import MenteeProfile, MentorProfile
+from profiles.models import MenteeProfile
 from matching.models import Subject, Topic, Competency
 
 User = get_user_model()
@@ -154,7 +154,6 @@ class AccountApprovalWorkflowTestCase(TestCase):
 
     def test_newly_registered_accounts_strictly_default_to_pending(self):
         from accounts.models import get_user_profile
-        from accounts.jwt_utils import decode_access_token
 
         # 1. Register a new mentee
         res = self.client.post(

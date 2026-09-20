@@ -25,7 +25,6 @@ from profiles.models import (
     InterestTag,
     MentorCompetency,
     MenteeCompetencyNeed,
-    save_verification_documents,
 )
 from profiles.profile_completion import (
     INSTRUCTOR_ROLE,
@@ -37,10 +36,9 @@ from profiles.profile_completion import (
     mentor_account_fields_complete,
 )
 
-from accounts.email_utils import email_backend_can_send, send_activation_email, send_verification_email
+from accounts.email_utils import send_verification_email
 from accounts.forms import (
     AccountSettingsForm,
-    RegisterForm,
     PasswordChangeCodeRequestForm,
     PasswordChangeCodeVerifyForm,
     PasswordChangeUpdateForm,
@@ -64,7 +62,6 @@ from accounts.views import (
     PASSWORD_CHANGE_CODE_TTL_SECONDS,
     PASSWORD_CHANGE_MAX_ATTEMPTS,
 )
-from accounts.auth_backends import EmailOrUsernameModelBackend
 from accounts.jwt_utils import (
     issue_access_token,
     issue_refresh_token,
@@ -104,7 +101,6 @@ from ..views import (
 from matching.models import Notification, Subject, Topic
 from django.middleware.csrf import get_token
 from django.views.decorators.csrf import ensure_csrf_cookie
-from profiles.questionnaire_utils import filter_topics_for_subjects
 ME_CACHE_TTL_SECONDS = 30
 ME_CACHE_METRICS_LOG_EVERY = 100
 STUDENT_MENTOR_ROLE = "Senior IT Student"
@@ -807,215 +803,6 @@ def check_lockout(request):
             "penalty_minutes": lockout_info.get("penalty_minutes"),
         })
     return JsonResponse({"is_locked": False})
-
-
-@require_http_methods(["POST"])
-def auth_register(request):
-    try:
-        content_type = (request.content_type or "").lower()
-        if "multipart/form-data" in content_type:
-            payload = request.POST
-        else:
-            payload = _get_payload(request)
-        if not _rate_limit(f"register:{_client_ip(request)}", 5, 300):
-            return JsonResponse(
-                {"error": "Too many signups. Try again later."}, status=429
-            )
-
-        role = payload.get("role")
-        from ..views import _validate_role  # avoid circular import at top
-
-        if not _validate_role(role):
-            return JsonResponse({"error": "Role is required."}, status=400)
-
-        expected_role = (_get_str(payload, "expected_role") or "").lower()
-        if expected_role in ("mentor", "mentee") and role != expected_role:
-            return JsonResponse(
-                {
-                    "error": (
-                        f"Sign up must create a {expected_role} account. "
-                        "Return to the portal and choose the correct role."
-                    ),
-                },
-                status=400,
-            )
-
-        form = RegisterForm(payload, request.FILES)
-        if not form.is_valid():
-            return JsonResponse({"errors": form.errors}, status=400)
-        if not email_backend_can_send():
-            return JsonResponse(
-                {
-                    "error": (
-                        "Account could not be created because the server cannot send "
-                        "the activation email. Please try again later."
-                    ),
-                },
-                status=503,
-            )
-
-        cleaned = form.cleaned_data
-        first_name = (cleaned.get("first_name") or "").strip()
-        middle_name = cleaned.get("middle_name", "")
-        last_name = (cleaned.get("last_name") or "").strip()
-        email = (cleaned.get("email") or "").strip()
-        password = cleaned.get("password1") or ""
-        files_by_kind = cleaned.get("verification_files_by_kind") or {}
-        missing = {}
-        if not first_name:
-            missing["first_name"] = ["First name is required."]
-        if not last_name:
-            missing["last_name"] = ["Last name is required."]
-        if not email:
-            missing["email"] = ["Email is required."]
-        if not password:
-            missing["password1"] = ["Password is required."]
-        if not cleaned.get("password2"):
-            missing["password2"] = ["Confirm password is required."]
-        if missing:
-            return JsonResponse({"errors": missing}, status=400)
-        base_username = "".join(part for part in [first_name, last_name] if part)
-        base_username = "".join(ch for ch in base_username.lower() if ch.isalnum())
-        if not base_username:
-            base_username = email.split("@")[0].lower()
-        username = base_username
-        suffix = 1
-        while User.objects.filter(username=username).exists():
-            suffix += 1
-            username = f"{base_username}{suffix}"
-
-        try:
-            user = User.objects.create_user(
-                username=username,
-                email=email,
-                password=password,
-                first_name=first_name,
-                last_name=last_name,
-            )
-            user.is_active = False
-            user.save(update_fields=["is_active"])
-        except Exception as exc:
-            logger.exception("auth_register_user_create_failed", extra={"email": email, "role": role})
-            return JsonResponse(
-                {
-                    "error": "Unable to create account at the moment. Please try again.",
-                    "detail": str(exc),
-                },
-                status=400,
-            )
-
-        try:
-            if role == "mentor":
-                mentor_role = (
-                    _get_str(payload, "mentor_role")
-                    or _get_str(payload, "mentor_type")
-                    or cleaned.get("mentor_role", "")
-                )
-                if mentor_role not in ("Senior IT Student", "Instructor"):
-                    user.delete()
-                    return JsonResponse(
-                        {
-                            "error": (
-                                "Select whether you are signing up as a "
-                                "student mentor or an instructor."
-                            ),
-                        },
-                        status=400,
-                    )
-                requested_year = cleaned.get("year_level")
-                if requested_year not in STUDENT_MENTOR_YEAR_LEVELS:
-                    requested_year = _get_int(payload, "year_level")
-                if (
-                    mentor_role == STUDENT_MENTOR_ROLE
-                    and requested_year not in STUDENT_MENTOR_YEAR_LEVELS
-                ):
-                    user.delete()
-                    return JsonResponse(
-                        {
-                            "error": (
-                                "Select whether you are a 3rd year or "
-                                "4th year student mentor."
-                            ),
-                        },
-                        status=400,
-                    )
-                year_level = _mentor_year_level_for_role(
-                    mentor_role,
-                    requested_year,
-                )
-                mentor = MentorProfile.objects.create(
-                    user=user,
-                    program="BSIT",
-                    year_level=year_level,
-                    role=mentor_role,
-                    capacity=5,
-                    gender=_normalise_mentor_gender(
-                        cleaned.get("gender") or _get_str(payload, "gender"),
-                        default="",
-                    ),
-                    approved=False,
-                )
-                save_verification_documents(
-                    mentor=mentor,
-                    files_by_kind=files_by_kind,
-                )
-            else:
-                mentee = MenteeProfile.objects.create(
-                    user=user,
-                    program="BSIT",
-                    year_level=1,
-                    campus="",
-                    student_id_no="",
-                    contact_no="",
-                    admission_type="",
-                    sex="",
-                    approved=False,
-                )
-                save_verification_documents(
-                    mentee=mentee,
-                    files_by_kind=files_by_kind,
-                )
-        except Exception as exc:
-            logger.exception("auth_register_profile_create_failed", extra={"email": email, "role": role})
-            user.delete()
-            return JsonResponse(
-                {
-                    "error": "Unable to save your verification documents. Please upload valid PDF, JPG, or PNG files and try again.",
-                    "detail": str(exc),
-                },
-                status=400,
-            )
-
-        try:
-            send_activation_email(request, user)
-        except Exception as exc:
-            logger.exception("auth_register_email_phase_failed", extra={"user_id": user.id, "email": user.email})
-            user.delete()
-            return JsonResponse(
-                {
-                    "error": "Account could not be created because activation email could not be sent. Please try again.",
-                    "detail": str(exc),
-                },
-                status=503,
-            )
-
-        audit_log(user, "register", "auth", user.id)
-        logger.info("auth_register", extra={"user_id": user.id, "role": role})
-        return JsonResponse(
-            {
-                "status": "ok",
-                "message": "Check your email to activate your account.",
-            }
-        )
-    except Exception as exc:
-        logger.exception("auth_register_unhandled_error")
-        return JsonResponse(
-            {
-                "error": "Unable to create account right now. Please try again.",
-                "detail": str(exc),
-            },
-            status=400,
-        )
 
 
 @require_http_methods(["POST"])

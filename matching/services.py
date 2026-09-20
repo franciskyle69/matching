@@ -7,7 +7,7 @@ import time
 
 import pandas as pd
 from django.core.cache import cache
-from django.db.models import Count, Prefetch, QuerySet, Q
+from django.db.models import Count, QuerySet, Q
 
 from profiles.models import MentorProfile, MenteeProfile
 from matching.models import MenteeMentorRequest, UserTopicPreference, Topic

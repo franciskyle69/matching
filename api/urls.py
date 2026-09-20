@@ -9,7 +9,6 @@ from .controllers.account_controller import (
     auth_logout,
     auth_refresh,
     check_lockout,
-    auth_register,
     unified_auth_register,
     auth_verify_email,
     auth_resend_verification,

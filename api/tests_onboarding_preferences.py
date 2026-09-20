@@ -1,11 +1,9 @@
 from django.test import TestCase, Client
 from django.contrib.auth import get_user_model
-from rest_framework import serializers
-
 from accounts.models import UserProfile
 from matching.models import Subject, Topic, Competency
 from profiles.models import MenteeProfile, MentorProfile
-from api.serializers import OnboardingPreferenceSerializer, ROLE_PREFERENCE_LIMITS
+from api.serializers import OnboardingPreferenceSerializer
 
 User = get_user_model()
 

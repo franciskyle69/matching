@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import List, Dict, Any
+from typing import Dict, Any
 
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction

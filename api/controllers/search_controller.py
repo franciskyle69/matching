@@ -1,6 +1,6 @@
 from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
-from django.db.models import Q, Value, CharField, Case, When
+from django.db.models import Q
 from django.http import JsonResponse
 from django.views.decorators.http import require_GET
 

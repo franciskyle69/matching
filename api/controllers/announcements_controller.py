@@ -4,7 +4,7 @@ Supports targeting: all mentees (default) or specific user(s) via recipient_ids.
 Soft delete: announcements with deleted_at set are excluded from lists.
 """
 from django.contrib.auth.decorators import login_required
-from django.db.models import Exists, OuterRef, Q
+from django.db.models import Exists, OuterRef
 from django.http import JsonResponse
 from django.utils import timezone
 from django.views.decorators.http import require_GET, require_http_methods

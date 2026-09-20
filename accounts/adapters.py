@@ -14,10 +14,7 @@ from profiles.profile_completion import (
 from accounts.oauth_gate import (
     ACCOUNT_EXISTS,
     INTENT_SESSION_KEY,
-    LOGIN_MISSING_MESSAGE,
     NO_ACCOUNT,
-    SIGNUP_EXISTS_MESSAGE,
-    SIGNUP_INTENT,
     normalize_oauth_intent,
     resolve_google_oauth_gate,
 )
