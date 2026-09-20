@@ -56,3 +56,29 @@ def sync_site_from_env() -> None:
     except Exception:
         # Sites table may not exist yet during migrate.
         pass
+
+
+def sync_google_socialapp_from_env() -> None:
+    """Keep allauth SocialApp for Google in sync with GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET from environment."""
+    client_id = (os.environ.get("GOOGLE_CLIENT_ID") or "").strip()
+    client_secret = (os.environ.get("GOOGLE_CLIENT_SECRET") or "").strip()
+    if not client_id:
+        return
+    try:
+        from django.conf import settings
+        from django.contrib.sites.models import Site
+        from allauth.socialaccount.models import SocialApp
+
+        app, _ = SocialApp.objects.update_or_create(
+            provider="google",
+            defaults={
+                "name": "Google",
+                "client_id": client_id,
+                "secret": client_secret,
+            },
+        )
+        current_site = Site.objects.filter(pk=getattr(settings, "SITE_ID", 1)).first()
+        if current_site and not app.sites.filter(pk=current_site.pk).exists():
+            app.sites.add(current_site)
+    except Exception:
+        pass

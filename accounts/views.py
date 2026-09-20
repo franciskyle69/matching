@@ -97,6 +97,9 @@ def select_role(request, role: str):
 
 
 def select_google_role(request, role: str):
+    from capstone_site.site_utils import sync_google_socialapp_from_env
+    sync_google_socialapp_from_env()
+
     if role not in ("mentor", "mentee"):
         return redirect("/app/signin?role_required=1")
     request.session[ROLE_SESSION_KEY] = role
@@ -112,6 +115,9 @@ def select_google_role(request, role: str):
 
 def start_google_oauth(request, intent: str):
     """Google OAuth is strictly login-only. Redirect any signup attempts to manual registration."""
+    from capstone_site.site_utils import sync_google_socialapp_from_env
+    sync_google_socialapp_from_env()
+
     normalized = normalize_oauth_intent(intent)
     if normalized == SIGNUP_INTENT:
         messages.info(request, "Google sign up is disabled. Please complete the manual registration.")
