@@ -28,11 +28,14 @@ import {
   Alert,
   CircularProgress,
   Chip,
+  useTheme,
 } from "@mui/material";
 import CloudUploadOutlinedIcon from "@mui/icons-material/CloudUploadOutlined";
 import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
 import SchoolOutlinedIcon from "@mui/icons-material/SchoolOutlined";
 import DescriptionOutlinedIcon from "@mui/icons-material/DescriptionOutlined";
+import MarkEmailReadOutlinedIcon from "@mui/icons-material/MarkEmailReadOutlined";
+import RegisterSuccess from "./RegisterSuccess.jsx";
 
 export const CAMPUS_OPTIONS = [
   "Main Campus (Malaybalay)",
@@ -51,6 +54,9 @@ export const CAMPUS_OPTIONS = [
 ];
 
 export default function Register({ onRegisterSuccess, onNavigateToLogin }) {
+  const theme = useTheme();
+  const isDark = theme?.palette?.mode === "dark";
+
   const [role, setRole] = useState("MENTEE");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
@@ -71,6 +77,10 @@ export default function Register({ onRegisterSuccess, onNavigateToLogin }) {
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [approvalModalOpen, setApprovalModalOpen] = useState(false);
+  const [isRegistered, setIsRegistered] = useState(false);
+  const [registeredEmail, setRegisteredEmail] = useState("");
+  const [resendLoading, setResendLoading] = useState(false);
+  const [resendSuccess, setResendSuccess] = useState("");
 
   // Update default year level when role changes
   useEffect(() => {
@@ -182,28 +192,12 @@ export default function Register({ onRegisterSuccess, onNavigateToLogin }) {
         return;
       }
 
-      // Store JWT tokens
-      if (data.access_token) {
-        localStorage.setItem("accessToken", data.access_token);
-        localStorage.setItem("token", data.access_token);
-      }
-      if (data.refresh_token) {
-        localStorage.setItem("refreshToken", data.refresh_token);
-      }
-
-      const user = data.user || {};
-      const approvalStatus = user.approval_status || (role === "MENTEE" ? "ACTIVE" : "PENDING_APPROVAL");
+      // Strictly halt auto-login and do not redirect to onboarding
+      setIsRegistered(true);
+      setRegisteredEmail(email.trim().toLowerCase());
 
       if (onRegisterSuccess) {
         onRegisterSuccess(data);
-      }
-
-      if (approvalStatus === "ACTIVE") {
-        // Mentee active: go directly to onboarding
-        window.location.hash = "#/onboarding";
-      } else {
-        // Mentor pending: show approval modal
-        setApprovalModalOpen(true);
       }
     } catch (err) {
       console.error("Registration error:", err);
@@ -274,20 +268,63 @@ export default function Register({ onRegisterSuccess, onNavigateToLogin }) {
     </Paper>
   );
 
+  const handleResendVerification = async () => {
+    setResendLoading(true);
+    setResendSuccess("");
+    try {
+      const res = await fetch("/api/auth/resend-verification/", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ identifier: registeredEmail }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        setResendSuccess(data.message || "A fresh verification email has been sent. Please check your inbox.");
+      } else {
+        setErrorMessage(data.error || "Failed to resend verification email.");
+      }
+    } catch (e) {
+      setErrorMessage("Network error while resending verification email.");
+    } finally {
+      setResendLoading(false);
+    }
+  };
+
+  if (isRegistered) {
+    return (
+      <RegisterSuccess
+        email={registeredEmail}
+        onNavigateToLogin={() => {
+          if (onNavigateToLogin) {
+            onNavigateToLogin();
+          } else {
+            window.location.hash = "#/login";
+          }
+        }}
+      />
+    );
+  }
+
   return (
     <Container maxWidth="md" sx={{ py: 4 }}>
       <Paper
-        elevation={3}
+        elevation={0}
         sx={{
           p: { xs: 3, sm: 5 },
-          borderRadius: 3,
-          backgroundColor: "#ffffff",
-          boxShadow: "0 10px 30px rgba(0, 40, 85, 0.08)",
+          borderRadius: "24px",
+          backgroundColor: isDark ? "#151D2A" : "#E6ECF5",
+          boxShadow: isDark
+            ? "8px 8px 20px #080d16, -8px -8px 20px #1e2b3c"
+            : "8px 8px 20px #c5d0e0, -8px -8px 20px #ffffff",
+          border: isDark
+            ? "1px solid rgba(255, 255, 255, 0.08)"
+            : "1px solid rgba(255, 255, 255, 0.8)",
+          transition: "all 0.25s ease-in-out",
         }}
       >
         <Box sx={{ textAlign: "center", mb: 4 }}>
-          <SchoolOutlinedIcon sx={{ fontSize: 44, color: "primary.main", mb: 1 }} />
-          <Typography variant="h4" component="h1" fontWeight={700} color="#002855" gutterBottom>
+          <SchoolOutlinedIcon sx={{ fontSize: 44, color: isDark ? "#60A5FA" : "primary.main", mb: 1 }} />
+          <Typography variant="h4" component="h1" fontWeight={700} color="text.primary" gutterBottom>
             BukSU IT Mentorship Registration
           </Typography>
           <Typography variant="body1" color="text.secondary">

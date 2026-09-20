@@ -116,6 +116,7 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    'django.middleware.gzip.GZipMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'capstone_site.security.SecurityHeadersMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',  # For serving static files in production
@@ -181,6 +182,7 @@ if db_name and not force_sqlite:
             'HOST': db_host,
             'PORT': db_port,
             'OPTIONS': db_options,
+            'CONN_MAX_AGE': int(os.environ.get('DB_CONN_MAX_AGE', '600')),
         }
     }
 else:

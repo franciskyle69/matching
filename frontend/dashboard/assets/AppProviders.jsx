@@ -92,6 +92,7 @@
       .replace(/^\//, "");
     if (!value) return null;
     const base = value.split("/")[0];
+    if (base === "verify-email") return "verify-email";
     if (MAIN_TABS.some((tab) => tab.id === base)) return base;
     const hiddenTabs =
       (window.DashboardApp && window.DashboardApp.HIDDEN_TABS) || [];
@@ -113,6 +114,10 @@
   function AppProviders() {
     const [activeTab, setActiveTab] = useState(() => {
       const path = (window.location.pathname || "").replace(/\/+$/, "");
+      const hash = window.location.hash || "";
+      if (path.includes("/verify-email") || hash.includes("verify-email")) {
+        return "verify-email";
+      }
       if (path.endsWith("/app/signin")) return "signin";
       if (path.endsWith("/app/signup")) return "signup";
       if (
@@ -175,6 +180,7 @@
     const [onboardingSaving, setOnboardingSaving] = useState(false);
     const [signInLoading, setSignInLoading] = useState(false);
     const [signUpLoading, setSignUpLoading] = useState(false);
+    const [signUpSuccessEmail, setSignUpSuccessEmail] = useState("");
     const [logoutLoading, setLogoutLoading] = useState(false);
     const [signInForm, setSignInForm] = useState({
       identifier: "",
@@ -616,7 +622,7 @@
     useEffect(() => {
       if (!authCheckDone) return;
       if (!authRequired) return;
-      if (activeTab === "signin" || activeTab === "signup") return;
+      if (activeTab === "signin" || activeTab === "signup" || activeTab === "verify-email") return;
       setActiveTab("signin");
       replaceAppUrl("signin");
     }, [authCheckDone, authRequired, activeTab]);
@@ -923,17 +929,9 @@
       postsFeedLoaded,
     ]);
 
-    useEffect(() => {
-      if (!user) return;
-      const onFocus = () => {
-        if (document.visibilityState !== "visible") return;
-        const stale =
-          Date.now() - meLastFetchTsRef.current > ME_MIN_FETCH_INTERVAL_MS;
-        if (stale) loadMe({ force: false });
-      };
-      window.addEventListener("focus", onFocus);
-      return () => window.removeEventListener("focus", onFocus);
-    }, [user]);
+    // Disabled aggressive window-focus refetching so tab switches do not trigger
+    // full API re-queries or disruptive loading spinners (refetchOnWindowFocus: false).
+
 
     async function loadMe(options = {}) {
       const force = !!options.force;
@@ -1436,11 +1434,20 @@
         }
 
         if (result.status === 403 && result.data?.error) {
-          setError(result.data.error);
+          const errText = result.data.error;
+          const isEmailVerification =
+            result.data.code === "email_not_verified" ||
+            errText.toLowerCase().includes("verify your buksu email");
+
+          setError(errText);
           setAuthAlert({
-            severity: "error",
-            title: "Cannot sign in with this role",
-            message: result.data.error,
+            severity: isEmailVerification ? "warning" : "error",
+            code: isEmailVerification ? "email_not_verified" : undefined,
+            title: isEmailVerification
+              ? "Email verification required"
+              : "Cannot sign in with this role",
+            message: errText,
+            email: result.data.email || signInForm.identifier,
           });
           return;
         }
@@ -1558,13 +1565,18 @@
             });
             return;
           }
-          const token = result.data?.access_token || "";
-          setAccessToken(token);
-          try {
-            window.sessionStorage.setItem("peerlink_access_token", token);
-          } catch (_) {}
-          const profile = await loadMe({ force: true });
-          if (profile) setActiveTab("onboarding");
+          const message =
+            result.data?.message ||
+            "Registration successful. Please check your email to verify your account.";
+          setSignUpSuccessEmail(email);
+          setAuthAlert({
+            severity: "success",
+            code: "registration_success",
+            title: "Account Created Successfully!",
+            message,
+            email,
+          });
+          setAuthMessage(message);
           return;
         }
         const portalRole = getPortalAuthRole();
@@ -1762,7 +1774,17 @@
           addToast(message, "error");
           return;
         }
-        const message = result.data?.message || "Account created.";
+        const message =
+          result.data?.message ||
+          "Registration successful. Please check your email to verify your account.";
+        setSignUpSuccessEmail(email);
+        setAuthAlert({
+          severity: "success",
+          code: "registration_success",
+          title: "Account Created Successfully!",
+          message,
+          email,
+        });
         setAuthMessage(message);
         const keepRole =
           portalRole === "mentor" || portalRole === "mentee"
@@ -1772,8 +1794,6 @@
           ...emptySignUpForm,
           role: keepRole,
         });
-        setActiveTab("signin");
-        replaceAppUrl("signin");
       } finally {
         setSignUpLoading(false);
       }
@@ -2824,7 +2844,7 @@
     const showSignInPrompt =
       authCheckDone &&
       authRequired &&
-      !["signin", "signup"].includes(activeTab);
+      !["signin", "signup", "verify-email"].includes(activeTab);
 
     useEffect(() => {
       const unapproved = user && getIsPendingApproval(user);
@@ -2992,6 +3012,8 @@
       loadMe,
       handleSignIn,
       handleSignUp,
+      signUpSuccessEmail,
+      setSignUpSuccessEmail,
       handleLogout,
       theme,
       toggleTheme,

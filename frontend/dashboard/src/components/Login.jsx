@@ -50,6 +50,10 @@ export default function Login({ onLoginSuccess, onNavigateRegister }) {
   const [googleLoading, setGoogleLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [showRegisterPrompt, setShowRegisterPrompt] = useState(false);
+  const [isUnverified, setIsUnverified] = useState(false);
+  const [unverifiedEmail, setUnverifiedEmail] = useState("");
+  const [resendLoading, setResendLoading] = useState(false);
+  const [resendSuccess, setResendSuccess] = useState("");
 
   // Check URL parameters for OAuth error responses
   useEffect(() => {
@@ -88,6 +92,8 @@ export default function Login({ onLoginSuccess, onNavigateRegister }) {
     if (e) e.preventDefault();
     setErrorMessage("");
     setShowRegisterPrompt(false);
+    setIsUnverified(false);
+    setResendSuccess("");
 
     if (!identifier.trim() || !password) {
       setErrorMessage("Please enter both your email/username and password.");
@@ -113,6 +119,17 @@ export default function Login({ onLoginSuccess, onNavigateRegister }) {
           data.error ||
           (data.errors && Object.values(data.errors).flat().join(" ")) ||
           "Login failed. Please check your credentials.";
+
+        if (
+          response.status === 403 &&
+          (data.code === "email_not_verified" ||
+            errorText.toLowerCase().includes("verify your buksu email"))
+        ) {
+          setIsUnverified(true);
+          setUnverifiedEmail(data.email || identifier.trim());
+          setErrorMessage("Your email is not verified.");
+          return;
+        }
 
         setErrorMessage(errorText);
         if (
@@ -142,6 +159,28 @@ export default function Login({ onLoginSuccess, onNavigateRegister }) {
       setErrorMessage("Network error connecting to login service. Please try again.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleResendVerification = async () => {
+    setResendLoading(true);
+    setResendSuccess("");
+    try {
+      const res = await fetch("/api/auth/resend-verification/", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ identifier: unverifiedEmail || identifier.trim() }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        setResendSuccess(data.message || "A verification email has been sent. Please check your inbox.");
+      } else {
+        setErrorMessage(data.error || "Failed to resend verification email. Please try again later.");
+      }
+    } catch (e) {
+      setErrorMessage("Network error while resending verification email.");
+    } finally {
+      setResendLoading(false);
     }
   };
 
@@ -223,12 +262,28 @@ export default function Login({ onLoginSuccess, onNavigateRegister }) {
           </Typography>
         </Box>
 
+        {resendSuccess && (
+          <Alert severity="success" sx={{ mb: 3 }}>
+            {resendSuccess}
+          </Alert>
+        )}
+
         {errorMessage && (
           <Alert
-            severity="error"
+            severity={isUnverified ? "warning" : "error"}
             sx={{ mb: 3 }}
             action={
-              showRegisterPrompt ? (
+              isUnverified ? (
+                <Button
+                  color="inherit"
+                  size="small"
+                  disabled={resendLoading}
+                  onClick={handleResendVerification}
+                  sx={{ fontWeight: 600, textDecoration: "underline" }}
+                >
+                  {resendLoading ? <CircularProgress size={18} /> : "Resend Verification Email"}
+                </Button>
+              ) : showRegisterPrompt ? (
                 <Button color="inherit" size="small" onClick={goToRegister}>
                   Register Now
                 </Button>

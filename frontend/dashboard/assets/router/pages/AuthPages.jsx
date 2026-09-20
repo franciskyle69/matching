@@ -7,6 +7,7 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
+import RegisterSuccess from "../../../src/components/RegisterSuccess.jsx";
 
 (function () {
   "use strict";
@@ -404,8 +405,12 @@ import {
   }
 
   function AuthAlertBanner({ authAlert, setAuthAlert, defaultTitle }) {
+    const [resendLoading, setResendLoading] = useState(false);
+    const [resendDone, setResendDone] = useState(false);
+
     useEffect(() => {
       if (!authAlert || isOauthMismatchAlert(authAlert)) return;
+      if (authAlert.code === "email_not_verified") return;
       const timer = setTimeout(() => {
         if (typeof setAuthAlert === "function") {
           setAuthAlert(null);
@@ -415,6 +420,23 @@ import {
     }, [authAlert, setAuthAlert]);
 
     if (!authAlert || isOauthMismatchAlert(authAlert)) return null;
+
+    const handleResend = async () => {
+      setResendLoading(true);
+      try {
+        await fetch("/api/auth/resend-verification/", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ identifier: authAlert.email || "" }),
+        });
+        setResendDone(true);
+      } catch (e) {
+      } finally {
+        setResendLoading(false);
+      }
+    };
+
+    const isEmailNotVerified = authAlert.code === "email_not_verified";
     const body = (
       <div className="auth-alert-content">
         <p className="auth-alert-title">{authAlert.title || defaultTitle}</p>
@@ -426,6 +448,33 @@ import {
           <p className="auth-alert-attempts">
             Failed attempts: {authAlert.attempts}
           </p>
+        )}
+        {isEmailNotVerified && (
+          <div style={{ marginTop: "8px" }}>
+            {resendDone ? (
+              <span style={{ fontSize: "13px", color: "#166534", fontWeight: 600 }}>
+                Verification email sent! Please check your inbox.
+              </span>
+            ) : (
+              <button
+                type="button"
+                className="btn btn-sm"
+                onClick={handleResend}
+                disabled={resendLoading}
+                style={{
+                  padding: "4px 12px",
+                  fontSize: "13px",
+                  cursor: "pointer",
+                  borderRadius: "6px",
+                  backgroundColor: "#002855",
+                  color: "#ffffff",
+                  border: "none",
+                }}
+              >
+                {resendLoading ? "Sending..." : "Resend Verification Email"}
+              </button>
+            )}
+          </div>
         )}
       </div>
     );
@@ -777,11 +826,27 @@ import {
       handleSignUp,
       setActiveTab,
       signUpLoading,
+      signUpSuccessEmail,
+      setSignUpSuccessEmail,
       authAlert,
       setAuthAlert,
       theme,
       toggleTheme,
     } = ctx;
+
+    if (signUpSuccessEmail || (authAlert && authAlert.code === "registration_success")) {
+      const emailToShow = signUpSuccessEmail || authAlert?.email || signUpForm.email;
+      return (
+        <RegisterSuccess
+          email={emailToShow}
+          onNavigateToLogin={() => {
+            if (typeof setSignUpSuccessEmail === "function") setSignUpSuccessEmail("");
+            if (typeof setAuthAlert === "function") setAuthAlert(null);
+            navigateAuthTab(setActiveTab, "signin");
+          }}
+        />
+      );
+    }
     const portalRoleLabel = getPortalRoleLabel();
     const portalAuthRole = getPortalAuthRole();
     const isAuthLoading = signUpLoading;
@@ -1418,10 +1483,27 @@ import {
       signUpForm,
       setSignUpForm,
       handleSignUp,
+      setActiveTab,
       signUpLoading,
+      signUpSuccessEmail,
+      setSignUpSuccessEmail,
       authAlert,
       setAuthAlert,
     } = ctx;
+
+    if (signUpSuccessEmail || (authAlert && authAlert.code === "registration_success")) {
+      const emailToShow = signUpSuccessEmail || authAlert?.email || signUpForm.email;
+      return (
+        <RegisterSuccess
+          email={emailToShow}
+          onNavigateToLogin={() => {
+            if (typeof setSignUpSuccessEmail === "function") setSignUpSuccessEmail("");
+            if (typeof setAuthAlert === "function") setAuthAlert(null);
+            if (typeof setActiveTab === "function") setActiveTab("signin");
+          }}
+        />
+      );
+    }
     const update = (key) => (event) =>
       setSignUpForm((previous) => ({ ...previous, [key]: event.target.value }));
     const emailIsValid = /^[^\s@]+@(student\.)?buksu\.edu\.ph$/i.test(
@@ -1537,10 +1619,149 @@ import {
     );
   }
 
+  function VerifyEmailPage() {
+    const [loading, setLoading] = useState(true);
+    const [success, setSuccess] = useState(false);
+    const [message, setMessage] = useState("");
+    const [errorMessage, setErrorMessage] = useState("");
+
+    useEffect(() => {
+      const pathname = window.location.pathname || "";
+      const hash = window.location.hash || "";
+
+      let uid = "";
+      let tok = "";
+
+      const pathMatch = pathname.match(/\/verify-email\/([^/]+)\/([^/]+)/);
+      if (pathMatch) {
+        uid = pathMatch[1];
+        tok = pathMatch[2];
+      }
+
+      if (!uid || !tok) {
+        const hashMatch = hash.match(/verify-email\/([^/?#]+)\/([^/?#]+)/);
+        if (hashMatch) {
+          uid = hashMatch[1];
+          tok = hashMatch[2];
+        }
+      }
+
+      if (!uid || !tok) {
+        const searchParams = new URLSearchParams(window.location.search);
+        const hashQuery = hash.includes("?") ? new URLSearchParams(hash.split("?")[1]) : null;
+        uid = searchParams.get("uidb64") || searchParams.get("uid") || (hashQuery ? hashQuery.get("uidb64") || hashQuery.get("uid") : "");
+        tok = searchParams.get("token") || (hashQuery ? hashQuery.get("token") : "");
+      }
+
+      if (!uid || !tok) {
+        setLoading(false);
+        setErrorMessage("Invalid or missing email verification parameters.");
+        return;
+      }
+
+      fetch("/api/auth/verify-email/", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ uidb64: uid, token: tok }),
+      })
+        .then((res) => res.json().then((data) => ({ ok: res.ok, data })))
+        .then(({ ok, data }) => {
+          setLoading(false);
+          if (ok) {
+            setSuccess(true);
+            setMessage(data.message || "Email successfully verified. You can now log in.");
+          } else {
+            setSuccess(false);
+            setErrorMessage(data.error || "Activation link is invalid or expired.");
+          }
+        })
+        .catch(() => {
+          setLoading(false);
+          setSuccess(false);
+          setErrorMessage("Network error verifying email. Please try again later.");
+        });
+    }, []);
+
+    const goToLogin = () => {
+      window.location.href = "/app/#signin";
+    };
+
+    return (
+      <div className="auth-page">
+        <div className="auth-card" style={{ maxWidth: "540px", margin: "40px auto", padding: "32px", textAlign: "center" }}>
+          <h2 style={{ color: "#002855", marginBottom: "16px" }}>BukSU IT PeerLink</h2>
+          {loading && (
+            <div style={{ padding: "32px 0" }}>
+              <div className="spinner" style={{ margin: "0 auto 16px" }} />
+              <p style={{ fontWeight: 600, fontSize: "16px" }}>Verifying your BukSU email address...</p>
+              <p style={{ color: "#64748b", fontSize: "14px" }}>Please wait while we confirm your credentials.</p>
+            </div>
+          )}
+          {!loading && success && (
+            <div style={{ padding: "24px 0" }}>
+              <div style={{ fontSize: "48px", color: "#16a34a", marginBottom: "16px" }}>✓</div>
+              <h3 style={{ color: "#16a34a", marginBottom: "8px" }}>Email Verified Successfully!</h3>
+              <p style={{ color: "#475569", marginBottom: "24px", fontSize: "15px" }}>
+                {message || "Your BukSU institutional email has been verified. You can now log in to PeerLink."}
+              </p>
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={goToLogin}
+                style={{
+                  width: "100%",
+                  padding: "12px",
+                  fontSize: "16px",
+                  backgroundColor: "#002855",
+                  color: "#fff",
+                  borderRadius: "8px",
+                  border: "none",
+                  cursor: "pointer",
+                  fontWeight: 600,
+                }}
+              >
+                Proceed to Login
+              </button>
+            </div>
+          )}
+          {!loading && !success && (
+            <div style={{ padding: "24px 0" }}>
+              <div style={{ fontSize: "48px", color: "#dc2626", marginBottom: "16px" }}>⚠</div>
+              <h3 style={{ color: "#dc2626", marginBottom: "8px" }}>Verification Failed</h3>
+              <p style={{ color: "#475569", marginBottom: "24px", fontSize: "15px" }}>
+                {errorMessage || "Activation link is invalid or expired."}
+              </p>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={goToLogin}
+                style={{
+                  width: "100%",
+                  padding: "12px",
+                  fontSize: "16px",
+                  backgroundColor: "#002855",
+                  color: "#fff",
+                  borderRadius: "8px",
+                  border: "none",
+                  cursor: "pointer",
+                  fontWeight: 600,
+                }}
+              >
+                Go to Sign In
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   window.DashboardApp = window.DashboardApp || {};
   window.DashboardApp.Pages = window.DashboardApp.Pages || {};
   window.DashboardApp.Pages.signin = SignInPage;
   window.DashboardApp.Pages.signup = SignUpPage;
+  window.DashboardApp.Pages["verify-email"] = VerifyEmailPage;
   if (typeof module !== "undefined" && module.exports)
-    module.exports = { SignInPage, SignUpPage, UnifiedSignUpPage };
+    module.exports = { SignInPage, SignUpPage, UnifiedSignUpPage, VerifyEmailPage };
 })();
+

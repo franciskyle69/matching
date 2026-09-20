@@ -82,6 +82,7 @@
     { id: "mentor-preferences", label: "Mentor Preferences" },
     { id: "pending-approval", label: "Account Under Review" },
     { id: "account-rejected", label: "Account Rejected" },
+    { id: "verify-email", label: "Verify Email" },
   ];
   window.DashboardApp.MAIN_TABS = ROUTES.map(({ id, label }) => ({
     id,

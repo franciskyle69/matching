@@ -49,8 +49,10 @@ class UserProfile(models.Model):
 		max_length=20,
 		choices=APPROVAL_CHOICES,
 		default=STATUS_PENDING,
+		db_index=True,
 	)
-	is_onboarded = models.BooleanField(default=False)
+	is_onboarded = models.BooleanField(default=False, db_index=True)
+	is_email_verified = models.BooleanField(default=False, db_index=True)
 	student_id_no = models.CharField(max_length=20, blank=True, default="")
 	contact_no = models.CharField(max_length=11, blank=True, default="")
 	admission_type = models.CharField(max_length=100, blank=True, default="")
@@ -228,4 +230,23 @@ if not hasattr(_UserModel, "is_onboarded"):
 			profile.is_onboarded = bool(value)
 
 	_UserModel.is_onboarded = property(_user_get_is_onboarded, _user_set_is_onboarded)
+
+if not hasattr(_UserModel, "is_email_verified"):
+	def _user_get_is_email_verified(self):
+		profile = getattr(self, "profile", None)
+		if profile is not None:
+			return bool(getattr(profile, "is_email_verified", False))
+		return False
+
+	def _user_set_is_email_verified(self, value):
+		profile = getattr(self, "profile", None)
+		if profile is not None:
+			profile.is_email_verified = bool(value)
+			try:
+				profile.save(update_fields=["is_email_verified"])
+			except Exception:
+				pass
+
+	_UserModel.is_email_verified = property(_user_get_is_email_verified, _user_set_is_email_verified)
+
 

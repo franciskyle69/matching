@@ -65,4 +65,30 @@ describe("Register Component", () => {
     expect(screen.queryByRole("button", { name: /Google/i })).not.toBeInTheDocument();
     expect(screen.queryByText(/Google account verified/i)).not.toBeInTheDocument();
   });
+
+  it("transitions to Check Your Inbox screen on successful registration without auto-login", async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 201,
+      json: async () => ({
+        message: "Registration successful. Please check your email to verify your account.",
+      }),
+    });
+
+    render(<Register />);
+
+    fireEvent.change(screen.getByLabelText(/First Name/i), { target: { value: "Juan" } });
+    fireEvent.change(screen.getByLabelText(/Last Name/i), { target: { value: "Dela Cruz" } });
+    fireEvent.change(screen.getByLabelText(/BukSU Email Address/i), { target: { value: "juan@student.buksu.edu.ph" } });
+    fireEvent.change(screen.getByLabelText(/^Password/i), { target: { value: "Password123!" } });
+    fireEvent.change(screen.getByLabelText(/Confirm Password/i), { target: { value: "Password123!" } });
+
+    fireEvent.click(screen.getByRole("button", { name: /Complete Registration/i }));
+
+    expect(await screen.findByRole("heading", { name: /Check Your Inbox/i })).toBeInTheDocument();
+    expect(screen.getByText(/juan@student\.buksu\.edu\.ph/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Proceed to Sign In/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Resend Verification Email/i })).toBeInTheDocument();
+  });
 });
+

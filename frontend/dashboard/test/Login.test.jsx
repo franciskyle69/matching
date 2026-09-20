@@ -85,4 +85,47 @@ describe("Login Component", () => {
     fireEvent.click(registerBtn);
     expect(onNavigateRegister).toHaveBeenCalled();
   });
+
+  it("captures 403 unverified email error and allows resending verification email", async () => {
+    global.fetch = vi.fn()
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 403,
+        json: async () => ({
+          error: "Please verify your BukSU email address before logging in.",
+          code: "email_not_verified",
+          email: "student@student.buksu.edu.ph",
+        }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          message: "A verification email has been sent. Please check your inbox.",
+        }),
+      });
+
+    render(<Login />);
+
+    fireEvent.change(
+      screen.getByPlaceholderText(/you@student\.buksu\.edu\.ph or username/i),
+      { target: { value: "student@student.buksu.edu.ph" } }
+    );
+    fireEvent.change(screen.getByPlaceholderText(/••••••••/i), {
+      target: { value: "password123" },
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /Sign In/i }));
+
+    expect(await screen.findByText(/Your email is not verified\./i)).toBeInTheDocument();
+    const resendBtn = screen.getByRole("button", { name: /Resend Verification Email/i });
+    expect(resendBtn).toBeInTheDocument();
+
+    fireEvent.click(resendBtn);
+
+    expect(
+      await screen.findByText(/A verification email has been sent\. Please check your inbox\./i)
+    ).toBeInTheDocument();
+  });
 });
+

@@ -12,15 +12,15 @@
         <p style="margin:0 0 20px; font-size:15px; line-height:1.6; color:#475569;">
           Hi {{ user.get_full_name|default:user.email }}, please confirm your email address to activate your account.
         </p>
-        <a href="{{ protocol }}://{{ domain }}{% url 'activate_account' uid token %}"
+        <a href="{% if verification_url %}{{ verification_url }}{% else %}{{ protocol }}://{{ domain }}{% url 'activate_account' uid token %}{% endif %}"
            style="display:inline-block; background:linear-gradient(135deg, #352c90 0%, #22177A 100%); color:#ffffff; padding:12px 24px; border-radius:10px; font-size:15px; text-decoration:none; font-weight:600;">
-          Confirm email
+          Verify Email Address
         </a>
         <p style="margin:16px 0 0; color:#6b7280; font-size:13px;">
           If the button does not work, copy and paste this link into your browser:
         </p>
         <p style="word-break:break-all; font-size:12px; color:#352c90; margin:8px 0 0;">
-          {{ protocol }}://{{ domain }}{% url 'activate_account' uid token %}
+          {% if verification_url %}{{ verification_url }}{% else %}{{ protocol }}://{{ domain }}{% url 'activate_account' uid token %}{% endif %}
         </p>
         <div style="margin-top:24px; padding:16px; background:#fef3c7; border:1px solid #fcd34d; border-radius:10px;">
           <p style="margin:0; font-size:13px; line-height:1.5; color:#92400e;">

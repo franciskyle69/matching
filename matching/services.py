@@ -1,17 +1,23 @@
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 from typing import List, Tuple, Dict, Set, Any, Optional
 import time
 
 import pandas as pd
 from django.core.cache import cache
-from django.db.models import Count
+from django.db.models import Count, Prefetch, QuerySet, Q
 
 from profiles.models import MentorProfile, MenteeProfile
 from matching.models import MenteeMentorRequest, UserTopicPreference, Topic
 from matching.ml.features import build_features
 from matching.ml.model_io import load_model
+
+logger = logging.getLogger(__name__)
+
+# Feature vector cache TTL: 24 hours (seconds).
+_FV_CACHE_TTL = 60 * 60 * 24
 
 
 def _to_set(items: Any) -> Set[str]:
@@ -213,9 +219,27 @@ class MentorFilterResult:
 
 def _filter_mentors_for_mentee(
     mentee: MenteeProfile,
-    mentors: List[MentorProfile],
+    mentors: Union[QuerySet, List[MentorProfile]],
     accepted_counts: Optional[Dict[int, int]] = None,
 ) -> MentorFilterResult:
+    # SQL Pre-Filtering: If mentors is a QuerySet, pre-filter directly at the database level
+    # so only mentors sharing >= 1 Subject or Topic with the mentee are evaluated.
+    if isinstance(mentors, QuerySet):
+        mentee_sex = _normalise_gender(getattr(mentee, "sex", ""), default="")
+        if mentee_sex in ("male", "female"):
+            mentors = mentors.filter(gender__iexact=mentee_sex)
+        mentee_subjects = _to_set(getattr(mentee, "subjects", None)) or _to_set(getattr(mentee, "skills", None))
+        mentee_topics = _to_set(getattr(mentee, "topics", None)) or _to_set(getattr(mentee, "skills", None))
+        if mentee_subjects or mentee_topics:
+            from django.db.models import Q
+            q_academic = Q()
+            for s in mentee_subjects:
+                q_academic |= Q(subjects__icontains=s) | Q(skills__icontains=s)
+            for t in mentee_topics:
+                q_academic |= Q(topics__icontains=t) | Q(skills__icontains=t)
+            mentors = mentors.filter(q_academic)
+        mentors = list(mentors)
+
     if not mentors:
         return MentorFilterResult(mentors=[], empty_reason="no_mentors", suggested_time_slots=[])
 
@@ -317,41 +341,85 @@ def reload_model():
     return _get_model()
 
 
-def _build_row(mentor: MentorProfile, mentee: MenteeProfile) -> Dict[str, Any]:
-    mentor_competency_levels = {}
-    if hasattr(mentor, "competency_levels"):
-        mentor_competency_levels = {
+USER_VECTOR_CACHE_TTL = 86400  # 24 hours
+
+
+def get_user_vector(user_id: int, profile: Optional[Union[MentorProfile, MenteeProfile]] = None) -> Dict[str, Any]:
+    """Retrieve or compute and cache a user's feature vector in Redis/Django cache (24h TTL)."""
+    cache_key = f"user_vector_{user_id}"
+    cached = cache.get(cache_key)
+    if cached is not None:
+        return cached
+
+    if profile is None:
+        try:
+            profile = MentorProfile.objects.filter(user_id=user_id).first() or MenteeProfile.objects.filter(user_id=user_id).first()
+        except Exception:
+            profile = None
+
+    if profile is None:
+        return {}
+
+    is_mentor = isinstance(profile, MentorProfile)
+    if is_mentor:
+        comp_levels = {
             item.competency_id: int(item.proficiency_level)
-            for item in mentor.competency_levels.all()
+            for item in getattr(profile, "competency_levels", []).all()
+        } if hasattr(profile, "competency_levels") else {}
+        comp_names = [getattr(c, "name", "") for c in getattr(profile, "competencies", []).all()] if hasattr(profile, "competencies") else []
+        vector = {
+            "role": getattr(profile, "role", ""),
+            "subjects": getattr(profile, "subjects", []) or getattr(profile, "skills", []),
+            "topics": getattr(profile, "topics", []) or getattr(profile, "skills", []),
+            "competencies": comp_names,
+            "expertise_level": getattr(profile, "expertise_level", 0) or 0,
+            "year_level": getattr(profile, "year_level", 0) or 0,
+            "competency_levels": comp_levels,
+            "years_experience": getattr(profile, "years_experience", 0) or 0,
+            "teaching_experience_years": getattr(profile, "teaching_experience_years", 0) or 0,
+            "availability": getattr(profile, "availability", []),
         }
-    mentee_competency_needs = {}
-    if hasattr(mentee, "competency_needs"):
-        mentee_competency_needs = {
+    else:
+        comp_needs = {
             item.competency_id: int(item.need_level)
-            for item in mentee.competency_needs.all()
+            for item in getattr(profile, "competency_needs", []).all()
+        } if hasattr(profile, "competency_needs") else {}
+        comp_names = [getattr(c, "name", "") for c in getattr(profile, "competencies", []).all()] if hasattr(profile, "competencies") else []
+        vector = {
+            "subjects": getattr(profile, "subjects", []) or getattr(profile, "skills", []),
+            "topics": getattr(profile, "topics", []) or getattr(profile, "skills", []),
+            "competencies": comp_names,
+            "difficulty_level": getattr(profile, "difficulty_level", 0) or 0,
+            "year_level": getattr(profile, "year_level", 0) or 0,
+            "competency_needs": comp_needs,
+            "availability": getattr(profile, "availability", []),
         }
+
+    cache.set(cache_key, vector, timeout=USER_VECTOR_CACHE_TTL)
+    return vector
+
+
+def _build_row(mentor: MentorProfile, mentee: MenteeProfile) -> Dict[str, Any]:
+    mentor_vec = get_user_vector(mentor.user_id, mentor)
+    mentee_vec = get_user_vector(mentee.user_id, mentee)
     return {
-        "mentee_subjects": mentee.subjects or mentee.skills,
-        "mentee_topics": mentee.topics or mentee.skills,
-        "mentee_competencies": list(
-            mentee.competencies.values_list("name", flat=True)
-        ) if hasattr(mentee, "competencies") else [],
-        "mentee_difficulty_level": mentee.difficulty_level,
-        "mentee_year_level": getattr(mentee, "year_level", 0) or 0,
-        "mentee_competency_needs": mentee_competency_needs,
-        "mentee_availability": getattr(mentee, "availability", []),
-        "mentor_role": mentor.role,
-        "mentor_subjects": mentor.subjects or mentor.skills,
-        "mentor_topics": mentor.topics or mentor.skills,
-        "mentor_competencies": list(
-            mentor.competencies.values_list("name", flat=True)
-        ) if hasattr(mentor, "competencies") else [],
-        "mentor_expertise_level": mentor.expertise_level,
-        "mentor_year_level": getattr(mentor, "year_level", 0) or 0,
-        "mentor_competency_levels": mentor_competency_levels,
-        "mentor_years_experience": getattr(mentor, "years_experience", 0) or 0,
-        "mentor_teaching_experience_years": getattr(mentor, "teaching_experience_years", 0) or 0,
-        "mentor_availability": getattr(mentor, "availability", []),
+        "mentee_subjects": mentee_vec.get("subjects", []),
+        "mentee_topics": mentee_vec.get("topics", []),
+        "mentee_competencies": mentee_vec.get("competencies", []),
+        "mentee_difficulty_level": mentee_vec.get("difficulty_level", 0),
+        "mentee_year_level": mentee_vec.get("year_level", 0),
+        "mentee_competency_needs": mentee_vec.get("competency_needs", {}),
+        "mentee_availability": mentee_vec.get("availability", []),
+        "mentor_role": mentor_vec.get("role", ""),
+        "mentor_subjects": mentor_vec.get("subjects", []),
+        "mentor_topics": mentor_vec.get("topics", []),
+        "mentor_competencies": mentor_vec.get("competencies", []),
+        "mentor_expertise_level": mentor_vec.get("expertise_level", 0),
+        "mentor_year_level": mentor_vec.get("year_level", 0),
+        "mentor_competency_levels": mentor_vec.get("competency_levels", {}),
+        "mentor_years_experience": mentor_vec.get("years_experience", 0),
+        "mentor_teaching_experience_years": mentor_vec.get("teaching_experience_years", 0),
+        "mentor_availability": mentor_vec.get("availability", []),
     }
 
 
@@ -365,12 +433,12 @@ def _heuristic_score(mentor: MentorProfile, mentee: MenteeProfile) -> float:
     mentee_subjects = _to_set(mentee.subjects) or _to_set(mentee.skills)
     mentor_topics = _to_set(mentor.topics) or _to_set(mentor.skills)
     mentee_topics = _to_set(mentee.topics) or _to_set(mentee.skills)
-    mentor_competencies = _to_set(
-        mentor.competencies.values_list("id", flat=True)
-    ) if hasattr(mentor, "competencies") else set()
-    mentee_competencies = _to_set(
-        mentee.competencies.values_list("id", flat=True)
-    ) if hasattr(mentee, "competencies") else set()
+    mentor_competencies = {
+        c.id for c in getattr(mentor, "competencies", []).all()
+    } if hasattr(mentor, "competencies") else set()
+    mentee_competencies = {
+        c.id for c in getattr(mentee, "competencies", []).all()
+    } if hasattr(mentee, "competencies") else set()
     topic_confidence = _topic_overlap_confidence(mentor_topics, mentee_topics)
 
     subjects = _jaccard(mentor_subjects, mentee_subjects)
@@ -393,6 +461,13 @@ def _score_with_model(mentor: MentorProfile, mentee: MenteeProfile) -> Optional[
     model, meta = _get_model()
     if model is None or meta is None:
         return None
+
+    # Check feature vector cache first.
+    cache_key = f"matching:fv:v1:{mentor.id}:{mentee.id}"
+    cached_score = cache.get(cache_key)
+    if cached_score is not None:
+        return float(cached_score)
+
     row = _build_row(mentor, mentee)
     feats = build_features(row)
     X = pd.DataFrame([feats])
@@ -416,7 +491,81 @@ def _score_with_model(mentor: MentorProfile, mentee: MenteeProfile) -> Optional[
         score *= (0.85 + 0.15 * topic_confidence)
 
     # Clip final values strictly between 0.0 and 1.0
-    return max(0.0, min(1.0, score))
+    score = max(0.0, min(1.0, score))
+
+    # Cache the computed score for 24h.
+    cache.set(cache_key, score, timeout=_FV_CACHE_TTL)
+    return score
+
+
+def _batch_score_with_model(
+    mentors: List[MentorProfile],
+    mentee: MenteeProfile,
+) -> Optional[Dict[int, float]]:
+    """Score all *mentors* against a single *mentee* in one XGBoost call.
+
+    Returns a dict mapping mentor_id → score, or ``None`` if the model is
+    unavailable (callers should fall back to heuristic scoring).
+    """
+    model, meta = _get_model()
+    if model is None or meta is None:
+        return None
+    if not mentors:
+        return {}
+
+    feature_names = meta.get("feature_names")
+    task = meta.get("task", "regression")
+
+    # ── 1. Check cache for each (mentor, mentee) pair. ──────────────
+    scores: Dict[int, float] = {}
+    uncached_mentors: List[MentorProfile] = []
+    for mentor in mentors:
+        cache_key = f"matching:fv:v1:{mentor.id}:{mentee.id}"
+        cached = cache.get(cache_key)
+        if cached is not None:
+            scores[mentor.id] = float(cached)
+        else:
+            uncached_mentors.append(mentor)
+
+    if not uncached_mentors:
+        return scores
+
+    # ── 2. Build feature rows for uncached mentors. ─────────────────
+    rows = []
+    for mentor in uncached_mentors:
+        row = _build_row(mentor, mentee)
+        feats = build_features(row)
+        rows.append(feats)
+
+    X = pd.DataFrame(rows)
+    if feature_names:
+        X = X.reindex(columns=feature_names, fill_value=0.0)
+
+    # ── 3. Single batch prediction call via xgb.DMatrix ─────────────
+    try:
+        import xgboost as xgb
+        dmatrix = xgb.DMatrix(X.values, feature_names=feature_names)
+        booster = model.get_booster() if hasattr(model, "get_booster") else model
+        raw_scores = booster.predict(dmatrix).tolist()
+    except Exception:
+        if task == "classification" and hasattr(model, "predict_proba"):
+            raw_scores = model.predict_proba(X.values)[:, 1].tolist()
+        else:
+            raw_scores = model.predict(X.values).tolist()
+
+    # ── 4. Post-process: confidence adjustment & caching. ──────────
+    for mentor, raw in zip(uncached_mentors, raw_scores):
+        score = float(raw)
+        mentor_topics = _to_set(mentor.topics) or _to_set(mentor.skills)
+        mentee_topics = _to_set(mentee.topics) or _to_set(mentee.skills)
+        if mentor_topics and mentee_topics and (mentor_topics & mentee_topics):
+            topic_confidence = _topic_overlap_confidence(mentor_topics, mentee_topics)
+            score *= (0.85 + 0.15 * topic_confidence)
+        score = max(0.0, min(1.0, score))
+        scores[mentor.id] = score
+        cache.set(f"matching:fv:v1:{mentor.id}:{mentee.id}", score, timeout=_FV_CACHE_TTL)
+
+    return scores
 
 
 def _overlapping_slots_formatted(a_slots: List[Slot], b_slots: List[Slot]) -> List[str]:
@@ -455,8 +604,8 @@ def compute_score_breakdown(mentor: MentorProfile, mentee: MenteeProfile) -> Dic
         academic_pct = min(100, round((0.6 * subj_jaccard + 0.4 * top_jaccard) * 100))
         academic_summary = f"{len(shared_subjects)} shared subject(s), {len(shared_topics)} topic(s)"
 
-    mentor_comp_ids = set(mentor.competencies.values_list("id", flat=True)) if hasattr(mentor, "competencies") else set()
-    mentee_comp_ids = set(mentee.competencies.values_list("id", flat=True)) if hasattr(mentee, "competencies") else set()
+    mentor_comp_ids = {c.id for c in getattr(mentor, "competencies", []).all()} if hasattr(mentor, "competencies") else set()
+    mentee_comp_ids = {c.id for c in getattr(mentee, "competencies", []).all()} if hasattr(mentee, "competencies") else set()
     shared_comp_ids = mentor_comp_ids & mentee_comp_ids
     comp_jaccard = _jaccard(mentor_comp_ids, mentee_comp_ids)
     if not shared_comp_ids:
@@ -564,6 +713,26 @@ def compute_score(mentor: MentorProfile, mentee: MenteeProfile) -> float:
 GROUP_MATCHING_DEFAULT_MIN_SCORE = 0.3
 
 
+def _optimized_mentor_queryset():
+    """Return a MentorProfile queryset with eager loading to avoid N+1 queries."""
+    return MentorProfile.objects.select_related("user", "user__profile").prefetch_related(
+        "competencies",
+        "competency_levels",
+        "competency_levels__competency",
+        "interest_tags",
+    )
+
+
+def _optimized_mentee_queryset():
+    """Return a MenteeProfile queryset with eager loading to avoid N+1 queries."""
+    return MenteeProfile.objects.select_related("user", "user__profile").prefetch_related(
+        "competencies",
+        "competency_needs",
+        "competency_needs__competency",
+        "interest_tags",
+    )
+
+
 def run_greedy_matching(
     mode: str = "one_to_one",
     min_score: Optional[float] = None,
@@ -572,8 +741,8 @@ def run_greedy_matching(
         min_score = GROUP_MATCHING_DEFAULT_MIN_SCORE
     threshold = float(min_score) if mode == "group" and min_score is not None else 0.0
 
-    mentors: List[MentorProfile] = list(MentorProfile.objects.all())
-    mentees: List[MenteeProfile] = list(MenteeProfile.objects.all())
+    mentors: List[MentorProfile] = list(_optimized_mentor_queryset())
+    mentees: List[MenteeProfile] = list(_optimized_mentee_queryset())
     if not mentors or not mentees:
         return []
 
@@ -589,8 +758,13 @@ def run_greedy_matching(
             mentors,
             accepted_counts=accepted_counts,
         )
+        # Use batch scoring for all filtered mentors at once.
+        batch_scores = _batch_score_with_model(filtered.mentors, mentee)
         for mentor in filtered.mentors:
-            score = compute_score(mentor, mentee)
+            if batch_scores and mentor.id in batch_scores:
+                score = batch_scores[mentor.id]
+            else:
+                score = compute_score(mentor, mentee)
             if score > 0 and (mode != "group" or score >= threshold):
                 candidates.append((mentor.id, mentee.id, float(score)))
 
@@ -630,15 +804,6 @@ def recommend_mentors_for_mentee_with_meta(
     min_score: float = 0.0,
 ) -> Tuple[List[Tuple[MentorProfile, float]], Dict[str, Any]]:
     start = time.monotonic()
-    mentors: List[MentorProfile] = list(MentorProfile.objects.all())
-    if not mentors:
-        elapsed_ms = int((time.monotonic() - start) * 1000)
-        return [], {
-            "empty_reason": "no_mentors",
-            "suggested_time_slots": [],
-            "from_cache": False,
-            "elapsed_ms": elapsed_ms,
-        }
 
     # Use a global profiles version so that when any mentor/mentee profile changes,
     # cached recommendations are automatically invalidated.
@@ -648,23 +813,23 @@ def recommend_mentors_for_mentee_with_meta(
     cached = cache.get(cache_key, version=version)
     if cached:
         mentor_ids = [item["mentor_id"] for item in cached.get("items", [])]
-        mentor_map = MentorProfile.objects.in_bulk(mentor_ids)
+        mentor_map = _optimized_mentor_queryset().in_bulk(mentor_ids)
         scored: List[Tuple[MentorProfile, float]] = []
         for item in cached.get("items", []):
             m = mentor_map.get(item["mentor_id"])
             if m is not None:
                 scored.append((m, float(item.get("score", 0.0))))
         meta = dict(cached.get("meta", {}) or {})
-        meta.setdefault("from_cache", True)
+        meta["from_cache"] = True
         elapsed_ms = int((time.monotonic() - start) * 1000)
-        meta.setdefault("elapsed_ms", elapsed_ms)
+        meta["elapsed_ms"] = elapsed_ms
         return scored, meta
 
-    accepted_counts = _accepted_mentee_counts([m.id for m in mentors])
+    # Pass the optimized queryset to _filter_mentors_for_mentee for DB-level pre-filtering
     filtered = _filter_mentors_for_mentee(
         mentee,
-        mentors,
-        accepted_counts=accepted_counts,
+        _optimized_mentor_queryset(),
+        accepted_counts=None,
     )
     if not filtered.mentors:
         elapsed_ms = int((time.monotonic() - start) * 1000)
@@ -682,10 +847,16 @@ def recommend_mentors_for_mentee_with_meta(
         )
         return [], meta
 
+    # ── Batch scoring: one XGBoost predict call for ALL filtered mentors. ──
+    batch_scores = _batch_score_with_model(filtered.mentors, mentee)
     scored: List[Tuple[MentorProfile, float]] = []
     threshold = float(min_score or 0.0)
     for mentor in filtered.mentors:
-        score = compute_score(mentor, mentee)
+        if batch_scores and mentor.id in batch_scores:
+            score = batch_scores[mentor.id]
+        else:
+            # Fallback to per-mentor scoring (heuristic or model unavailable).
+            score = compute_score(mentor, mentee)
         if score <= threshold:
             continue
         scored.append((mentor, float(score)))
@@ -713,5 +884,9 @@ def recommend_mentors_for_mentee_with_meta(
         cache_payload,
         timeout=MENTEE_RECS_CACHE_TIMEOUT,
         version=version,
+    )
+    logger.debug(
+        "recommend_mentors elapsed=%dms mentors_evaluated=%d results=%d",
+        elapsed_ms, len(filtered.mentors), len(scored),
     )
     return scored, meta

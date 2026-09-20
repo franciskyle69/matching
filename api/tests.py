@@ -15,7 +15,7 @@ from profiles.models import (
     MenteeCompetencyNeed,
 )
 from accounts.jwt_utils import decode_access_token
-from accounts.models import UserSecurityState
+from accounts.models import UserSecurityState, UserProfile
 from matching.models import Notification, Competency, Topic, Subject
 
 
@@ -26,6 +26,12 @@ class ApiAuthTests(TestCase):
             username="mentor1",
             email="mentor1@student.buksu.edu.ph",
             password=self.password,
+        )
+        UserProfile.objects.create(
+            user=self.user,
+            role=UserProfile.ROLE_STUDENT_MENTOR,
+            is_email_verified=True,
+            approval_status=UserProfile.STATUS_ACTIVE,
         )
         MentorProfile.objects.create(user=self.user, program="BSIT", year_level=4, approved=True)
 
@@ -67,6 +73,12 @@ class ApiAuthTests(TestCase):
             email="mentee1@student.buksu.edu.ph",
             password=self.password,
         )
+        UserProfile.objects.create(
+            user=mentee_user,
+            role=UserProfile.ROLE_MENTEE,
+            is_email_verified=True,
+            approval_status=UserProfile.STATUS_ACTIVE,
+        )
         MenteeProfile.objects.create(user=mentee_user, program="BSIT", year_level=1)
 
         res = self.client.post(
@@ -81,6 +93,102 @@ class ApiAuthTests(TestCase):
         )
 
         self.assertEqual(res.status_code, 200)
+
+    def test_login_unverified_email_fails_with_403(self):
+        unverified_user = User.objects.create_user(
+            username="unverified1",
+            email="unverified@student.buksu.edu.ph",
+            password=self.password,
+        )
+        UserProfile.objects.create(
+            user=unverified_user,
+            role=UserProfile.ROLE_MENTEE,
+            is_email_verified=False,
+        )
+        res = self.client.post(
+            "/api/auth/login/",
+            data=json.dumps(
+                {
+                    "email": "unverified@student.buksu.edu.ph",
+                    "password": self.password,
+                }
+            ),
+            content_type="application/json",
+        )
+        self.assertEqual(res.status_code, 403)
+        data = res.json()
+        self.assertEqual(data.get("code"), "email_not_verified")
+        self.assertEqual(data.get("error"), "Please verify your BukSU email address before logging in.")
+
+    def test_verify_email_endpoint_valid_and_invalid_tokens(self):
+        from django.contrib.auth.tokens import default_token_generator
+        from django.utils.http import urlsafe_base64_encode
+        from django.utils.encoding import force_bytes
+
+        unverified = User.objects.create_user(
+            username="verifytest",
+            email="verifytest@student.buksu.edu.ph",
+            password=self.password,
+        )
+        UserProfile.objects.create(
+            user=unverified,
+            role=UserProfile.ROLE_MENTEE,
+            is_email_verified=False,
+        )
+
+        uidb64 = urlsafe_base64_encode(force_bytes(unverified.pk))
+        valid_token = default_token_generator.make_token(unverified)
+
+        # Invalid token fails with 400
+        bad_res = self.client.post(
+            "/api/auth/verify-email/",
+            data=json.dumps({"uidb64": uidb64, "token": "invalid-token"}),
+            content_type="application/json",
+        )
+        self.assertEqual(bad_res.status_code, 400)
+        self.assertEqual(bad_res.json().get("error"), "Activation link is invalid or expired.")
+
+        # Valid token succeeds with 200
+        good_res = self.client.post(
+            "/api/auth/verify-email/",
+            data=json.dumps({"uidb64": uidb64, "token": valid_token}),
+            content_type="application/json",
+        )
+        self.assertEqual(good_res.status_code, 200)
+        self.assertEqual(good_res.json().get("message"), "Email successfully verified. You can now log in.")
+
+        unverified.refresh_from_db()
+        self.assertTrue(unverified.profile.is_email_verified)
+
+        # Now login succeeds with 200
+        login_res = self.client.post(
+            "/api/auth/login/",
+            data=json.dumps({"email": "verifytest@student.buksu.edu.ph", "password": self.password}),
+            content_type="application/json",
+        )
+        self.assertEqual(login_res.status_code, 200)
+        self.assertIn("access_token", login_res.json())
+
+    def test_resend_verification_endpoint(self):
+        unverified = User.objects.create_user(
+            username="resendtest",
+            email="resendtest@student.buksu.edu.ph",
+            password=self.password,
+        )
+        UserProfile.objects.create(
+            user=unverified,
+            role=UserProfile.ROLE_MENTEE,
+            is_email_verified=False,
+        )
+
+        res = self.client.post(
+            "/api/auth/resend-verification/",
+            data=json.dumps({"email": "resendtest@student.buksu.edu.ph"}),
+            content_type="application/json",
+        )
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(res.json().get("message"), "A verification email has been sent. Please check your inbox.")
+        self.assertGreaterEqual(len(mail.outbox), 1)
 
     def test_login_rate_limit(self):
         for _ in range(8):
@@ -193,8 +301,28 @@ class ApiRegisterTests(TestCase):
                 "role": "mentee",
             },
         )
-        self.assertIn(registration.status_code, (200, 201), registration.content)
-        payload = registration.json()
+        self.assertEqual(registration.status_code, 201, registration.content)
+        reg_payload = registration.json()
+        self.assertEqual(reg_payload.get("message"), "Registration successful. Please check your email to verify your account.")
+        self.assertNotIn("access_token", reg_payload)
+
+        # Verify email
+        user = User.objects.get(email="ada.unified@student.buksu.edu.ph")
+        self.assertFalse(user.profile.is_email_verified)
+        user.profile.is_email_verified = True
+        user.profile.save()
+
+        # Log in after verification to obtain token
+        login_res = self.client.post(
+            "/api/auth/login/",
+            data=json.dumps({
+                "email": "ada.unified@student.buksu.edu.ph",
+                "password": "TestPass123!",
+            }),
+            content_type="application/json",
+        )
+        self.assertEqual(login_res.status_code, 200)
+        payload = login_res.json()
         self.assertFalse(payload["user"]["is_onboarded"])
         claims = decode_access_token(payload["access_token"])
         self.assertEqual(claims["email"], "ada.unified@student.buksu.edu.ph")
@@ -711,16 +839,16 @@ class ApiCoordinatorAndMentorRegistrationTests(TestCase):
                 "grades": file3,
             },
         )
-        self.assertIn(res.status_code, [200, 201], res.content)
+        self.assertEqual(res.status_code, 201, res.content)
         data = res.json()
-        self.assertEqual(data["user"]["role"], "STUDENT_MENTOR")
-        self.assertIn(data["user"]["approval_status"], ["PENDING", "PENDING_APPROVAL"])
+        self.assertEqual(data.get("message"), "Registration successful. Please check your email to verify your account.")
+        self.assertNotIn("access_token", data)
 
-        # Verify PyJWT claims
-        claims = decode_access_token(data["access_token"])
-        self.assertEqual(claims["role"], "STUDENT_MENTOR")
-        self.assertIn(claims["approval_status"], ["PENDING", "PENDING_APPROVAL"])
-        self.assertFalse(claims["is_onboarded"])
+        # Verify MentorDocument records created
+        user = User.objects.get(email="seniortutor@student.buksu.edu.ph")
+        self.assertEqual(user.profile.role, "STUDENT_MENTOR")
+        self.assertIn(user.profile.approval_status, ["PENDING", "PENDING_APPROVAL"])
+        self.assertFalse(user.profile.is_email_verified)
 
         # Verify MentorDocument records created
         user = User.objects.get(email="seniortutor@student.buksu.edu.ph")
@@ -750,10 +878,15 @@ class ApiCoordinatorAndMentorRegistrationTests(TestCase):
                 "faculty_verification": file,
             },
         )
-        self.assertIn(res.status_code, [200, 201], res.content)
+        self.assertEqual(res.status_code, 201, res.content)
         data = res.json()
-        self.assertEqual(data["user"]["role"], "INSTRUCTOR_MENTOR")
-        self.assertIn(data["user"]["approval_status"], ["PENDING", "PENDING_APPROVAL"])
+        self.assertEqual(data.get("message"), "Registration successful. Please check your email to verify your account.")
+        self.assertNotIn("access_token", data)
+
+        user = User.objects.get(email="prof.mentor@buksu.edu.ph")
+        self.assertEqual(user.profile.role, "INSTRUCTOR_MENTOR")
+        self.assertIn(user.profile.approval_status, ["PENDING", "PENDING_APPROVAL"])
+        self.assertFalse(user.profile.is_email_verified)
 
         user = User.objects.get(email="prof.mentor@buksu.edu.ph")
         docs = list(MentorDocument.objects.filter(user=user))

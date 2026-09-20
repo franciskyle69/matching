@@ -170,19 +170,17 @@ class AccountApprovalWorkflowTestCase(TestCase):
                 "year_level": 1,
             },
         )
-        self.assertIn(res.status_code, [200, 201], res.content)
+        self.assertEqual(res.status_code, 201, res.content)
         data = res.json()
-        self.assertEqual(data["user"]["approval_status"], "PENDING")
-
-        # Verify JWT claims
-        claims = decode_access_token(data["access_token"])
-        self.assertEqual(claims["approval_status"], "PENDING")
+        self.assertEqual(data.get("message"), "Registration successful. Please check your email to verify your account.")
+        self.assertNotIn("access_token", data)
 
         # Verify DB models
         user = User.objects.get(email="newmentee@student.buksu.edu.ph")
         profile = get_user_profile(user)
         self.assertEqual(profile.approval_status, "PENDING")
         self.assertFalse(user.mentee_profile.approved)
+        self.assertFalse(profile.is_email_verified)
 
         # 2. Model default check directly
         standalone_user = User.objects.create_user(

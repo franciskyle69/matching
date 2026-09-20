@@ -1,6 +1,7 @@
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth import update_session_auth_hash
 from django.contrib.auth.models import User
+from django.contrib.auth.tokens import default_token_generator
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.core.mail import EmailMultiAlternatives
@@ -9,6 +10,8 @@ from django.core.cache import cache
 from django.db import transaction
 from django.views.decorators.http import require_GET, require_http_methods
 from django.utils.crypto import constant_time_compare
+from django.utils.encoding import force_str
+from django.utils.http import urlsafe_base64_decode
 import secrets
 import time
 import json
@@ -34,7 +37,7 @@ from profiles.profile_completion import (
     mentor_account_fields_complete,
 )
 
-from accounts.email_utils import email_backend_can_send, send_activation_email
+from accounts.email_utils import email_backend_can_send, send_activation_email, send_verification_email
 from accounts.forms import (
     AccountSettingsForm,
     RegisterForm,
@@ -436,7 +439,26 @@ def auth_login(request):
 
     if not user.is_active:
         return JsonResponse(
-            {"error": "Please verify your email before logging in."}, status=401
+            {
+                "error": "Please verify your BukSU email address before logging in.",
+                "code": "email_not_verified",
+                "email": user.email,
+            },
+            status=403,
+        )
+
+    # Email verification check
+    is_verified = getattr(user, "is_email_verified", False)
+    if hasattr(user, "profile") and not is_verified:
+        is_verified = getattr(user.profile, "is_email_verified", False)
+    if not user.is_superuser and not is_verified:
+        return JsonResponse(
+            {
+                "error": "Please verify your BukSU email address before logging in.",
+                "code": "email_not_verified",
+                "email": user.email,
+            },
+            status=403,
         )
 
     # Role is chosen only when creating an account; sign-in is role-neutral.
@@ -657,6 +679,12 @@ def auth_google(request):
         )
 
     user = existing_user
+    user.is_active = True
+    user.save(update_fields=["is_active"])
+    profile = get_user_profile(user)
+    if profile and not profile.is_email_verified:
+        profile.is_email_verified = True
+        profile.save(update_fields=["is_email_verified"])
     login(request, user, backend="accounts.auth_backends.EmailOrUsernameModelBackend")
 
     is_mentor = hasattr(user, "mentor_profile")
@@ -1167,30 +1195,103 @@ def unified_auth_register(request):
         logger.exception("unified_auth_register_failed", extra={"email": email})
         return JsonResponse({"error": "Unable to create your account right now. Please try again."}, status=400)
 
-    login(request, user, backend="accounts.auth_backends.EmailOrUsernameModelBackend")
+    try:
+        from accounts.email_utils import send_verification_email
+        send_verification_email(request, user)
+    except Exception as exc:
+        logger.exception("unified_auth_register_email_failed", extra={"user_id": user.id, "email": user.email})
+
     audit_log(user, "register", "auth", user.id)
 
-    access_token = issue_access_token(user)
-    refresh_token = issue_refresh_token(user)
-
-    response = JsonResponse({
-        "status": "ok",
-        "access_token": access_token,
-        "refresh_token": refresh_token,
-        "user": {
-            "id": user.id,
-            "user_id": user.id,
-            "email": user.email,
-            "role": user_profile.role,
-            "approval_status": user_profile.approval_status,
-            "is_onboarded": False,
-            "full_name": get_user_display_name(user),
+    return JsonResponse(
+        {
+            "message": "Registration successful. Please check your email to verify your account."
         },
-        "approval_status": user_profile.approval_status,
-        "documents_uploaded": len(uploaded_docs),
-    }, status=201)
-    set_refresh_cookie(response, refresh_token)
-    return response
+        status=201,
+    )
+
+
+@require_http_methods(["POST"])
+def auth_verify_email(request):
+    payload = _get_payload(request)
+    uidb64 = (
+        _get_str(payload, "uidb64")
+        or _get_str(payload, "uid")
+        or request.GET.get("uidb64")
+        or request.GET.get("uid")
+        or ""
+    ).strip()
+    token = (_get_str(payload, "token") or request.GET.get("token") or "").strip()
+
+    if not uidb64 or not token:
+        return JsonResponse(
+            {"error": "Verification token and user ID are required."},
+            status=400,
+        )
+
+    try:
+        uid = force_str(urlsafe_base64_decode(uidb64))
+        user = User.objects.get(pk=uid)
+    except Exception:
+        user = None
+
+    if not user or not default_token_generator.check_token(user, token):
+        return JsonResponse(
+            {"error": "Activation link is invalid or expired."},
+            status=400,
+        )
+
+    user.is_active = True
+    user.save(update_fields=["is_active"])
+
+    profile = getattr(user, "profile", None)
+    if profile is not None:
+        profile.is_email_verified = True
+        profile.save(update_fields=["is_email_verified"])
+    else:
+        user.is_email_verified = True
+
+    logger.info("auth_verify_email_success", extra={"user_id": user.id, "email": user.email})
+    audit_log(user, "verify_email", "auth", user.id)
+
+    return JsonResponse(
+        {"message": "Email successfully verified. You can now log in."},
+        status=200,
+    )
+
+
+@require_http_methods(["POST"])
+def auth_resend_verification(request):
+    if not _rate_limit(f"resend_verification:{_client_ip(request)}", 5, 300):
+        return JsonResponse({"error": "Too many requests. Please try again later."}, status=429)
+
+    payload = _get_payload(request)
+    identifier = (_get_str(payload, "email") or _get_str(payload, "identifier") or "").strip()
+    if not identifier:
+        return JsonResponse({"error": "Email or username is required."}, status=400)
+
+    user = User.objects.filter(email__iexact=identifier).first()
+    if not user:
+        user = User.objects.filter(username__iexact=identifier).first()
+
+    if user:
+        is_verified = getattr(user, "is_email_verified", False)
+        if hasattr(user, "profile") and not is_verified:
+            is_verified = getattr(user.profile, "is_email_verified", False)
+
+        if not is_verified:
+            try:
+                from accounts.email_utils import send_verification_email
+                send_verification_email(request, user)
+                logger.info("auth_resend_verification_sent", extra={"user_id": user.id, "email": user.email})
+            except Exception as exc:
+                logger.exception("auth_resend_verification_failed", extra={"user_id": user.id, "error": str(exc)})
+                return JsonResponse({"error": "Failed to send verification email. Please try again later."}, status=503)
+
+    return JsonResponse(
+        {"message": "A verification email has been sent. Please check your inbox."},
+        status=200,
+    )
 
 
 @login_required

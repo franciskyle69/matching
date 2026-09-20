@@ -1,8 +1,8 @@
 Hi {{ user.get_full_name|default:user.email }},
 
-Please activate your account by clicking the link below:
+Please activate and verify your BukSU account by clicking the link below:
 
-{{ protocol }}://{{ domain }}{% url 'activate_account' uid token %}
+{% if verification_url %}{{ verification_url }}{% else %}{{ protocol }}://{{ domain }}{% url 'activate_account' uid token %}{% endif %}
 
 Only enter this code on an official website or app. Don't share it with anyone. We'll never ask for it outside an official platform.
 

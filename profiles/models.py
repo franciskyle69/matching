@@ -191,6 +191,12 @@ class MentorProfile(models.Model):
     )
     approved = models.BooleanField(default=False)
 
+    class Meta:
+        indexes = [
+            models.Index(fields=["gender", "approved"], name="prof_mentor_gender_appr"),
+            models.Index(fields=["approved"], name="prof_mentor_approved"),
+        ]
+
     def save(self, *args, **kwargs):
         self.capacity = MENTOR_MENTEE_CAPACITY
         super().save(*args, **kwargs)
@@ -242,6 +248,12 @@ class MenteeProfile(models.Model):
         blank=True,
     )
     approved = models.BooleanField(default=False)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=["sex", "approved"], name="prof_mentee_sex_appr"),
+            models.Index(fields=["approved"], name="prof_mentee_approved"),
+        ]
 
     def __str__(self):
         return f"MenteeProfile<{self.user.username}>"

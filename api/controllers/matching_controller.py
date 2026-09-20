@@ -84,16 +84,10 @@ def _build_match_details(mentee_profile, mentor):
     overlap_topics = [
         t for t in mentor_topics if t and str(t).strip().lower() in mentee_top_set
     ]
-    mentor_competency_ids = set(mentor.competencies.values_list("id", flat=True))
-    mentee_competency_ids = set(mentee_profile.competencies.values_list("id", flat=True))
-    shared_competency_ids = mentor_competency_ids & mentee_competency_ids
-    shared_competencies = []
-    if shared_competency_ids:
-        shared_competencies = list(
-            Competency.objects.filter(id__in=shared_competency_ids)
-            .order_by("name")
-            .values_list("name", flat=True)
-        )
+    mentor_comp_dict = {c.id: getattr(c, "name", "") for c in getattr(mentor, "competencies", []).all()} if hasattr(mentor, "competencies") else {}
+    mentee_comp_dict = {c.id: getattr(c, "name", "") for c in getattr(mentee_profile, "competencies", []).all()} if hasattr(mentee_profile, "competencies") else {}
+    shared_competency_ids = set(mentor_comp_dict.keys()) & set(mentee_comp_dict.keys())
+    shared_competencies = sorted([mentor_comp_dict[cid] for cid in shared_competency_ids if mentor_comp_dict.get(cid)])
     breakdown = None
     try:
         breakdown = compute_score_breakdown(mentor, mentee_profile)

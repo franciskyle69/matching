@@ -1,6 +1,7 @@
 /* Mentor / mentee matching profile cards — theme-aware via tokens. */
 
 .profile-matching-card {
+  transform: translateZ(0);
   background: var(--card-bg);
   border: var(--card-border);
   border-radius: 16px;

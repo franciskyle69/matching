@@ -13,6 +13,7 @@ import CheckCircleOutline from "@mui/icons-material/CheckCircleOutline";
 import GroupsOutlined from "@mui/icons-material/GroupsOutlined";
 import BarChartOutlined from "@mui/icons-material/BarChartOutlined";
 import HourglassEmptyOutlined from "@mui/icons-material/HourglassEmptyOutlined";
+import Skeleton from "@mui/material/Skeleton";
 
 (function () {
   "use strict";
@@ -239,6 +240,8 @@ import HourglassEmptyOutlined from "@mui/icons-material/HourglassEmptyOutlined";
       authCheckDone,
       setActiveTab,
       menteeRecommendations,
+      menteeRecLoading,
+      loadMenteeRecommendations,
       myMentor,
       menteeMatching,
       theme,
@@ -258,6 +261,19 @@ import HourglassEmptyOutlined from "@mui/icons-material/HourglassEmptyOutlined";
         loadAdminPairings();
       }
     }, [user]);
+
+    // Deferred / Lazy Loading: Fetch mentor recommendations asynchronously in the background
+    // without blocking the rendering of user profile, metrics strip, or stats widgets.
+    useEffect(() => {
+      if (
+        user &&
+        user.role === "mentee" &&
+        (!menteeRecommendations || menteeRecommendations.length === 0) &&
+        typeof loadMenteeRecommendations === "function"
+      ) {
+        loadMenteeRecommendations(10);
+      }
+    }, [user, menteeRecommendations, loadMenteeRecommendations]);
 
     const handleRequestMentor = async (mentorId) => {
       if (!mentorId || typeof chooseMentor !== "function") return;
@@ -714,7 +730,20 @@ import HourglassEmptyOutlined from "@mui/icons-material/HourglassEmptyOutlined";
                   <span className="kasandigan-card-badge">{matchCount} available</span>
                 </div>
 
-                {matchCount > 0 ? (
+                {menteeRecLoading && matchCount === 0 ? (
+                  <div className="mentee-top-recommendations-list" style={{ padding: "14px 0" }}>
+                    <Skeleton
+                      variant="rectangular"
+                      height={180}
+                      sx={{ borderRadius: "16px", mb: 2, transform: "translateZ(0)" }}
+                    />
+                    <Skeleton
+                      variant="rectangular"
+                      height={180}
+                      sx={{ borderRadius: "16px", transform: "translateZ(0)" }}
+                    />
+                  </div>
+                ) : matchCount > 0 ? (
                   <div className="mentee-spotlight-content" style={{ padding: "14px 0 0 0" }}>
                     <p className="mentee-muted" style={{ marginBottom: "14px", fontSize: "13px" }}>
                       Curated algorithmic recommendations based on your course subjects and available days:

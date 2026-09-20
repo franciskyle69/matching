@@ -734,6 +734,7 @@ import ExpandLess from "@mui/icons-material/ExpandLess";
           variant +
           (isOfficial ? " pmc-card--official" : "")
         }
+        style={{ transform: "translateZ(0)" }}
       >
         <header className="pmc-header">
           <div className="pmc-identity">
@@ -1012,8 +1013,13 @@ import ExpandLess from "@mui/icons-material/ExpandLess";
     );
   }
 
+  const MemoizedMentorProfileCard =
+    typeof React !== "undefined" && React.memo
+      ? React.memo(MentorProfileCard)
+      : MentorProfileCard;
+
   window.DashboardApp = window.DashboardApp || {};
-  window.DashboardApp.MentorProfileCard = MentorProfileCard;
+  window.DashboardApp.MentorProfileCard = MemoizedMentorProfileCard;
   window.DashboardApp.ProfileCardHelpers = {
     formatHoursValue,
     formatNextWindow,
@@ -1024,7 +1030,7 @@ import ExpandLess from "@mui/icons-material/ExpandLess";
     pluralLabel,
   };
   if (typeof module !== "undefined" && module.exports) {
-    module.exports = { MentorProfileCard };
+    module.exports = { MentorProfileCard: MemoizedMentorProfileCard };
   }
 })();
 

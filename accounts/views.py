@@ -273,6 +273,10 @@ def activate_account(request, uidb64: str, token: str):
     if user and default_token_generator.check_token(user, token):
         user.is_active = True
         user.save()
+        profile = getattr(user, "profile", None)
+        if profile is not None:
+            profile.is_email_verified = True
+            profile.save(update_fields=["is_email_verified"])
         messages.success(request, "Your account has been activated. You can log in now.")
         return redirect("/app/signin?activated=1")
 

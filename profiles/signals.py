@@ -32,8 +32,12 @@ def _invalidate_approval_cache(sender, instance, update_fields=None, **kwargs):
 @receiver(post_delete, sender=MentorProfile)
 @receiver(post_save, sender=MenteeProfile)
 @receiver(post_delete, sender=MenteeProfile)
-def _matching_profiles_changed(sender, **kwargs):
+def _matching_profiles_changed(sender, instance=None, **kwargs):
     _bump_matching_profiles_version()
+    if instance is not None:
+        user_id = getattr(instance, "user_id", None)
+        if user_id:
+            cache.delete(f"user_vector_{user_id}")
 
 
 @receiver(post_save, sender=MentorProfile)
