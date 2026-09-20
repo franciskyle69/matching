@@ -136,6 +136,12 @@ import "./components/Sidebar.jsx";
       };
     }, [mobileMenuOpen]);
 
+    const isStaff = !!(
+      user?.is_staff ||
+      user?.role === "staff" ||
+      user?.role === "coordinator"
+    );
+
     const closeMobileMenu = () => setMobileMenuOpen(false);
     const handleHeaderCollapseClick = () => {
       if (isMobileView) {
@@ -153,13 +159,27 @@ import "./components/Sidebar.jsx";
           /* jsdom does not implement scrollTo */
         }
       };
+      if (isStaff) {
+        if (
+          tabId === "onboarding" ||
+          tabId === "complete-profile" ||
+          tabId === "matching" ||
+          tabId === "profile" ||
+          tabId === "mentees" ||
+          tabId === "mentoring-preferences" ||
+          tabId === "mentor-matching-profile"
+        ) {
+          finishNavigation("home");
+          return;
+        }
+      }
       if (user && user.is_profile_complete === false && !isStaff) {
         if (tabId !== "complete-profile") {
           finishNavigation("complete-profile");
           return;
         }
       }
-      if (isPendingApproval) {
+      if (isPendingApproval && !isStaff) {
         if (user && user.is_onboarded === false) {
           if (tabId !== "onboarding") {
             finishNavigation("onboarding");
@@ -194,7 +214,6 @@ import "./components/Sidebar.jsx";
     const profileMenuRef = useRef(null);
     const shortcutLabel = getSearchShortcutLabel();
 
-    const isStaff = !!(user?.is_staff || user?.role === "staff");
     const topbarDisplayName = getTopbarDisplayName(user);
     const topbarRoleLabel = getTopbarRoleLabel(user, isStaff, mentorProfile);
 
@@ -226,16 +245,30 @@ import "./components/Sidebar.jsx";
     });
 
     const filteredTabs = MAIN_TABS.filter((tab) => {
+      if (isStaff) {
+        if (
+          tab.id === "onboarding" ||
+          tab.id === "complete-profile" ||
+          tab.id === "matching" ||
+          tab.id === "mentees" ||
+          tab.id === "mentoring-preferences" ||
+          tab.id === "mentor-matching-profile" ||
+          tab.id === "profile"
+        ) {
+          return false;
+        }
+      }
       if (user && user.is_profile_complete === false && !isStaff) {
         return tab.id === "complete-profile";
       }
-      if (isPendingApproval) {
+      if (isPendingApproval && !isStaff) {
         if (user && user.is_onboarded === false) {
           return tab.id === "onboarding" || tab.id === "settings";
         }
         return tab.id === "settings";
       }
       if (tab.id === "onboarding") {
+        if (isStaff) return false;
         if (!(user?.role === "mentor" || user?.role === "mentee")) return false;
         if (user?.is_onboarded) return false;
         if (user.role === "mentee") {
@@ -266,6 +299,7 @@ import "./components/Sidebar.jsx";
       if (tab.id === "matching") return !isStaff;
       if (tab.id === "approvals") return isStaff;
       if (tab.id === "complete-profile") {
+        if (isStaff) return false;
         if (user?.is_onboarded) return false;
         const unapprovedMentor =
           user?.role === "mentor" && !user?.mentor_approved;

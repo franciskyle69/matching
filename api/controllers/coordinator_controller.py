@@ -6,6 +6,7 @@ from rest_framework.permissions import IsAuthenticated
 from accounts.models import UserProfile, get_user_profile, get_user_display_name
 from ..serializers import PendingMentorSerializer
 from ..views.helpers import audit_log, invalidate_approval_cache_mentor, invalidate_approval_cache_mentee
+from .account_controller import _clear_me_cache
 
 User = get_user_model()
 
@@ -98,6 +99,7 @@ def approve_mentor(request, user_id):
         e.save(update_fields=["approved"])
         invalidate_approval_cache_mentee(e.id)
 
+    _clear_me_cache(user.id)
     audit_log(request.user, "approve", "coordinator_approval", user.id)
     return JsonResponse({
         "status": "ok",
@@ -133,6 +135,7 @@ def reject_mentor(request, user_id):
         e.save(update_fields=["approved"])
         invalidate_approval_cache_mentee(e.id)
 
+    _clear_me_cache(user.id)
     audit_log(request.user, "reject", "coordinator_approval", user.id)
     return JsonResponse({
         "status": "ok",

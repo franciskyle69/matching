@@ -636,7 +636,22 @@ import OnboardingPreferences from "../../../src/components/Onboarding.jsx";
     const user = ctx && ctx.user;
     const setActiveTab = ctx && ctx.setActiveTab;
 
+    useEffect(() => {
+      if (
+        user &&
+        (user.is_staff || user.role === "staff" || user.role === "coordinator")
+      ) {
+        if (setActiveTab) setActiveTab("home");
+        if (window.DashboardApp && window.DashboardApp.replaceAppUrl) {
+          window.DashboardApp.replaceAppUrl("home");
+        }
+      }
+    }, [user, setActiveTab]);
+
     if (!ctx || !user) return null;
+    if (user.is_staff || user.role === "staff" || user.role === "coordinator") {
+      return null;
+    }
 
     return (
       <div className="onboarding-container-wrap">

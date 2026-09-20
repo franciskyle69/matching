@@ -18005,4 +18005,384 @@ html[data-theme="dark"] .admin-neu-xai-summary,
   box-shadow: 3px 3px 8px rgba(0, 0, 0, 0.55), -2px -2px 6px rgba(255, 255, 255, 0.02) !important;
 }
 
+/* ═══════════════════════════════════════════════════════════════════
+   Neumorphic Pending Approval & Live Congratulatory Experience
+   Tailored for both Light Mode and Dark Mode with dual-source lighting
+   ═══════════════════════════════════════════════════════════════════ */
+
+.neu-approval-shell {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 2.5rem 1.25rem;
+  font-family: var(--font-sans, "Inter", -apple-system, sans-serif);
+}
+
+/* ── Light Mode Base Surface ── */
+.neu-card-surface {
+  background: #ebf0f7;
+  border-radius: 28px;
+  padding: 3.5rem 2.25rem;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 14px 14px 30px #cbd5e1, -14px -14px 30px #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ── Dark Mode Surface ── */
+[data-theme="dark"] .neu-card-surface,
+.dark .neu-card-surface {
+  background: #161920;
+  box-shadow: 14px 14px 32px #0a0c10, -10px -10px 24px #222733;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+/* ── Neumorphic Recessed Well / Status Pill ── */
+.neu-recessed-well {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 20px;
+  border-radius: 999px;
+  background: #e4eaf3;
+  box-shadow: inset 3px 3px 7px #cbd5e1, inset -3px -3px 7px #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  font-weight: 700;
+  font-size: 0.85rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  transition: all 0.3s ease;
+}
+
+[data-theme="dark"] .neu-recessed-well,
+.dark .neu-recessed-well {
+  background: #12141a;
+  box-shadow: inset 3px 3px 8px #090a0d, inset -2px -2px 6px #1f242f;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* ── Neumorphic Convex Emblem (Hero Icon) ── */
+.neu-convex-emblem {
+  width: 90px;
+  height: 90px;
+  margin: 0 auto 1.75rem auto;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #f6f9fc, #dfe6f1);
+  box-shadow: 9px 9px 20px #cbd5e1, -9px -9px 20px #ffffff;
+  border: 2px solid rgba(255, 255, 255, 0.9);
+  transition: transform 0.4s ease, box-shadow 0.4s ease;
+}
+
+.neu-convex-emblem:hover {
+  transform: translateY(-2px);
+  box-shadow: 11px 11px 24px #cbd5e1, -11px -11px 24px #ffffff;
+}
+
+[data-theme="dark"] .neu-convex-emblem,
+.dark .neu-convex-emblem {
+  background: linear-gradient(135deg, #1f242e, #13151c);
+  box-shadow: 9px 9px 22px #090b0e, -6px -6px 18px #222835;
+  border: 2px solid rgba(255, 255, 255, 0.07);
+}
+
+[data-theme="dark"] .neu-convex-emblem:hover,
+.dark .neu-convex-emblem:hover {
+  box-shadow: 11px 11px 26px #07080a, -8px -8px 20px #252b39;
+}
+
+/* ── Neumorphic Tactile Detail Tiles ── */
+.neu-detail-tile {
+  background: #ebf0f7;
+  padding: 1rem 1.25rem;
+  border-radius: 20px;
+  box-shadow: 6px 6px 14px #cbd5e1, -6px -6px 14px #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  text-align: left;
+  transition: all 0.25s ease;
+}
+
+.neu-detail-tile:hover {
+  transform: translateY(-1px);
+  box-shadow: 7px 7px 16px #cbd5e1, -7px -7px 16px #ffffff;
+}
+
+[data-theme="dark"] .neu-detail-tile,
+.dark .neu-detail-tile {
+  background: #161920;
+  box-shadow: 6px 6px 16px #0a0c10, -4px -4px 12px #222733;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+[data-theme="dark"] .neu-detail-tile:hover,
+.dark .neu-detail-tile:hover {
+  box-shadow: 7px 7px 18px #08090d, -5px -5px 14px #252b38;
+}
+
+/* ── Neumorphic Raised Buttons ── */
+.neu-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-weight: 700;
+  font-size: 0.95rem;
+  padding: 0.85rem 1.75rem;
+  border-radius: 16px;
+  cursor: pointer;
+  border: none;
+  outline: none;
+  text-decoration: none;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  user-select: none;
+}
+
+.neu-btn:active {
+  transform: scale(0.97);
+}
+
+/* Primary Button (Glow / Vibrant) */
+.neu-btn-primary {
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: #ffffff !important;
+  box-shadow: 6px 6px 18px rgba(16, 185, 129, 0.38), -4px -4px 14px #ffffff;
+}
+
+.neu-btn-primary:hover {
+  background: linear-gradient(135deg, #059669, #047857);
+  box-shadow: 8px 8px 22px rgba(16, 185, 129, 0.48), -5px -5px 16px #ffffff;
+}
+
+.neu-btn-primary:active {
+  box-shadow: inset 3px 3px 6px rgba(0, 0, 0, 0.3);
+}
+
+[data-theme="dark"] .neu-btn-primary,
+.dark .neu-btn-primary {
+  background: linear-gradient(135deg, #10b981, #047857);
+  box-shadow: 6px 6px 18px #080a0e, -3px -3px 10px rgba(16, 185, 129, 0.25);
+}
+
+[data-theme="dark"] .neu-btn-primary:hover,
+.dark .neu-btn-primary:hover {
+  background: linear-gradient(135deg, #34d399, #059669);
+  box-shadow: 8px 8px 22px #06070a, -4px -4px 12px rgba(52, 211, 153, 0.35);
+}
+
+[data-theme="dark"] .neu-btn-primary:active,
+.dark .neu-btn-primary:active {
+  box-shadow: inset 3px 3px 7px rgba(0, 0, 0, 0.6);
+}
+
+/* Secondary Button (Soft Neumorphic) */
+.neu-btn-secondary {
+  background: #ebf0f7;
+  color: #334155 !important;
+  box-shadow: 6px 6px 15px #cbd5e1, -6px -6px 15px #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.8);
+}
+
+.neu-btn-secondary:hover {
+  color: #0f172a !important;
+  box-shadow: 8px 8px 18px #c4d0df, -8px -8px 18px #ffffff;
+}
+
+.neu-btn-secondary:active {
+  box-shadow: inset 3px 3px 6px #cbd5e1, inset -3px -3px 6px #ffffff;
+}
+
+[data-theme="dark"] .neu-btn-secondary,
+.dark .neu-btn-secondary {
+  background: #191d26;
+  color: #e2e8f0 !important;
+  box-shadow: 6px 6px 16px #090b0e, -4px -4px 12px #222835;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+[data-theme="dark"] .neu-btn-secondary:hover,
+.dark .neu-btn-secondary:hover {
+  color: #ffffff !important;
+  box-shadow: 7px 7px 18px #07080b, -5px -5px 14px #262d3b;
+}
+
+[data-theme="dark"] .neu-btn-secondary:active,
+.dark .neu-btn-secondary:active {
+  box-shadow: inset 3px 3px 6px #090b0e, inset -2px -2px 6px #222835;
+}
+
+/* ── Live Radar Polling Indicator ── */
+.neu-live-radar {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  opacity: 0.85;
+  margin-top: 1.5rem;
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: #e4eaf3;
+  box-shadow: inset 2px 2px 4px #cbd5e1, inset -2px -2px 4px #ffffff;
+}
+
+[data-theme="dark"] .neu-live-radar,
+.dark .neu-live-radar {
+  background: #12141a;
+  box-shadow: inset 2px 2px 4px #080a0c, inset -1px -1px 3px #1f242e;
+}
+
+.neu-radar-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #10b981;
+  position: relative;
+}
+
+.neu-radar-dot::after {
+  content: "";
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  border: 2px solid #10b981;
+  animation: neu-radar-pulse 2s cubic-bezier(0.25, 1, 0.5, 1) infinite;
+}
+
+@keyframes neu-radar-pulse {
+  0% {
+    transform: scale(0.6);
+    opacity: 0.9;
+  }
+  100% {
+    transform: scale(2.4);
+    opacity: 0;
+  }
+}
+
+/* ── Celebration Modal & Effects ── */
+.neu-celebrate-card {
+  animation: neu-celebrate-in 0.65s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes neu-celebrate-in {
+  0% {
+    opacity: 0;
+    transform: scale(0.85) translateY(24px);
+  }
+  60% {
+    transform: scale(1.02) translateY(-4px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.neu-trophy-float {
+  animation: neu-trophy-float 3s ease-in-out infinite;
+}
+
+@keyframes neu-trophy-float {
+  0%, 100% {
+    transform: translateY(0) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-8px) rotate(2deg);
+  }
+}
+
+.neu-spin {
+  animation: neu-spin 1s linear infinite;
+}
+
+@keyframes neu-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.neu-sparkle-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 20px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(59, 130, 246, 0.15));
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  box-shadow: inset 2px 2px 4px rgba(255, 255, 255, 0.5), inset -2px -2px 4px rgba(0, 0, 0, 0.05);
+  font-weight: 700;
+  font-size: 0.85rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #059669;
+}
+
+[data-theme="dark"] .neu-sparkle-badge,
+.dark .neu-sparkle-badge {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(59, 130, 246, 0.18));
+  border: 1px solid rgba(52, 211, 153, 0.4);
+  box-shadow: inset 2px 2px 5px rgba(0, 0, 0, 0.4), inset -1px -1px 3px rgba(255, 255, 255, 0.05);
+  color: #34d399;
+}
+
+/* ── Unlocked Feature Icon Wrappers (Replaces Emojis) ── */
+.neu-feature-icon-wrapper {
+  width: 52px;
+  height: 52px;
+  border-radius: 16px;
+  margin: 0 auto 0.85rem auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s ease;
+  position: relative;
+  background: #eef2f7;
+  box-shadow: 4px 4px 10px #c2cbd6, -4px -4px 10px #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.8);
+}
+
+.neu-detail-tile:hover .neu-feature-icon-wrapper {
+  transform: translateY(-3px) scale(1.05);
+}
+
+[data-theme="dark"] .neu-feature-icon-wrapper,
+.dark .neu-feature-icon-wrapper {
+  background: #181e29;
+  box-shadow: 4px 4px 10px #090c12, -3px -3px 8px #222b3a;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* Variant 1: Smart Matching (Indigo / Cyan) */
+.neu-icon-matching {
+  color: #2563eb;
+}
+[data-theme="dark"] .neu-icon-matching,
+.dark .neu-icon-matching {
+  color: #60a5fa;
+  box-shadow: 4px 4px 10px #090c12, -3px -3px 8px #222b3a, 0 0 16px rgba(59, 130, 246, 0.2);
+}
+
+/* Variant 2: Direct Messaging (Violet / Purple) */
+.neu-icon-messaging {
+  color: #7c3aed;
+}
+[data-theme="dark"] .neu-icon-messaging,
+.dark .neu-icon-messaging {
+  color: #a78bfa;
+  box-shadow: 4px 4px 10px #090c12, -3px -3px 8px #222b3a, 0 0 16px rgba(139, 92, 246, 0.2);
+}
+
+/* Variant 3: Session Bookings (Emerald / Green) */
+.neu-icon-booking {
+  color: #059669;
+}
+[data-theme="dark"] .neu-icon-booking,
+.dark .neu-icon-booking {
+  color: #34d399;
+  box-shadow: 4px 4px 10px #090c12, -3px -3px 8px #222b3a, 0 0 16px rgba(16, 185, 129, 0.2);
+}
+
+
 

@@ -24,6 +24,13 @@
   }
   function getPendingApprovalLandingTab(userData) {
     if (!userData) return "pending-approval";
+    if (
+      userData.is_staff ||
+      userData.role === "staff" ||
+      userData.role === "coordinator"
+    ) {
+      return "home";
+    }
     if (userData.approval_status === "REJECTED") return "account-rejected";
     if (userData.must_change_password) return "settings";
     if (needsCompleteProfile(userData)) return "onboarding";
@@ -31,7 +38,15 @@
   }
 
   function needsCompleteProfile(userData) {
-    return !!userData && userData.is_onboarded === false;
+    if (!userData) return false;
+    if (
+      userData.is_staff ||
+      userData.role === "staff" ||
+      userData.role === "coordinator"
+    ) {
+      return false;
+    }
+    return userData.is_onboarded === false;
   }
 
   function isPendingApprovalMessage(message) {
@@ -830,8 +845,17 @@
 
     useEffect(() => {
       if (!authCheckDone || !user) return;
-      const isStaff = !!(user.is_staff || user.role === "staff");
+      const isStaff = !!(
+        user.is_staff ||
+        user.role === "staff" ||
+        user.role === "coordinator"
+      );
       if (!isStaff) return;
+      if (activeTab === "onboarding" || activeTab === "complete-profile") {
+        setActiveTab("home");
+        replaceAppUrl("home");
+        return;
+      }
       // Staff do not have an own Profile page; keep mentor/user profile views.
       if (
         activeTab === "profile" &&

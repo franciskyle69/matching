@@ -3,8 +3,9 @@ from django.core.cache import cache
 from django.http import JsonResponse
 from django.views.decorators.http import require_GET, require_http_methods
 
-from accounts.models import get_user_display_name
+from accounts.models import get_user_display_name, UserProfile, get_user_profile
 from profiles.models import MentorProfile, MenteeProfile, serialize_verification_documents
+from .account_controller import _clear_me_cache
 
 from ..views import (
     _require_staff,
@@ -159,12 +160,13 @@ def approve_mentor(request):
 
     mentor.approved = True
     mentor.save(update_fields=["approved"])
-    up = getattr(mentor.user, "user_profile", None)
+    up = getattr(mentor.user, "profile", None) or get_user_profile(mentor.user)
     if up:
-        up.approval_status = up.STATUS_ACTIVE
+        up.approval_status = UserProfile.STATUS_ACTIVE
         up.save(update_fields=["approval_status"])
     audit_log(request.user, "approve", "mentor_approval", mentor.id)
     invalidate_approval_cache_mentor(mentor.id)
+    _clear_me_cache(mentor.user_id)
     return JsonResponse({"status": "ok", "mentor": _serialize_mentor_detail(mentor, request)})
 
 
@@ -187,12 +189,13 @@ def reject_mentor(request):
 
     mentor.approved = False
     mentor.save(update_fields=["approved"])
-    up = getattr(mentor.user, "user_profile", None)
+    up = getattr(mentor.user, "profile", None) or get_user_profile(mentor.user)
     if up:
-        up.approval_status = up.STATUS_REJECTED
+        up.approval_status = UserProfile.STATUS_REJECTED
         up.save(update_fields=["approval_status"])
     audit_log(request.user, "reject", "mentor_approval", mentor.id)
     invalidate_approval_cache_mentor(mentor.id)
+    _clear_me_cache(mentor.user_id)
     return JsonResponse({"status": "ok", "mentor": _serialize_mentor_detail(mentor, request)})
 
 
@@ -215,12 +218,13 @@ def approve_mentee(request):
 
     mentee.approved = True
     mentee.save(update_fields=["approved"])
-    up = getattr(mentee.user, "user_profile", None)
+    up = getattr(mentee.user, "profile", None) or get_user_profile(mentee.user)
     if up:
-        up.approval_status = up.STATUS_ACTIVE
+        up.approval_status = UserProfile.STATUS_ACTIVE
         up.save(update_fields=["approval_status"])
     audit_log(request.user, "approve", "mentee_approval", mentee.id)
     invalidate_approval_cache_mentee(mentee.id)
+    _clear_me_cache(mentee.user_id)
     return JsonResponse({"status": "ok", "mentee": _serialize_mentee_detail(mentee, request)})
 
 
@@ -243,10 +247,11 @@ def reject_mentee(request):
 
     mentee.approved = False
     mentee.save(update_fields=["approved"])
-    up = getattr(mentee.user, "user_profile", None)
+    up = getattr(mentee.user, "profile", None) or get_user_profile(mentee.user)
     if up:
-        up.approval_status = up.STATUS_REJECTED
+        up.approval_status = UserProfile.STATUS_REJECTED
         up.save(update_fields=["approval_status"])
     audit_log(request.user, "reject", "mentee_approval", mentee.id)
     invalidate_approval_cache_mentee(mentee.id)
+    _clear_me_cache(mentee.user_id)
     return JsonResponse({"status": "ok", "mentee": _serialize_mentee_detail(mentee, request)})

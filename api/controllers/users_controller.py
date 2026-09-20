@@ -18,10 +18,11 @@ from ..views import (
     logger,
 )
 from accounts.forms import CoordinatorCreateUserForm
-from accounts.models import set_must_change_password
-from accounts.models import get_user_display_name
+from accounts.models import set_must_change_password, get_user_display_name, UserProfile, get_user_profile
 from profiles.models import MentorProfile, MenteeProfile, serialize_verification_documents
 from matching.models import MenteeMentorRequest
+from .account_controller import _clear_me_cache
+from ..views.helpers import invalidate_approval_cache_mentor, invalidate_approval_cache_mentee
 
 
 def _parse_bool_query(value):
@@ -522,7 +523,14 @@ def mentor_approve_reject(request, user_id):
         approved = payload.get("approved", False)
         
         mentor.approved = bool(approved)
-        mentor.save()
+        mentor.save(update_fields=["approved"])
+
+        up = getattr(user, "profile", None) or get_user_profile(user)
+        if up:
+            up.approval_status = UserProfile.STATUS_ACTIVE if mentor.approved else UserProfile.STATUS_REJECTED
+            up.save(update_fields=["approval_status"])
+        invalidate_approval_cache_mentor(mentor.id)
+        _clear_me_cache(user.id)
         
         action = "approved" if mentor.approved else "rejected"
         audit_log(
@@ -560,7 +568,14 @@ def mentee_approve_reject(request, user_id):
         approved = payload.get("approved", False)
         
         mentee.approved = bool(approved)
-        mentee.save()
+        mentee.save(update_fields=["approved"])
+
+        up = getattr(user, "profile", None) or get_user_profile(user)
+        if up:
+            up.approval_status = UserProfile.STATUS_ACTIVE if mentee.approved else UserProfile.STATUS_REJECTED
+            up.save(update_fields=["approval_status"])
+        invalidate_approval_cache_mentee(mentee.id)
+        _clear_me_cache(user.id)
         
         action = "approved" if mentee.approved else "rejected"
         audit_log(

@@ -51,6 +51,11 @@ def compute_is_profile_complete(user):
     """True when stored flag is set or required account fields are filled."""
     if not user:
         return False
+    if getattr(user, "is_staff", False) or getattr(user, "is_superuser", False):
+        return True
+    profile = _related(user, "profile")
+    if profile and getattr(profile, "role", None) in ("COORDINATOR",):
+        return True
     mentor = _related(user, "mentor_profile")
     mentee = _related(user, "mentee_profile")
     if mentor:

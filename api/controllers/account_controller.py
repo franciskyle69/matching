@@ -209,6 +209,13 @@ def _user_role(user):
 
 
 def _user_is_onboarded(user):
+    if not user:
+        return False
+    if getattr(user, "is_staff", False) or getattr(user, "is_superuser", False):
+        return True
+    profile = getattr(user, "profile", None)
+    if profile and getattr(profile, "role", None) in ("COORDINATOR",):
+        return True
     state = getattr(user, "security_state", None)
     if state is None:
         return compute_is_profile_complete(user)
@@ -515,6 +522,7 @@ def auth_login(request):
     _ensure_onboarding_state(user, compute_is_profile_complete(user))
     refresh_token = issue_refresh_token(user)
     audit_log(user, "login", "auth")
+    user_up = getattr(user, "profile", None) or get_user_profile(user)
     response = JsonResponse(
         {
             "status": "ok",
@@ -525,7 +533,11 @@ def auth_login(request):
                 "email": user.email,
                 "role": _user_role(user),
                 "is_onboarded": _user_is_onboarded(user),
-                "approval_status": getattr(user, "approval_status", "PENDING"),
+                "approval_status": (
+                    user_up.approval_status
+                    if user_up
+                    else ("ACTIVE" if getattr(user, "is_staff", False) else "PENDING")
+                ),
             },
         }
     )
@@ -1111,7 +1123,7 @@ def me(request):
     total_mentees = MenteeProfile.objects.count()
     accepted_pairings = MenteeMentorRequest.objects.filter(accepted=True).count()
 
-    user_prof = getattr(request.user, "profile", None)
+    user_prof = getattr(request.user, "profile", None) or get_user_profile(request.user)
 
     avatar_url = ""
     if mentor and getattr(mentor, "avatar_url", ""):
@@ -1286,15 +1298,26 @@ def me(request):
         "full_name": get_user_display_name(request.user),
         "display_name": get_user_display_name(request.user),
         "is_onboarded": _user_is_onboarded(request.user),
-        "approval_status": getattr(request.user, "approval_status", "PENDING"),
+        "approval_status": (
+            user_prof.approval_status
+            if user_prof
+            else ("ACTIVE" if request.user.is_staff else "PENDING")
+        ),
         "is_staff": request.user.is_staff,
         "must_change_password": must_change_password(request.user),
-        "role": "mentor"
+        "role": "staff"
+        if (
+            request.user.is_staff
+            or getattr(request.user, "is_superuser", False)
+            or (
+                getattr(request.user, "profile", None)
+                and request.user.profile.role == "COORDINATOR"
+            )
+        )
+        else "mentor"
         if role_flags["is_mentor"]
         else "mentee"
         if role_flags["is_mentee"]
-        else "staff"
-        if request.user.is_staff
         else None,
         "avatar_url": avatar_url,
         "cover_url": cover_url,
