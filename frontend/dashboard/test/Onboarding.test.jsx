@@ -2,7 +2,9 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import React from "react";
+import { ThemeProvider, createTheme } from "@mui/material/styles";
 import Onboarding from "../src/components/Onboarding.jsx";
+import { getNeumorphicStyle, getNeuStyles } from "../assets/theme/neumorphism.js";
 
 describe("Onboarding Component", () => {
   beforeEach(() => {
@@ -127,6 +129,67 @@ describe("Onboarding Component", () => {
     // Alert should be displayed
     expect(screen.getByRole("alert")).toBeInTheDocument();
     expect(screen.getByText(/must select at least 1 competency/i)).toBeInTheDocument();
+  });
+
+  it("Dark mode rendering: correctly applies dark mode palette and neumorphic styles", () => {
+    const darkTheme = createTheme({
+      palette: {
+        mode: "dark",
+        background: {
+          default: "#0F172A",
+          paper: "#151D2A",
+        },
+        text: {
+          primary: "#F8FAFC",
+          secondary: "#94A3B8",
+        },
+      },
+    });
+
+    const { container } = render(
+      <ThemeProvider theme={darkTheme}>
+        <Onboarding user={{ role: "mentee", email: "student@student.buksu.edu.ph" }} />
+      </ThemeProvider>
+    );
+
+    // Header title and subheader render
+    expect(screen.getByText("BukSU IT Mentorship Onboarding")).toBeInTheDocument();
+    expect(screen.getByText(/Configure your academic preferences/i)).toBeInTheDocument();
+
+    // Orientation card and guidelines in dark mode
+    expect(screen.getByText(/1. How the Smart Matching System Works/i)).toBeInTheDocument();
+    expect(screen.getByText(/2. Mentorship Meeting Schedules/i)).toBeInTheDocument();
+    expect(screen.getByText(/3. Code of Conduct & Academic Integrity/i)).toBeInTheDocument();
+
+    // Verify outer canvas container has dark background
+    const outerBox = container.firstChild;
+    expect(outerBox).toHaveStyle({ backgroundColor: "#0F172A" });
+
+    // Test getNeumorphicStyle helper directly
+    const darkFlat = getNeumorphicStyle(darkTheme, "flat", false);
+    expect(darkFlat.backgroundColor).toBe("#151D2A");
+    expect(darkFlat.boxShadow).toContain("6px 6px 14px #0d121b");
+
+    const darkPressed = getNeumorphicStyle(darkTheme, "pressed", true);
+    expect(darkPressed.backgroundColor).toBe("#1E293B");
+    expect(darkPressed.boxShadow).toContain("inset 4px 4px 10px #0d121b");
+
+    // Test light mode fallback
+    const lightTheme = createTheme({ palette: { mode: "light" } });
+    const lightFlat = getNeumorphicStyle(lightTheme, "flat", false);
+    expect(lightFlat.backgroundColor).toBe("#E6ECF5");
+    expect(lightFlat.boxShadow).toContain("6px 6px 14px #c5d0e0");
+
+    // Test getNeuStyles helper tokens
+    const neuDark = getNeuStyles(darkTheme);
+    expect(neuDark.isDark).toBe(true);
+    expect(neuDark.bgBase).toBe("#0F172A");
+    expect(neuDark.textPrimary).toBe("#F8FAFC");
+    expect(neuDark.textSecondary).toBe("#94A3B8");
+
+    const neuLight = getNeuStyles(lightTheme);
+    expect(neuLight.isDark).toBe(false);
+    expect(neuLight.bgBase).toBe("#E6ECF5");
   });
 });
 

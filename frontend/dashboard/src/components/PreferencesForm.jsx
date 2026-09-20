@@ -24,6 +24,7 @@ import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import TuneIcon from "@mui/icons-material/Tune";
 import AccessTimeIcon from "@mui/icons-material/AccessTime";
 import SpeedIcon from "@mui/icons-material/Speed";
+import { useTheme } from "@mui/material/styles";
 
 import SubjectSkillPreferences, {
   ROLE_LIMITS,
@@ -31,6 +32,7 @@ import SubjectSkillPreferences, {
   CANONICAL_CURRICULUM,
   NEU_STYLES,
 } from "./SubjectSkillPreferences.jsx";
+import { getNeuStyles } from "../theme/neumorphism.js";
 
 export { ROLE_LIMITS, getRoleLimits, CANONICAL_CURRICULUM, NEU_STYLES };
 
@@ -53,6 +55,10 @@ export default function PreferencesForm({
   setErrorMessage = () => {},
   onBack,
 }) {
+  const theme = useTheme();
+  const neu = useMemo(() => getNeuStyles(theme), [theme?.palette?.mode]);
+  const isDark = theme?.palette?.mode === "dark";
+
   const currentLimits = useMemo(() => {
     return getRoleLimits(user?.role);
   }, [user?.role]);
@@ -176,21 +182,25 @@ export default function PreferencesForm({
     <Card
       elevation={0}
       sx={{
-        ...NEU_STYLES.elevatedCard,
+        ...neu.elevatedCard,
         p: { xs: 1, sm: 2 },
       }}
     >
       <CardHeader
-        avatar={<TuneIcon sx={{ color: "#1976D2", fontSize: 32 }} />}
+        avatar={<TuneIcon sx={{ color: neu.accentBlue, fontSize: 32 }} />}
         title={
-          <Typography variant="h5" fontWeight={700} color="#0D47A1">
+          <Typography variant="h5" fontWeight={700} color={neu.titleColor}>
             Subject & Skill Preferences
           </Typography>
         }
-        subheader={`Role: ${currentLimits.label} — Feature Vector Sparsity Bounds Enforced`}
+        subheader={
+          <Typography variant="body2" color={theme.palette.text?.secondary || neu.textSecondary} sx={{ mt: 0.5 }}>
+            {`Role: ${currentLimits.label} — Feature Vector Sparsity Bounds Enforced`}
+          </Typography>
+        }
         sx={{ px: 3, pt: 2.5 }}
       />
-      <Divider sx={{ my: 1, borderColor: "rgba(148, 163, 184, 0.2)" }} />
+      <Divider sx={{ my: 1, borderColor: isDark ? "rgba(255, 255, 255, 0.08)" : "rgba(148, 163, 184, 0.2)" }} />
 
       <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
         <Stack spacing={4}>
@@ -200,8 +210,11 @@ export default function PreferencesForm({
               onClose={() => setErrorMessage("")}
               sx={{
                 borderRadius: "12px",
-                boxShadow: "inset 2px 2px 5px #c5d0e0, inset -2px -2px 5px #ffffff",
-                background: "#e6ecf5",
+                ...neu.sunkenPanel,
+                color: isDark ? "#FCA5A5" : undefined,
+                "& .MuiAlert-icon": {
+                  color: isDark ? "#F87171" : undefined,
+                },
               }}
             >
               {errorMessage}
@@ -224,17 +237,17 @@ export default function PreferencesForm({
             readOnly={loading}
           />
 
-          <Divider sx={{ borderColor: "rgba(148, 163, 184, 0.2)" }} />
+          <Divider sx={{ borderColor: isDark ? "rgba(255, 255, 255, 0.08)" : "rgba(148, 163, 184, 0.2)" }} />
 
           {/* ── Support Need Rating Slider ── */}
-          <Box sx={{ ...NEU_STYLES.elevatedCard, p: { xs: 2.5, sm: 3 } }}>
+          <Box sx={{ ...neu.elevatedCard, p: { xs: 2.5, sm: 3 } }}>
             <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1 }}>
-              <SpeedIcon sx={{ color: "#1976D2", fontSize: 24 }} />
-              <Typography variant="subtitle1" fontWeight={700} color="#0D47A1">
+              <SpeedIcon sx={{ color: neu.accentBlue, fontSize: 24 }} />
+              <Typography variant="subtitle1" fontWeight={700} color={neu.titleColor}>
                 Support Need Rating Scale (1 to 5)
               </Typography>
             </Box>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            <Typography variant="body2" color={theme.palette.text?.secondary || neu.textSecondary} sx={{ mb: 2 }}>
               Indicate the intensity of mentorship guidance needed:
             </Typography>
             <Box sx={{ px: 2, pt: 1 }}>
@@ -247,13 +260,15 @@ export default function PreferencesForm({
                 max={5}
                 valueLabelDisplay="auto"
                 sx={{
-                  color: "#1976D2",
+                  color: neu.accentBlue,
                   "& .MuiSlider-thumb": {
                     width: 24,
                     height: 24,
-                    background: "#e6ecf5",
-                    boxShadow: "3px 3px 6px #c5d0e0, -3px -3px 6px #ffffff",
-                    border: "2px solid #1976D2",
+                    backgroundColor: isDark ? "#1E293B" : "#e6ecf5",
+                    boxShadow: isDark
+                      ? "3px 3px 6px #090e18, -3px -3px 6px #1f2c40"
+                      : "3px 3px 6px #c5d0e0, -3px -3px 6px #ffffff",
+                    border: isDark ? "2px solid #60A5FA" : "2px solid #1976D2",
                   },
                   "& .MuiSlider-track": {
                     height: 8,
@@ -262,18 +277,23 @@ export default function PreferencesForm({
                   "& .MuiSlider-rail": {
                     height: 8,
                     borderRadius: 4,
-                    boxShadow: "inset 2px 2px 4px #c5d0e0, inset -2px -2px 4px #ffffff",
-                    background: "#e6ecf5",
+                    boxShadow: isDark
+                      ? "inset 2px 2px 4px #090e18, inset -2px -2px 4px #1f2c40"
+                      : "inset 2px 2px 4px #c5d0e0, inset -2px -2px 4px #ffffff",
+                    backgroundColor: isDark ? "#101827" : "#e6ecf5",
+                  },
+                  "& .MuiSlider-markLabel": {
+                    color: theme.palette.text?.secondary || neu.textSecondary,
                   },
                 }}
               />
             </Box>
           </Box>
 
-          <Divider sx={{ borderColor: "rgba(148, 163, 184, 0.2)" }} />
+          <Divider sx={{ borderColor: isDark ? "rgba(255, 255, 255, 0.08)" : "rgba(148, 163, 184, 0.2)" }} />
 
           {/* ── Recurring Availability Picker with Neumorphic Slots ── */}
-          <Box sx={{ ...NEU_STYLES.elevatedCard, p: { xs: 2.5, sm: 3 } }}>
+          <Box sx={{ ...neu.elevatedCard, p: { xs: 2.5, sm: 3 } }}>
             <Stack
               direction={{ xs: "column", sm: "row" }}
               justifyContent="space-between"
@@ -282,18 +302,26 @@ export default function PreferencesForm({
               sx={{ mb: 2.5 }}
             >
               <Box>
-                <Typography variant="subtitle1" fontWeight={700} color="#0D47A1" sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                  <AccessTimeIcon sx={{ color: "#1976D2", fontSize: 24 }} />
+                <Typography variant="subtitle1" fontWeight={700} color={neu.titleColor} sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                  <AccessTimeIcon sx={{ color: neu.accentBlue, fontSize: 24 }} />
                   Recurring Availability Schedule
                 </Typography>
-                <Typography variant="caption" color="text.secondary">
+                <Typography variant="caption" color={theme.palette.text?.secondary || neu.textSecondary}>
                   Specify regular weekly time slots when you are available for sessions:
                 </Typography>
               </Box>
 
               <Stack direction="row" spacing={1.5} alignItems="center" flexWrap="wrap">
-                <Box sx={NEU_STYLES.counterPill}>
-                  <Typography variant="caption" fontWeight={700} color={availabilitySlots.length >= currentLimits.minAvailabilitySlots ? "#0D47A1" : "#D32F2F"}>
+                <Box sx={neu.counterPill}>
+                  <Typography
+                    variant="caption"
+                    fontWeight={700}
+                    color={
+                      availabilitySlots.length >= currentLimits.minAvailabilitySlots
+                        ? (isDark ? "#60A5FA" : "#0D47A1")
+                        : (isDark ? "#F87171" : "#D32F2F")
+                    }
+                  >
                     Availability Slots: {availabilitySlots.length} / {currentLimits.maxAvailabilitySlots} (Min {currentLimits.minAvailabilitySlots}, Max {currentLimits.maxAvailabilitySlots})
                   </Typography>
                 </Box>
@@ -304,12 +332,12 @@ export default function PreferencesForm({
                   onClick={handleAddSlot}
                   disabled={availabilitySlots.length >= currentLimits.maxAvailabilitySlots}
                   sx={{
-                    ...NEU_STYLES.elevatedCard,
+                    ...neu.elevatedCard,
                     textTransform: "none",
                     fontWeight: 600,
-                    color: "#0D47A1",
+                    color: neu.accentDark,
                     px: 2,
-                    "&:hover": { background: "#e6ecf5", transform: "translateY(-1px)" },
+                    "&:hover": { transform: "translateY(-1px)" },
                   }}
                 >
                   Add Day Slot
@@ -322,23 +350,24 @@ export default function PreferencesForm({
                 <Paper
                   key={index}
                   sx={{
-                    ...NEU_STYLES.topicContainer,
+                    ...neu.topicContainer,
                     p: 2,
                   }}
                 >
                   <Grid container spacing={2} alignItems="center">
                     <Grid item xs={12} sm={4}>
                       <FormControl fullWidth size="small">
-                        <InputLabel id={`day-select-label-${index}`}>Day of Week</InputLabel>
+                        <InputLabel id={`day-select-label-${index}`} sx={{ color: theme.palette.text?.secondary || neu.textSecondary }}>Day of Week</InputLabel>
                         <Select
                           labelId={`day-select-label-${index}`}
                           value={slot.day}
                           label="Day of Week"
                           onChange={(e) => handleSlotChange(index, "day", e.target.value)}
                           sx={{
-                            background: "#e6ecf5",
-                            borderRadius: "12px",
-                            boxShadow: "inset 2px 2px 5px #c5d0e0, inset -2px -2px 5px #ffffff",
+                            ...neu.inputRoot,
+                            "& .MuiSelect-select": {
+                              color: neu.textPrimary,
+                            },
                           }}
                         >
                           {DAYS_OF_WEEK.map((day) => (
@@ -357,12 +386,13 @@ export default function PreferencesForm({
                         fullWidth
                         value={slot.start_time}
                         onChange={(e) => handleSlotChange(index, "start_time", e.target.value)}
-                        InputLabelProps={{ shrink: true }}
+                        InputLabelProps={{ shrink: true, sx: { color: theme.palette.text?.secondary || neu.textSecondary } }}
                         sx={{
                           "& .MuiOutlinedInput-root": {
-                            background: "#e6ecf5",
-                            borderRadius: "12px",
-                            boxShadow: "inset 2px 2px 5px #c5d0e0, inset -2px -2px 5px #ffffff",
+                            ...neu.inputRoot,
+                          },
+                          "& input": {
+                            color: neu.textPrimary,
                           },
                         }}
                       />
@@ -375,12 +405,13 @@ export default function PreferencesForm({
                         fullWidth
                         value={slot.end_time}
                         onChange={(e) => handleSlotChange(index, "end_time", e.target.value)}
-                        InputLabelProps={{ shrink: true }}
+                        InputLabelProps={{ shrink: true, sx: { color: theme.palette.text?.secondary || neu.textSecondary } }}
                         sx={{
                           "& .MuiOutlinedInput-root": {
-                            background: "#e6ecf5",
-                            borderRadius: "12px",
-                            boxShadow: "inset 2px 2px 5px #c5d0e0, inset -2px -2px 5px #ffffff",
+                            ...neu.inputRoot,
+                          },
+                          "& input": {
+                            color: neu.textPrimary,
                           },
                         }}
                       />
@@ -392,8 +423,11 @@ export default function PreferencesForm({
                         onClick={() => handleRemoveSlot(index)}
                         disabled={availabilitySlots.length <= currentLimits.minAvailabilitySlots}
                         sx={{
-                          boxShadow: "3px 3px 6px #c5d0e0, -3px -3px 6px #ffffff",
-                          background: "#e6ecf5",
+                          boxShadow: isDark
+                            ? "3px 3px 6px #090e18, -3px -3px 6px #1f2c40"
+                            : "3px 3px 6px #c5d0e0, -3px -3px 6px #ffffff",
+                          backgroundColor: isDark ? "#1E293B" : "#e6ecf5",
+                          color: isDark ? "#F87171" : "#D32F2F",
                         }}
                       >
                         <DeleteOutlineIcon fontSize="small" />
@@ -405,7 +439,7 @@ export default function PreferencesForm({
             </Stack>
           </Box>
 
-          <Divider sx={{ borderColor: "rgba(148, 163, 184, 0.2)" }} />
+          <Divider sx={{ borderColor: isDark ? "rgba(255, 255, 255, 0.08)" : "rgba(148, 163, 184, 0.2)" }} />
 
           {/* ── Navigation & Submit Buttons ── */}
           <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", pt: 1 }}>
@@ -415,13 +449,13 @@ export default function PreferencesForm({
                 onClick={onBack}
                 disabled={loading}
                 sx={{
-                  ...NEU_STYLES.elevatedCard,
+                  ...neu.elevatedCard,
                   textTransform: "none",
                   fontWeight: 600,
-                  color: "#455A64",
+                  color: isDark ? "#94A3B8" : "#455A64",
                   px: 3,
                   py: 1,
-                  "&:hover": { background: "#e6ecf5" },
+                  "&:hover": { transform: "translateY(-1px)" },
                 }}
               >
                 Back to Guidelines
@@ -440,16 +474,24 @@ export default function PreferencesForm({
                 fontWeight: 700,
                 fontSize: "1rem",
                 borderRadius: "24px",
-                background: "linear-gradient(135deg, #1976D2, #0D47A1)",
-                boxShadow: "6px 6px 14px #c5d0e0, -6px -6px 14px #ffffff",
+                background: isDark
+                  ? "linear-gradient(135deg, #2563EB, #1D4ED8)"
+                  : "linear-gradient(135deg, #1976D2, #0D47A1)",
+                boxShadow: isDark
+                  ? "6px 6px 14px #090e18, -6px -6px 14px #1f2c40"
+                  : "6px 6px 14px #c5d0e0, -6px -6px 14px #ffffff",
                 color: "#ffffff",
                 "&:hover": {
-                  background: "linear-gradient(135deg, #1565C0, #0A387E)",
-                  boxShadow: "3px 3px 8px #c5d0e0, -3px -3px 8px #ffffff",
+                  background: isDark
+                    ? "linear-gradient(135deg, #3B82F6, #1E40AF)"
+                    : "linear-gradient(135deg, #1565C0, #0A387E)",
+                  boxShadow: isDark
+                    ? "3px 3px 8px #090e18, -3px -3px 8px #1f2c40"
+                    : "3px 3px 8px #c5d0e0, -3px -3px 8px #ffffff",
                   transform: "translateY(-1px)",
                 },
                 "&:active": {
-                  boxShadow: "inset 3px 3px 6px rgba(0,0,0,0.3)",
+                  boxShadow: "inset 3px 3px 6px rgba(0,0,0,0.4)",
                 },
               }}
             >

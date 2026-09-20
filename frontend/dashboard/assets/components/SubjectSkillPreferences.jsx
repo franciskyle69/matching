@@ -13,6 +13,7 @@ import {
   Alert,
   FormControlLabel,
 } from "@mui/material";
+import { useTheme } from "@mui/material/styles";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import MenuBookIcon from "@mui/icons-material/MenuBook";
 import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
@@ -194,59 +195,15 @@ export const CANONICAL_CURRICULUM = [
   },
 ];
 
-// Neumorphic Styling Constants
-export const NEU_STYLES = {
-  bgBase: "#e6ecf5",
-  accentBlue: "#1976D2",
-  accentDark: "#0D47A1",
-  elevatedCard: {
-    background: "#e6ecf5",
-    boxShadow: "6px 6px 14px #c5d0e0, -6px -6px 14px #ffffff",
-    borderRadius: "16px",
-    border: "1px solid rgba(255, 255, 255, 0.6)",
-    transition: "all 0.25s cubic-bezier(0.4, 0, 0.2, 1)",
-  },
-  pressedCard: {
-    background: "#e6ecf5",
-    boxShadow: "inset 4px 4px 8px #c5d0e0, inset -4px -4px 8px #ffffff",
-    border: "2px solid #1976D2",
-    borderRadius: "16px",
-    transition: "all 0.25s cubic-bezier(0.4, 0, 0.2, 1)",
-  },
-  counterPill: {
-    boxShadow: "inset 2px 2px 5px #c5d0e0, inset -2px -2px 5px #ffffff",
-    background: "#e6ecf5",
-    borderRadius: "20px",
-    px: 1.8,
-    py: 0.6,
-    display: "inline-flex",
-    alignItems: "center",
-    gap: 0.8,
-  },
-  headerPill: {
-    boxShadow: "inset 2px 2px 5px #c5d0e0, inset -2px -2px 5px #ffffff",
-    background: "#e6ecf5",
-    borderRadius: "20px",
-    px: 2,
-    py: 0.8,
-  },
-  topicContainer: {
-    background: "#e6ecf5",
-    boxShadow: "4px 4px 10px #c5d0e0, -4px -4px 10px #ffffff",
-    borderRadius: "14px",
-    border: "1px solid rgba(255, 255, 255, 0.7)",
-  },
-  stickyBar: {
-    position: "sticky",
-    top: 16,
-    zIndex: 10,
-    background: "rgba(230, 236, 245, 0.92)",
-    backdropFilter: "blur(10px)",
-    boxShadow: "6px 6px 14px #c5d0e0, -6px -6px 14px #ffffff",
-    borderRadius: "16px",
-    border: "1px solid rgba(255, 255, 255, 0.8)",
-  },
-};
+import {
+  getNeuStyles,
+  getNeumorphicStyle,
+  NEU_STYLES as DEFAULT_NEU_STYLES,
+} from "../theme/neumorphism.js";
+
+// Neumorphic Styling Constants (Backwards compatibility fallback)
+export const NEU_STYLES = DEFAULT_NEU_STYLES;
+export { getNeuStyles, getNeumorphicStyle };
 
 export default function SubjectSkillPreferences({
   role = "MENTEE",
@@ -254,6 +211,10 @@ export default function SubjectSkillPreferences({
   onChange = () => {},
   readOnly = false,
 }) {
+  const theme = useTheme();
+  const neu = useMemo(() => getNeuStyles(theme), [theme?.palette?.mode]);
+  const isDark = theme?.palette?.mode === "dark";
+
   const currentLimits = useMemo(() => getRoleLimits(role), [role]);
 
   const selectedSubjects = value.selectedSubjects || [];
@@ -393,8 +354,11 @@ export default function SubjectSkillPreferences({
           onClose={() => setValidationError("")}
           sx={{
             borderRadius: "12px",
-            boxShadow: "inset 2px 2px 5px #c5d0e0, inset -2px -2px 5px #ffffff",
-            background: "#e6ecf5",
+            ...neu.sunkenPanel,
+            color: isDark ? "#FDBA74" : undefined,
+            "& .MuiAlert-icon": {
+              color: isDark ? "#FB923C" : undefined,
+            },
           }}
         >
           {validationError}
@@ -402,7 +366,7 @@ export default function SubjectSkillPreferences({
       )}
 
       {/* ── 1. Core Subjects Section ── */}
-      <Box sx={{ ...NEU_STYLES.elevatedCard, p: { xs: 2.5, sm: 3 } }}>
+      <Box sx={{ ...neu.elevatedCard, p: { xs: 2.5, sm: 3 } }}>
         <Stack
           direction={{ xs: "column", sm: "row" }}
           justifyContent="space-between"
@@ -411,18 +375,26 @@ export default function SubjectSkillPreferences({
           sx={{ mb: 2.5 }}
         >
           <Box>
-            <Typography variant="h6" fontWeight={700} color="#0D47A1" sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-              <MenuBookIcon sx={{ color: "#1976D2", fontSize: 24 }} />
+            <Typography variant="h6" fontWeight={700} color={neu.titleColor} sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+              <MenuBookIcon sx={{ color: neu.accentBlue, fontSize: 24 }} />
               Core BSIT Subjects
             </Typography>
-            <Typography variant="body2" color="text.secondary">
+            <Typography variant="body2" color={theme.palette.text?.secondary || neu.textSecondary}>
               Select academic courses to configure corresponding topics and competencies.
             </Typography>
           </Box>
 
           {/* Header badge showing real-time counts */}
-          <Box sx={NEU_STYLES.counterPill}>
-            <Typography variant="caption" fontWeight={700} color={selectedSubjects.length >= currentLimits.minSubjects ? "#0D47A1" : "#D32F2F"}>
+          <Box sx={neu.counterPill}>
+            <Typography
+              variant="caption"
+              fontWeight={700}
+              color={
+                selectedSubjects.length >= currentLimits.minSubjects
+                  ? (isDark ? "#60A5FA" : "#0D47A1")
+                  : (isDark ? "#F87171" : "#D32F2F")
+              }
+            >
               Subjects: {selectedSubjects.length} / {currentLimits.maxSubjects} (Min {currentLimits.minSubjects}, Max {currentLimits.maxSubjects})
             </Typography>
           </Box>
@@ -438,7 +410,7 @@ export default function SubjectSkillPreferences({
                 <Paper
                   onClick={() => !isDisabled && !readOnly && handleToggleSubject(sub.code)}
                   sx={{
-                    ...(isSelected ? NEU_STYLES.pressedCard : NEU_STYLES.elevatedCard),
+                    ...(isSelected ? neu.pressedCard : neu.elevatedCard),
                     p: 2,
                     cursor: isDisabled || readOnly ? "not-allowed" : "pointer",
                     opacity: isDisabled ? 0.45 : 1,
@@ -459,15 +431,24 @@ export default function SubjectSkillPreferences({
                     onClick={(e) => e.stopPropagation()}
                     size="small"
                     sx={{
-                      color: "#90A4AE",
-                      "&.Mui-checked": { color: "#1976D2" },
+                      color: isDark ? "#64748B" : "#90A4AE",
+                      "&.Mui-checked": { color: isDark ? "#60A5FA" : "#1976D2" },
                     }}
                   />
                   <Box sx={{ minWidth: 0, flex: 1 }}>
-                    <Typography variant="subtitle2" fontWeight={700} color={isSelected ? "#0D47A1" : "#37474F"} noWrap>
+                    <Typography
+                      variant="subtitle2"
+                      fontWeight={700}
+                      color={isSelected ? (isDark ? "#93C5FD" : "#0D47A1") : neu.textPrimary}
+                      noWrap
+                    >
                       {sub.code}
                     </Typography>
-                    <Typography variant="caption" color="text.secondary" sx={{ display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
+                    <Typography
+                      variant="caption"
+                      color={theme.palette.text?.secondary || neu.textSecondary}
+                      sx={{ display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}
+                    >
                       {sub.name.replace(`${sub.code} - `, "")}
                     </Typography>
                   </Box>
@@ -479,7 +460,7 @@ export default function SubjectSkillPreferences({
       </Box>
 
       {/* ── 2. Hierarchy & Skill Tags Section ── */}
-      <Box sx={{ ...NEU_STYLES.elevatedCard, p: { xs: 2.5, sm: 3 } }}>
+      <Box sx={{ ...neu.elevatedCard, p: { xs: 2.5, sm: 3 } }}>
         <Stack
           direction={{ xs: "column", sm: "row" }}
           justifyContent="space-between"
@@ -488,19 +469,19 @@ export default function SubjectSkillPreferences({
           sx={{ mb: 2 }}
         >
           <Box>
-            <Typography variant="h6" fontWeight={700} color="#0D47A1" sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-              <AutoStoriesIcon sx={{ color: "#1976D2", fontSize: 24 }} />
+            <Typography variant="h6" fontWeight={700} color={neu.titleColor} sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+              <AutoStoriesIcon sx={{ color: neu.accentBlue, fontSize: 24 }} />
               Competency & Skill Tags
             </Typography>
-            <Typography variant="body2" color="text.secondary">
+            <Typography variant="body2" color={theme.palette.text?.secondary || neu.textSecondary}>
               Expand each subject to select specific topics and granular competencies.
             </Typography>
           </Box>
 
           <Box sx={{ display: "flex", gap: 1.5, flexWrap: "wrap" }}>
             {/* Hierarchy Badge */}
-            <Box sx={NEU_STYLES.headerPill}>
-              <Typography variant="caption" fontWeight={600} color="#546E7A">
+            <Box sx={neu.headerPill}>
+              <Typography variant="caption" fontWeight={600} color={theme.palette.text?.secondary || neu.textSecondary}>
                 Hierarchy: Subject → Topic → Competency
               </Typography>
             </Box>
@@ -508,12 +489,16 @@ export default function SubjectSkillPreferences({
             {/* Global Counter Pill */}
             <Box
               sx={{
-                ...NEU_STYLES.counterPill,
-                border: isGlobalCompCapReached ? "1px solid #FF9800" : "none",
+                ...neu.counterPill,
+                border: isGlobalCompCapReached ? (isDark ? "1px solid #F59E0B" : "1px solid #FF9800") : "none",
               }}
             >
-              <CheckCircleOutlineIcon sx={{ fontSize: 16, color: isGlobalCompCapReached ? "#FF9800" : "#1976D2" }} />
-              <Typography variant="caption" fontWeight={700} color={isGlobalCompCapReached ? "#E65100" : "#0D47A1"}>
+              <CheckCircleOutlineIcon sx={{ fontSize: 16, color: isGlobalCompCapReached ? (isDark ? "#F59E0B" : "#FF9800") : neu.accentBlue }} />
+              <Typography
+                variant="caption"
+                fontWeight={700}
+                color={isGlobalCompCapReached ? (isDark ? "#F59E0B" : "#E65100") : (isDark ? "#60A5FA" : "#0D47A1")}
+              >
                 Competencies: {selectedCompetencies.length} / {currentLimits.maxGlobalCompetencies} (Max {currentLimits.maxGlobalCompetencies})
               </Typography>
             </Box>
@@ -524,13 +509,16 @@ export default function SubjectSkillPreferences({
         {isGlobalCompCapReached && (
           <Box
             sx={{
-              ...NEU_STYLES.headerPill,
+              ...neu.headerPill,
               mb: 2.5,
-              background: "#FFF3E0",
-              boxShadow: "inset 2px 2px 5px #FFE0B2, inset -2px -2px 5px #ffffff",
+              backgroundColor: isDark ? "rgba(245, 158, 11, 0.12)" : "#FFF3E0",
+              boxShadow: isDark
+                ? "inset 2px 2px 5px rgba(0,0,0,0.4), inset -2px -2px 5px rgba(255,255,255,0.05)"
+                : "inset 2px 2px 5px #FFE0B2, inset -2px -2px 5px #ffffff",
+              border: isDark ? "1px solid rgba(245, 158, 11, 0.25)" : "none",
             }}
           >
-            <Typography variant="caption" color="#E65100" fontWeight={600}>
+            <Typography variant="caption" color={isDark ? "#FCD34D" : "#E65100"} fontWeight={600}>
               ⚡ Maximum competency capacity reached ({currentLimits.maxGlobalCompetencies}/{currentLimits.maxGlobalCompetencies}). Unchecked competencies are disabled across all topics.
             </Typography>
           </Box>
@@ -539,7 +527,7 @@ export default function SubjectSkillPreferences({
         {activeSubjectObjects.length === 0 ? (
           <Box
             sx={{
-              ...NEU_STYLES.counterPill,
+              ...neu.counterPill,
               width: "100%",
               py: 4,
               textAlign: "center",
@@ -549,7 +537,7 @@ export default function SubjectSkillPreferences({
               justifyContent: "center",
             }}
           >
-            <Typography variant="body2" color="text.secondary" fontWeight={500}>
+            <Typography variant="body2" color={theme.palette.text?.secondary || neu.textSecondary} fontWeight={500}>
               No subjects selected. Please select at least {currentLimits.minSubjects} subject above to view and configure topics.
             </Typography>
           </Box>
@@ -569,12 +557,12 @@ export default function SubjectSkillPreferences({
                   defaultExpanded
                   disableGutters
                   sx={{
-                    ...NEU_STYLES.topicContainer,
+                    ...neu.topicContainer,
                     "&:before": { display: "none" },
                   }}
                 >
                   <AccordionSummary
-                    expandIcon={<ExpandMoreIcon sx={{ color: "#1976D2" }} />}
+                    expandIcon={<ExpandMoreIcon sx={{ color: neu.accentBlue }} />}
                     sx={{
                       px: 2.5,
                       py: 1,
@@ -588,17 +576,17 @@ export default function SubjectSkillPreferences({
                     }}
                   >
                     <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
-                      <Typography variant="subtitle1" fontWeight={700} color="#0D47A1">
+                      <Typography variant="subtitle1" fontWeight={700} color={neu.titleColor}>
                         {subjectObj.code}
                       </Typography>
-                      <Typography variant="body2" color="text.secondary" sx={{ display: { xs: "none", sm: "inline" } }}>
+                      <Typography variant="body2" color={theme.palette.text?.secondary || neu.textSecondary} sx={{ display: { xs: "none", sm: "inline" } }}>
                         — {subjectObj.name.replace(`${subjectObj.code} - `, "")}
                       </Typography>
                     </Box>
 
                     {/* Topic-level badge */}
-                    <Box sx={NEU_STYLES.counterPill}>
-                      <Typography variant="caption" fontWeight={600} color="#0D47A1">
+                    <Box sx={neu.counterPill}>
+                      <Typography variant="caption" fontWeight={600} color={isDark ? "#60A5FA" : "#0D47A1"}>
                         Topics: {selectedTopicsInThisSubject.length} / {currentLimits.maxTopicsPerSubject} (Max {currentLimits.maxTopicsPerSubject})
                       </Typography>
                     </Box>
@@ -625,7 +613,7 @@ export default function SubjectSkillPreferences({
                           <Grid item xs={12} md={6} key={topicObj.name}>
                             <Paper
                               sx={{
-                                ...(isTopicSelected ? NEU_STYLES.pressedCard : NEU_STYLES.elevatedCard),
+                                ...(isTopicSelected ? neu.pressedCard : neu.elevatedCard),
                                 p: 2,
                                 display: "flex",
                                 flexDirection: "column",
@@ -646,13 +634,17 @@ export default function SubjectSkillPreferences({
                                       sx={{
                                         p: 0.5,
                                         mr: 0.5,
-                                        color: "#90A4AE",
-                                        "&.Mui-checked": { color: "#1976D2" },
+                                        color: isDark ? "#64748B" : "#90A4AE",
+                                        "&.Mui-checked": { color: isDark ? "#60A5FA" : "#1976D2" },
                                       }}
                                     />
                                   }
                                   label={
-                                    <Typography variant="body2" fontWeight={700} color={isTopicSelected ? "#0D47A1" : "#37474F"}>
+                                    <Typography
+                                      variant="body2"
+                                      fontWeight={700}
+                                      color={isTopicSelected ? (isDark ? "#93C5FD" : "#0D47A1") : neu.textPrimary}
+                                    >
                                       {topicObj.name}
                                     </Typography>
                                   }
@@ -661,8 +653,8 @@ export default function SubjectSkillPreferences({
 
                                 {/* Topic Count Tag: e.g. 1/2 competencies */}
                                 {isTopicSelected && (
-                                  <Box sx={{ ...NEU_STYLES.counterPill, px: 1, py: 0.2 }}>
-                                    <Typography variant="caption" fontWeight={600} color="#1976D2">
+                                  <Box sx={{ ...neu.counterPill, px: 1, py: 0.2 }}>
+                                    <Typography variant="caption" fontWeight={600} color={neu.accentBlue}>
                                       {selectedCompsInThisTopic.length}/{currentLimits.maxCompetenciesPerTopic} competencies
                                     </Typography>
                                   </Box>
@@ -699,15 +691,15 @@ export default function SubjectSkillPreferences({
                                             sx={{
                                               p: 0.4,
                                               mr: 0.5,
-                                              color: "#90A4AE",
-                                              "&.Mui-checked": { color: "#1976D2" },
+                                              color: isDark ? "#64748B" : "#90A4AE",
+                                              "&.Mui-checked": { color: isDark ? "#60A5FA" : "#1976D2" },
                                             }}
                                           />
                                         }
                                         label={
                                           <Typography
                                             variant="body2"
-                                            color={isCompSelected ? "#0D47A1" : "#455A64"}
+                                            color={isCompSelected ? (isDark ? "#93C5FD" : "#0D47A1") : (theme.palette.text?.secondary || neu.textSecondary)}
                                             fontWeight={isCompSelected ? 600 : 400}
                                           >
                                             {compName}

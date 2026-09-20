@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext } from "react";
+import React, { useState, useEffect, useContext, useMemo } from "react";
 import {
   Box,
   Typography,
@@ -12,6 +12,7 @@ import {
   Chip,
   Divider,
 } from "@mui/material";
+import { useTheme } from "@mui/material/styles";
 import SaveIcon from "@mui/icons-material/Save";
 import TuneIcon from "@mui/icons-material/Tune";
 import RefreshIcon from "@mui/icons-material/Refresh";
@@ -20,6 +21,7 @@ import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import SubjectSkillPreferences, {
   NEU_STYLES,
   getRoleLimits,
+  getNeuStyles,
 } from "../../components/SubjectSkillPreferences.jsx";
 
 function getCookie(name) {
@@ -46,6 +48,10 @@ export default function MenteePreferencesPage({ defaultRole = "MENTEE" }) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+
+  const theme = useTheme();
+  const neu = useMemo(() => getNeuStyles(theme), [theme?.palette?.mode]);
+  const isDark = theme?.palette?.mode === "dark";
 
   // Hierarchical preferences state
   const [selectedSubjects, setSelectedSubjects] = useState([]);
@@ -163,17 +169,19 @@ export default function MenteePreferencesPage({ defaultRole = "MENTEE" }) {
   return (
     <Box
       sx={{
-        backgroundColor: NEU_STYLES.bgBase,
+        backgroundColor: theme.palette.background?.default || neu.bgBase,
+        color: theme.palette.text?.primary || neu.textPrimary,
         minHeight: "100vh",
         py: { xs: 3, md: 5 },
         px: { xs: 2, sm: 3 },
+        transition: "background-color 0.3s ease, color 0.3s ease",
       }}
     >
       <Container maxWidth="lg">
         {/* Header Bar */}
         <Paper
           sx={{
-            ...NEU_STYLES.elevatedCard,
+            ...neu.elevatedCard,
             p: { xs: 2.5, sm: 3.5 },
             mb: 4,
             display: "flex",
@@ -185,17 +193,17 @@ export default function MenteePreferencesPage({ defaultRole = "MENTEE" }) {
         >
           <Box>
             <Stack direction="row" spacing={1.5} alignItems="center" sx={{ mb: 0.5 }}>
-              <TuneIcon sx={{ color: "#1976D2", fontSize: 28 }} />
-              <Typography variant="h5" fontWeight={800} color="#0D47A1">
+              <TuneIcon sx={{ color: neu.accentBlue, fontSize: 28 }} />
+              <Typography variant="h5" fontWeight={800} color={neu.titleColor}>
                 {roleLimits.label} Matching Preferences
               </Typography>
-              <Box sx={{ ...NEU_STYLES.counterPill, px: 1.5, py: 0.3 }}>
-                <Typography variant="caption" fontWeight={700} color="#1976D2">
+              <Box sx={{ ...neu.counterPill, px: 1.5, py: 0.3 }}>
+                <Typography variant="caption" fontWeight={700} color={neu.accentBlue}>
                   {roleLimits.label}
                 </Typography>
               </Box>
             </Stack>
-            <Typography variant="body2" color="text.secondary">
+            <Typography variant="body2" color={theme.palette.text?.secondary || neu.textSecondary}>
               Configure your subjects, topics, and competencies to optimize recommendation scoring.
             </Typography>
           </Box>
@@ -208,14 +216,17 @@ export default function MenteePreferencesPage({ defaultRole = "MENTEE" }) {
               startIcon={<RefreshIcon />}
               sx={{
                 borderRadius: "20px",
-                borderColor: "#90A4AE",
-                color: "#455A64",
+                borderColor: isDark ? "rgba(255, 255, 255, 0.15)" : "#90A4AE",
+                color: isDark ? "#94A3B8" : "#455A64",
                 textTransform: "none",
                 fontWeight: 600,
-                boxShadow: "2px 2px 5px #c5d0e0, -2px -2px 5px #ffffff",
+                boxShadow: isDark
+                  ? "2px 2px 5px #090e18, -2px -2px 5px #1f2c40"
+                  : "2px 2px 5px #c5d0e0, -2px -2px 5px #ffffff",
+                backgroundColor: isDark ? "#151D2A" : "#e6ecf5",
                 "&:hover": {
-                  borderColor: "#1976D2",
-                  background: "rgba(25, 118, 210, 0.04)",
+                  borderColor: neu.accentBlue,
+                  background: isDark ? "rgba(96, 165, 250, 0.08)" : "rgba(25, 118, 210, 0.04)",
                 },
               }}
             >
@@ -234,12 +245,20 @@ export default function MenteePreferencesPage({ defaultRole = "MENTEE" }) {
                 textTransform: "none",
                 fontWeight: 700,
                 fontSize: "0.95rem",
-                background: "linear-gradient(135deg, #1976D2, #0D47A1)",
-                boxShadow: "4px 4px 10px #c5d0e0, -4px -4px 10px #ffffff",
+                background: isDark
+                  ? "linear-gradient(135deg, #2563EB, #1D4ED8)"
+                  : "linear-gradient(135deg, #1976D2, #0D47A1)",
+                boxShadow: isDark
+                  ? "4px 4px 10px #090e18, -4px -4px 10px #1f2c40"
+                  : "4px 4px 10px #c5d0e0, -4px -4px 10px #ffffff",
                 color: "#ffffff",
                 "&:hover": {
-                  background: "linear-gradient(135deg, #1565C0, #0A387E)",
-                  boxShadow: "2px 2px 6px #c5d0e0, -2px -2px 6px #ffffff",
+                  background: isDark
+                    ? "linear-gradient(135deg, #3B82F6, #1E40AF)"
+                    : "linear-gradient(135deg, #1565C0, #0A387E)",
+                  boxShadow: isDark
+                    ? "2px 2px 6px #090e18, -2px -2px 6px #1f2c40"
+                    : "2px 2px 6px #c5d0e0, -2px -2px 6px #ffffff",
                 },
               }}
             >
@@ -255,8 +274,11 @@ export default function MenteePreferencesPage({ defaultRole = "MENTEE" }) {
             sx={{
               mb: 3,
               borderRadius: "12px",
-              boxShadow: "inset 2px 2px 5px #c5d0e0, inset -2px -2px 5px #ffffff",
-              background: "#e6ecf5",
+              ...neu.sunkenPanel,
+              color: isDark ? "#FCA5A5" : undefined,
+              "& .MuiAlert-icon": {
+                color: isDark ? "#F87171" : undefined,
+              },
             }}
           >
             {error}
@@ -265,7 +287,7 @@ export default function MenteePreferencesPage({ defaultRole = "MENTEE" }) {
 
         {loading ? (
           <Box sx={{ display: "flex", justifyContent: "center", py: 10 }}>
-            <CircularProgress sx={{ color: "#1976D2" }} />
+            <CircularProgress sx={{ color: neu.accentBlue }} />
           </Box>
         ) : (
           <Stack spacing={4}>
@@ -288,7 +310,7 @@ export default function MenteePreferencesPage({ defaultRole = "MENTEE" }) {
             {/* Bottom Save Action Bar */}
             <Paper
               sx={{
-                ...NEU_STYLES.elevatedCard,
+                ...neu.elevatedCard,
                 p: 3,
                 display: "flex",
                 justifyContent: "space-between",
@@ -297,7 +319,7 @@ export default function MenteePreferencesPage({ defaultRole = "MENTEE" }) {
                 gap: 2,
               }}
             >
-              <Typography variant="body2" color="text.secondary">
+              <Typography variant="body2" color={theme.palette.text?.secondary || neu.textSecondary}>
                 Remember to click <strong>Save Preferences</strong> to commit your subject and competency adjustments.
               </Typography>
               <Button
@@ -313,12 +335,20 @@ export default function MenteePreferencesPage({ defaultRole = "MENTEE" }) {
                   textTransform: "none",
                   fontWeight: 700,
                   fontSize: "1rem",
-                  background: "linear-gradient(135deg, #1976D2, #0D47A1)",
-                  boxShadow: "5px 5px 12px #c5d0e0, -5px -5px 12px #ffffff",
+                  background: isDark
+                    ? "linear-gradient(135deg, #2563EB, #1D4ED8)"
+                    : "linear-gradient(135deg, #1976D2, #0D47A1)",
+                  boxShadow: isDark
+                    ? "5px 5px 12px #090e18, -5px -5px 12px #1f2c40"
+                    : "5px 5px 12px #c5d0e0, -5px -5px 12px #ffffff",
                   color: "#ffffff",
                   "&:hover": {
-                    background: "linear-gradient(135deg, #1565C0, #0A387E)",
-                    boxShadow: "2px 2px 6px #c5d0e0, -2px -2px 6px #ffffff",
+                    background: isDark
+                      ? "linear-gradient(135deg, #3B82F6, #1E40AF)"
+                      : "linear-gradient(135deg, #1565C0, #0A387E)",
+                    boxShadow: isDark
+                      ? "2px 2px 6px #090e18, -2px -2px 6px #1f2c40"
+                      : "2px 2px 6px #c5d0e0, -2px -2px 6px #ffffff",
                   },
                 }}
               >

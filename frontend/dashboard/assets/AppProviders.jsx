@@ -2937,7 +2937,29 @@
     const LayoutComponent = Layout;
     const ThemeProvider =
       window.Mui && window.Mui.ThemeProvider ? window.Mui.ThemeProvider : null;
-    const muiTheme = window.DashboardApp && window.DashboardApp.theme;
+    const muiTheme = useMemo(() => {
+      const baseTheme = (window.DashboardApp && window.DashboardApp.theme) || {};
+      const createThemeFn =
+        (window.Mui && window.Mui.createTheme) ||
+        (window.DashboardApp && window.DashboardApp.createTheme);
+      const isDark = theme === "dark";
+      if (typeof createThemeFn === "function") {
+        return createThemeFn(baseTheme, {
+          palette: {
+            mode: isDark ? "dark" : "light",
+            background: {
+              default: isDark ? "#0F172A" : "#E6ECF5",
+              paper: isDark ? "#151D2A" : "#E6ECF5",
+            },
+            text: {
+              primary: isDark ? "#F8FAFC" : "#1E293B",
+              secondary: isDark ? "#94A3B8" : "#546E7A",
+            },
+          },
+        });
+      }
+      return baseTheme;
+    }, [theme]);
     const appTree = (
       <AppContext.Provider value={contextValue}>
         <LayoutComponent />

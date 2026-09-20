@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
   Box,
   Button,
@@ -14,6 +14,7 @@ import {
   Typography,
   Alert,
 } from "@mui/material";
+import { useTheme } from "@mui/material/styles";
 import HandshakeIcon from "@mui/icons-material/Handshake";
 import SchoolIcon from "@mui/icons-material/School";
 import ScheduleIcon from "@mui/icons-material/Schedule";
@@ -21,6 +22,7 @@ import VerifiedUserIcon from "@mui/icons-material/VerifiedUser";
 
 import PreferencesForm from "./PreferencesForm.jsx";
 import { NEU_STYLES } from "./SubjectSkillPreferences.jsx";
+import { getNeuStyles, getNeumorphicStyle } from "../theme/neumorphism.js";
 
 export const CORE_BSIT_SUBJECTS = [
   { code: "IT 111", name: "IT 111 - Introduction to Computing" },
@@ -57,6 +59,10 @@ export const DAYS_OF_WEEK = [
 ];
 
 export default function Onboarding({ user, onComplete }) {
+  const theme = useTheme();
+  const neu = useMemo(() => getNeuStyles(theme), [theme?.palette?.mode]);
+  const isDark = theme?.palette?.mode === "dark";
+
   const [activeStep, setActiveStep] = useState(0);
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
@@ -119,9 +125,11 @@ export default function Onboarding({ user, onComplete }) {
     <Box
       sx={{
         minHeight: "100vh",
-        background: "#e6ecf5",
+        backgroundColor: theme.palette.background?.default || neu.bgBase,
+        color: theme.palette.text?.primary || neu.textPrimary,
         py: { xs: 3, md: 5 },
         px: { xs: 2, sm: 3 },
+        transition: "background-color 0.3s ease, color 0.3s ease",
       }}
     >
       <Container maxWidth="lg">
@@ -130,7 +138,7 @@ export default function Onboarding({ user, onComplete }) {
           <Typography
             variant="h4"
             fontWeight={800}
-            color="#0D47A1"
+            color={theme.palette.mode === "dark" ? neu.titleColor : "#0D47A1"}
             gutterBottom
             sx={{
               letterSpacing: "-0.03em",
@@ -141,7 +149,7 @@ export default function Onboarding({ user, onComplete }) {
           </Typography>
           <Typography
             variant="body1"
-            color="text.secondary"
+            color={theme.palette.text?.secondary || neu.textSecondary}
             sx={{ maxWidth: 640, mx: "auto", fontWeight: 500 }}
           >
             Configure your academic preferences to empower our XGBoost matching engine with optimal feature vector sparsity.
@@ -153,40 +161,39 @@ export default function Onboarding({ user, onComplete }) {
           sx={{
             mb: 4,
             p: 1.5,
-            background: "#e6ecf5",
-            borderRadius: "30px",
-            boxShadow: "inset 3px 3px 8px #c5d0e0, inset -3px -3px 8px #ffffff",
-            border: "1px solid rgba(255, 255, 255, 0.6)",
+            ...neu.stepperTrack,
           }}
         >
           <Stepper
             activeStep={activeStep}
             sx={{
               "& .MuiStepConnector-line": {
-                borderColor: "#c5d0e0",
+                borderColor: isDark ? "rgba(255, 255, 255, 0.12)" : "#c5d0e0",
                 borderTopWidth: 2,
               },
               "& .MuiStepIcon-root": {
-                color: "#c5d0e0",
+                color: isDark ? "#334155" : "#c5d0e0",
                 fontSize: 28,
                 "&.Mui-active": {
-                  color: "#1976D2",
-                  filter: "drop-shadow(2px 2px 4px rgba(25, 118, 210, 0.4))",
+                  color: isDark ? "#60A5FA" : "#1976D2",
+                  filter: isDark
+                    ? "drop-shadow(0 0 6px rgba(96, 165, 250, 0.5))"
+                    : "drop-shadow(2px 2px 4px rgba(25, 118, 210, 0.4))",
                 },
                 "&.Mui-completed": {
-                  color: "#0D47A1",
+                  color: isDark ? "#38BDF8" : "#0D47A1",
                 },
               },
               "& .MuiStepLabel-label": {
-                color: "#546E7A",
+                color: theme.palette.text?.secondary || neu.textSecondary,
                 fontWeight: 600,
                 fontSize: { xs: "0.75rem", sm: "0.875rem" },
                 "&.Mui-active": {
-                  color: "#0D47A1",
+                  color: isDark ? "#60A5FA" : "#0D47A1",
                   fontWeight: 700,
                 },
                 "&.Mui-completed": {
-                  color: "#0D47A1",
+                  color: isDark ? "#38BDF8" : "#0D47A1",
                   fontWeight: 600,
                 },
               },
@@ -207,8 +214,11 @@ export default function Onboarding({ user, onComplete }) {
             sx={{
               mb: 3,
               borderRadius: "14px",
-              boxShadow: "inset 2px 2px 5px #c5d0e0, inset -2px -2px 5px #ffffff",
-              background: "#e6ecf5",
+              ...neu.sunkenPanel,
+              color: isDark ? "#FCA5A5" : undefined,
+              "& .MuiAlert-icon": {
+                color: isDark ? "#F87171" : undefined,
+              },
             }}
             onClose={() => setErrorMessage("")}
           >
@@ -221,7 +231,7 @@ export default function Onboarding({ user, onComplete }) {
           <Card
             elevation={0}
             sx={{
-              ...NEU_STYLES.elevatedCard,
+              ...neu.elevatedCard,
               p: { xs: 1.5, sm: 3 },
             }}
           >
@@ -232,25 +242,34 @@ export default function Onboarding({ user, onComplete }) {
                     width: 48,
                     height: 48,
                     borderRadius: "14px",
-                    background: "#e6ecf5",
-                    boxShadow: "4px 4px 10px #c5d0e0, -4px -4px 10px #ffffff",
+                    backgroundColor: isDark ? "#1E293B" : "#e6ecf5",
+                    boxShadow: isDark
+                      ? "4px 4px 10px #090e18, -4px -4px 10px #1f2c40"
+                      : "4px 4px 10px #c5d0e0, -4px -4px 10px #ffffff",
+                    border: isDark
+                      ? "1px solid rgba(255, 255, 255, 0.08)"
+                      : "1px solid rgba(255, 255, 255, 0.6)",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
                   }}
                 >
-                  <HandshakeIcon sx={{ color: "#1976D2", fontSize: 28 }} />
+                  <HandshakeIcon sx={{ color: isDark ? "#60A5FA" : "#1976D2", fontSize: 28 }} />
                 </Box>
               }
               title={
-                <Typography variant="h5" fontWeight={800} color="#0D47A1">
+                <Typography variant="h5" fontWeight={800} color={neu.titleColor}>
                   BukSU Mentorship Orientation & Guidelines
                 </Typography>
               }
-              subheader="Please read carefully before proceeding with your matching configuration"
+              subheader={
+                <Typography variant="body2" color={theme.palette.text?.secondary || neu.textSecondary} sx={{ mt: 0.5 }}>
+                  Please read carefully before proceeding with your matching configuration
+                </Typography>
+              }
               sx={{ px: { xs: 2, sm: 3 }, pt: 2 }}
             />
-            <Divider sx={{ my: 2, borderColor: "rgba(148, 163, 184, 0.2)" }} />
+            <Divider sx={{ my: 2, borderColor: isDark ? "rgba(255, 255, 255, 0.08)" : "rgba(148, 163, 184, 0.2)" }} />
 
             <CardContent sx={{ px: { xs: 2, sm: 3 }, pb: 3 }}>
               <Stack spacing={3}>
@@ -258,16 +277,14 @@ export default function Onboarding({ user, onComplete }) {
                 <Box
                   sx={{
                     p: 2.5,
-                    background: "#e6ecf5",
-                    boxShadow: "inset 2px 2px 6px #c5d0e0, inset -2px -2px 6px #ffffff",
-                    borderRadius: "16px",
+                    ...neu.sunkenPanel,
                   }}
                 >
-                  <Typography variant="subtitle1" fontWeight={700} color="#0D47A1" sx={{ display: "flex", alignItems: "center", gap: 1, mb: 0.8 }}>
-                    <SchoolIcon sx={{ color: "#1976D2", fontSize: 20 }} />
+                  <Typography variant="subtitle1" fontWeight={700} color={neu.titleColor} sx={{ display: "flex", alignItems: "center", gap: 1, mb: 0.8 }}>
+                    <SchoolIcon sx={{ color: isDark ? "#60A5FA" : "#1976D2", fontSize: 20 }} />
                     1. How the Smart Matching System Works
                   </Typography>
-                  <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.6 }}>
+                  <Typography variant="body2" color={theme.palette.text?.secondary || neu.textSecondary} sx={{ lineHeight: 1.6 }}>
                     Our platform utilizes an intelligent XGBoost machine learning model trained specifically on BukSU IT curriculum benchmarks. The algorithm analyzes your selected subjects, specific competency needs, and overlapping time windows to calculate an optimal mentor-mentee compatibility score.
                   </Typography>
                 </Box>
@@ -276,16 +293,14 @@ export default function Onboarding({ user, onComplete }) {
                 <Box
                   sx={{
                     p: 2.5,
-                    background: "#e6ecf5",
-                    boxShadow: "inset 2px 2px 6px #c5d0e0, inset -2px -2px 6px #ffffff",
-                    borderRadius: "16px",
+                    ...neu.sunkenPanel,
                   }}
                 >
-                  <Typography variant="subtitle1" fontWeight={700} color="#0D47A1" sx={{ display: "flex", alignItems: "center", gap: 1, mb: 0.8 }}>
-                    <ScheduleIcon sx={{ color: "#1976D2", fontSize: 20 }} />
+                  <Typography variant="subtitle1" fontWeight={700} color={neu.titleColor} sx={{ display: "flex", alignItems: "center", gap: 1, mb: 0.8 }}>
+                    <ScheduleIcon sx={{ color: isDark ? "#60A5FA" : "#1976D2", fontSize: 20 }} />
                     2. Mentorship Meeting Schedules
                   </Typography>
-                  <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.6 }}>
+                  <Typography variant="body2" color={theme.palette.text?.secondary || neu.textSecondary} sx={{ lineHeight: 1.6 }}>
                     Pairs are expected to meet at least once weekly during their mutually agreed recurring time slots. Meetings can be conducted in-person on campus (IT computer laboratories or study hubs) or virtually via authorized BukSU video conferencing.
                   </Typography>
                 </Box>
@@ -294,16 +309,14 @@ export default function Onboarding({ user, onComplete }) {
                 <Box
                   sx={{
                     p: 2.5,
-                    background: "#e6ecf5",
-                    boxShadow: "inset 2px 2px 6px #c5d0e0, inset -2px -2px 6px #ffffff",
-                    borderRadius: "16px",
+                    ...neu.sunkenPanel,
                   }}
                 >
-                  <Typography variant="subtitle1" fontWeight={700} color="#0D47A1" sx={{ display: "flex", alignItems: "center", gap: 1, mb: 0.8 }}>
-                    <VerifiedUserIcon sx={{ color: "#1976D2", fontSize: 20 }} />
+                  <Typography variant="subtitle1" fontWeight={700} color={neu.titleColor} sx={{ display: "flex", alignItems: "center", gap: 1, mb: 0.8 }}>
+                    <VerifiedUserIcon sx={{ color: isDark ? "#60A5FA" : "#1976D2", fontSize: 20 }} />
                     3. Code of Conduct & Academic Integrity
                   </Typography>
-                  <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.6 }}>
+                  <Typography variant="body2" color={theme.palette.text?.secondary || neu.textSecondary} sx={{ lineHeight: 1.6 }}>
                     • <strong>Punctuality & Respect:</strong> Honor all scheduled sessions. Notify your mentor or mentee at least 24 hours prior to any schedule adjustments.<br />
                     • <strong>Academic Honesty:</strong> Mentorship focuses on conceptual understanding, problem-solving techniques, and code comprehension. Mentors are prohibited from completing assignments, projects, or exams for mentees.<br />
                     • <strong>Professional Communication:</strong> Keep all discussions aligned with academic growth and adhere to BukSU student conduct standards.
@@ -323,16 +336,24 @@ export default function Onboarding({ user, onComplete }) {
                       fontWeight: 700,
                       fontSize: "1rem",
                       borderRadius: "24px",
-                      background: "linear-gradient(135deg, #1976D2, #0D47A1)",
-                      boxShadow: "6px 6px 14px #c5d0e0, -6px -6px 14px #ffffff",
+                      background: isDark
+                        ? "linear-gradient(135deg, #2563EB, #1D4ED8)"
+                        : "linear-gradient(135deg, #1976D2, #0D47A1)",
+                      boxShadow: isDark
+                        ? "6px 6px 14px #090e18, -6px -6px 14px #1f2c40"
+                        : "6px 6px 14px #c5d0e0, -6px -6px 14px #ffffff",
                       color: "#ffffff",
                       "&:hover": {
-                        background: "linear-gradient(135deg, #1565C0, #0A387E)",
-                        boxShadow: "3px 3px 8px #c5d0e0, -3px -3px 8px #ffffff",
+                        background: isDark
+                          ? "linear-gradient(135deg, #3B82F6, #1E40AF)"
+                          : "linear-gradient(135deg, #1565C0, #0A387E)",
+                        boxShadow: isDark
+                          ? "3px 3px 8px #090e18, -3px -3px 8px #1f2c40"
+                          : "3px 3px 8px #c5d0e0, -3px -3px 8px #ffffff",
                         transform: "translateY(-1px)",
                       },
                       "&:active": {
-                        boxShadow: "inset 3px 3px 6px rgba(0,0,0,0.3)",
+                        boxShadow: "inset 3px 3px 6px rgba(0,0,0,0.4)",
                       },
                     }}
                   >

@@ -72,8 +72,10 @@ const dashboardTheme = createTheme({
 window.React = React;
 window.ReactDOM = ReactDOM;
 window.Mui = Mui;
+window.Mui.createTheme = createTheme;
 window.MaterialUI = Mui;
 window.DashboardApp = window.DashboardApp || {};
+window.DashboardApp.createTheme = createTheme;
 window.DashboardApp.theme = dashboardTheme;
 
 async function loadDashboardModules() {
