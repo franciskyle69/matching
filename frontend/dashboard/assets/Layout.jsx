@@ -237,6 +237,7 @@ import "./components/Sidebar.jsx";
       }
       if (tab.id === "onboarding") {
         if (!(user?.role === "mentor" || user?.role === "mentee")) return false;
+        if (user?.is_onboarded) return false;
         if (user.role === "mentee") {
           const prefsDone = !!(
             user.mentee_questionnaire_completed ??
@@ -265,6 +266,7 @@ import "./components/Sidebar.jsx";
       if (tab.id === "matching") return !isStaff;
       if (tab.id === "approvals") return isStaff;
       if (tab.id === "complete-profile") {
+        if (user?.is_onboarded) return false;
         const unapprovedMentor =
           user?.role === "mentor" && !user?.mentor_approved;
         const unapprovedMentee =
