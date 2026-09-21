@@ -48,19 +48,27 @@ def send_activation_email(request, user) -> str:
 
 
 def send_verification_email(request, user) -> str:
+    import os
+
     sync_site_from_env()
     uid = urlsafe_base64_encode(force_bytes(user.pk))
     token = default_token_generator.make_token(user)
 
-    frontend_url = getattr(settings, "FRONTEND_URL", "").strip().rstrip("/")
-    if frontend_url:
-        verification_url = f"{frontend_url}/verify-email/{uid}/{token}/"
-        domain = frontend_url.split("://")[-1]
-        protocol = "https" if frontend_url.startswith("https://") else "http"
-    else:
-        domain = public_host(request)
-        protocol = public_protocol(request)
-        verification_url = f"{protocol}://{domain}/verify-email/{uid}/{token}/"
+    # Safely fetch FRONTEND_URL from environment with fallback to settings or default
+    frontend_url = os.getenv("FRONTEND_URL", getattr(settings, "FRONTEND_URL", "https://peerlink.online")).strip().rstrip("/")
+    if not frontend_url:
+        frontend_url = "https://peerlink.online"
+
+    # Build the clean, plain string verification URL
+    verification_url = f"{frontend_url}/verify-email/{uid}/{token}/"
+
+    # Defensive cleanup: remove any accidental Markdown link formatting like [url](url)
+    if verification_url.startswith("[") and "](" in verification_url:
+        verification_url = verification_url.split("](")[-1].rstrip(")")
+    verification_url = str(verification_url).strip()
+
+    domain = frontend_url.split("://")[-1]
+    protocol = "https" if frontend_url.startswith("https://") else "http"
 
     context = {
         "user": user,
@@ -70,8 +78,17 @@ def send_verification_email(request, user) -> str:
         "protocol": protocol,
         "verification_url": verification_url,
     }
-    text_message = render_to_string("registration/activation_email.txt", context)
-    html_message = render_to_string("registration/activation_email.html", context)
+
+    try:
+        html_message = render_to_string("emails/activate_account.html", context)
+    except Exception:
+        html_message = render_to_string("registration/activation_email.html", context)
+
+    try:
+        text_message = render_to_string("emails/activate_account.txt", context)
+    except Exception:
+        text_message = render_to_string("registration/activation_email.txt", context)
+
     email_message = EmailMultiAlternatives(
         "Verify your BukSU email address",
         text_message,
