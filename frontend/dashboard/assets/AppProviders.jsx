@@ -505,6 +505,12 @@
 
     useEffect(() => {
       signInPathRef.current = isSignInPathFlow();
+      const path = (window.location.pathname || "").replace(/\/+$/, "");
+      const hash = window.location.hash || "";
+      if (path.includes("/verify-email") || hash.includes("verify-email")) {
+        setActiveTab("verify-email");
+        return;
+      }
       const raw = window.location.hash.replace(/^#\/?/, "");
       if (raw.startsWith("profile/mentor")) {
         setActiveTab("profile");
@@ -517,7 +523,12 @@
       }
 
       const onHashChange = () => {
+        const currentPath = (window.location.pathname || "").replace(/\/+$/, "");
         const hashStr = window.location.hash.replace(/^#\/?/, "");
+        if (currentPath.includes("/verify-email") || hashStr.includes("verify-email")) {
+          setActiveTab("verify-email");
+          return;
+        }
         if (hashStr.startsWith("profile/mentor")) {
           setActiveTab("profile");
           const m = hashStr.match(/profile\/mentor\/(\d+)/);
@@ -532,7 +543,11 @@
 
     useEffect(() => {
       if (!authCheckDone) return;
+      const path = (window.location.pathname || "").replace(/\/+$/, "");
       const hash = window.location.hash.replace(/^#\/?/, "");
+      if (path.includes("/verify-email") || hash.includes("verify-email") || activeTab === "verify-email") {
+        return;
+      }
       const validTabs = [
         ...MAIN_TABS.map((t) => t.id),
         ...((window.DashboardApp && window.DashboardApp.HIDDEN_TABS) || []).map(
@@ -567,6 +582,8 @@
     useEffect(() => {
       if (!authCheckDone || !user) return;
       if (user.is_staff || user.role === "staff" || user.role === "coordinator") return;
+      const path = (window.location.pathname || "").replace(/\/+$/, "");
+      if (path.includes("/verify-email") || activeTab === "verify-email") return;
 
       if (needsCompleteProfile(user)) {
         if (activeTab !== "onboarding") {
@@ -637,7 +654,8 @@
     useEffect(() => {
       if (!authCheckDone) return;
       if (!authRequired) return;
-      if (activeTab === "signin" || activeTab === "signup" || activeTab === "verify-email") return;
+      const path = (window.location.pathname || "").replace(/\/+$/, "");
+      if (activeTab === "signin" || activeTab === "signup" || activeTab === "verify-email" || path.includes("/verify-email")) return;
       setActiveTab("signin");
       replaceAppUrl("signin");
     }, [authCheckDone, authRequired, activeTab]);
@@ -794,6 +812,10 @@
 
     useEffect(() => {
       if (!authCheckDone) return;
+      const currentPath = (window.location.pathname || "").replace(/\/+$/, "");
+      if (activeTab === "verify-email" || currentPath.includes("/verify-email")) {
+        return;
+      }
       if (activeTab === "profile" && mentorProfileHashId) {
         window.location.hash = `profile/mentor/${mentorProfileHashId}`;
       } else if (activeTab === "signin" || activeTab === "signup") {
@@ -987,7 +1009,18 @@
           });
         }
         setAuthRequired(true);
-        setActiveTab((prev) => (prev === "signup" ? "signup" : "signin"));
+        setActiveTab((prev) => {
+          const currentPath = (window.location.pathname || "").replace(/\/+$/, "");
+          const currentHash = window.location.hash || "";
+          if (
+            prev === "verify-email" ||
+            currentPath.includes("/verify-email") ||
+            currentHash.includes("verify-email")
+          ) {
+            return "verify-email";
+          }
+          return prev === "signup" ? "signup" : "signin";
+        });
         setAuthCheckDone(true);
         return null;
       }
@@ -1130,11 +1163,20 @@
               )
             ? "onboarding"
             : null);
-      setActiveTab((prev) =>
-        ["signin", "signup"].includes(prev)
+      setActiveTab((prev) => {
+        const currentPath = (window.location.pathname || "").replace(/\/+$/, "");
+        const currentHash = window.location.hash || "";
+        if (
+          prev === "verify-email" ||
+          currentPath.includes("/verify-email") ||
+          currentHash.includes("verify-email")
+        ) {
+          return "verify-email";
+        }
+        return ["signin", "signup"].includes(prev)
           ? requiredOnboardingTab || "home"
-          : requiredOnboardingTab || prev,
-      );
+          : requiredOnboardingTab || prev;
+      });
       if (result.data.role === "mentee") {
         loadMyMentor({ role: "mentee" });
       }
@@ -2878,7 +2920,8 @@
     const showSignInPrompt =
       authCheckDone &&
       authRequired &&
-      !["signin", "signup", "verify-email"].includes(activeTab);
+      !["signin", "signup", "verify-email"].includes(activeTab) &&
+      !((window.location.pathname || "").includes("/verify-email"));
 
     useEffect(() => {
       const unapproved = user && getIsPendingApproval(user);

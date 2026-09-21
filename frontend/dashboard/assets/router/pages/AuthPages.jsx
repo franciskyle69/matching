@@ -1653,7 +1653,8 @@ import RegisterSuccess from "../../../src/components/RegisterSuccess.jsx";
       let uid = "";
       let tok = "";
 
-      const pathMatch = pathname.match(/\/verify-email\/([^/]+)\/([^/]+)/);
+      // Match path: /verify-email/:uid/:token (optional trailing slash)
+      const pathMatch = pathname.match(/\/verify-email\/([^/?#]+)\/([^/?#]+)/);
       if (pathMatch) {
         uid = pathMatch[1];
         tok = pathMatch[2];
@@ -1668,11 +1669,14 @@ import RegisterSuccess from "../../../src/components/RegisterSuccess.jsx";
       }
 
       if (!uid || !tok) {
-        const searchParams = new URLSearchParams(window.location.search);
+        const searchParams = new URLSearchParams(window.location.search || "");
         const hashQuery = hash.includes("?") ? new URLSearchParams(hash.split("?")[1]) : null;
-        uid = searchParams.get("uidb64") || searchParams.get("uid") || (hashQuery ? hashQuery.get("uidb64") || hashQuery.get("uid") : "");
-        tok = searchParams.get("token") || (hashQuery ? hashQuery.get("token") : "");
+        uid = uid || searchParams.get("uid") || searchParams.get("uidb64") || (hashQuery ? hashQuery.get("uid") || hashQuery.get("uidb64") : "");
+        tok = tok || searchParams.get("token") || (hashQuery ? hashQuery.get("token") : "");
       }
+
+      if (uid) uid = decodeURIComponent(uid).replace(/\/+$/, "").trim();
+      if (tok) tok = decodeURIComponent(tok).replace(/\/+$/, "").trim();
 
       if (!uid || !tok) {
         setLoading(false);

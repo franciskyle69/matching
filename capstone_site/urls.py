@@ -31,5 +31,5 @@ urlpatterns = [
     path('api/', include('api.urls')),
     path('app/', react_app, name='react_app'),
     re_path(r'^app/.*$', react_app),
-    re_path(r'^verify-email/.*$', react_app, name='verify_email_app'),
+    re_path(r'^verify-email/?.*$', react_app, name='verify_email_app'),
 ] + (static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT) if settings.DEBUG else [])

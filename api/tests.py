@@ -827,6 +827,12 @@ class CompleteProfileApiTests(TestCase):
             year_level=1,
             is_profile_complete=False,
         )
+        UserProfile.objects.create(
+            user=self.user,
+            role=UserProfile.ROLE_MENTEE,
+            is_email_verified=True,
+            approval_status=UserProfile.STATUS_ACTIVE,
+        )
         self.client.force_login(self.user)
 
     def test_me_reports_incomplete_profile(self):

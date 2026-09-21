@@ -1,4 +1,4 @@
-from django.urls import path
+from django.urls import path, re_path
 
 from .controllers.account_controller import (
     health,
@@ -139,8 +139,8 @@ urlpatterns = [
     path('auth/logout/', auth_logout, name='api-auth-logout'),
     path('auth/check-lockout/', check_lockout, name='api-auth-check-lockout'),
     path('auth/register/', unified_auth_register, name='api-auth-register'),
-    path('verify-email/', VerifyEmailView.as_view(), name='api-verify-email'),
-    path('auth/verify-email/', VerifyEmailView.as_view(), name='api-auth-verify-email'),
+    re_path(r'^verify-email/?$', VerifyEmailView.as_view(), name='api-verify-email'),
+    re_path(r'^auth/verify-email/?$', VerifyEmailView.as_view(), name='api-auth-verify-email'),
     path('auth/resend-verification/', auth_resend_verification, name='api-auth-resend-verification'),
     path('me/', me, name='api-me'),
     path('me/update/', update_account, name='api-me-update'),

@@ -30,8 +30,8 @@ export default function VerifyEmail({ uidb64: propUid, token: propToken, onNavig
       const pathname = window.location.pathname || "";
       const hash = window.location.hash || "";
 
-      // Match path: /verify-email/<uidb64>/<token>
-      const pathMatch = pathname.match(/\/verify-email\/([^/]+)\/([^/]+)/);
+      // Match path: /verify-email/<uidb64>/<token> (optional trailing slash)
+      const pathMatch = pathname.match(/\/verify-email\/([^/?#]+)\/([^/?#]+)/);
       if (pathMatch) {
         uid = pathMatch[1];
         tok = pathMatch[2];
@@ -48,11 +48,14 @@ export default function VerifyEmail({ uidb64: propUid, token: propToken, onNavig
 
       // Query params fallback: ?uidb64=...&token=...
       if (!uid || !tok) {
-        const searchParams = new URLSearchParams(window.location.search);
+        const searchParams = new URLSearchParams(window.location.search || "");
         const hashQuery = hash.includes("?") ? new URLSearchParams(hash.split("?")[1]) : null;
-        uid = uid || searchParams.get("uidb64") || searchParams.get("uid") || (hashQuery ? hashQuery.get("uidb64") || hashQuery.get("uid") : null);
+        uid = uid || searchParams.get("uid") || searchParams.get("uidb64") || (hashQuery ? hashQuery.get("uid") || hashQuery.get("uidb64") : null);
         tok = tok || searchParams.get("token") || (hashQuery ? hashQuery.get("token") : null);
       }
+
+      if (uid) uid = decodeURIComponent(uid).replace(/\/+$/, "").trim();
+      if (tok) tok = decodeURIComponent(tok).replace(/\/+$/, "").trim();
     }
 
     if (!uid || !tok) {
