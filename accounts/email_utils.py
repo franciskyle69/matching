@@ -14,11 +14,26 @@ from capstone_site.site_utils import public_host, public_protocol, sync_site_fro
 
 def email_backend_can_send() -> bool:
     backend = (getattr(settings, "EMAIL_BACKEND", "") or "").lower()
+    delivery_mode = (getattr(settings, "EMAIL_DELIVERY_MODE", "") or "").upper()
+    is_dev = getattr(settings, "DEBUG", False) or getattr(settings, "DJANGO_ENV", "") == "development"
+
+    # Console, mock, and in-memory testing backends
     if any(
         name in backend
         for name in ("console", "locmem", "dummy", "filebased", "inmemory")
     ):
         return True
+
+    # HTTP API delivery backend (Resend / SendGrid)
+    if "httpemailbackend" in backend or delivery_mode == "HTTP":
+        if bool((getattr(settings, "RESEND_API_KEY", "") or "").strip()) or bool((getattr(settings, "SENDGRID_API_KEY", "") or "").strip()):
+            return True
+        # In development/debug mode, HttpEmailBackend safely falls back to console logging
+        if is_dev or delivery_mode == "CONSOLE":
+            return True
+        return False
+
+    # Standard SMTP backend check
     return bool(
         (getattr(settings, "EMAIL_HOST_USER", "") or "").strip()
         and (getattr(settings, "EMAIL_HOST_PASSWORD", "") or "").strip()

@@ -160,8 +160,21 @@ WSGI_APPLICATION = 'capstone_site.wsgi.application'
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases
 
 force_sqlite = os.environ.get("FORCE_SQLITE", "").lower() == "true"
+database_url = os.environ.get("DATABASE_URL")
 db_name = os.environ.get("DB_NAME")
-if db_name and not force_sqlite:
+
+if database_url and not force_sqlite:
+    import dj_database_url
+    DATABASES = {
+        'default': dj_database_url.config(
+            default=database_url,
+            conn_max_age=int(os.environ.get('DB_CONN_MAX_AGE', '600')),
+            conn_health_checks=True,
+        )
+    }
+    if "supabase" in database_url.lower() or os.environ.get("DB_SSLMODE"):
+        DATABASES['default'].setdefault('OPTIONS', {})['sslmode'] = os.environ.get("DB_SSLMODE", "require")
+elif db_name and not force_sqlite:
     db_host = os.environ.get("DB_HOST", "localhost")
     db_port = os.environ.get("DB_PORT")
     if not db_port:
@@ -345,8 +358,13 @@ FILE_UPLOAD_MAX_MEMORY_SIZE = 6 * 1024 * 1024
 DATA_UPLOAD_MAX_NUMBER_FIELDS = 200
 
 # Frontend & Email Backend Settings
+EMAIL_DELIVERY_MODE = os.getenv('EMAIL_DELIVERY_MODE', 'HTTP').upper()
+RESEND_API_KEY = os.getenv('RESEND_API_KEY', '').strip()
+SENDGRID_API_KEY = os.getenv('SENDGRID_API_KEY', '').strip()
+DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'BukSU PeerLink <onboarding@resend.dev>').strip()
 FRONTEND_URL = os.getenv('FRONTEND_URL', 'http://localhost:5173').rstrip('/')
-EMAIL_BACKEND = os.getenv('EMAIL_BACKEND', 'django.core.mail.backends.smtp.EmailBackend')
+
+# SMTP Configuration (used if EMAIL_DELIVERY_MODE == 'SMTP')
 EMAIL_HOST = os.getenv('EMAIL_HOST', 'smtp.gmail.com')
 EMAIL_PORT = int(os.getenv('EMAIL_PORT', 587))
 EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS', 'True').lower() in ('true', '1', 't')
@@ -354,13 +372,24 @@ EMAIL_USE_SSL = os.getenv('EMAIL_USE_SSL', 'False').lower() in ('true', '1', 't'
 EMAIL_TIMEOUT = int(os.getenv('EMAIL_TIMEOUT', '20'))
 EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', '').strip()
 EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', '').strip()  # 16-character App Password if using Gmail
-DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', EMAIL_HOST_USER or 'noreply@buksu.edu.ph').strip()
-if EMAIL_HOST_USER and ('@' not in DEFAULT_FROM_EMAIL or EMAIL_HOST_USER.lower() not in DEFAULT_FROM_EMAIL.lower()):
+
+if EMAIL_DELIVERY_MODE == 'SMTP' and EMAIL_HOST_USER and ('@' not in DEFAULT_FROM_EMAIL or EMAIL_HOST_USER.lower() not in DEFAULT_FROM_EMAIL.lower()):
     DEFAULT_FROM_EMAIL = f'PeerLink <{EMAIL_HOST_USER}>'
 
-# Fallback to console backend in development if credentials are empty to prevent crashes
-if not EMAIL_HOST_USER and (os.getenv('DJANGO_ENV', 'development') == 'development' or DEBUG):
+# Resolve EMAIL_BACKEND
+explicit_backend = os.getenv('EMAIL_BACKEND')
+if explicit_backend:
+    EMAIL_BACKEND = explicit_backend
+elif EMAIL_DELIVERY_MODE == 'CONSOLE':
     EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+elif EMAIL_DELIVERY_MODE == 'SMTP':
+    if not EMAIL_HOST_USER and (os.getenv('DJANGO_ENV', 'development') == 'development' or DEBUG):
+        EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+    else:
+        EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+else:
+    # Default is HTTP delivery over HTTPS REST API (Resend / SendGrid)
+    EMAIL_BACKEND = 'users.services.email_service.HttpEmailBackend'
 
 
 # Institutional email domains restriction (optional, comma-separated)
