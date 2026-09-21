@@ -34,7 +34,6 @@ export const CORE_BSIT_SUBJECTS = [
   { code: "IT 113", name: "IT 113 - Computer Programming 2 (Data Structures)" },
   { code: "IT 115", name: "IT 115 - Information Management (Database Systems)" },
   { code: "IT 211", name: "IT 211 - Data Structures and Algorithms" },
-  { code: "IT 212", name: "IT 212 - Object-Oriented Programming" },
   { code: "IT 221", name: "IT 221 - Web Systems and Technologies" },
 ];
 
@@ -42,7 +41,6 @@ export const SUGGESTED_SKILLS = [
   "Loop Control",
   "Figma UI Design",
   "Flexbox & Grid",
-  "Object-Oriented Programming",
   "SQL & Relational Databases",
   "Data Structures (Arrays & Lists)",
   "Algorithm Complexity & Big-O",

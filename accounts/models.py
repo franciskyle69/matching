@@ -93,11 +93,19 @@ class MentorDocument(models.Model):
 	DOC_STUDY_LOAD = "STUDY_LOAD"
 	DOC_GRADES = "GRADES"
 	DOC_FACULTY_VERIFICATION = "FACULTY_VERIFICATION"
+	DOC_PROOF_OF_ENROLLMENT = "PROOF_OF_ENROLLMENT"
+	DOC_STUDENT_ID = "STUDENT_ID"
+	DOC_CERTIFICATE = "CERTIFICATE"
+	DOC_APPLICATION = "APPLICATION"
 	DOCUMENT_TYPE_CHOICES = [
 		(DOC_LETTER_OF_INTENT, "Letter of Intent"),
 		(DOC_STUDY_LOAD, "Study Load"),
 		(DOC_GRADES, "Grades"),
 		(DOC_FACULTY_VERIFICATION, "Faculty Verification"),
+		(DOC_PROOF_OF_ENROLLMENT, "Proof of Enrollment"),
+		(DOC_STUDENT_ID, "Student / Employee ID Card"),
+		(DOC_CERTIFICATE, "Certificate"),
+		(DOC_APPLICATION, "Application Form"),
 	]
 
 	user = models.ForeignKey(

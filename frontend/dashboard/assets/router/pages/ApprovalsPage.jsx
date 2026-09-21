@@ -206,6 +206,7 @@
     onApprove,
     onRejectAsk,
     onPreview,
+    onViewDetails,
     Spinner,
   }) {
     const [expanded, setExpanded] = useState(false);
@@ -242,7 +243,19 @@
         <div className="approval-card-main">
           {/* Top Row: Identity on Left, Status & Details on Right */}
           <div className="approval-card-header">
-            <div className="approval-card-identity">
+            <div
+              className="approval-card-identity"
+              role="button"
+              tabIndex={0}
+              title="Click to view all applicant details"
+              onClick={() => onViewDetails && onViewDetails(item, type)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  onViewDetails && onViewDetails(item, type);
+                }
+              }}
+            >
               <div className="approval-avatar" aria-hidden="true">
                 {initials}
               </div>
@@ -260,13 +273,23 @@
               <StatusBadge complete={!!m.general_info_complete} />
               <button
                 type="button"
+                className="btn small primary approval-view-details-btn"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onViewDetails && onViewDetails(item, type);
+                }}
+              >
+                View Details
+              </button>
+              <button
+                type="button"
                 className="btn secondary small approval-expand-btn"
                 onClick={(e) => {
                   e.stopPropagation();
                   setExpanded((v) => !v);
                 }}
               >
-                {expanded ? "Hide" : "Details"}
+                {expanded ? "Hide" : "Quick View"}
               </button>
             </div>
           </div>
@@ -771,6 +794,385 @@
     );
   }
 
+  function extractUserDocuments(user) {
+    if (!user) return [];
+    const docs = [];
+    const seenUrls = new Set();
+
+    function addDoc(doc) {
+      if (!doc || !doc.url || seenUrls.has(doc.url)) return;
+      seenUrls.add(doc.url);
+      const isImage = isImageFile(doc.url, doc.name || doc.label);
+      docs.push({
+        id: doc.id || doc.url,
+        kind: doc.kind || "document",
+        label: doc.label || (doc.kind ? String(doc.kind).replace(/_/g, " ") : "Verification Document"),
+        name: doc.name || doc.file_name || doc.label || "Uploaded Document",
+        url: doc.url,
+        is_image: isImage,
+      });
+    }
+
+    if (Array.isArray(user.documents)) {
+      user.documents.forEach(addDoc);
+    }
+    if (user.proof_of_enrollment_url) {
+      addDoc({
+        id: "proof_of_enrollment",
+        kind: "proof_of_enrollment",
+        label: "Proof of Enrollment",
+        name: "Proof of Enrollment",
+        url: user.proof_of_enrollment_url,
+      });
+    }
+    if (user.id_card_url) {
+      addDoc({
+        id: "id_card",
+        kind: "id_card",
+        label: "ID Card / Student ID",
+        name: "ID Card",
+        url: user.id_card_url,
+      });
+    }
+    if (Array.isArray(user.verification_documents)) {
+      user.verification_documents.forEach((d) => {
+        addDoc({
+          id: d.id,
+          kind: d.kind,
+          label: d.kind ? String(d.kind).replace(/_/g, " ") : "Verification Document",
+          name: d.name || d.file_name,
+          url: d.url || d.file_url,
+        });
+      });
+    }
+    if (user.verification_documents_by_kind) {
+      Object.entries(user.verification_documents_by_kind).forEach(([kind, arr]) => {
+        if (Array.isArray(arr)) {
+          arr.forEach((d) => {
+            addDoc({
+              id: d.id,
+              kind: kind,
+              label: String(kind).replace(/_/g, " "),
+              name: d.name,
+              url: d.url,
+            });
+          });
+        }
+      });
+    }
+    if (user.verification_document_url) {
+      addDoc({
+        id: "verification_document",
+        kind: "verification",
+        label: "Verification Document",
+        name: user.verification_document_name || "Verification Document",
+        url: user.verification_document_url,
+      });
+    }
+
+    return docs;
+  }
+
+  function UserApprovalDetailModal({
+    open,
+    data,
+    loading,
+    onClose,
+    onApprove,
+    onReject,
+    onPreview,
+  }) {
+    if (!open || !data || !data.item) return null;
+    const { item, type } = data;
+
+    const fullName = [item.first_name, item.last_name]
+      .map((part) => String(part || "").trim())
+      .filter(Boolean)
+      .join(" ");
+    const displayName =
+      fullName ||
+      item.full_name ||
+      item.display_name ||
+      item.username ||
+      item.email ||
+      "Applicant";
+
+    const initials = getInitials(displayName, item.email || item.username);
+    const roleLabel = type === "mentor" ? (item.role || "Mentor") : "Mentee";
+    const docs = extractUserDocuments(item);
+
+    return (
+      <div
+        className="approval-modal-backdrop"
+        onClick={onClose}
+        role="presentation"
+      >
+        <div
+          className="approval-detail-modal"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="approval-modal-user-name"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <header className="approval-detail-modal-header">
+            <div className="approval-modal-header-user">
+              <div className="approval-avatar approval-modal-avatar" aria-hidden="true">
+                {initials}
+              </div>
+              <div>
+                <div className="approval-modal-title-row">
+                  <h2 id="approval-modal-user-name" className="approval-modal-user-name">
+                    {displayName}
+                  </h2>
+                  <span className="approval-modal-role-badge">
+                    {roleLabel}
+                  </span>
+                  <StatusBadge complete={!!item.general_info_complete} />
+                </div>
+                <p className="approval-modal-user-email">{item.email || "No email provided"}</p>
+              </div>
+            </div>
+            <button
+              type="button"
+              className="file-close-btn"
+              onClick={onClose}
+              aria-label="Close details modal"
+            >
+              ×
+            </button>
+          </header>
+
+          <div className="approval-detail-modal-body">
+            {/* Section 1: Personal & Academic Info */}
+            <section className="approval-modal-section">
+              <h3 className="approval-modal-section-title">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                  <circle cx="12" cy="7" r="4" />
+                </svg>
+                Personal &amp; Academic Info
+              </h3>
+              <div className="approval-info-grid">
+                <div className="approval-info-item">
+                  <span className="approval-info-label">Full Name</span>
+                  <span className="approval-info-value">{displayName}</span>
+                </div>
+                <div className="approval-info-item">
+                  <span className="approval-info-label">Email Address</span>
+                  <span className="approval-info-value">{item.email || "—"}</span>
+                </div>
+                <div className="approval-info-item">
+                  <span className="approval-info-label">Student / Employee ID</span>
+                  <span className="approval-info-value">{item.student_id_no || item.id_number || "—"}</span>
+                </div>
+                <div className="approval-info-item">
+                  <span className="approval-info-label">Department</span>
+                  <span className="approval-info-value">{item.department || "—"}</span>
+                </div>
+                <div className="approval-info-item">
+                  <span className="approval-info-label">Program / Course</span>
+                  <span className="approval-info-value">{item.program || item.course || "—"}</span>
+                </div>
+                <div className="approval-info-item">
+                  <span className="approval-info-label">Year Level</span>
+                  <span className="approval-info-value">
+                    {item.year_level
+                      ? (Number(item.year_level) === 3
+                          ? "3rd Year"
+                          : Number(item.year_level) === 4
+                            ? "4th Year"
+                            : `Year ${item.year_level}`)
+                      : "—"}
+                  </span>
+                </div>
+                <div className="approval-info-item">
+                  <span className="approval-info-label">Campus</span>
+                  <span className="approval-info-value">{item.campus || "—"}</span>
+                </div>
+                <div className="approval-info-item">
+                  <span className="approval-info-label">Admission Type</span>
+                  <span className="approval-info-value">{item.admission_type || "—"}</span>
+                </div>
+                <div className="approval-info-item">
+                  <span className="approval-info-label">Contact Number</span>
+                  <span className="approval-info-value">{item.contact_no || "—"}</span>
+                </div>
+                <div className="approval-info-item">
+                  <span className="approval-info-label">Biological Sex</span>
+                  <span className="approval-info-value">{item.sex || item.biological_sex || "—"}</span>
+                </div>
+              </div>
+            </section>
+
+            {/* Section 2: Preferences & Role Details */}
+            <section className="approval-modal-section">
+              <h3 className="approval-modal-section-title">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <circle cx="12" cy="12" r="10" />
+                  <path d="m4.93 4.93 4.24 4.24" />
+                  <path d="m14.83 9.17 4.24-4.24" />
+                  <path d="m14.83 14.83 4.24 4.24" />
+                  <path d="m9.17 14.83-4.24 4.24" />
+                  <circle cx="12" cy="12" r="4" />
+                </svg>
+                Preferences &amp; Role Details
+              </h3>
+              <div className="approval-info-grid">
+                <div className="approval-info-item">
+                  <span className="approval-info-label">Applied Role</span>
+                  <span className="approval-info-value">{roleLabel}</span>
+                </div>
+                {type === "mentor" && item.expertise_level ? (
+                  <div className="approval-info-item">
+                    <span className="approval-info-label">Expertise Level</span>
+                    <span className="approval-info-value">Level {item.expertise_level} of 5</span>
+                  </div>
+                ) : null}
+                <div className="approval-info-item approval-info-item--full">
+                  <span className="approval-info-label">Selected Subject Preferences</span>
+                  <div className="approval-tags-wrap">
+                    {item.subjects && (Array.isArray(item.subjects) ? item.subjects.length > 0 : Boolean(item.subjects)) ? (
+                      (Array.isArray(item.subjects) ? item.subjects : [item.subjects]).map((subj, idx) => (
+                        <span key={idx} className="approval-tag approval-tag--subject">
+                          {String(subj)}
+                        </span>
+                      ))
+                    ) : (
+                      <span className="muted" style={{ fontSize: "12px" }}>No subject preferences recorded.</span>
+                    )}
+                  </div>
+                </div>
+                {(item.topics?.length > 0 || item.skills?.length > 0) && (
+                  <div className="approval-info-item approval-info-item--full">
+                    <span className="approval-info-label">Competencies &amp; Skills</span>
+                    <div className="approval-tags-wrap">
+                      {(item.topics || item.skills || []).map((top, idx) => (
+                        <span key={idx} className="approval-tag approval-tag--topic">
+                          {String(top)}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {item.interests && (
+                  <div className="approval-info-item approval-info-item--full">
+                    <span className="approval-info-label">Interests &amp; Background</span>
+                    <span className="approval-info-value">{item.interests}</span>
+                  </div>
+                )}
+              </div>
+            </section>
+
+            {/* Section 3: Uploaded Documents */}
+            <section className="approval-modal-section">
+              <h3 className="approval-modal-section-title">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48" />
+                </svg>
+                Uploaded Documents ({docs.length})
+              </h3>
+              {docs.length === 0 ? (
+                <div className="approval-docs-empty">
+                  No verification documents or certificates uploaded by this applicant.
+                </div>
+              ) : (
+                <div className="approval-doc-grid">
+                  {docs.map((doc, idx) => (
+                    <div key={doc.id || idx} className="approval-doc-card">
+                      <div
+                        className="approval-doc-thumb-container"
+                        role="button"
+                        tabIndex={0}
+                        title="Click to preview document"
+                        onClick={() => onPreview && onPreview(doc.url, doc.name || doc.label, 1)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            onPreview && onPreview(doc.url, doc.name || doc.label, 1);
+                          }
+                        }}
+                      >
+                        {doc.is_image ? (
+                          <img
+                            src={doc.url}
+                            alt={doc.name || doc.label}
+                            className="approval-doc-thumb-img"
+                          />
+                        ) : (
+                          <div className="approval-doc-thumb-fallback">
+                            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M14 2H7a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7z" />
+                              <path d="M14 2v5h5" />
+                              <path d="M9 13h6" />
+                              <path d="M9 17h6" />
+                            </svg>
+                            <span style={{ fontSize: "11px", fontWeight: 700 }}>DOCUMENT / PDF</span>
+                          </div>
+                        )}
+                      </div>
+                      <div className="approval-doc-card-body">
+                        <span className="approval-doc-kind-badge">{doc.label}</span>
+                        <p className="approval-doc-name" title={doc.name}>
+                          {shortenFileName(doc.name, 34)}
+                        </p>
+                        <div className="approval-doc-card-actions">
+                          <button
+                            type="button"
+                            className="btn small secondary"
+                            onClick={() => onPreview && onPreview(doc.url, doc.name || doc.label, 1)}
+                          >
+                            Preview
+                          </button>
+                          <a
+                            href={doc.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="btn small"
+                            title="Open document securely in new tab"
+                          >
+                            View / Download
+                          </a>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </section>
+          </div>
+
+          <footer className="approval-modal-footer">
+            <button
+              type="button"
+              className="btn secondary"
+              onClick={onClose}
+            >
+              Close
+            </button>
+            <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+              <button
+                type="button"
+                className="btn approval-reject-btn"
+                onClick={() => onReject(type, item.id, displayName)}
+                disabled={loading}
+              >
+                Reject Applicant
+              </button>
+              <button
+                type="button"
+                className="btn approval-accept-btn"
+                onClick={() => onApprove(item.id)}
+                disabled={loading}
+              >
+                Approve Applicant
+              </button>
+            </div>
+          </footer>
+        </div>
+      </div>
+    );
+  }
+
   function RejectConfirmModal({ open, target, loading, onConfirm, onCancel }) {
     if (!open || !target) return null;
     return (
@@ -794,7 +1196,7 @@
           </p>
           <div className="approval-confirm-actions">
             {loading ? (
-              <Spinner inline />
+              <LoadingSpinner inline />
             ) : (
               <>
                 <button
@@ -836,6 +1238,7 @@
     const Spinner = LoadingSpinner;
     const [previewData, setPreviewData] = useState(null);
     const [rejectTarget, setRejectTarget] = useState(null);
+    const [selectedDetailUser, setSelectedDetailUser] = useState(null);
 
     const mentorCardLoading = (id) => approvalActionKey === "mentor:" + id;
     const menteeCardLoading = (id) => approvalActionKey === "mentee:" + id;
@@ -932,6 +1335,7 @@
                       onApprove={handleApproveMentor}
                       onRejectAsk={askReject}
                       onPreview={openPreview}
+                      onViewDetails={(item, type) => setSelectedDetailUser({ item, type })}
                       Spinner={Spinner}
                     />
                   ))}
@@ -968,6 +1372,7 @@
                       onApprove={handleApproveMentee}
                       onRejectAsk={askReject}
                       onPreview={openPreview}
+                      onViewDetails={(item, type) => setSelectedDetailUser({ item, type })}
                       Spinner={Spinner}
                     />
                   ))}
@@ -977,6 +1382,29 @@
           </div>
         )}
 
+        <UserApprovalDetailModal
+          open={!!selectedDetailUser}
+          data={selectedDetailUser}
+          onClose={() => setSelectedDetailUser(null)}
+          onApprove={(id) => {
+            if (selectedDetailUser?.type === "mentor") {
+              handleApproveMentor(id);
+            } else {
+              handleApproveMentee(id);
+            }
+            setSelectedDetailUser(null);
+          }}
+          onReject={(type, id, name) => {
+            askReject(type, id, name);
+            setSelectedDetailUser(null);
+          }}
+          onPreview={openPreview}
+          loading={
+            selectedDetailUser
+              ? approvalActionKey === `${selectedDetailUser.type}:${selectedDetailUser.item.id}`
+              : false
+          }
+        />
         <FileViewerModal
           open={!!previewData}
           data={previewData}

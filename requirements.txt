@@ -11,6 +11,7 @@ resend>=0.7.0
 requests
 PyJWT
 cloudinary>=1.36
+django-cloudinary-storage>=0.3.0
 google-auth>=2.0
 google-api-python-client>=2.0
 cryptography

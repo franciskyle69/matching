@@ -30,6 +30,7 @@ from .controllers.account_controller import (
     complete_profile,
     complete_onboarding,
     user_preferences,
+    upload_user_document,
 )
 from .controllers.matching_controller import (
     run_matching,
@@ -49,6 +50,7 @@ from .controllers.approvals_controller import (
     reject_mentee,
 )
 from .controllers.coordinator_controller import (
+    coordinator_approvals,
     pending_mentors as coordinator_pending_mentors,
     approve_mentor as coordinator_approve_mentor,
     reject_mentor as coordinator_reject_mentor,
@@ -146,6 +148,8 @@ urlpatterns = [
     path('me/update/', update_account, name='api-me-update'),
     path('me/avatar/', upload_avatar, name='api-me-avatar'),
     path('me/cover/', upload_cover, name='api-me-cover'),
+    path('account/documents/upload/', upload_user_document, name='api-account-documents-upload'),
+    path('user/documents/upload/', upload_user_document, name='api-user-documents-upload'),
     path('me/complete-profile/', complete_profile, name='api-me-complete-profile'),
     path('user/complete-onboarding/', complete_onboarding, name='api-user-complete-onboarding'),
     path('user/onboarding/', complete_onboarding, name='api-user-onboarding'),
@@ -166,6 +170,7 @@ urlpatterns = [
     path('approvals/reject-mentor/', reject_mentor, name='api-approvals-reject-mentor'),
     path('approvals/approve-mentee/', approve_mentee, name='api-approvals-approve-mentee'),
     path('approvals/reject-mentee/', reject_mentee, name='api-approvals-reject-mentee'),
+    path('coordinator/approvals/', coordinator_approvals, name='api-coordinator-approvals'),
     path('coordinator/pending-mentors/', coordinator_pending_mentors, name='api-coordinator-pending-mentors'),
     path('coordinator/approve-mentor/<int:user_id>/', coordinator_approve_mentor, name='api-coordinator-approve-mentor'),
     path('coordinator/reject-mentor/<int:user_id>/', coordinator_reject_mentor, name='api-coordinator-reject-mentor'),

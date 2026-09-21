@@ -1,0 +1,86 @@
+{% extends "admin/base_site.html" %}
+{% load i18n l10n %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+<a href="{% url 'admin:index' %}">{% translate 'Home' %}</a>
+&rsaquo; <a href="{% url 'admin:app_list' app_label=opts.app_label %}">{{ opts.app_config.verbose_name }}</a>
+&rsaquo; <a href="{% url opts|admin_urlname:'changelist' %}">{{ opts.verbose_name_plural|capfirst }}</a>
+&rsaquo; {% translate 'Delete selected mentee accounts' %}
+</div>
+{% endblock %}
+
+{% block content %}
+<h1>{% translate "Confirm Deletion of Mentee Accounts" %}</h1>
+
+<p>
+    {% blocktranslate %}
+    Are you sure you want to permanently delete the selected mentee account(s)?
+    This will cascade and remove related mentee profiles, competency preferences, verification documents, and remote files.
+    {% endblocktranslate %}
+</p>
+
+{% if mentees %}
+    <h2 style="margin-top: 20px; color: #ba2121;">
+        {% translate "Targeted Mentee Accounts to be Deleted" %} ({{ mentees|length }}):
+    </h2>
+    <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+        <thead>
+            <tr style="text-align: left; border-bottom: 2px solid #ddd; background: #f8f9fa;">
+                <th style="padding: 8px;">ID</th>
+                <th style="padding: 8px;">Username</th>
+                <th style="padding: 8px;">Email</th>
+                <th style="padding: 8px;">Role</th>
+                <th style="padding: 8px;">Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for u in mentees %}
+            <tr style="border-bottom: 1px solid #eee;">
+                <td style="padding: 8px;">{{ u.id }}</td>
+                <td style="padding: 8px;"><strong>{{ u.username }}</strong></td>
+                <td style="padding: 8px;">{{ u.email|default:"(No email)" }}</td>
+                <td style="padding: 8px;">{{ u.profile.role|default:"Mentee" }}</td>
+                <td style="padding: 8px;">{{ u.profile.approval_status|default:"ACTIVE" }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% else %}
+    <p><em>{% translate "No valid mentee accounts were selected." %}</em></p>
+{% endif %}
+
+{% if non_mentees %}
+    <div style="background-color: #fff3cd; color: #856404; border: 1px solid #ffeeba; padding: 12px 16px; border-radius: 4px; margin-bottom: 20px;">
+        <strong>{% translate "Notice: The following selected user(s) are NOT mentees (or are staff/superusers/mentors) and will be SAFELY SKIPPED:" %}</strong>
+        <ul style="margin: 8px 0 0 16px;">
+            {% for u in non_mentees %}
+            <li>
+                <strong>{{ u.username }}</strong> (ID: {{ u.id }}) &mdash; {{ u.email|default:"No email" }}
+                {% if u.is_superuser %} [Superuser]{% elif u.is_staff %} [Staff]{% elif u.profile.role %} [{{ u.profile.role }}]{% endif %}
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+{% endif %}
+
+{% if mentees %}
+<form method="post" action="">
+    {% csrf_token %}
+    {% for obj in queryset %}
+    <input type="hidden" name="{{ action_checkbox_name }}" value="{{ obj.pk }}" />
+    {% endfor %}
+    <input type="hidden" name="action" value="delete_selected_mentees" />
+    <input type="hidden" name="confirmed" value="yes" />
+
+    <div style="margin-top: 25px;">
+        <input type="submit" value="{% translate 'Yes, delete selected mentees' %}" style="background: #ba2121; color: #fff; font-weight: bold; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; font-size: 14px;" />
+        <a href="{% url opts|admin_urlname:'changelist' %}" class="button cancel-link" style="margin-left: 15px; padding: 10px 15px; text-decoration: none; background: #6c757d; color: #fff; border-radius: 4px;">{% translate "No, cancel" %}</a>
+    </div>
+</form>
+{% else %}
+<div>
+    <a href="{% url opts|admin_urlname:'changelist' %}" class="button cancel-link" style="padding: 10px 15px; text-decoration: none; background: #6c757d; color: #fff; border-radius: 4px;">{% translate "Back to list" %}</a>
+</div>
+{% endif %}
+{% endblock %}

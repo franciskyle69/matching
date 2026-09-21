@@ -979,6 +979,13 @@ def unified_auth_register(request):
                 "grades": MentorDocument.DOC_GRADES,
                 "grade": MentorDocument.DOC_GRADES,
                 "faculty_verification": MentorDocument.DOC_FACULTY_VERIFICATION,
+                "proof_of_enrollment": MentorDocument.DOC_PROOF_OF_ENROLLMENT,
+                "id_card": MentorDocument.DOC_STUDENT_ID,
+                "student_id": MentorDocument.DOC_STUDENT_ID,
+                "institutional_id": MentorDocument.DOC_STUDENT_ID,
+                "certificate": MentorDocument.DOC_CERTIFICATE,
+                "certificates": MentorDocument.DOC_CERTIFICATE,
+                "application": MentorDocument.DOC_APPLICATION,
                 "verification_document": MentorDocument.DOC_FACULTY_VERIFICATION if role == UserProfile.ROLE_INSTRUCTOR_MENTOR else MentorDocument.DOC_STUDY_LOAD,
                 "student_verification_document": MentorDocument.DOC_FACULTY_VERIFICATION if role == UserProfile.ROLE_INSTRUCTOR_MENTOR else MentorDocument.DOC_STUDY_LOAD,
             }
@@ -1910,21 +1917,61 @@ def complete_onboarding(request):
     else:
         availability = []
 
-    # Optional avatar/photo upload handling
+    # Document and institutional ID uploads during onboarding
     image_url = ""
-    upload = request.FILES.get("profile_photo") or request.FILES.get("institutional_id")
-    if upload and upload.size <= 5 * 1024 * 1024:
-        extension = (upload.name.rsplit(".", 1)[-1] if "." in upload.name else "").lower()
-        if extension in {"png", "jpg", "jpeg"}:
+    id_upload = request.FILES.get("profile_photo") or request.FILES.get("institutional_id") or request.FILES.get("student_id")
+    if id_upload and id_upload.size <= 6 * 1024 * 1024:
+        extension = (id_upload.name.rsplit(".", 1)[-1] if "." in id_upload.name else "").lower()
+        if extension in {"png", "jpg", "jpeg", "webp", "pdf"}:
             try:
-                from django.core.files.storage import default_storage
-                from django.core.files.base import ContentFile
-                import uuid
-                path = default_storage.save(
-                    f"avatars/onboarding_{request.user.id}_{uuid.uuid4().hex}.{extension}",
-                    ContentFile(upload.read()),
-                )
-                image_url = default_storage.url(path)
+                upload_res = upload_to_cloudinary(id_upload, folder=f"peerlink/user_documents/{request.user.id}")
+                image_url = upload_res.get("url", "")
+                if image_url:
+                    MentorDocument.objects.create(
+                        user=request.user,
+                        document_type=MentorDocument.DOC_STUDENT_ID,
+                        cloudinary_url=image_url,
+                        cloudinary_public_id=upload_res.get("public_id", ""),
+                    )
+            except Exception:
+                pass
+            if not image_url:
+                try:
+                    from django.core.files.storage import default_storage
+                    from django.core.files.base import ContentFile
+                    import uuid
+                    path = default_storage.save(
+                        f"avatars/onboarding_{request.user.id}_{uuid.uuid4().hex}.{extension}",
+                        ContentFile(id_upload.read()),
+                    )
+                    image_url = default_storage.url(path)
+                except Exception:
+                    pass
+
+    # Check for additional document uploads
+    onboarding_doc_keys = {
+        "proof_of_enrollment": MentorDocument.DOC_PROOF_OF_ENROLLMENT,
+        "study_load": MentorDocument.DOC_STUDY_LOAD,
+        "letter_of_intent": MentorDocument.DOC_LETTER_OF_INTENT,
+        "grades": MentorDocument.DOC_GRADES,
+        "grade": MentorDocument.DOC_GRADES,
+        "certificate": MentorDocument.DOC_CERTIFICATE,
+        "certificates": MentorDocument.DOC_CERTIFICATE,
+        "faculty_verification": MentorDocument.DOC_FACULTY_VERIFICATION,
+        "verification_document": MentorDocument.DOC_STUDY_LOAD,
+    }
+    for doc_key, doc_type in onboarding_doc_keys.items():
+        doc_file = request.FILES.get(doc_key)
+        if doc_file and doc_file != id_upload:
+            try:
+                res = upload_to_cloudinary(doc_file, folder=f"peerlink/user_documents/{request.user.id}")
+                if res.get("url"):
+                    MentorDocument.objects.create(
+                        user=request.user,
+                        document_type=doc_type,
+                        cloudinary_url=res.get("url", ""),
+                        cloudinary_public_id=res.get("public_id", ""),
+                    )
             except Exception:
                 pass
 
@@ -2683,4 +2730,49 @@ def questionnaire_options(request):
             "topic_map": topic_map,
         }
     )
+
+
+@login_required
+@require_http_methods(["POST"])
+def upload_user_document(request):
+    """
+    Upload a user document (student ID, proof of enrollment, certificate) to Cloudinary.
+    """
+    file_obj = request.FILES.get("file") or request.FILES.get("document")
+    if not file_obj:
+        return JsonResponse({"error": "No file uploaded."}, status=400)
+
+    doc_type_raw = (
+        request.POST.get("document_type")
+        or (request.data.get("document_type") if hasattr(request, "data") else None)
+        or "STUDENT_ID"
+    ).strip().upper()
+    valid_types = [choice[0] for choice in MentorDocument.DOCUMENT_TYPE_CHOICES]
+    doc_type = doc_type_raw if doc_type_raw in valid_types else MentorDocument.DOC_STUDENT_ID
+
+    try:
+        res = upload_to_cloudinary(file_obj, folder=f"peerlink/user_documents/{request.user.id}")
+        url = res.get("url", "")
+        if not url:
+            return JsonResponse({"error": "Failed to upload document to Cloudinary."}, status=500)
+
+        doc = MentorDocument.objects.create(
+            user=request.user,
+            document_type=doc_type,
+            cloudinary_url=url,
+            cloudinary_public_id=res.get("public_id", ""),
+        )
+        return JsonResponse({
+            "status": "success",
+            "document": {
+                "id": doc.id,
+                "document_type": doc.document_type,
+                "label": dict(MentorDocument.DOCUMENT_TYPE_CHOICES).get(doc.document_type, doc.document_type),
+                "url": doc.cloudinary_url,
+                "uploaded_at": doc.uploaded_at.isoformat(),
+            }
+        }, status=201)
+    except Exception as e:
+        logger.exception("user_document_upload_failed", extra={"user_id": request.user.id})
+        return JsonResponse({"error": f"Upload failed: {str(e)}"}, status=500)
 

@@ -194,16 +194,6 @@ export const CANONICAL_CURRICULUM = [
       },
     ],
   },
-  {
-    code: "IT 212",
-    name: "IT 212 - Object-Oriented Programming",
-    topics: [
-      {
-        name: "OOP Pillars",
-        competencies: ["Inheritance & Polymorphism", "Abstract Classes & Interfaces", "Method Overriding/Overloading"],
-      },
-    ],
-  },
 ];
 
 import {

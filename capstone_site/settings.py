@@ -126,6 +126,8 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'cloudinary_storage',
+    'cloudinary',
     'django.contrib.sites',
     'axes',  # Login attempt rate limiting
     'rest_framework',
@@ -284,9 +286,15 @@ ENABLE_GOOGLE_CALENDAR = _env_bool("ENABLE_GOOGLE_CALENDAR", default=False)
 ENABLE_GOOGLE_DRIVE_API = _env_bool("ENABLE_GOOGLE_DRIVE_API", default=False)
 
 # Cloudinary media storage configuration
-CLOUDINARY_CLOUD_NAME = os.environ.get("CLOUDINARY_CLOUD_NAME", "").strip()
-CLOUDINARY_API_KEY = os.environ.get("CLOUDINARY_API_KEY", "").strip()
-CLOUDINARY_API_SECRET = os.environ.get("CLOUDINARY_API_SECRET", "").strip()
+CLOUDINARY_STORAGE = {
+    "CLOUD_NAME": os.getenv("CLOUDINARY_CLOUD_NAME", "").strip(),
+    "API_KEY": os.getenv("CLOUDINARY_API_KEY", "").strip(),
+    "API_SECRET": os.getenv("CLOUDINARY_API_SECRET", "").strip(),
+}
+CLOUDINARY_CLOUD_NAME = CLOUDINARY_STORAGE["CLOUD_NAME"]
+CLOUDINARY_API_KEY = CLOUDINARY_STORAGE["API_KEY"]
+CLOUDINARY_API_SECRET = CLOUDINARY_STORAGE["API_SECRET"]
+
 if CLOUDINARY_CLOUD_NAME:
     import cloudinary
     cloudinary.config(
@@ -296,18 +304,19 @@ if CLOUDINARY_CLOUD_NAME:
         secure=True,
     )
 
+# Django 4.2+ Storages format
 STORAGES = {
+    "default": {
+        "BACKEND": "cloudinary_storage.storage.MediaCloudinaryStorage"
+        if CLOUDINARY_CLOUD_NAME
+        else "django.core.files.storage.FileSystemStorage",
+    },
     "staticfiles": {
         "BACKEND": "capstone_site.storage.WhiteNoiseStaticFilesStorage",
     },
 }
-if CLOUDINARY_CLOUD_NAME:
-    STORAGES["default"] = {"BACKEND": "api.cloudinary_storage.CloudinaryStorage"}
-else:
-    STORAGES["default"] = {
-        "BACKEND": "django.core.files.storage.FileSystemStorage",
-        "OPTIONS": {"location": MEDIA_ROOT, "base_url": MEDIA_URL},
-    }
+if not CLOUDINARY_CLOUD_NAME:
+    STORAGES["default"]["OPTIONS"] = {"location": MEDIA_ROOT, "base_url": MEDIA_URL}
 
 # WhiteNoise for serving static files in production (legacy setting, STORAGES used above)
 STATICFILES_STORAGE = STORAGES["staticfiles"]["BACKEND"]

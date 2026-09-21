@@ -4,7 +4,8 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 
 from accounts.models import UserProfile, get_user_profile, get_user_display_name
-from ..serializers import PendingMentorSerializer
+from ..permissions import IsCoordinator
+from ..serializers import UserApprovalSerializer, PendingUserSerializer, PendingMentorSerializer
 from ..views.helpers import audit_log, invalidate_approval_cache_mentor, invalidate_approval_cache_mentee
 from .account_controller import _clear_me_cache
 
@@ -21,53 +22,67 @@ def _is_coordinator_or_staff(user):
 
 
 @api_view(["GET"])
-@permission_classes([IsAuthenticated])
-def pending_mentors(request):
-    if not _is_coordinator_or_staff(request.user):
-        return JsonResponse({"error": "Coordinator access required."}, status=403)
-
-    pending_profiles = (
-        UserProfile.objects.filter(approval_status__in=[UserProfile.STATUS_PENDING, UserProfile.STATUS_PENDING_APPROVAL])
+@permission_classes([IsAuthenticated, IsCoordinator])
+def coordinator_approvals(request):
+    role_filter = (request.GET.get("role") or "").strip().upper()
+    queryset = (
+        UserProfile.objects.filter(
+            approval_status__in=[UserProfile.STATUS_PENDING, UserProfile.STATUS_PENDING_APPROVAL]
+        )
         .select_related("user")
         .prefetch_related("user__documents")
         .order_by("-id")
     )
-    serializer = PendingMentorSerializer(pending_profiles, many=True)
+    if role_filter == "MENTOR":
+        queryset = queryset.filter(
+            role__in=[UserProfile.ROLE_STUDENT_MENTOR, UserProfile.ROLE_INSTRUCTOR_MENTOR]
+        )
+    elif role_filter == "MENTEE":
+        queryset = queryset.filter(role=UserProfile.ROLE_MENTEE)
+
+    serializer = UserApprovalSerializer(queryset, many=True, context={"request": request})
+    all_users = serializer.data
+    mentors = [u for u in all_users if u.get("role_type") == "mentor"]
+    mentees = [u for u in all_users if u.get("role_type") == "mentee"]
+
+    return JsonResponse({
+        "count": len(all_users),
+        "results": all_users,
+        "users": all_users,
+        "pending_mentors": mentors,
+        "pending_mentees": mentees,
+    })
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated, IsCoordinator])
+def pending_mentors(request):
+    pending_profiles = (
+        UserProfile.objects.filter(
+            approval_status__in=[UserProfile.STATUS_PENDING, UserProfile.STATUS_PENDING_APPROVAL],
+            role__in=[UserProfile.ROLE_STUDENT_MENTOR, UserProfile.ROLE_INSTRUCTOR_MENTOR],
+        )
+        .select_related("user")
+        .prefetch_related("user__documents")
+        .order_by("-id")
+    )
+    serializer = UserApprovalSerializer(pending_profiles, many=True, context={"request": request})
     return JsonResponse({"count": len(serializer.data), "results": serializer.data})
 
 
 @api_view(["GET"])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, IsCoordinator])
 def pending_users(request):
-    if not _is_coordinator_or_staff(request.user):
-        return JsonResponse({"error": "Coordinator access required."}, status=403)
-
     pending_profiles = (
-        UserProfile.objects.filter(approval_status__in=[UserProfile.STATUS_PENDING, UserProfile.STATUS_PENDING_APPROVAL])
+        UserProfile.objects.filter(
+            approval_status__in=[UserProfile.STATUS_PENDING, UserProfile.STATUS_PENDING_APPROVAL]
+        )
         .select_related("user")
         .prefetch_related("user__documents")
         .order_by("-id")
     )
-    users_data = []
-    for up in pending_profiles:
-        u = up.user
-        display_name = get_user_display_name(u) or u.get_full_name() or u.username
-        users_data.append({
-            "id": u.id,
-            "username": u.username,
-            "email": u.email,
-            "full_name": display_name,
-            "role": up.role,
-            "approval_status": up.approval_status,
-            "is_onboarded": up.is_onboarded,
-            "student_id_no": getattr(up, "student_id_no", "") or "",
-            "contact_no": getattr(up, "contact_no", "") or "",
-            "admission_type": getattr(up, "admission_type", "") or "",
-            "sex": getattr(up, "sex", "") or "",
-            "campus": getattr(up, "campus", "Main") or "Main",
-            "program": getattr(up, "program", "BSIT") or "BSIT",
-            "year_level": getattr(up, "year_level", 1) or 1,
-        })
+    serializer = UserApprovalSerializer(pending_profiles, many=True, context={"request": request})
+    users_data = serializer.data
     return JsonResponse({"count": len(users_data), "users": users_data, "results": users_data})
 
 
