@@ -11,6 +11,7 @@ import {
   AccordionSummary,
   AccordionDetails,
   Alert,
+  Snackbar,
   FormControlLabel,
 } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
@@ -19,58 +20,68 @@ import MenuBookIcon from "@mui/icons-material/MenuBook";
 import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
 import AutoStoriesIcon from "@mui/icons-material/AutoStories";
 
-export const ROLE_LIMITS = {
+export const ROLE_PREFERENCE_LIMITS = {
   MENTEE: {
-    label: "Mentee",
-    roleLabel: "Mentees",
-    minSubjects: 1,
     maxSubjects: 2,
-    minTopicsPerSubject: 1,
+    minSubjects: 1,
     maxTopicsPerSubject: 2,
-    minCompetenciesPerTopic: 1,
+    minTopicsPerSubject: 1,
     maxCompetenciesPerTopic: 2,
+    minCompetenciesPerTopic: 1,
+    minTotalCompetencies: 1,
+    maxTotalCompetencies: 5,
     minGlobalCompetencies: 1,
     maxGlobalCompetencies: 5,
     minAvailabilitySlots: 1,
     maxAvailabilitySlots: 4,
+    label: "Mentee",
+    roleLabel: "Mentees",
   },
   STUDENT_MENTOR: {
+    maxSubjects: 2,
+    minSubjects: 1,
+    maxTopicsPerSubject: 3,
+    minTopicsPerSubject: 1,
+    maxCompetenciesPerTopic: 3,
+    minCompetenciesPerTopic: 1,
+    minTotalCompetencies: 2,
+    maxTotalCompetencies: 10,
+    minGlobalCompetencies: 2,
+    maxGlobalCompetencies: 10,
+    minAvailabilitySlots: 2,
+    maxAvailabilitySlots: 6,
     label: "Student Mentor",
     roleLabel: "Student Mentors",
-    minSubjects: 1,
-    maxSubjects: 3,
-    minTopicsPerSubject: 1,
-    maxTopicsPerSubject: 3,
-    minCompetenciesPerTopic: 1,
-    maxCompetenciesPerTopic: 3,
-    minGlobalCompetencies: 2,
-    maxGlobalCompetencies: 10,
-    minAvailabilitySlots: 2,
-    maxAvailabilitySlots: 6,
   },
   INSTRUCTOR_MENTOR: {
-    label: "Instructor Mentor",
-    roleLabel: "Instructor Mentors",
+    maxSubjects: 3,
     minSubjects: 1,
-    maxSubjects: 4,
-    minTopicsPerSubject: 1,
     maxTopicsPerSubject: 3,
-    minCompetenciesPerTopic: 1,
+    minTopicsPerSubject: 1,
     maxCompetenciesPerTopic: 3,
+    minCompetenciesPerTopic: 1,
+    minTotalCompetencies: 2,
+    maxTotalCompetencies: 10,
     minGlobalCompetencies: 2,
     maxGlobalCompetencies: 10,
     minAvailabilitySlots: 2,
     maxAvailabilitySlots: 6,
+    label: "Instructor Mentor",
+    roleLabel: "Instructor Mentors",
   },
 };
 
-export function getRoleLimits(role) {
+export const ROLE_LIMITS = ROLE_PREFERENCE_LIMITS;
+
+export function getRolePreferenceLimits(role) {
   const norm = String(role || "").trim().toUpperCase();
-  if (norm === "MENTEE") return ROLE_LIMITS.MENTEE;
-  if (norm === "INSTRUCTOR_MENTOR" || norm === "INSTRUCTOR") return ROLE_LIMITS.INSTRUCTOR_MENTOR;
-  if (norm === "STUDENT_MENTOR" || norm === "MENTOR") return ROLE_LIMITS.STUDENT_MENTOR;
-  return ROLE_LIMITS.MENTEE;
+  if (norm === "MENTEE" || norm === "STUDENT") return ROLE_PREFERENCE_LIMITS.MENTEE;
+  if (norm === "INSTRUCTOR_MENTOR" || norm === "INSTRUCTOR" || norm === "FACULTY") return ROLE_PREFERENCE_LIMITS.INSTRUCTOR_MENTOR;
+  if (norm === "STUDENT_MENTOR" || norm === "MENTOR" || norm === "PEER") return ROLE_PREFERENCE_LIMITS.STUDENT_MENTOR;
+  return ROLE_PREFERENCE_LIMITS.MENTEE;
 }
+
+export const getRoleLimits = getRolePreferenceLimits;
 
 export const CANONICAL_CURRICULUM = [
   {
@@ -223,6 +234,12 @@ export default function SubjectSkillPreferences({
 
   const [curriculum, setCurriculum] = useState(CANONICAL_CURRICULUM);
   const [validationError, setValidationError] = useState("");
+  const [toastMessage, setToastMessage] = useState("");
+
+  const triggerWarning = (msg) => {
+    setValidationError(msg);
+    setToastMessage(msg);
+  };
 
   // Filter curriculum to only selected subjects
   const activeSubjectObjects = useMemo(() => {
@@ -231,16 +248,17 @@ export default function SubjectSkillPreferences({
     );
   }, [curriculum, selectedSubjects]);
 
-  const isGlobalCompCapReached = selectedCompetencies.length >= currentLimits.maxGlobalCompetencies;
+  const maxTotalComps = currentLimits.maxTotalCompetencies ?? currentLimits.maxGlobalCompetencies ?? 5;
+  const isGlobalCompCapReached = selectedCompetencies.length >= maxTotalComps;
   const isSubjectCapReached = selectedSubjects.length >= currentLimits.maxSubjects;
 
-  // Toggle Subject
+  // Toggle Subject with Cascade Purge
   const handleToggleSubject = (subCode) => {
     if (readOnly) return;
     setValidationError("");
 
     if (selectedSubjects.includes(subCode)) {
-      // Prune its topics & competencies
+      // Prune its topics & competencies on deselection
       const subObj = curriculum.find((s) => s.code === subCode || s.name === subCode);
       const subTopicNames = subObj ? subObj.topics.map((t) => t.name) : [];
       const subCompNames = subObj
@@ -257,8 +275,8 @@ export default function SubjectSkillPreferences({
       });
     } else {
       if (selectedSubjects.length >= currentLimits.maxSubjects) {
-        setValidationError(
-          `${currentLimits.roleLabel} cannot select more than ${currentLimits.maxSubjects} subjects.`
+        triggerWarning(
+          `${currentLimits.roleLabel} can select a maximum of ${currentLimits.maxSubjects} subjects and ${maxTotalComps} total competencies.`
         );
         return;
       }
@@ -269,14 +287,14 @@ export default function SubjectSkillPreferences({
     }
   };
 
-  // Toggle Topic
+  // Toggle Topic with Cascade Purge
   const handleToggleTopic = (topicName, subjectObj) => {
     if (readOnly) return;
     setValidationError("");
     const isSelected = selectedTopics.includes(topicName);
 
     if (isSelected) {
-      // Prune competencies under this topic
+      // Prune competencies under this topic on deselection
       const topicObj = subjectObj.topics.find((t) => t.name === topicName);
       const compNames = topicObj
         ? typeof topicObj.competencies[0] === "string"
@@ -293,10 +311,8 @@ export default function SubjectSkillPreferences({
       const topicsInThisSubject = subjectObj.topics.map((t) => t.name);
       const currentSelectedInSubj = selectedTopics.filter((t) => topicsInThisSubject.includes(t));
       if (currentSelectedInSubj.length >= currentLimits.maxTopicsPerSubject) {
-        setValidationError(
-          `${currentLimits.roleLabel} cannot select more than ${currentLimits.maxTopicsPerSubject} topics for ${
-            subjectObj.code || subjectObj.name
-          }.`
+        triggerWarning(
+          `${currentLimits.roleLabel} can select a maximum of ${currentLimits.maxTopicsPerSubject} topics per subject.`
         );
         return;
       }
@@ -319,9 +335,9 @@ export default function SubjectSkillPreferences({
         selectedCompetencies: selectedCompetencies.filter((c) => c !== compName),
       });
     } else {
-      if (selectedCompetencies.length >= currentLimits.maxGlobalCompetencies) {
-        setValidationError(
-          `${currentLimits.roleLabel} cannot select more than ${currentLimits.maxGlobalCompetencies} competencies total.`
+      if (selectedCompetencies.length >= maxTotalComps) {
+        triggerWarning(
+          `${currentLimits.roleLabel} can select a maximum of ${currentLimits.maxSubjects} subjects and ${maxTotalComps} total competencies.`
         );
         return;
       }
@@ -333,8 +349,8 @@ export default function SubjectSkillPreferences({
       const currentSelectedInTopic = selectedCompetencies.filter((c) => compsInThisTopic.includes(c));
 
       if (currentSelectedInTopic.length >= currentLimits.maxCompetenciesPerTopic) {
-        setValidationError(
-          `${currentLimits.roleLabel} cannot select more than ${currentLimits.maxCompetenciesPerTopic} competencies for topic '${topicObj.name}'.`
+        triggerWarning(
+          `${currentLimits.roleLabel} can select a maximum of ${currentLimits.maxCompetenciesPerTopic} competencies per topic.`
         );
         return;
       }
@@ -384,7 +400,7 @@ export default function SubjectSkillPreferences({
             </Typography>
           </Box>
 
-          {/* Header badge showing real-time counts */}
+          {/* Header badge showing real-time counts vs role-specific limit */}
           <Box sx={neu.counterPill}>
             <Typography
               variant="caption"
@@ -395,7 +411,7 @@ export default function SubjectSkillPreferences({
                   : (isDark ? "#F87171" : "#D32F2F")
               }
             >
-              Subjects: {selectedSubjects.length} / {currentLimits.maxSubjects} (Min {currentLimits.minSubjects}, Max {currentLimits.maxSubjects})
+              Subjects: {selectedSubjects.length} / {currentLimits.maxSubjects} selected
             </Typography>
           </Box>
         </Stack>
@@ -405,19 +421,31 @@ export default function SubjectSkillPreferences({
             const isSelected = selectedSubjects.includes(sub.code) || selectedSubjects.includes(sub.name);
             const isDisabled = !isSelected && isSubjectCapReached;
 
+            const handleSubjectClick = () => {
+              if (readOnly) return;
+              if (isDisabled) {
+                triggerWarning(
+                  `${currentLimits.roleLabel} can select a maximum of ${currentLimits.maxSubjects} subjects and ${maxTotalComps} total competencies.`
+                );
+                return;
+              }
+              handleToggleSubject(sub.code);
+            };
+
             return (
               <Grid item xs={12} sm={6} md={4} key={sub.code}>
                 <Paper
-                  onClick={() => !isDisabled && !readOnly && handleToggleSubject(sub.code)}
+                  onClick={handleSubjectClick}
                   sx={{
                     ...(isSelected ? neu.pressedCard : neu.elevatedCard),
                     p: 2,
-                    cursor: isDisabled || readOnly ? "not-allowed" : "pointer",
+                    cursor: readOnly ? "default" : (isDisabled ? "not-allowed" : "pointer"),
                     opacity: isDisabled ? 0.45 : 1,
                     display: "flex",
                     alignItems: "center",
                     gap: 1.5,
                     userSelect: "none",
+                    transition: "all 0.2s ease",
                     "&:hover": {
                       transform: isDisabled || readOnly || isSelected ? "none" : "translateY(-2px)",
                     },
@@ -427,8 +455,11 @@ export default function SubjectSkillPreferences({
                     checked={isSelected}
                     disabled={isDisabled || readOnly}
                     inputProps={{ "aria-label": sub.code }}
-                    onChange={() => handleToggleSubject(sub.code)}
-                    onClick={(e) => e.stopPropagation()}
+                    onChange={handleSubjectClick}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleSubjectClick();
+                    }}
                     size="small"
                     sx={{
                       color: isDark ? "#64748B" : "#90A4AE",
@@ -499,7 +530,7 @@ export default function SubjectSkillPreferences({
                 fontWeight={700}
                 color={isGlobalCompCapReached ? (isDark ? "#F59E0B" : "#E65100") : (isDark ? "#60A5FA" : "#0D47A1")}
               >
-                Competencies: {selectedCompetencies.length} / {currentLimits.maxGlobalCompetencies} (Max {currentLimits.maxGlobalCompetencies})
+                Competencies: {selectedCompetencies.length} / {maxTotalComps} selected
               </Typography>
             </Box>
           </Box>
@@ -519,7 +550,7 @@ export default function SubjectSkillPreferences({
             }}
           >
             <Typography variant="caption" color={isDark ? "#FCD34D" : "#E65100"} fontWeight={600}>
-              ⚡ Maximum competency capacity reached ({currentLimits.maxGlobalCompetencies}/{currentLimits.maxGlobalCompetencies}). Unchecked competencies are disabled across all topics.
+              ⚡ Maximum competency capacity reached ({maxTotalComps}/{maxTotalComps}). Unchecked competencies are disabled across all topics.
             </Typography>
           </Box>
         )}
@@ -584,10 +615,10 @@ export default function SubjectSkillPreferences({
                       </Typography>
                     </Box>
 
-                    {/* Topic-level badge */}
+                    {/* Topic-level badge showing [Count] / role-specific limit */}
                     <Box sx={neu.counterPill}>
                       <Typography variant="caption" fontWeight={600} color={isDark ? "#60A5FA" : "#0D47A1"}>
-                        Topics: {selectedTopicsInThisSubject.length} / {currentLimits.maxTopicsPerSubject} (Max {currentLimits.maxTopicsPerSubject})
+                        Topics: {selectedTopicsInThisSubject.length} / {currentLimits.maxTopicsPerSubject} selected
                       </Typography>
                     </Box>
                   </AccordionSummary>
@@ -609,6 +640,17 @@ export default function SubjectSkillPreferences({
                         const isCompCapReachedInTopic =
                           selectedCompsInThisTopic.length >= currentLimits.maxCompetenciesPerTopic;
 
+                        const handleTopicClick = () => {
+                          if (readOnly) return;
+                          if (isTopicDisabled) {
+                            triggerWarning(
+                              `${currentLimits.roleLabel} can select a maximum of ${currentLimits.maxTopicsPerSubject} topics per subject.`
+                            );
+                            return;
+                          }
+                          handleToggleTopic(topicObj.name, subjectObj);
+                        };
+
                         return (
                           <Grid item xs={12} md={6} key={topicObj.name}>
                             <Paper
@@ -628,7 +670,11 @@ export default function SubjectSkillPreferences({
                                     <Checkbox
                                       checked={isTopicSelected}
                                       disabled={isTopicDisabled || readOnly}
-                                      onChange={() => handleToggleTopic(topicObj.name, subjectObj)}
+                                      onChange={handleTopicClick}
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleTopicClick();
+                                      }}
                                       size="small"
                                       inputProps={{ "aria-label": topicObj.name }}
                                       sx={{
@@ -648,14 +694,23 @@ export default function SubjectSkillPreferences({
                                       {topicObj.name}
                                     </Typography>
                                   }
-                                  sx={{ m: 0, flex: 1, userSelect: "none", cursor: isTopicDisabled || readOnly ? "not-allowed" : "pointer" }}
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    handleTopicClick();
+                                  }}
+                                  sx={{
+                                    m: 0,
+                                    flex: 1,
+                                    userSelect: "none",
+                                    cursor: readOnly ? "default" : (isTopicDisabled ? "not-allowed" : "pointer"),
+                                  }}
                                 />
 
-                                {/* Topic Count Tag: e.g. 1/2 competencies */}
+                                {/* Topic Count Tag: Competencies: [Count] / role limit selected */}
                                 {isTopicSelected && (
                                   <Box sx={{ ...neu.counterPill, px: 1, py: 0.2 }}>
                                     <Typography variant="caption" fontWeight={600} color={neu.accentBlue}>
-                                      {selectedCompsInThisTopic.length}/{currentLimits.maxCompetenciesPerTopic} competencies
+                                      Competencies: {selectedCompsInThisTopic.length} / {currentLimits.maxCompetenciesPerTopic} selected
                                     </Typography>
                                   </Box>
                                 )}
@@ -678,6 +733,23 @@ export default function SubjectSkillPreferences({
                                     const isCompDisabled =
                                       !isCompSelected && (isGlobalCompCapReached || isCompCapReachedInTopic);
 
+                                    const handleCompClick = () => {
+                                      if (readOnly) return;
+                                      if (isCompDisabled) {
+                                        if (isGlobalCompCapReached) {
+                                          triggerWarning(
+                                            `${currentLimits.roleLabel} can select a maximum of ${currentLimits.maxSubjects} subjects and ${maxTotalComps} total competencies.`
+                                          );
+                                        } else {
+                                          triggerWarning(
+                                            `${currentLimits.roleLabel} can select a maximum of ${currentLimits.maxCompetenciesPerTopic} competencies per topic.`
+                                          );
+                                        }
+                                        return;
+                                      }
+                                      handleToggleCompetency(compName, topicObj);
+                                    };
+
                                     return (
                                       <FormControlLabel
                                         key={compName}
@@ -685,7 +757,11 @@ export default function SubjectSkillPreferences({
                                           <Checkbox
                                             checked={isCompSelected}
                                             disabled={isCompDisabled || readOnly}
-                                            onChange={() => handleToggleCompetency(compName, topicObj)}
+                                            onChange={handleCompClick}
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              handleCompClick();
+                                            }}
                                             size="small"
                                             inputProps={{ "aria-label": compName }}
                                             sx={{
@@ -705,10 +781,14 @@ export default function SubjectSkillPreferences({
                                             {compName}
                                           </Typography>
                                         }
+                                        onClick={(e) => {
+                                          e.preventDefault();
+                                          handleCompClick();
+                                        }}
                                         sx={{
                                           m: 0,
                                           opacity: isCompDisabled ? 0.45 : 1,
-                                          cursor: isCompDisabled || readOnly ? "not-allowed" : "pointer",
+                                          cursor: readOnly ? "default" : (isCompDisabled ? "not-allowed" : "pointer"),
                                           userSelect: "none",
                                         }}
                                       />
@@ -728,6 +808,31 @@ export default function SubjectSkillPreferences({
           </Stack>
         )}
       </Box>
+
+      {/* Subtle Warning Toast Snackbar */}
+      <Snackbar
+        open={Boolean(toastMessage)}
+        autoHideDuration={4000}
+        onClose={() => setToastMessage("")}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+      >
+        <Alert
+          onClose={() => setToastMessage("")}
+          severity="warning"
+          variant="filled"
+          sx={{
+            borderRadius: "12px",
+            fontWeight: 600,
+            fontSize: "0.9rem",
+            boxShadow: "0 8px 24px rgba(0,0,0,0.3)",
+            backgroundColor: isDark ? "#D97706" : "#ED6C02",
+            color: "#FFFFFF",
+            "& .MuiAlert-icon": { color: "#FFFFFF" },
+          }}
+        >
+          {toastMessage}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 }

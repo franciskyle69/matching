@@ -407,6 +407,7 @@ import RegisterSuccess from "../../../src/components/RegisterSuccess.jsx";
   function AuthAlertBanner({ authAlert, setAuthAlert, defaultTitle }) {
     const [resendLoading, setResendLoading] = useState(false);
     const [resendDone, setResendDone] = useState(false);
+    const [resendError, setResendError] = useState("");
 
     useEffect(() => {
       if (!authAlert || isOauthMismatchAlert(authAlert)) return;
@@ -423,14 +424,27 @@ import RegisterSuccess from "../../../src/components/RegisterSuccess.jsx";
 
     const handleResend = async () => {
       setResendLoading(true);
+      setResendError("");
       try {
-        await fetch("/api/auth/resend-verification/", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ identifier: authAlert.email || "" }),
-        });
-        setResendDone(true);
+        const fetchFn = window.DashboardApp?.utils?.fetchJSON;
+        const res = fetchFn
+          ? await fetchFn("/api/auth/resend-verification/", {
+              method: "POST",
+              body: JSON.stringify({ identifier: authAlert.email || "" }),
+            })
+          : await fetch("/api/auth/resend-verification/", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ identifier: authAlert.email || "" }),
+            }).then(async (r) => ({ ok: r.ok, data: await r.json().catch(() => ({})) }));
+
+        if (res.ok) {
+          setResendDone(true);
+        } else {
+          setResendError(res.data?.error || "Failed to resend verification email. Please try again.");
+        }
       } catch (e) {
+        setResendError("Network error. Please try again.");
       } finally {
         setResendLoading(false);
       }
@@ -456,23 +470,30 @@ import RegisterSuccess from "../../../src/components/RegisterSuccess.jsx";
                 Verification email sent! Please check your inbox.
               </span>
             ) : (
-              <button
-                type="button"
-                className="btn btn-sm"
-                onClick={handleResend}
-                disabled={resendLoading}
-                style={{
-                  padding: "4px 12px",
-                  fontSize: "13px",
-                  cursor: "pointer",
-                  borderRadius: "6px",
-                  backgroundColor: "#002855",
-                  color: "#ffffff",
-                  border: "none",
-                }}
-              >
-                {resendLoading ? "Sending..." : "Resend Verification Email"}
-              </button>
+              <div>
+                <button
+                  type="button"
+                  className="btn btn-sm"
+                  onClick={handleResend}
+                  disabled={resendLoading}
+                  style={{
+                    padding: "4px 12px",
+                    fontSize: "13px",
+                    cursor: "pointer",
+                    borderRadius: "6px",
+                    backgroundColor: "#002855",
+                    color: "#ffffff",
+                    border: "none",
+                  }}
+                >
+                  {resendLoading ? "Sending..." : "Resend Verification Email"}
+                </button>
+                {resendError && (
+                  <p style={{ marginTop: "6px", fontSize: "12px", color: "#dc2626", fontWeight: 500 }}>
+                    {resendError}
+                  </p>
+                )}
+              </div>
             )}
           </div>
         )}
@@ -1659,20 +1680,27 @@ import RegisterSuccess from "../../../src/components/RegisterSuccess.jsx";
         return;
       }
 
-      fetch("/api/auth/verify-email/", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ uidb64: uid, token: tok }),
-      })
-        .then((res) => res.json().then((data) => ({ ok: res.ok, data })))
+      const fetchFn = window.DashboardApp?.utils?.fetchJSON;
+      const verifyPromise = fetchFn
+        ? fetchFn("/api/auth/verify-email/", {
+            method: "POST",
+            body: JSON.stringify({ uidb64: uid, token: tok }),
+          })
+        : fetch("/api/auth/verify-email/", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ uidb64: uid, token: tok }),
+          }).then((res) => res.json().catch(() => ({})).then((data) => ({ ok: res.ok, data })));
+
+      verifyPromise
         .then(({ ok, data }) => {
           setLoading(false);
           if (ok) {
             setSuccess(true);
-            setMessage(data.message || "Email successfully verified. You can now log in.");
+            setMessage(data?.message || "Email successfully verified. You can now log in.");
           } else {
             setSuccess(false);
-            setErrorMessage(data.error || "Activation link is invalid or expired.");
+            setErrorMessage(data?.error || "Activation link is invalid or expired.");
           }
         })
         .catch(() => {

@@ -359,14 +359,14 @@ class Command(BaseCommand):
             slot_min, slot_max = 1, 4
             target = UserTopicPreference.TARGET_MENTEE
         elif role == UserProfile.ROLE_STUDENT_MENTOR:
-            subj_min, subj_max = 1, 3
+            subj_min, subj_max = 1, 2
             top_min, top_max = 1, 3
             comp_min, comp_max = 1, 3
             global_min, global_max = 2, 10
             slot_min, slot_max = 2, 6
             target = UserTopicPreference.TARGET_MENTOR
         elif role == UserProfile.ROLE_INSTRUCTOR_MENTOR:
-            subj_min, subj_max = 1, 4
+            subj_min, subj_max = 1, 3
             top_min, top_max = 1, 3
             comp_min, comp_max = 1, 3
             global_min, global_max = 2, 10

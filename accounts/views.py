@@ -162,7 +162,15 @@ def login_view(request):
                 return redirect("login")
             
             if not user.is_active:
-                messages.error(request, "Please verify your email before logging in.")
+                messages.error(request, "Please verify your BukSU email address before logging in.")
+                return redirect("login")
+
+            # Email verification check
+            is_verified = getattr(user, "is_email_verified", False)
+            if hasattr(user, "profile") and not is_verified:
+                is_verified = getattr(user.profile, "is_email_verified", False)
+            if not user.is_superuser and not is_verified:
+                messages.error(request, "Please verify your BukSU email address before logging in.")
                 return redirect("login")
 
             if must_change_password(user):

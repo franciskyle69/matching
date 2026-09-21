@@ -31,11 +31,19 @@ def send_activation_email(request, user) -> str:
 
 def send_verification_email(request, user) -> str:
     sync_site_from_env()
-    domain = public_host(request)
-    protocol = public_protocol(request)
     uid = urlsafe_base64_encode(force_bytes(user.pk))
     token = default_token_generator.make_token(user)
-    verification_url = f"{protocol}://{domain}/verify-email/{uid}/{token}/"
+
+    frontend_url = getattr(settings, "FRONTEND_URL", "").strip().rstrip("/")
+    if frontend_url:
+        verification_url = f"{frontend_url}/verify-email/{uid}/{token}/"
+        domain = frontend_url.split("://")[-1]
+        protocol = "https" if frontend_url.startswith("https://") else "http"
+    else:
+        domain = public_host(request)
+        protocol = public_protocol(request)
+        verification_url = f"{protocol}://{domain}/verify-email/{uid}/{token}/"
+
     context = {
         "user": user,
         "domain": domain,

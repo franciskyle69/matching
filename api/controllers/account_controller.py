@@ -9,6 +9,7 @@ from django.http import JsonResponse
 from django.core.cache import cache
 from django.db import transaction
 from django.views.decorators.http import require_GET, require_http_methods
+from django.views.decorators.csrf import csrf_exempt
 from django.utils.crypto import constant_time_compare
 from django.utils.encoding import force_str
 from django.utils.http import urlsafe_base64_decode
@@ -51,7 +52,7 @@ from accounts.models import (
     MentorDocument,
     get_user_profile,
 )
-from ..serializers import upload_to_cloudinary, OnboardingPreferenceSerializer
+from ..serializers import upload_to_cloudinary, OnboardingPreferenceSerializer, UserPreferenceUpdateSerializer
 from accounts.views import (
     ROLE_SESSION_KEY,
     PASSWORD_CHANGE_CODE_SESSION_KEY,
@@ -1010,7 +1011,8 @@ def unified_auth_register(request):
     )
 
 
-@require_http_methods(["POST"])
+@csrf_exempt
+@require_http_methods(["GET", "POST"])
 def auth_verify_email(request):
     payload = _get_payload(request)
     uidb64 = (
@@ -1059,6 +1061,7 @@ def auth_verify_email(request):
     )
 
 
+@csrf_exempt
 @require_http_methods(["POST"])
 def auth_resend_verification(request):
     if not _rate_limit(f"resend_verification:{_client_ip(request)}", 5, 300):
@@ -1096,6 +1099,20 @@ def auth_resend_verification(request):
 @login_required
 @require_GET
 def me(request):
+    user = request.user
+    is_verified = getattr(user, "is_email_verified", False)
+    if hasattr(user, "profile") and not is_verified:
+        is_verified = getattr(user.profile, "is_email_verified", False)
+    if not user.is_superuser and not is_verified:
+        return JsonResponse(
+            {
+                "error": "Please verify your BukSU email address before logging in.",
+                "code": "email_not_verified",
+                "email": user.email,
+            },
+            status=403,
+        )
+
     role_error = _require_role(request)
     if role_error:
         return role_error
@@ -1818,7 +1835,7 @@ def complete_onboarding(request):
         val_payload["availability"] = metadata["availability"]
 
     # Validate against strict role-based min-max bounds and hierarchy integrity
-    serializer = OnboardingPreferenceSerializer(data=val_payload, context={"request": request})
+    serializer = UserPreferenceUpdateSerializer(data=val_payload, context={"request": request, "user": request.user})
     if not serializer.is_valid():
         first_field = next(iter(serializer.errors))
         first_err = serializer.errors[first_field]

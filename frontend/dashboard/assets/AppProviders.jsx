@@ -976,7 +976,15 @@
       const [result] = await Promise.all([requestPromise, optionsPromise]);
       meInFlightRef.current = null;
       if (!result.ok) {
-        if (result.status === 401 || result.status === 403) {
+        setUser(null);
+        if (result.status === 403 && result.data?.code === "email_not_verified") {
+          setAuthAlert({
+            severity: "warning",
+            code: "email_not_verified",
+            title: "Email verification required",
+            message: result.data.error,
+            email: result.data.email || "",
+          });
         }
         setAuthRequired(true);
         setActiveTab((prev) => (prev === "signup" ? "signup" : "signin"));
@@ -1463,6 +1471,7 @@
             result.data.code === "email_not_verified" ||
             errText.toLowerCase().includes("verify your buksu email");
 
+          setUser(null);
           setError(errText);
           setAuthAlert({
             severity: isEmailVerification ? "warning" : "error",
@@ -1477,6 +1486,7 @@
         }
 
         if (!result.ok) {
+          setUser(null);
           const errorMsg = result.data?.error || "Unable to sign in.";
           setError(errorMsg);
 
