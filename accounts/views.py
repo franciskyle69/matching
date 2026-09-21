@@ -417,7 +417,22 @@ class PeerLinkPasswordResetView(auth_views.PasswordResetView):
             dest_email = form.cleaned_data.get("email_or_username")
         if dest_email:
             self.request.session["password_reset_dest_email"] = dest_email
-        return super().form_valid(form)
+        try:
+            return super().form_valid(form)
+        except Exception as exc:
+            import logging
+            logging.getLogger(__name__).exception("password_reset_view_send_failed", extra={"error": str(exc)})
+            err_msg = getattr(exc, "messages", None)
+            if err_msg:
+                for message in err_msg:
+                    form.add_error(None, message)
+            else:
+                form.add_error(
+                    None,
+                    "Unable to send reset email due to a mail server connection error. Please try again shortly.",
+                )
+            return self.form_invalid(form)
+
 
 
 def password_reset_done_view(request):

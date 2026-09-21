@@ -72,6 +72,19 @@ class PeerLinkAccountAdapter(DefaultAccountAdapter):
             message=message,
         )
 
+    def send_mail(self, template_prefix: str, email: str, context: dict) -> None:
+        try:
+            super().send_mail(template_prefix, email, context)
+        except Exception as exc:
+            import logging
+            from django.conf import settings
+            logger = logging.getLogger(__name__)
+            logger.exception("account_adapter_send_mail_failed", extra={"email": email, "error": str(exc)})
+            if getattr(settings, "DEBUG", False):
+                return
+            raise
+
+
 
 class RoleAwareSocialAccountAdapter(DefaultSocialAccountAdapter):
     """
