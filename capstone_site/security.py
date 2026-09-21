@@ -13,6 +13,7 @@ PUBLIC_API_PATHS = {
     "/api/auth/google/",
     "/api/auth/google/login/",
     "/api/auth/register/",
+    "/api/verify-email/",
     "/api/auth/verify-email/",
     "/api/auth/resend-verification/",
     "/api/auth/forgot-password/",

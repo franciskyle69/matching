@@ -141,24 +141,95 @@ class ApiAuthTests(TestCase):
 
         # Invalid token fails with 400
         bad_res = self.client.post(
-            "/api/auth/verify-email/",
-            data=json.dumps({"uidb64": uidb64, "token": "invalid-token"}),
+            "/api/verify-email/",
+            data=json.dumps({"uid": uidb64, "token": "invalid-token"}),
             content_type="application/json",
         )
         self.assertEqual(bad_res.status_code, 400)
-        self.assertEqual(bad_res.json().get("error"), "Activation link is invalid or expired.")
+        self.assertIn(
+            bad_res.json().get("error"),
+            ["Verification token is invalid or has expired.", "Activation link is invalid or expired."],
+        )
 
-        # Valid token succeeds with 200
+        # Valid token succeeds with 200 via /api/verify-email/
         good_res = self.client.post(
-            "/api/auth/verify-email/",
-            data=json.dumps({"uidb64": uidb64, "token": valid_token}),
+            "/api/verify-email/",
+            data=json.dumps({"uid": uidb64, "token": valid_token}),
             content_type="application/json",
         )
         self.assertEqual(good_res.status_code, 200)
-        self.assertEqual(good_res.json().get("message"), "Email successfully verified. You can now log in.")
+        self.assertIn(
+            good_res.json().get("message"),
+            ["Email verified successfully! You can now log in.", "Email successfully verified. You can now log in."],
+        )
 
         unverified.refresh_from_db()
+        self.assertTrue(unverified.is_active)
         self.assertTrue(unverified.profile.is_email_verified)
+
+        # Missing uid or token fails with 400
+        missing_res = self.client.post(
+            "/api/verify-email/",
+            data=json.dumps({}),
+            content_type="application/json",
+        )
+        self.assertEqual(missing_res.status_code, 400)
+        self.assertEqual(missing_res.json().get("error"), "Missing uid or token.")
+
+        # Invalid user identification fails with 400
+        invalid_user_res = self.client.post(
+            "/api/verify-email/",
+            data=json.dumps({"uid": "invalid-b64-uid", "token": "any-token"}),
+            content_type="application/json",
+        )
+        self.assertEqual(invalid_user_res.status_code, 400)
+        self.assertEqual(invalid_user_res.json().get("error"), "Invalid user identification.")
+
+        # GET request with query params succeeds with 200
+        unverified_get = User.objects.create_user(
+            username="verifygettest",
+            email="verifygettest@student.buksu.edu.ph",
+            password=self.password,
+            is_active=False,
+        )
+        UserProfile.objects.create(
+            user=unverified_get,
+            role=UserProfile.ROLE_MENTEE,
+            is_email_verified=False,
+        )
+        get_uidb64 = urlsafe_base64_encode(force_bytes(unverified_get.pk))
+        get_token = default_token_generator.make_token(unverified_get)
+
+        get_res = self.client.get(f"/api/verify-email/?uid={get_uidb64}&token={get_token}")
+        self.assertEqual(get_res.status_code, 200)
+        unverified_get.refresh_from_db()
+        self.assertTrue(unverified_get.is_active)
+        self.assertTrue(unverified_get.profile.is_email_verified)
+
+        # Legacy /api/auth/verify-email/ with uidb64 also succeeds with 200
+        unverified_legacy = User.objects.create_user(
+            username="verifylegacytest",
+            email="verifylegacytest@student.buksu.edu.ph",
+            password=self.password,
+            is_active=False,
+        )
+        UserProfile.objects.create(
+            user=unverified_legacy,
+            role=UserProfile.ROLE_MENTEE,
+            is_email_verified=False,
+        )
+        legacy_uidb64 = urlsafe_base64_encode(force_bytes(unverified_legacy.pk))
+        legacy_token = default_token_generator.make_token(unverified_legacy)
+
+        legacy_res = self.client.post(
+            "/api/auth/verify-email/",
+            data=json.dumps({"uidb64": legacy_uidb64, "token": legacy_token}),
+            content_type="application/json",
+        )
+        self.assertEqual(legacy_res.status_code, 200)
+        unverified_legacy.refresh_from_db()
+        self.assertTrue(unverified_legacy.is_active)
+        self.assertTrue(unverified_legacy.profile.is_email_verified)
 
         # Now login succeeds with 200
         login_res = self.client.post(

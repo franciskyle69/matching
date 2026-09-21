@@ -1,4 +1,4 @@
-from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth import authenticate, login, logout, get_user_model
 from django.contrib.auth import update_session_auth_hash
 from django.contrib.auth.models import User
 from django.contrib.auth.tokens import default_token_generator
@@ -16,6 +16,10 @@ from django.utils.http import urlsafe_base64_decode
 import secrets
 import time
 import json
+from rest_framework import status
+from rest_framework.response import Response
+from rest_framework.views import APIView
+from rest_framework.permissions import AllowAny
 
 from django.utils import timezone
 
@@ -1011,54 +1015,82 @@ def unified_auth_register(request):
     )
 
 
-@csrf_exempt
-@require_http_methods(["GET", "POST"])
-def auth_verify_email(request):
-    payload = _get_payload(request)
-    uidb64 = (
-        _get_str(payload, "uidb64")
-        or _get_str(payload, "uid")
-        or request.GET.get("uidb64")
-        or request.GET.get("uid")
-        or ""
-    ).strip()
-    token = (_get_str(payload, "token") or request.GET.get("token") or "").strip()
+class VerifyEmailView(APIView):
+    permission_classes = [AllowAny]
+    authentication_classes = []
 
-    if not uidb64 or not token:
-        return JsonResponse(
-            {"error": "Verification token and user ID are required."},
-            status=400,
+    def get(self, request):
+        return self._handle_verification(request)
+
+    def post(self, request):
+        return self._handle_verification(request)
+
+    def _handle_verification(self, request):
+        data = getattr(request, "data", {})
+        if not isinstance(data, dict):
+            data = {}
+        query = getattr(request, "query_params", {})
+
+        uidb64 = (
+            data.get("uid")
+            or data.get("uidb64")
+            or query.get("uid")
+            or query.get("uidb64")
+            or ""
+        )
+        token = (
+            data.get("token")
+            or query.get("token")
+            or ""
         )
 
-    try:
-        uid = force_str(urlsafe_base64_decode(uidb64))
-        user = User.objects.get(pk=uid)
-    except Exception:
-        user = None
+        if isinstance(uidb64, str):
+            uidb64 = uidb64.strip()
+        if isinstance(token, str):
+            token = token.strip()
 
-    if not user or not default_token_generator.check_token(user, token):
-        return JsonResponse(
-            {"error": "Activation link is invalid or expired."},
-            status=400,
+        if not uidb64 or not token:
+            return Response(
+                {"error": "Missing uid or token."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        User = get_user_model()
+        try:
+            uid = urlsafe_base64_decode(uidb64).decode()
+            user = User.objects.get(pk=uid)
+        except (TypeError, ValueError, OverflowError, User.DoesNotExist):
+            return Response(
+                {"error": "Invalid user identification."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if default_token_generator.check_token(user, token):
+            user.is_active = True
+            user.save(update_fields=["is_active"])
+
+            profile = getattr(user, "profile", None)
+            if profile is not None:
+                profile.is_email_verified = True
+                profile.save(update_fields=["is_email_verified"])
+            else:
+                user.is_email_verified = True
+
+            logger.info("auth_verify_email_success", extra={"user_id": user.id, "email": user.email})
+            audit_log(user, "verify_email", "auth", user.id)
+
+            return Response(
+                {"message": "Email verified successfully! You can now log in."},
+                status=status.HTTP_200_OK,
+            )
+
+        return Response(
+            {"error": "Verification token is invalid or has expired."},
+            status=status.HTTP_400_BAD_REQUEST,
         )
 
-    user.is_active = True
-    user.save(update_fields=["is_active"])
 
-    profile = getattr(user, "profile", None)
-    if profile is not None:
-        profile.is_email_verified = True
-        profile.save(update_fields=["is_email_verified"])
-    else:
-        user.is_email_verified = True
-
-    logger.info("auth_verify_email_success", extra={"user_id": user.id, "email": user.email})
-    audit_log(user, "verify_email", "auth", user.id)
-
-    return JsonResponse(
-        {"message": "Email successfully verified. You can now log in."},
-        status=200,
-    )
+auth_verify_email = VerifyEmailView.as_view()
 
 
 @csrf_exempt

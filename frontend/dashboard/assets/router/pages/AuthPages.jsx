@@ -1680,34 +1680,51 @@ import RegisterSuccess from "../../../src/components/RegisterSuccess.jsx";
         return;
       }
 
-      const fetchFn = window.DashboardApp?.utils?.fetchJSON;
-      const verifyPromise = fetchFn
-        ? fetchFn("/api/auth/verify-email/", {
-            method: "POST",
-            body: JSON.stringify({ uidb64: uid, token: tok }),
-          })
-        : fetch("/api/auth/verify-email/", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ uidb64: uid, token: tok }),
-          }).then((res) => res.json().catch(() => ({})).then((data) => ({ ok: res.ok, data })));
+      const payload = JSON.stringify({ uid: uid, uidb64: uid, token: tok });
+      const headers = { "Content-Type": "application/json" };
+      const csrfCookie = typeof document !== "undefined"
+        ? (document.cookie.match(/(?:^|; )csrftoken=([^;]*)/) || [])[1]
+        : null;
+      if (csrfCookie) {
+        headers["X-CSRFToken"] = decodeURIComponent(csrfCookie);
+      }
 
-      verifyPromise
-        .then(({ ok, data }) => {
+      const executeVerification = async () => {
+        try {
+          let response = await fetch("/api/verify-email/", {
+            method: "POST",
+            headers,
+            body: payload,
+          });
+
+          // Fallback to /api/auth/verify-email/ if 404
+          if (response.status === 404) {
+            response = await fetch("/api/auth/verify-email/", {
+              method: "POST",
+              headers,
+              body: payload,
+            });
+          }
+
+          const data = await response.json().catch(() => ({}));
           setLoading(false);
-          if (ok) {
+
+          if (response.ok) {
             setSuccess(true);
-            setMessage(data?.message || "Email successfully verified. You can now log in.");
+            setMessage(data?.message || "Email verified successfully! You can now log in.");
           } else {
             setSuccess(false);
-            setErrorMessage(data?.error || "Activation link is invalid or expired.");
+            setErrorMessage(data?.error || data?.detail || "Verification token is invalid or has expired.");
           }
-        })
-        .catch(() => {
+        } catch (err) {
+          console.error("Email verification error:", err);
           setLoading(false);
           setSuccess(false);
           setErrorMessage("Network error verifying email. Please try again later.");
-        });
+        }
+      };
+
+      executeVerification();
     }, []);
 
     const goToLogin = () => {

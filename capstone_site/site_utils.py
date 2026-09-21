@@ -16,6 +16,16 @@ def public_protocol(request=None) -> str:
 
 
 def public_host(request=None) -> str:
+    import re
+    frontend_raw = os.environ.get("FRONTEND_URL", "").strip()
+    if frontend_raw:
+        clean_frontend = re.sub(r"[()\[\]'\"\s]+", "", frontend_raw)
+        if "://" in clean_frontend:
+            clean_frontend = clean_frontend.split("://", 1)[1]
+        host = clean_frontend.split("/")[0].split(":")[0].strip()
+        if host:
+            return host
+
     render_host = (os.environ.get("RENDER_EXTERNAL_HOSTNAME") or "").strip()
     if render_host:
         return render_host.split(":")[0]
@@ -38,11 +48,21 @@ def public_host(request=None) -> str:
 
 
 def sync_site_from_env() -> None:
-    """Keep django.contrib.sites in sync with the Render hostname.
+    """Keep django.contrib.sites in sync with the custom FRONTEND_URL or Render hostname.
 
     allauth and activation emails otherwise keep using the default example.com.
     """
-    host = (os.environ.get("RENDER_EXTERNAL_HOSTNAME") or "").strip().split(":")[0]
+    import re
+    frontend_raw = os.environ.get("FRONTEND_URL", "").strip()
+    host = ""
+    if frontend_raw:
+        clean_frontend = re.sub(r"[()\[\]'\"\s]+", "", frontend_raw)
+        if "://" in clean_frontend:
+            clean_frontend = clean_frontend.split("://", 1)[1]
+        host = clean_frontend.split("/")[0].split(":")[0].strip()
+
+    if not host:
+        host = (os.environ.get("RENDER_EXTERNAL_HOSTNAME") or "").strip().split(":")[0]
     if not host:
         return
     try:

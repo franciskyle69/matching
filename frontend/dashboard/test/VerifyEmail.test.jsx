@@ -17,10 +17,10 @@ describe("VerifyEmail Component", () => {
     render(<VerifyEmail uidb64="MQ" token="token123" />);
 
     expect(screen.getByText(/Verifying your BukSU email address\.\.\./i)).toBeInTheDocument();
-    expect(global.fetch).toHaveBeenCalledWith("/api/auth/verify-email/", {
+    expect(global.fetch).toHaveBeenCalledWith("/api/verify-email/", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ uidb64: "MQ", token: "token123" }),
+      body: JSON.stringify({ uid: "MQ", uidb64: "MQ", token: "token123" }),
     });
   });
 

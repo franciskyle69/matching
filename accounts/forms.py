@@ -498,13 +498,15 @@ class PeerLinkPasswordResetForm(forms.Form):
         html_email_template_name="registration/password_reset_email_html.html",
         extra_email_context=None,
     ):
+        import os
+        import re
         import logging
         from django.contrib.auth.tokens import default_token_generator
         from django.core.mail import EmailMultiAlternatives
         from django.template.loader import render_to_string
         from django.utils.encoding import force_bytes
         from django.utils.http import urlsafe_base64_encode
-        from capstone_site.site_utils import public_host, public_protocol, sync_site_from_env
+        from capstone_site.site_utils import sync_site_from_env
 
         logger = logging.getLogger(__name__)
         token_gen = token_generator or default_token_generator
@@ -515,8 +517,20 @@ class PeerLinkPasswordResetForm(forms.Form):
             return 0
 
         sync_site_from_env()
-        domain = domain_override or public_host(request)
-        protocol = "https" if use_https else public_protocol(request)
+
+        # Dynamic clean base URL from FRONTEND_URL environment variable
+        raw_url = os.getenv("FRONTEND_URL", "https://peerlink.online")
+        frontend_url = re.sub(r"[()\[\]'\"\s]+", "", str(raw_url or "https://peerlink.online")).rstrip("/")
+        if not frontend_url:
+            frontend_url = "https://peerlink.online"
+
+        if "://" in frontend_url:
+            default_protocol, default_domain = frontend_url.split("://", 1)
+        else:
+            default_protocol, default_domain = "https", frontend_url
+
+        domain = domain_override or default_domain
+        protocol = "https" if use_https else default_protocol
 
         from django.conf import settings
 
@@ -535,14 +549,19 @@ class PeerLinkPasswordResetForm(forms.Form):
             if not dest_email:
                 continue
 
+            uid = urlsafe_base64_encode(force_bytes(user.pk))
+            token = token_gen.make_token(user)
+            reset_url = f"{frontend_url}/accounts/reset/{uid}/{token}/"
+
             context = {
                 "email": dest_email,
                 "domain": domain,
                 "site_name": "PeerLink",
-                "uid": urlsafe_base64_encode(force_bytes(user.pk)),
+                "uid": uid,
                 "user": user,
-                "token": token_gen.make_token(user),
+                "token": token,
                 "protocol": protocol,
+                "reset_url": reset_url,
                 **(extra_email_context or {}),
             }
 
@@ -553,7 +572,7 @@ class PeerLinkPasswordResetForm(forms.Form):
                 text_content = (
                     f"Hi {user.get_full_name() or user.username},\n\n"
                     f"Click the link below to reset your PeerLink password:\n"
-                    f"{protocol}://{domain}/accounts/reset/{context['uid']}/{context['token']}/\n\n"
+                    f"{reset_url}\n\n"
                     f"If you did not request this, you can safely ignore this email.\n"
                 )
 

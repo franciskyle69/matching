@@ -63,22 +63,37 @@ export default function VerifyEmail({ uidb64: propUid, token: propToken, onNavig
 
     const verifyToken = async () => {
       try {
-        const response = await fetch("/api/auth/verify-email/", {
+        const payload = JSON.stringify({ uid: uid, uidb64: uid, token: tok });
+        const headers = { "Content-Type": "application/json" };
+        const csrfCookie = typeof document !== "undefined"
+          ? (document.cookie.match(/(?:^|; )csrftoken=([^;]*)/) || [])[1]
+          : null;
+        if (csrfCookie) {
+          headers["X-CSRFToken"] = decodeURIComponent(csrfCookie);
+        }
+
+        let response = await fetch("/api/verify-email/", {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ uidb64: uid, token: tok }),
+          headers,
+          body: payload,
         });
+
+        if (response.status === 404) {
+          response = await fetch("/api/auth/verify-email/", {
+            method: "POST",
+            headers,
+            body: payload,
+          });
+        }
 
         const data = await response.json().catch(() => ({}));
 
         if (response.ok) {
           setSuccess(true);
-          setMessage(data.message || "Email successfully verified. You can now log in.");
+          setMessage(data.message || "Email verified successfully! You can now log in.");
         } else {
           setSuccess(false);
-          setErrorMessage(data.error || "Activation link is invalid or expired.");
+          setErrorMessage(data.error || data.detail || "Verification token is invalid or has expired.");
         }
       } catch (err) {
         console.error("Email verification error:", err);
