@@ -67,6 +67,15 @@ def send_resend_email(
         raise ValueError("RESEND_API_KEY is not configured.")
 
     sender = format_from_email(from_email)
+    # If the sender address is a personal/public domain (e.g. gmail.com), Resend will reject with HTTP 403.
+    # Automatically switch to onboarding@resend.dev to ensure delivery succeeds on Resend.
+    if any(domain in sender.lower() for domain in ("@gmail.com", "@yahoo.com", "@outlook.com", "@hotmail.com")):
+        logger.warning(
+            "resend_unsupported_sender_domain: '%s' contains a public domain not allowed as sender by Resend. Using 'BukSU PeerLink <onboarding@resend.dev>' instead.",
+            sender,
+        )
+        sender = "BukSU PeerLink <onboarding@resend.dev>"
+
     recipients = [to] if isinstance(to, str) else list(to)
     if not recipients:
         raise ValueError("At least one recipient email address is required.")
@@ -277,8 +286,26 @@ def send_http_email(
                 reply_to=reply_to,
             )
             return True
+        elif bool(getattr(settings, "EMAIL_HOST_USER", "")) and bool(getattr(settings, "EMAIL_HOST_PASSWORD", "")):
+            # If SMTP credentials exist, forward through Django SMTP backend
+            from django.core.mail.backends.smtp import EmailBackend as SmtpBackend
+            from django.core.mail import EmailMultiAlternatives
+            smtp_backend = SmtpBackend(fail_silently=fail_silently)
+            msg = EmailMultiAlternatives(
+                subject=subject,
+                body=text_content or "",
+                from_email=from_email or getattr(settings, "DEFAULT_FROM_EMAIL", None),
+                to=[to] if isinstance(to, str) else list(to),
+                reply_to=[reply_to] if isinstance(reply_to, str) else (list(reply_to) if reply_to else None),
+                connection=smtp_backend,
+            )
+            if html_content:
+                msg.attach_alternative(html_content, "text/html")
+            msg.send(fail_silently=fail_silently)
+            logger.info("smtp_fallback_email_sent", extra={"to": to, "subject": subject})
+            return True
         elif delivery_mode == "CONSOLE" or is_dev:
-            # Graceful console logging fallback when no API key is supplied in dev
+            # Graceful console logging fallback when no API key or SMTP is supplied in dev
             logger.info(
                 "console_email_fallback: To: %s | Subject: %s\nText:\n%s\nHTML:\n%s",
                 to,
@@ -289,7 +316,7 @@ def send_http_email(
             return True
         else:
             raise RuntimeError(
-                "No HTTP email API key configured. Set RESEND_API_KEY or SENDGRID_API_KEY in environment variables."
+                "No HTTP email API key or SMTP credentials configured. Set RESEND_API_KEY or EMAIL_HOST_USER/PASSWORD."
             )
     except Exception as exc:
         logger.exception("http_email_dispatch_failed", extra={"error": str(exc), "to": to, "subject": subject})

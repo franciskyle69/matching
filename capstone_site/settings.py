@@ -28,8 +28,17 @@ def _env_bool(name: str, default: bool = False) -> bool:
     return str(raw).strip().lower() in {"1", "true", "yes", "on"}
 
 
-def _env_csv(name: str) -> list[str]:
-    raw = os.environ.get(name, "")
+def _env_csv(name: str, fallback_name: str = None) -> list[str]:
+    """
+    Parse an environment variable containing a comma-separated list of strings.
+    Strips whitespace from each item and filters out empty strings.
+    Optionally checks fallback_name if the primary variable is unset or empty.
+    """
+    raw = os.environ.get(name)
+    if not raw and fallback_name:
+        raw = os.environ.get(fallback_name)
+    if not raw:
+        return []
     return [part.strip() for part in raw.split(",") if part.strip()]
 
 
@@ -55,24 +64,40 @@ if not DEBUG:
     if SECRET_KEY.startswith('django-insecure') or 'change-me' in SECRET_KEY.lower():
         raise RuntimeError('DJANGO_SECRET_KEY appears weak or placeholder-like in production.')
 
-# SECURITY WARNING: don't run with debug turned on in production!
-ALLOWED_HOSTS = _env_csv("DJANGO_ALLOWED_HOSTS")
-CSRF_TRUSTED_ORIGINS = _env_csv("DJANGO_CSRF_TRUSTED_ORIGINS")
-CSRF_FAILURE_VIEW = 'capstone_site.security.csrf_failure'
+# =============================================================================
+# Host and Origin Security Settings (ALLOWED_HOSTS, CSRF, CORS)
+# =============================================================================
+
+# 1. ALLOWED_HOSTS:
+# Read from ALLOWED_HOSTS (or DJANGO_ALLOWED_HOSTS), split by commas, strip whitespace, and filter empty strings.
+# If empty or not set, fall back to ['*'] in DEBUG mode or ['127.0.0.1', 'localhost'] in production.
+_parsed_allowed_hosts = _env_csv("ALLOWED_HOSTS", fallback_name="DJANGO_ALLOWED_HOSTS")
+if _parsed_allowed_hosts:
+    ALLOWED_HOSTS = _parsed_allowed_hosts
+else:
+    ALLOWED_HOSTS = ['*'] if DEBUG else ['127.0.0.1', 'localhost']
+
+# Render deployment support: automatically append RENDER_EXTERNAL_HOSTNAME and .onrender.com domain
 _render_host = (os.environ.get("RENDER_EXTERNAL_HOSTNAME") or "").strip()
-if _render_host and _render_host not in ALLOWED_HOSTS:
+if _render_host and _render_host not in ALLOWED_HOSTS and '*' not in ALLOWED_HOSTS:
     ALLOWED_HOSTS.append(_render_host)
+if os.environ.get("RENDER") and ".onrender.com" not in ALLOWED_HOSTS and '*' not in ALLOWED_HOSTS:
+    ALLOWED_HOSTS.append(".onrender.com")
+
+# 2. CSRF_TRUSTED_ORIGINS:
+# Read from CSRF_TRUSTED_ORIGINS (or DJANGO_CSRF_TRUSTED_ORIGINS), split by commas, strip whitespace, and filter empty strings.
+CSRF_TRUSTED_ORIGINS = _env_csv("CSRF_TRUSTED_ORIGINS", fallback_name="DJANGO_CSRF_TRUSTED_ORIGINS")
+CSRF_FAILURE_VIEW = 'capstone_site.security.csrf_failure'
 if _render_host:
     _render_origin = f"https://{_render_host}"
     if _render_origin not in CSRF_TRUSTED_ORIGINS:
         CSRF_TRUSTED_ORIGINS.append(_render_origin)
 
+# 3. CORS_ALLOWED_ORIGINS:
+# Read from CORS_ALLOWED_ORIGINS, split by commas, strip whitespace, and filter empty strings.
+CORS_ALLOWED_ORIGINS = _env_csv("CORS_ALLOWED_ORIGINS")
+
 if not DEBUG:
-    if not ALLOWED_HOSTS:
-        if os.environ.get("RENDER"):
-            ALLOWED_HOSTS = [".onrender.com"]
-        else:
-            raise RuntimeError('DJANGO_ALLOWED_HOSTS must be set when DJANGO_DEBUG is False.')
     SESSION_COOKIE_SECURE = True
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = 'Lax'
@@ -358,13 +383,11 @@ FILE_UPLOAD_MAX_MEMORY_SIZE = 6 * 1024 * 1024
 DATA_UPLOAD_MAX_NUMBER_FIELDS = 200
 
 # Frontend & Email Backend Settings
-EMAIL_DELIVERY_MODE = os.getenv('EMAIL_DELIVERY_MODE', 'HTTP').upper()
 RESEND_API_KEY = os.getenv('RESEND_API_KEY', '').strip()
 SENDGRID_API_KEY = os.getenv('SENDGRID_API_KEY', '').strip()
-DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'BukSU PeerLink <onboarding@resend.dev>').strip()
 FRONTEND_URL = os.getenv('FRONTEND_URL', 'http://localhost:5173').rstrip('/')
 
-# SMTP Configuration (used if EMAIL_DELIVERY_MODE == 'SMTP')
+# SMTP Configuration
 EMAIL_HOST = os.getenv('EMAIL_HOST', 'smtp.gmail.com')
 EMAIL_PORT = int(os.getenv('EMAIL_PORT', 587))
 EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS', 'True').lower() in ('true', '1', 't')
@@ -373,8 +396,35 @@ EMAIL_TIMEOUT = int(os.getenv('EMAIL_TIMEOUT', '20'))
 EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', '').strip()
 EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', '').strip()  # 16-character App Password if using Gmail
 
-if EMAIL_DELIVERY_MODE == 'SMTP' and EMAIL_HOST_USER and ('@' not in DEFAULT_FROM_EMAIL or EMAIL_HOST_USER.lower() not in DEFAULT_FROM_EMAIL.lower()):
-    DEFAULT_FROM_EMAIL = f'PeerLink <{EMAIL_HOST_USER}>'
+# Auto-detect EMAIL_DELIVERY_MODE if not explicitly defined in environment
+_explicit_delivery_mode = os.getenv('EMAIL_DELIVERY_MODE')
+if _explicit_delivery_mode:
+    EMAIL_DELIVERY_MODE = _explicit_delivery_mode.strip().upper()
+elif RESEND_API_KEY or SENDGRID_API_KEY:
+    EMAIL_DELIVERY_MODE = 'HTTP'
+elif EMAIL_HOST_USER and EMAIL_HOST_PASSWORD:
+    EMAIL_DELIVERY_MODE = 'SMTP'
+else:
+    EMAIL_DELIVERY_MODE = 'CONSOLE'
+
+# Configure DEFAULT_FROM_EMAIL based on the resolved delivery mode
+_raw_from_email = os.getenv('DEFAULT_FROM_EMAIL', '').strip()
+if EMAIL_DELIVERY_MODE == 'HTTP':
+    # Resend restricts unverified / personal domains (like @gmail.com, @yahoo.com).
+    # Default to onboarding@resend.dev unless a custom verified domain is provided.
+    if not _raw_from_email or any(d in _raw_from_email.lower() for d in ('@gmail.com', '@yahoo.com', '@outlook.com', '@hotmail.com')):
+        DEFAULT_FROM_EMAIL = os.getenv('RESEND_FROM_EMAIL', 'BukSU PeerLink <onboarding@resend.dev>').strip()
+    else:
+        DEFAULT_FROM_EMAIL = _raw_from_email
+elif EMAIL_DELIVERY_MODE == 'SMTP':
+    if _raw_from_email and EMAIL_HOST_USER and ('@' not in _raw_from_email or EMAIL_HOST_USER.lower() in _raw_from_email.lower()):
+        DEFAULT_FROM_EMAIL = _raw_from_email
+    elif EMAIL_HOST_USER:
+        DEFAULT_FROM_EMAIL = f'PeerLink <{EMAIL_HOST_USER}>'
+    else:
+        DEFAULT_FROM_EMAIL = _raw_from_email or 'noreply@buksu.edu.ph'
+else:
+    DEFAULT_FROM_EMAIL = _raw_from_email or 'noreply@buksu.edu.ph'
 
 # Resolve EMAIL_BACKEND
 explicit_backend = os.getenv('EMAIL_BACKEND')

@@ -102,9 +102,9 @@ class EmailServiceUnitTests(SimpleTestCase):
         self.assertTrue(success)
         mock_resend.assert_called_once()
 
-    @override_settings(RESEND_API_KEY="", SENDGRID_API_KEY="", DEBUG=True)
+    @override_settings(RESEND_API_KEY="", SENDGRID_API_KEY="", EMAIL_HOST_USER="", EMAIL_HOST_PASSWORD="", DEBUG=True)
     def test_send_http_email_dev_console_fallback(self):
-        # In debug mode without API keys, should fall back safely without raising
+        # In debug mode without API keys or SMTP, should fall back safely without raising
         success = send_http_email(
             to="test@buksu.edu.ph",
             subject="Hello Dev",
@@ -112,7 +112,7 @@ class EmailServiceUnitTests(SimpleTestCase):
         )
         self.assertTrue(success)
 
-    @override_settings(RESEND_API_KEY="", SENDGRID_API_KEY="", DEBUG=False, DJANGO_ENV="production")
+    @override_settings(RESEND_API_KEY="", SENDGRID_API_KEY="", EMAIL_HOST_USER="", EMAIL_HOST_PASSWORD="", DEBUG=False, DJANGO_ENV="production")
     def test_send_http_email_raises_in_prod_when_no_keys(self):
         with self.assertRaises(RuntimeError):
             send_http_email(
@@ -198,6 +198,8 @@ class EmailBackendCanSendTests(SimpleTestCase):
         EMAIL_DELIVERY_MODE="HTTP",
         RESEND_API_KEY="",
         SENDGRID_API_KEY="",
+        EMAIL_HOST_USER="",
+        EMAIL_HOST_PASSWORD="",
         DEBUG=False,
         DJANGO_ENV="production",
     )

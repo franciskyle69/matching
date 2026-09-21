@@ -28,6 +28,9 @@ def email_backend_can_send() -> bool:
     if "httpemailbackend" in backend or delivery_mode == "HTTP":
         if bool((getattr(settings, "RESEND_API_KEY", "") or "").strip()) or bool((getattr(settings, "SENDGRID_API_KEY", "") or "").strip()):
             return True
+        # If SMTP credentials are configured, HttpEmailBackend can fall back to SMTP
+        if bool((getattr(settings, "EMAIL_HOST_USER", "") or "").strip()) and bool((getattr(settings, "EMAIL_HOST_PASSWORD", "") or "").strip()):
+            return True
         # In development/debug mode, HttpEmailBackend safely falls back to console logging
         if is_dev or delivery_mode == "CONSOLE":
             return True
