@@ -243,11 +243,14 @@ import Skeleton from "@mui/material/Skeleton";
       menteeRecLoading,
       loadMenteeRecommendations,
       myMentor,
+      myMentors = [],
+      menteePairingsCount = 0,
       menteeMatching,
       theme,
       mentorRequests,
       mentorProfile,
       chooseMentor,
+      pendingMentorIds = [],
       acceptMentee,
       acceptMenteeLoading,
       adminPairings,
@@ -339,6 +342,12 @@ import Skeleton from "@mui/material/Skeleton";
         .trim()
         .split(/\s+/)[0];
 
+      const activePairingsCount = Math.max(
+        (myMentors && myMentors.length) || (myMentor ? 1 : 0),
+        menteePairingsCount || 0
+      );
+      const isLimitReached = activePairingsCount >= 2;
+
       const menteeSlots = Array.isArray(menteeMatching?.availability)
         ? menteeMatching.availability
         : [];
@@ -425,6 +434,38 @@ import Skeleton from "@mui/material/Skeleton";
               <p className="mentee-hero-subtitle kasandigan-subtitle">
                 Find your ideal academic mentor, review algorithmic compatibility, and manage your pairings.
               </p>
+              <div className="mentor-v2-status-row" style={{ marginTop: "8px", display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                {MentorRoleBadge ? <MentorRoleBadge role="mentee" prominent /> : null}
+                <span
+                  className={`neu-badge ${
+                    isLimitReached
+                      ? "neu-badge--high"
+                      : activePairingsCount === 1
+                      ? "neu-badge--medium"
+                      : "neu-badge--neutral"
+                  }`}
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "6px",
+                    fontSize: "0.8rem",
+                    fontWeight: 600,
+                    padding: "4px 10px",
+                  }}
+                >
+                  <span
+                    style={{
+                      width: 8,
+                      height: 8,
+                      borderRadius: "50%",
+                      backgroundColor: isLimitReached ? "#ef4444" : activePairingsCount === 1 ? "#3b82f6" : "#10b981",
+                    }}
+                  />
+                  {isLimitReached
+                    ? `Mentor Limit Reached (${activePairingsCount}/2)`
+                    : `Mentors: ${activePairingsCount}/2 Slots`}
+                </span>
+              </div>
             </div>
             <div className="kasandigan-header-actions">
               <button
@@ -452,7 +493,7 @@ import Skeleton from "@mui/material/Skeleton";
             aria-label="Your matching snapshot"
           >
             <div
-              className="kasandigan-metric-cell"
+              className={`kasandigan-metric-cell ${isLimitReached ? "kasandigan-metric-cell--limit-reached" : ""}`}
               onClick={() =>
                 myMentor
                   ? openMentorProfile(myMentor.user_id)
@@ -467,11 +508,15 @@ import Skeleton from "@mui/material/Skeleton";
                   <HandshakeOutlined fontSize="inherit" />
                 </span>
               </div>
-              <div className="kasandigan-metric-value">
-                {myMentor ? 1 : 0}
+              <div className="kasandigan-metric-value" style={isLimitReached ? { color: "#ef4444" } : {}}>
+                {activePairingsCount}/2
               </div>
               <span className="kasandigan-metric-link">
-                {myMentor ? `Paired with ${mentorName} →` : "Find mentor →"}
+                {isLimitReached
+                  ? "Limit reached (2/2) →"
+                  : activePairingsCount === 1
+                  ? "1 slot available (1/2) →"
+                  : "2 slots available (0/2) →"}
               </span>
             </div>
 
@@ -542,6 +587,23 @@ import Skeleton from "@mui/material/Skeleton";
             </div>
           </section>
 
+          {isLimitReached && (
+            <div className="mentee-limit-banner" role="alert" style={{ marginBottom: "20px" }}>
+              <div className="mentee-limit-icon">
+                <HandshakeOutlined fontSize="medium" />
+              </div>
+              <div className="mentee-limit-text">
+                <div className="mentee-limit-title">
+                  Mentor Limit Reached ({activePairingsCount}/2 Mentors)
+                </div>
+                <div className="mentee-limit-desc">
+                  Under AMU guidelines, each mentee is limited to a maximum of 2 concurrent mentors. You are currently paired with {activePairingsCount} mentors (maximum capacity reached). Pairing requests for additional mentors are paused.
+                </div>
+              </div>
+              <span className="neu-badge neu-badge--high">2/2 Limit Reached</span>
+            </div>
+          )}
+
           {/* Kasandigan Coordinated Grid */}
           <div className="mentee-home-grid kasandigan-main-grid">
             {/* Row 1: Spotlight (Your Mentor or Empty Prompt) + Upcoming Schedule Windows */}
@@ -550,99 +612,168 @@ import Skeleton from "@mui/material/Skeleton";
                 <div className="kasandigan-card-head">
                   <div className="kasandigan-card-head-title">
                     <PersonOutline fontSize="inherit" className="kasandigan-head-icon" />
-                    <h2>Your mentor</h2>
+                    <h2>
+                      {isLimitReached
+                        ? "Your Mentors (2/2 Limit Reached)"
+                        : activePairingsCount === 1
+                        ? "Your Mentor (1/2 Slots Used)"
+                        : "Your mentor"}
+                    </h2>
                   </div>
                   {myMentor ? <MatchBadge score={myMentor.score} /> : null}
                 </div>
 
-                {myMentor ? (
-                  <div className="mentee-spotlight-content">
-                    <div className="mentee-spotlight-identity">
-                      <div className="mentee-spotlight-avatar">
-                        <MenteeAvatar
-                          name={mentorName}
-                          url={myMentor.avatar_url}
-                        />
-                        <span
-                          className="mentee-spotlight-status"
-                          title="Active pairing"
-                          aria-label="Active pairing"
-                        />
-                      </div>
-                      <div className="mentee-spotlight-meta">
-                        <div className="mentee-spotlight-name-row">
-                          <p className="mentee-spotlight-name">{mentorName}</p>
-                          {myMentor.role && MentorRoleBadge ? (
-                            <MentorRoleBadge role={myMentor.role} prominent />
-                          ) : null}
-                        </div>
-                        {myMentor.accepted_at && (
-                          <p className="mentee-muted">
-                            Paired since{" "}
-                            {(() => {
-                              try {
-                                const d = new Date(myMentor.accepted_at);
-                                return Number.isNaN(d.getTime())
-                                  ? formatDate(myMentor.accepted_at)
-                                  : d.toLocaleDateString(undefined, {
-                                      month: "short",
-                                      day: "numeric",
-                                      year: "numeric",
-                                    });
-                              } catch (e) {
-                                return formatDate(myMentor.accepted_at);
-                              }
-                            })()}
-                          </p>
-                        )}
-                        {mentorSubjects.length > 0 && (
-                          <div className="mentee-chip-row">
-                            {mentorSubjects.slice(0, 4).map((subject) => (
-                              <span key={subject} className="mentee-chip">
-                                {subject}
-                              </span>
-                            ))}
+                {myMentor || (myMentors && myMentors.length > 0) ? (
+                  <div
+                    className="mentee-spotlight-content"
+                    style={
+                      myMentors && myMentors.length > 1
+                        ? { display: "flex", flexDirection: "column", gap: "20px" }
+                        : {}
+                    }
+                  >
+                    {(myMentors && myMentors.length > 0 ? myMentors : [myMentor]).map(
+                      (mentorItem, idx) => {
+                        const itemMentorName =
+                          mentorItem.display_name || mentorItem.username || "Mentor";
+                        const itemSubjects = (() => {
+                          const details = mentorItem.match_details || {};
+                          if ((details.common_subjects || []).length) {
+                            return details.common_subjects;
+                          }
+                          if (
+                            Array.isArray(mentorItem.subjects) &&
+                            Array.isArray(menteeMatching?.subjects)
+                          ) {
+                            const wanted = new Set(
+                              menteeMatching.subjects.map((s) =>
+                                String(s).trim().toLowerCase()
+                              )
+                            );
+                            return mentorItem.subjects.filter((s) =>
+                              wanted.has(String(s).trim().toLowerCase())
+                            );
+                          }
+                          return Array.isArray(mentorItem.subjects)
+                            ? mentorItem.subjects
+                            : [];
+                        })();
+
+                        return (
+                          <div
+                            key={mentorItem.id || mentorItem.user_id || idx}
+                            style={
+                              idx > 0
+                                ? {
+                                    borderTop:
+                                      "1px solid var(--border-color, rgba(0,0,0,0.08))",
+                                    paddingTop: "16px",
+                                  }
+                                : {}
+                            }
+                          >
+                            <div className="mentee-spotlight-identity">
+                              <div className="mentee-spotlight-avatar">
+                                <MenteeAvatar
+                                  name={itemMentorName}
+                                  url={mentorItem.avatar_url}
+                                />
+                                <span
+                                  className="mentee-spotlight-status"
+                                  title="Active pairing"
+                                  aria-label="Active pairing"
+                                />
+                              </div>
+                              <div className="mentee-spotlight-meta">
+                                <div className="mentee-spotlight-name-row">
+                                  <p className="mentee-spotlight-name">
+                                    {itemMentorName}
+                                  </p>
+                                  {mentorItem.role && MentorRoleBadge ? (
+                                    <MentorRoleBadge
+                                      role={mentorItem.role}
+                                      prominent
+                                    />
+                                  ) : null}
+                                </div>
+                                {mentorItem.accepted_at && (
+                                  <p className="mentee-muted">
+                                    Paired since{" "}
+                                    {(() => {
+                                      try {
+                                        const d = new Date(mentorItem.accepted_at);
+                                        return Number.isNaN(d.getTime())
+                                          ? formatDate(mentorItem.accepted_at)
+                                          : d.toLocaleDateString(undefined, {
+                                              month: "short",
+                                              day: "numeric",
+                                              year: "numeric",
+                                            });
+                                      } catch (e) {
+                                        return formatDate(mentorItem.accepted_at);
+                                      }
+                                    })()}
+                                  </p>
+                                )}
+                                {itemSubjects.length > 0 && (
+                                  <div className="mentee-chip-row">
+                                    {itemSubjects.slice(0, 4).map((subject) => (
+                                      <span key={subject} className="mentee-chip">
+                                        {subject}
+                                      </span>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+
+                            {idx === 0 && (
+                              <dl className="mentee-spotlight-facts" style={{ marginTop: "12px" }}>
+                                <div>
+                                  <dt>Next window</dt>
+                                  <dd>
+                                    {nextWindow
+                                      ? `${nextWindow.dateLabel} • ${nextWindow.timeLabel}`
+                                      : "No overlapping time yet"}
+                                  </dd>
+                                </div>
+                                <div>
+                                  <dt>Weekly hours</dt>
+                                  <dd>{formatHoursValue(weeklyMinutes)}</dd>
+                                </div>
+                              </dl>
+                            )}
+
+                            <div
+                              className="mentee-spotlight-actions"
+                              style={{ marginTop: "12px" }}
+                            >
+                              {mentorItem.email ? (
+                                <a
+                                  className="btn kasandigan-btn-primary"
+                                  href={gmailComposeUrl(mentorItem.email)}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                >
+                                  <ChatBubbleOutline fontSize="inherit" />
+                                  <span>Send Message</span>
+                                </a>
+                              ) : null}
+                              <button
+                                type="button"
+                                className="btn kasandigan-btn-secondary"
+                                onClick={() =>
+                                  openMentorProfile(mentorItem.user_id || mentorItem.id)
+                                }
+                              >
+                                <PersonOutline fontSize="inherit" />
+                                <span>View Profile</span>
+                              </button>
+                            </div>
                           </div>
-                        )}
-                      </div>
-                    </div>
-
-                    <dl className="mentee-spotlight-facts">
-                      <div>
-                        <dt>Next window</dt>
-                        <dd>
-                          {nextWindow
-                            ? `${nextWindow.dateLabel} • ${nextWindow.timeLabel}`
-                            : "No overlapping time yet"}
-                        </dd>
-                      </div>
-                      <div>
-                        <dt>Weekly hours</dt>
-                        <dd>{formatHoursValue(weeklyMinutes)}</dd>
-                      </div>
-                    </dl>
-
-                    <div className="mentee-spotlight-actions">
-                      {myMentor.email ? (
-                        <a
-                          className="btn kasandigan-btn-primary"
-                          href={gmailComposeUrl(myMentor.email)}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                        >
-                          <ChatBubbleOutline fontSize="inherit" />
-                          <span>Send Message</span>
-                        </a>
-                      ) : null}
-                      <button
-                        type="button"
-                        className="btn kasandigan-btn-secondary"
-                        onClick={() => openMentorProfile(myMentor.user_id)}
-                      >
-                        <PersonOutline fontSize="inherit" />
-                        <span>View Profile</span>
-                      </button>
-                    </div>
+                        );
+                      }
+                    )}
                   </div>
                 ) : (
                   <div className="mentee-empty">
@@ -762,6 +893,7 @@ import Skeleton from "@mui/material/Skeleton";
                           matchDetails.common_subjects || mentor.subjects || [];
                         const mentorId = match.mentor_id || mentor.mentor_id;
                         const isRequesting = requestingMentorId === mentorId;
+                        const isPending = (pendingMentorIds || []).includes(mentorId) || !!match.is_pending;
 
                         return (
                           <div key={mentorId || name} className="mentee-rec-card">
@@ -801,10 +933,13 @@ import Skeleton from "@mui/material/Skeleton";
                               <button
                                 type="button"
                                 className="btn kasandigan-btn-primary small"
-                                disabled={isRequesting || match.slots_left === 0}
-                                onClick={() => handleRequestMentor(mentorId)}
+                                disabled={isRequesting || match.slots_left === 0 || isPending}
+                                onClick={() => {
+                                  if (isPending) return;
+                                  handleRequestMentor(mentorId);
+                                }}
                               >
-                                {isRequesting ? "Connecting..." : "Connect"}
+                                {isRequesting ? "Connecting..." : isPending ? "Request Sent" : "Connect"}
                               </button>
                               {mentor.user_id && (
                                 <button

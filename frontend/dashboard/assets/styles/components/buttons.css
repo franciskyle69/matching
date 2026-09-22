@@ -64,7 +64,7 @@
 
 /* ── Primary Buttons (Base State) ─────────────────────────────── */
 
-.btn:not(.secondary):not(.btn-secondary):not(.kasandigan-btn-secondary):not(.sidebar-logout-btn):not(.danger):not(.btn-danger):not(.approval-reject-btn):not(.btn-warning):not(.btn-success):not(.outline):not(.ghost),
+.btn:not(.secondary):not(.btn-secondary):not(.kasandigan-btn-secondary):not(.sidebar-logout-btn):not(.danger):not(.btn-danger):not(.approval-reject-btn):not(.btn-warning):not(.btn-success):not(.outline):not(.ghost):not(.users-action-btn),
 .btn.btn-primary,
 .btn.primary,
 .btn-primary,
@@ -82,7 +82,7 @@
     inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
 }
 
-[data-theme="dark"] .btn:not(.secondary):not(.btn-secondary):not(.kasandigan-btn-secondary):not(.sidebar-logout-btn):not(.danger):not(.btn-danger):not(.approval-reject-btn):not(.btn-warning):not(.btn-success):not(.outline):not(.ghost),
+[data-theme="dark"] .btn:not(.secondary):not(.btn-secondary):not(.kasandigan-btn-secondary):not(.sidebar-logout-btn):not(.danger):not(.btn-danger):not(.approval-reject-btn):not(.btn-warning):not(.btn-success):not(.outline):not(.ghost):not(.users-action-btn),
 [data-theme="dark"] .btn.btn-primary,
 [data-theme="dark"] .btn.primary,
 [data-theme="dark"] .btn-primary,
@@ -99,7 +99,7 @@
 
 /* ── Universal Primary Button Hover (Identical across all buttons) ── */
 
-.btn:not(.secondary):not(.btn-secondary):not(.kasandigan-btn-secondary):not(.sidebar-logout-btn):not(.danger):not(.btn-danger):not(.approval-reject-btn):not(.btn-warning):not(.btn-success):not(.outline):not(.ghost):hover:not(:disabled),
+.btn:not(.secondary):not(.btn-secondary):not(.kasandigan-btn-secondary):not(.sidebar-logout-btn):not(.danger):not(.btn-danger):not(.approval-reject-btn):not(.btn-warning):not(.btn-success):not(.outline):not(.ghost):not(.users-action-btn):hover:not(:disabled),
 .btn.btn-primary:hover:not(:disabled),
 .btn.primary:hover:not(:disabled),
 .btn-primary:hover:not(:disabled),
@@ -118,7 +118,7 @@
   transform: translateY(-1.5px) !important;
 }
 
-[data-theme="dark"] .btn:not(.secondary):not(.btn-secondary):not(.kasandigan-btn-secondary):not(.sidebar-logout-btn):not(.danger):not(.btn-danger):not(.approval-reject-btn):not(.btn-warning):not(.btn-success):not(.outline):not(.ghost):hover:not(:disabled),
+[data-theme="dark"] .btn:not(.secondary):not(.btn-secondary):not(.kasandigan-btn-secondary):not(.sidebar-logout-btn):not(.danger):not(.btn-danger):not(.approval-reject-btn):not(.btn-warning):not(.btn-success):not(.outline):not(.ghost):not(.users-action-btn):hover:not(:disabled),
 [data-theme="dark"] .btn.btn-primary:hover:not(:disabled),
 [data-theme="dark"] .btn-primary:hover:not(:disabled),
 [data-theme="dark"] .btn.primary:hover:not(:disabled),

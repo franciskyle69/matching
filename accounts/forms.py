@@ -15,7 +15,7 @@ MENTOR_ROLE_CHOICES = (
 )
 
 
-CREATE_USER_ROLE_CHOICES = ROLE_CHOICES + (("staff", "Staff"),)
+CREATE_USER_ROLE_CHOICES = ROLE_CHOICES + (("both", "Both"), ("staff", "Staff"),)
 
 
 def is_institutional_email(email):
@@ -282,6 +282,7 @@ class CoordinatorCreateUserForm(forms.Form):
     last_name = forms.CharField(required=True)
     email = forms.EmailField(required=True)
     role = forms.ChoiceField(choices=CREATE_USER_ROLE_CHOICES, widget=forms.RadioSelect)
+    password = forms.CharField(required=False, max_length=128)
 
     def clean_first_name(self):
         first_name = (self.cleaned_data.get("first_name") or "").strip()

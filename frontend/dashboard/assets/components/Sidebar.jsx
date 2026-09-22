@@ -63,6 +63,37 @@ import VerifiedOutlinedIcon from "@mui/icons-material/VerifiedOutlined";
           {TAB_ICONS[tab.id] || TAB_ICONS.home}
         </span>
         <span className="sidebar-link-text nav-item-label">{tab.label}</span>
+        {tab.badge && (
+          <span
+            className={`sidebar-link-badge ${
+              tab.badgeType === "danger"
+                ? "sidebar-link-badge--danger"
+                : "sidebar-link-badge--info"
+            }`}
+            style={{
+              marginLeft: "auto",
+              fontSize: "0.68rem",
+              fontWeight: "700",
+              padding: "2px 7px",
+              borderRadius: "10px",
+              lineHeight: 1.2,
+              whiteSpace: "nowrap",
+              letterSpacing: "0.02em",
+              backgroundColor:
+                tab.badgeType === "danger"
+                  ? "rgba(239, 68, 68, 0.16)"
+                  : "rgba(59, 130, 246, 0.16)",
+              color: tab.badgeType === "danger" ? "#ef4444" : "#3b82f6",
+              border: `1px solid ${
+                tab.badgeType === "danger"
+                  ? "rgba(239, 68, 68, 0.35)"
+                  : "rgba(59, 130, 246, 0.35)"
+              }`,
+            }}
+          >
+            {tab.badge}
+          </span>
+        )}
       </button>
     );
   }

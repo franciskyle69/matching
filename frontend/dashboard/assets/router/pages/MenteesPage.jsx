@@ -13,7 +13,7 @@ import RefreshOutlined from "@mui/icons-material/RefreshOutlined";
   const { useContext, useMemo, useState } = React;
   const AppContext = window.DashboardApp.AppContext;
   const Utils = window.DashboardApp.Utils || {};
-  const { formatDate } = Utils;
+  const { formatDate, MentorRoleBadge } = Utils;
 
   function MenteeAvatar({ request }) {
     const name = request.mentee_display_name || request.mentee_username || "?";
@@ -170,16 +170,16 @@ import RefreshOutlined from "@mui/icons-material/RefreshOutlined";
             onClick={() => setFilter("unavailable")}
             role="button"
             tabIndex={0}
-            title="Filter unavailable or pending requests"
+            title="Filter pending pairing requests"
           >
             <div className="mentees-page-stat-top">
-              <span className="mentees-page-stat-label">Not available</span>
+              <span className="mentees-page-stat-label">Pending Requests</span>
               <span className="mentees-page-stat-icon neu-icon-pod is-pending">
                 <HourglassEmptyOutlined fontSize="inherit" />
               </span>
             </div>
             <div className="mentees-page-stat-val is-pending">{pending.length}</div>
-            <div className="mentees-page-stat-sub">Pending or unavailable</div>
+            <div className="mentees-page-stat-sub">Waiting for acceptance</div>
           </div>
         </div>
 
@@ -210,7 +210,7 @@ import RefreshOutlined from "@mui/icons-material/RefreshOutlined";
               className={"mentees-page-filter-btn " + (filter === "unavailable" ? "is-active" : "")}
               onClick={() => setFilter("unavailable")}
             >
-              Not available ({pending.length})
+              Pending Requests ({pending.length})
             </button>
           </div>
 
@@ -250,7 +250,7 @@ import RefreshOutlined from "@mui/icons-material/RefreshOutlined";
               {filter === "official"
                 ? "No official mentees yet"
                 : filter === "unavailable"
-                ? "No unavailable requests"
+                ? "No pending pairing requests"
                 : "No mentees found"}
             </h2>
             <p className="muted">
@@ -287,6 +287,9 @@ import RefreshOutlined from "@mui/icons-material/RefreshOutlined";
                   <div className="mentees-page-card-top">
                     <MenteeAvatar request={request} />
                     <div className="mentees-page-card-head">
+                      {MentorRoleBadge ? (
+                        <MentorRoleBadge role="mentee" className="mentees-page-role-badge" />
+                      ) : null}
                       <h3 className="mentees-page-card-name">{menteeName}</h3>
                       <p className="mentees-page-card-username">@{request.mentee_username}</p>
                     </div>
@@ -299,7 +302,7 @@ import RefreshOutlined from "@mui/icons-material/RefreshOutlined";
                       }
                     >
                       <span className="match-request-badge-dot" />
-                      <span>{request.accepted ? "Official mentee" : "Not available"}</span>
+                      <span>{request.accepted ? "Official mentee" : "Pending request"}</span>
                     </span>
                   </div>
 
@@ -371,7 +374,7 @@ import RefreshOutlined from "@mui/icons-material/RefreshOutlined";
                             ? "Accepting..."
                             : capacityFull
                               ? "Capacity reached"
-                              : "Accept Match"}
+                              : "Accept Pairing"}
                         </span>
                       </button>
                     )}

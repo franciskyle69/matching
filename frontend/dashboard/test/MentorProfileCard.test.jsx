@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import React from "react";
@@ -169,6 +169,52 @@ describe("MentorProfileCard", () => {
     expect(screen.queryByText("Skills & Topics")).toBeNull();
     expect(screen.getByText("Schedule Overlap")).toBeInTheDocument();
     expect(screen.getByText("Wed • 3:00 PM - 5:00 PM")).toBeInTheDocument();
+  });
+
+  it("disables request pairing button and shows limit reached (2/2) when isLimitReached is true", () => {
+    const onPairing = vi.fn();
+    render(
+      React.createElement(MentorProfileCard, {
+        person: mentor,
+        displayName: "Prof. Reyes",
+        email: mentor.email,
+        score: 0.94,
+        variant: "detail",
+        kind: "mentor",
+        isLimitReached: true,
+        onRequestPairing: onPairing,
+      }),
+    );
+
+    const btn = screen.getByRole("button", { name: /limit reached \(2\/2\)/i });
+    expect(btn).toBeInTheDocument();
+    expect(btn).toBeDisabled();
+    fireEvent.click(btn);
+    expect(onPairing).not.toHaveBeenCalled();
+  });
+
+  it("disables request pairing button and shows Request Sent badge and label when isPending is true", () => {
+    const onPairing = vi.fn();
+    render(
+      React.createElement(MentorProfileCard, {
+        person: mentor,
+        displayName: "Prof. Reyes",
+        email: mentor.email,
+        score: 0.94,
+        variant: "detail",
+        kind: "mentor",
+        isPending: true,
+        onRequestPairing: onPairing,
+      }),
+    );
+
+    const btn = screen.getByRole("button", { name: /request sent/i });
+    expect(btn).toBeInTheDocument();
+    expect(btn).toBeDisabled();
+    fireEvent.click(btn);
+    expect(onPairing).not.toHaveBeenCalled();
+
+    expect(screen.getAllByText("Request Sent").length).toBeGreaterThanOrEqual(1);
   });
 });
 

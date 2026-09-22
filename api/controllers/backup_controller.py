@@ -2,13 +2,18 @@
 
 from datetime import datetime
 from pathlib import Path
+import gzip
+import shutil
 import tempfile
 import time
 import io
 
+from django.apps import apps
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.core.management import call_command
+from django.core.management.color import no_style
+from django.db import connection
 from django.http import FileResponse, JsonResponse
 from django.utils import timezone
 from django.views.decorators.http import require_GET, require_http_methods
@@ -66,18 +71,67 @@ def _safe_backup_path(backup_id: str):
     return path
 
 
-def _create_json_fixture_backup() -> Path:
-    target = _backup_dir() / f"backup_{int(time.time() * 1000)}.json"
+def _reset_db_sequences():
+    """Synchronize primary key sequences for PostgreSQL to avoid ID collision."""
+    engine = settings.DATABASES.get("default", {}).get("ENGINE", "")
+    if "postgresql" not in engine:
+        return
+    try:
+        sequence_sql = connection.ops.sequence_reset_sql(no_style(), apps.get_models())
+        if sequence_sql:
+            with connection.cursor() as cursor:
+                for sql in sequence_sql:
+                    cursor.execute(sql)
+    except Exception:
+        pass
+
+
+def _create_clean_backup() -> Path:
+    timestamp_str = datetime.now().strftime("%Y%m%d_%H%M%S")
+    target = _backup_dir() / f"peerlink_backup_{timestamp_str}.json.gz"
     buffer = io.StringIO()
-    call_command("dumpdata", stdout=buffer, indent=2, verbosity=0)
-    target.write_text(buffer.getvalue(), encoding="utf-8")
+    call_command(
+        "dumpdata",
+        stdout=buffer,
+        exclude=[
+            "contenttypes",
+            "auth.permission",
+            "sessions.session",
+            "axes.accessattempt",
+            "axes.accesslog",
+        ],
+        natural_foreign=True,
+        natural_primary=True,
+        verbosity=0,
+    )
+    raw_data = buffer.getvalue().encode("utf-8")
+    with gzip.open(target, "wb", compresslevel=9) as gz_out:
+        gz_out.write(raw_data)
     return target
 
 
-def _restore_json_fixture(path: Path):
-    # Match previous restore semantics: replace current data with backup snapshot.
-    call_command("flush", interactive=False, verbosity=0)
-    call_command("loaddata", str(path), verbosity=0)
+def _restore_backup_file(path: Path):
+    """Safely restore a backup file, whether .json, .json.gz, or binary dump."""
+    is_gz = path.name.lower().endswith(".gz") or path.suffix.lower() == ".gz"
+    is_json = path.name.lower().endswith(".json") or path.name.lower().endswith(".json.gz")
+
+    if is_json:
+        call_command("flush", interactive=False, verbosity=0)
+        if is_gz:
+            with tempfile.NamedTemporaryFile(delete=False, suffix=".json", dir=_backup_dir()) as tmp:
+                with gzip.open(path, "rb") as f_in:
+                    shutil.copyfileobj(f_in, tmp)
+                tmp_path = Path(tmp.name)
+            try:
+                call_command("loaddata", str(tmp_path), verbosity=0)
+            finally:
+                tmp_path.unlink(missing_ok=True)
+        else:
+            call_command("loaddata", str(path), verbosity=0)
+    else:
+        call_command("dbrestore", input_filename=str(path), interactive=False, verbosity=0)
+
+    _reset_db_sequences()
 
 
 @login_required
@@ -110,48 +164,23 @@ def backup_create(request):
     err = _require_staff(request)
     if err:
         return err
-    before = {item.name for item in _list_backup_files()}
     try:
-        call_command("dbbackup", interactive=False, verbosity=0)
-        after = _list_backup_files()
-        created = next((item for item in after if item.name not in before), after[0] if after else None)
-        if created is None:
-            return JsonResponse({"error": "Backup command completed but no file was found."}, status=500)
-
-        audit_log(request.user, "create", "backup", created.name)
+        created = _create_clean_backup()
         stat = created.stat()
+        audit_log(request.user, "create", "backup", created.name)
         return JsonResponse({
             "ok": True,
             "id": created.name,
             "path": str(created),
             "size_bytes": stat.st_size,
             "size_display": _size_display(stat.st_size),
-            "records": "Database snapshot",
+            "records": "Compressed database snapshot",
         })
     except Exception as e:
-        # Fallback for environments without pg_dump/psql (common on local Windows setups).
-        try:
-            created = _create_json_fixture_backup()
-            stat = created.stat()
-            audit_log(request.user, "create", "backup", created.name)
-            return JsonResponse(
-                {
-                    "ok": True,
-                    "id": created.name,
-                    "path": str(created),
-                    "size_bytes": stat.st_size,
-                    "size_display": _size_display(stat.st_size),
-                    "records": "JSON fixture snapshot",
-                    "note": f"dbbackup unavailable, used JSON fallback: {e}",
-                }
-            )
-        except Exception as fallback_error:
-            return JsonResponse(
-                {
-                    "error": f"Primary backup failed: {e}. Fallback backup failed: {fallback_error}",
-                },
-                status=500,
-            )
+        return JsonResponse(
+            {"error": f"Backup creation failed: {e}"},
+            status=500,
+        )
 
 
 @login_required
@@ -180,22 +209,16 @@ def backup_restore(request):
     if not f:
         return JsonResponse({"error": "No file uploaded."}, status=400)
 
-    suffix = Path(f.name).suffix or ".dump"
+    # Preserve multi-part extensions like .json.gz
+    fname = f.name.lower()
+    suffix = ".json.gz" if fname.endswith(".json.gz") else (Path(f.name).suffix or ".dump")
     with tempfile.NamedTemporaryFile(delete=False, suffix=suffix, dir=_backup_dir()) as tmp:
         for chunk in f.chunks():
             tmp.write(chunk)
         tmp_path = Path(tmp.name)
 
     try:
-        if tmp_path.suffix.lower() == ".json":
-            _restore_json_fixture(tmp_path)
-        else:
-            call_command(
-                "dbrestore",
-                input_filename=str(tmp_path),
-                interactive=False,
-                verbosity=0,
-            )
+        _restore_backup_file(tmp_path)
         audit_log(request.user, "restore", "backup", f.name)
         return JsonResponse({"ok": True, "message": "Restore completed. You may need to log in again."})
     except Exception as e:
@@ -219,15 +242,7 @@ def backup_restore_by_id(request, backup_id):
         return JsonResponse({"error": "Backup not found."}, status=404)
 
     try:
-        if path.suffix.lower() == ".json":
-            _restore_json_fixture(path)
-        else:
-            call_command(
-                "dbrestore",
-                input_filename=str(path),
-                interactive=False,
-                verbosity=0,
-            )
+        _restore_backup_file(path)
         audit_log(request.user, "restore", "backup", path.name)
         return JsonResponse({"ok": True, "message": "Restore completed. You may need to log in again."})
     except Exception as e:

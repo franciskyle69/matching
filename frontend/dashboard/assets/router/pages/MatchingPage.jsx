@@ -1,4 +1,11 @@
 import GroupsOutlined from "@mui/icons-material/GroupsOutlined";
+import HandshakeOutlined from "@mui/icons-material/HandshakeOutlined";
+import CheckCircleOutline from "@mui/icons-material/CheckCircleOutline";
+import RefreshOutlined from "@mui/icons-material/RefreshOutlined";
+import SearchOutlined from "@mui/icons-material/SearchOutlined";
+import MailOutline from "@mui/icons-material/MailOutline";
+import AutoAwesomeOutlined from "@mui/icons-material/AutoAwesomeOutlined";
+import InfoOutlined from "@mui/icons-material/InfoOutlined";
 
 (function () {
   "use strict";
@@ -16,12 +23,22 @@ import GroupsOutlined from "@mui/icons-material/GroupsOutlined";
       window.DashboardApp.Availability.formatSlotLabel) ||
     ((slot) => String(slot || ""));
   const {
+    formatDate,
     formatMatchScore,
     LoadingSpinner,
     MatchingLoadingAnimation,
-    MentorRoleBadge,
+    MentorRoleBadge: RawMentorRoleBadge,
     getAvatarInitials: getAvatarInitialsFromUtils,
   } = Utils;
+  const MentorRoleBadge =
+    RawMentorRoleBadge ||
+    function FallbackMentorRoleBadge({ role, className }) {
+      return (
+        <span className={"mentor-role-badge " + (className || "")}>
+          {String(role || "Mentor")}
+        </span>
+      );
+    };
   const intersectSlots =
     (window.DashboardApp.Availability &&
       window.DashboardApp.Availability.intersectSlots) ||
@@ -108,21 +125,23 @@ import GroupsOutlined from "@mui/icons-material/GroupsOutlined";
     };
   }
 
-  function AdminPairXaiBreakdown({ breakdown }) {
+  function AdminPairXaiBreakdown({ breakdown, showHeader = false }) {
     if (!breakdown || !breakdown.factors) return null;
     const factorKeys = ["academic", "competency", "difficulty", "schedule"];
 
     return (
-      <div className="admin-neu-xai-card" role="region" aria-label="Explainable AI Diagnostics">
-        <div className="admin-neu-xai-header">
-          <div className="admin-neu-xai-title-wrap">
-            <span className="neu-xai-badge-ai">Explainable AI Diagnostics</span>
-            <span className="neu-xai-algo">{breakdown.algorithm || "XGBoost ML"}</span>
+      <div className="admin-neu-xai-shelf" role="region" aria-label="Explainable AI Diagnostics">
+        {showHeader && (
+          <div className="admin-neu-xai-header">
+            <div className="admin-neu-xai-title-wrap">
+              <span className="neu-xai-badge-ai">Explainable AI Diagnostics</span>
+              <span className="neu-xai-algo">{breakdown.algorithm || "XGBoost ML"}</span>
+            </div>
+            <span className={"neu-xai-tier neu-xai-tier--" + (breakdown.tier || "high")}>
+              {breakdown.tier_label || "Active Fit"} ({breakdown.overall_percentage || Math.round((breakdown.overall_score || 0.85) * 100)}%)
+            </span>
           </div>
-          <span className={"neu-xai-tier neu-xai-tier--" + (breakdown.tier || "high")}>
-            {breakdown.tier_label || "Active Fit"} ({breakdown.overall_percentage || Math.round((breakdown.overall_score || 0.85) * 100)}%)
-          </span>
-        </div>
+        )}
 
         <div className="admin-neu-xai-grid">
           {factorKeys.map((key) => {
@@ -164,30 +183,48 @@ import GroupsOutlined from "@mui/icons-material/GroupsOutlined";
 
   function OfficialMentorSpotlight({
     myMentor,
+    myMentors = [],
     menteeMatching,
   }) {
-    const displayName = myMentor.display_name || myMentor.username || "Mentor";
-    if (!MentorProfileCard) return null;
+    const list = myMentors && myMentors.length > 0 ? myMentors : (myMentor ? [myMentor] : []);
+    if (!MentorProfileCard || list.length === 0) return null;
+    const isFullCapacity = list.length >= 2;
+
     return (
       <div className="match-spotlight-section matching-section-block">
-        <div className="section-title">Your mentor</div>
-        <p className="page-subtitle matching-section-subtitle">
-          Your official mentor. View announcements and stay in touch through the
-          dashboard.
-        </p>
-        <MentorProfileCard
-          person={myMentor}
-          displayName={displayName}
-          email={myMentor.email}
-          score={myMentor.score}
-          matchDetails={myMentor.match_details}
-          scoreBreakdown={myMentor.score_breakdown || (myMentor.match_details && myMentor.match_details.score_breakdown)}
-          variant="hero"
-          kind="mentor"
-          isOfficial
-          menteeMatching={menteeMatching}
-          savedId={myMentor.user_id || myMentor.id}
-        />
+        <div className="mentees-section-head">
+          <div>
+            <div className="section-title">
+              {isFullCapacity ? "Your Official Mentors (2/2 Limit Reached)" : "Your Official Mentor (1/2 Slots Used)"}
+            </div>
+            <p className="page-subtitle matching-section-subtitle">
+              {isFullCapacity
+                ? "You are currently paired with 2 mentors (maximum mentee limit reached). Stay in touch and coordinate your academic sessions below."
+                : "Your confirmed mentor. You have 1 remaining slot available to request an additional mentor if needed."}
+            </p>
+          </div>
+        </div>
+        <div className={isFullCapacity ? "official-mentors-grid" : "official-mentor-single"} style={isFullCapacity ? { display: "flex", flexDirection: "column", gap: 20 } : {}}>
+          {list.map((m, idx) => {
+            const displayName = m.display_name || m.username || "Mentor";
+            return (
+              <MentorProfileCard
+                key={m.id || m.user_id || idx}
+                person={m}
+                displayName={displayName}
+                email={m.email}
+                score={m.score}
+                matchDetails={m.match_details}
+                scoreBreakdown={m.score_breakdown || (m.match_details && m.match_details.score_breakdown)}
+                variant="hero"
+                kind="mentor"
+                isOfficial
+                menteeMatching={menteeMatching}
+                savedId={m.user_id || m.id}
+              />
+            );
+          })}
+        </div>
       </div>
     );
   }
@@ -202,8 +239,11 @@ import GroupsOutlined from "@mui/icons-material/GroupsOutlined";
   function MentorMatchCard({
     match,
     myMentor,
+    myMentors = [],
     chosenMentorId,
     unavailableMentorIds,
+    isLimitReached = false,
+    isPending = false,
     onRequestPairing,
     onViewProfile,
     compact = false,
@@ -214,6 +254,7 @@ import GroupsOutlined from "@mui/icons-material/GroupsOutlined";
     const { mentor, displayName } = parsed;
     const isOfficialPair =
       (myMentor && isSameMentorMatch(match, myMentor)) ||
+      (Array.isArray(myMentors) && myMentors.some((m) => isSameMentorMatch(match, m))) ||
       chosenMentorId === match.mentor_id;
     const isNotAvailable = unavailableMentorIds.includes(match.mentor_id);
     const slotsLeft = Number(match.slots_left ?? mentor.capacity ?? 0);
@@ -230,6 +271,8 @@ import GroupsOutlined from "@mui/icons-material/GroupsOutlined";
         kind="mentor"
         isOfficial={isOfficialPair}
         isUnavailable={isNotAvailable}
+        isPending={isPending}
+        isLimitReached={isLimitReached}
         menteeMatching={menteeMatching}
         slotsLeft={slotsLeft}
         compact={compact}
@@ -346,6 +389,536 @@ import GroupsOutlined from "@mui/icons-material/GroupsOutlined";
     return `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(to)}`;
   }
 
+  function gmailComposeBothUrl(email1, email2) {
+    const to = [email1, email2].filter(Boolean).map((e) => String(e).trim()).join(",");
+    if (!to) return "";
+    return `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(to)}&su=${encodeURIComponent("AMU PeerLink Mentoring Partnership Check-In")}`;
+  }
+
+  function AdminPairingCard({ pair, onEmailMentor, onEmailMentee, onEmailBoth }) {
+    const breakdown = getAdminEffectiveBreakdown(pair);
+    const mentor = pair.mentor || {};
+    const mentee = pair.mentee || {};
+    const matchDetails = pair.match_details || {};
+    const commonSubjects = Array.isArray(matchDetails.common_subjects) ? matchDetails.common_subjects : [];
+    const commonTopics = Array.isArray(matchDetails.common_topics) ? matchDetails.common_topics : [];
+    const commonCompetencies = Array.isArray(matchDetails.common_competencies) ? matchDetails.common_competencies : [];
+    const pct = breakdown.overall_percentage ?? Math.round((Number(pair.score) || 0.85) * 100);
+    const tier = breakdown.tier || (pct >= 85 ? "high" : pct >= 70 ? "strong" : "medium");
+    const tierLabel = breakdown.tier_label || (pct >= 85 ? "Exceptional Fit" : pct >= 75 ? "Strong Fit" : pct >= 60 ? "Good Fit" : "Moderate Fit");
+
+    const menteeEmail = mentee.email || (pair.mentee_username ? `${pair.mentee_username}@student.buksu.edu.ph` : "");
+    const mentorEmail = mentor.email || (pair.mentor_username ? `${pair.mentor_username}@student.buksu.edu.ph` : "");
+
+    const menteeSubjects = Array.isArray(mentee.subjects) && mentee.subjects.length ? mentee.subjects : (matchDetails.mentee_subjects || []);
+    const mentorSubjects = Array.isArray(mentor.subjects) && mentor.subjects.length ? mentor.subjects : (matchDetails.mentor_subjects || []);
+
+    return (
+      <div className="admin-paired-card neu-card" data-testid={`admin-pair-card-${pair.id}`}>
+        <div className="admin-paired-card-top">
+          <div className="admin-paired-status-wrap">
+            <span className="admin-paired-status-dot" />
+            <span className="admin-paired-status-text">Active Partnership</span>
+            <span className="admin-paired-timestamp">
+              • Paired {formatDate(pair.accepted_at || pair.created_at)}
+            </span>
+          </div>
+          <div className="admin-paired-top-badges">
+            <span className={"neu-xai-tier neu-xai-tier--" + (tier === "high" || tier === "strong" ? "high" : tier === "medium" ? "medium" : "low")}>
+              {pct}% · {tierLabel}
+            </span>
+          </div>
+        </div>
+
+        <div className="admin-paired-profiles-row">
+          {/* Mentee Side */}
+          <div className="admin-paired-person-box is-mentee">
+            <div className="admin-paired-person-header">
+              <MatchPersonAvatar
+                name={pair.mentee_display_name || pair.mentee_username}
+                url={mentee.avatar_url}
+                className="admin-paired-avatar"
+              />
+              <div className="admin-paired-person-info">
+                <MentorRoleBadge role="mentee" prominent />
+                <h3 className="admin-paired-person-name">
+                  {pair.mentee_display_name || pair.mentee_username}
+                </h3>
+                <p className="admin-paired-person-sub">@{pair.mentee_username}</p>
+              </div>
+            </div>
+
+            <div className="admin-paired-person-meta">
+              {mentee.year_level && (
+                <div className="admin-paired-meta-row">
+                  <span className="admin-paired-meta-label">Year Level:</span>
+                  <span className="admin-paired-meta-val">Year {mentee.year_level}</span>
+                </div>
+              )}
+              {mentee.difficulty_level != null && (
+                <div className="admin-paired-meta-row">
+                  <span className="admin-paired-meta-label">Learning Need:</span>
+                  <span className="admin-paired-meta-val">{mentee.difficulty_level} / 5</span>
+                </div>
+              )}
+              {menteeEmail && (
+                <div className="admin-paired-meta-row">
+                  <span className="admin-paired-meta-label">Email:</span>
+                  <a href={`mailto:${menteeEmail}`} className="admin-paired-email-link" title="Email mentee">
+                    {menteeEmail}
+                  </a>
+                </div>
+              )}
+            </div>
+
+            {menteeSubjects.length > 0 && (
+              <div className="admin-paired-tags-row">
+                <span className="admin-paired-tags-label">Requested Subjects:</span>
+                <div className="admin-paired-tags-list">
+                  {menteeSubjects.map((s) => (
+                    <span key={s} className="neu-badge neu-badge--neutral">{s}</span>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Center Matching Bridge */}
+          <div className="admin-paired-bridge">
+            <div className="admin-paired-bridge-icon-pod" title={`${pct}% Compatibility Match`}>
+              <HandshakeOutlined fontSize="medium" />
+            </div>
+            <div className="admin-paired-bridge-score">
+              <span className="admin-paired-bridge-pct">{pct}%</span>
+              <span className="admin-paired-bridge-label">Match Score</span>
+            </div>
+            <div className="admin-paired-bridge-algo">
+              <span>{breakdown.algorithm || "XGBoost ML"}</span>
+            </div>
+            {menteeEmail && mentorEmail && (
+              <button
+                type="button"
+                className="btn small secondary admin-paired-email-both-btn"
+                onClick={() => onEmailBoth(menteeEmail, mentorEmail)}
+                title="Compose message to both mentor and mentee"
+              >
+                <MailOutline fontSize="small" style={{ marginRight: 4 }} />
+                <span>Email Both</span>
+              </button>
+            )}
+          </div>
+
+          {/* Mentor Side */}
+          <div className="admin-paired-person-box is-mentor">
+            <div className="admin-paired-person-header">
+              <MatchPersonAvatar
+                name={pair.mentor_display_name || pair.mentor_username}
+                url={mentor.avatar_url}
+                className="admin-paired-avatar"
+              />
+              <div className="admin-paired-person-info">
+                <MentorRoleBadge role={mentor.role || "student"} prominent />
+                <h3 className="admin-paired-person-name">
+                  {pair.mentor_display_name || pair.mentor_username}
+                </h3>
+                <p className="admin-paired-person-sub">@{pair.mentor_username}</p>
+              </div>
+            </div>
+
+            <div className="admin-paired-person-meta">
+              {mentor.expertise_level != null && (
+                <div className="admin-paired-meta-row">
+                  <span className="admin-paired-meta-label">Expertise:</span>
+                  <span className="admin-paired-meta-val">{mentor.expertise_level} / 5</span>
+                </div>
+              )}
+              {mentor.capacity != null && (
+                <div className="admin-paired-meta-row">
+                  <span className="admin-paired-meta-label">Capacity:</span>
+                  <span className="admin-paired-meta-val">{mentor.capacity} mentees</span>
+                </div>
+              )}
+              {mentorEmail && (
+                <div className="admin-paired-meta-row">
+                  <span className="admin-paired-meta-label">Email:</span>
+                  <a href={`mailto:${mentorEmail}`} className="admin-paired-email-link" title="Email mentor">
+                    {mentorEmail}
+                  </a>
+                </div>
+              )}
+            </div>
+
+            {mentorSubjects.length > 0 && (
+              <div className="admin-paired-tags-row">
+                <span className="admin-paired-tags-label">Expertise Subjects:</span>
+                <div className="admin-paired-tags-list">
+                  {mentorSubjects.map((s) => (
+                    <span key={s} className="neu-badge neu-badge--neutral">{s}</span>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* WHY THEY MATCH — Explainable AI Diagnostics */}
+        <div className="admin-paired-why-section">
+          <div className="admin-paired-why-header">
+            <div className="admin-paired-why-title">
+              <span className="admin-paired-why-icon-pod">
+                <AutoAwesomeOutlined fontSize="small" className="admin-paired-why-icon" />
+              </span>
+              <span>Why They Match • Explainable AI Diagnostics</span>
+            </div>
+            <div className="admin-paired-why-meta">
+              <span className="admin-paired-why-algo-badge">
+                Powered by {breakdown.algorithm || "XGBoost ML"}
+              </span>
+              <span className={"neu-xai-tier neu-xai-tier--" + (tier === "high" || tier === "strong" ? "high" : tier === "medium" ? "medium" : "low")}>
+                {pct}% · {tierLabel}
+              </span>
+            </div>
+          </div>
+
+          <AdminPairXaiBreakdown breakdown={breakdown} showHeader={false} />
+
+          {/* Shared overlaps summary bar */}
+          {(commonSubjects.length > 0 || commonTopics.length > 0 || commonCompetencies.length > 0) && (
+            <div className="admin-paired-overlaps-bar">
+              {commonSubjects.length > 0 && (
+                <div className="admin-paired-overlap-group">
+                  <span className="admin-paired-overlap-label">Shared Courses:</span>
+                  <div className="admin-paired-overlap-tags">
+                    {commonSubjects.map((s) => (
+                      <span key={s} className="neu-badge neu-badge--match-course">{s}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {commonTopics.length > 0 && (
+                <div className="admin-paired-overlap-group">
+                  <span className="admin-paired-overlap-label">Shared Topics:</span>
+                  <div className="admin-paired-overlap-tags">
+                    {commonTopics.map((t) => (
+                      <span key={t} className="neu-badge neu-badge--match-topic">{t}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {commonCompetencies.length > 0 && (
+                <div className="admin-paired-overlap-group">
+                  <span className="admin-paired-overlap-label">Verified Competencies:</span>
+                  <div className="admin-paired-overlap-tags">
+                    {commonCompetencies.map((c) => (
+                      <span key={c} className="neu-badge neu-badge--match-comp">{c}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        <div className="admin-paired-card-actions">
+          {menteeEmail && (
+            <button
+              type="button"
+              className="btn small secondary"
+              onClick={() => onEmailMentee(menteeEmail)}
+            >
+              <MailOutline fontSize="small" style={{ marginRight: 4 }} />
+              Contact Mentee
+            </button>
+          )}
+          {mentorEmail && (
+            <button
+              type="button"
+              className="btn small secondary"
+              onClick={() => onEmailMentor(mentorEmail)}
+            >
+              <MailOutline fontSize="small" style={{ marginRight: 4 }} />
+              Contact Mentor
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  function AdminPairedUsersView() {
+    const ctx = useContext(AppContext);
+    if (!ctx) return null;
+    const {
+      adminPairings = [],
+      adminPairingsLoading = false,
+      loadAdminPairings,
+    } = ctx;
+
+    const [search, setSearch] = useState("");
+    const [tierFilter, setTierFilter] = useState("all");
+    const [sort, setSort] = useState("score-desc");
+
+    useEffect(() => {
+      if (typeof loadAdminPairings === "function" && adminPairings.length === 0 && !adminPairingsLoading) {
+        loadAdminPairings();
+      }
+    }, [loadAdminPairings, adminPairings.length, adminPairingsLoading]);
+
+    const avgScore = useMemo(() => {
+      if (!adminPairings.length) return 0;
+      const total = adminPairings.reduce((sum, p) => {
+        const b = getAdminEffectiveBreakdown(p);
+        return sum + (b.overall_percentage || Math.round((Number(p.score) || 0) * 100));
+      }, 0);
+      return Math.round(total / adminPairings.length);
+    }, [adminPairings]);
+
+    const highFitCount = useMemo(() => {
+      return adminPairings.filter((p) => {
+        const b = getAdminEffectiveBreakdown(p);
+        const score = b.overall_percentage || Math.round((Number(p.score) || 0) * 100);
+        return score >= 75;
+      }).length;
+    }, [adminPairings]);
+
+    const filteredPairings = useMemo(() => {
+      let list = (adminPairings || []).slice();
+
+      if (search.trim()) {
+        const q = search.trim().toLowerCase();
+        list = list.filter((p) => {
+          const mentorName = String(p.mentor_display_name || p.mentor_username || "").toLowerCase();
+          const menteeName = String(p.mentee_display_name || p.mentee_username || "").toLowerCase();
+          const mentorEmail = String(p.mentor?.email || "").toLowerCase();
+          const menteeEmail = String(p.mentee?.email || "").toLowerCase();
+          const subjects = [
+            ...(p.match_details?.common_subjects || []),
+            ...(p.mentor?.subjects || []),
+            ...(p.mentee?.subjects || []),
+          ].map((s) => String(s).toLowerCase());
+          return (
+            mentorName.includes(q) ||
+            menteeName.includes(q) ||
+            mentorEmail.includes(q) ||
+            menteeEmail.includes(q) ||
+            subjects.some((s) => s.includes(q))
+          );
+        });
+      }
+
+      if (tierFilter !== "all") {
+        list = list.filter((p) => {
+          const b = getAdminEffectiveBreakdown(p);
+          const score = b.overall_percentage || Math.round((Number(p.score) || 0) * 100);
+          if (tierFilter === "exceptional") return score >= 85;
+          if (tierFilter === "strong") return score >= 75 && score < 85;
+          if (tierFilter === "good") return score >= 60 && score < 75;
+          if (tierFilter === "moderate") return score < 60;
+          return true;
+        });
+      }
+
+      list.sort((a, b) => {
+        const scoreA = Number(a.score || 0);
+        const scoreB = Number(b.score || 0);
+        if (sort === "score-desc") return scoreB - scoreA;
+        if (sort === "score-asc") return scoreA - scoreB;
+        if (sort === "recent") {
+          const dateA = new Date(a.accepted_at || a.created_at || 0).getTime();
+          const dateB = new Date(b.accepted_at || b.created_at || 0).getTime();
+          return dateB - dateA;
+        }
+        if (sort === "mentor") {
+          return String(a.mentor_display_name || a.mentor_username || "").localeCompare(
+            String(b.mentor_display_name || b.mentor_username || "")
+          );
+        }
+        if (sort === "mentee") {
+          return String(a.mentee_display_name || a.mentee_username || "").localeCompare(
+            String(b.mentee_display_name || b.mentee_username || "")
+          );
+        }
+        return 0;
+      });
+
+      return list;
+    }, [adminPairings, search, tierFilter, sort]);
+
+    function handleEmailMentor(email) {
+      if (!email) return;
+      window.open(gmailComposeUrl(email), "_blank", "noopener,noreferrer");
+    }
+
+    function handleEmailMentee(email) {
+      if (!email) return;
+      window.open(gmailComposeUrl(email), "_blank", "noopener,noreferrer");
+    }
+
+    function handleEmailBoth(email1, email2) {
+      const url = gmailComposeBothUrl(email1, email2);
+      if (!url) return;
+      window.open(url, "_blank", "noopener,noreferrer");
+    }
+
+    return (
+      <div className="admin-paired-page page-shell" data-testid="admin-paired-users-view">
+        <header className="kasandigan-header">
+          <div className="kasandigan-header-content">
+            <div className="kasandigan-badge">
+              <span className="kasandigan-badge-dot" />
+              <span>Academic Mentoring Unit • Matching Diagnostics</span>
+            </div>
+            <h1 className="kasandigan-title">Paired Users</h1>
+            <p className="kasandigan-subtitle">
+              Review active mentor–mentee partnerships and inspect Explainable AI (XAI) diagnostics detailing why they matched.
+            </p>
+          </div>
+          <div className="kasandigan-header-actions">
+            <div className="approvals-summary-pill">
+              <span className="approvals-summary-pill-count">{adminPairings.length}</span>
+              <span>{adminPairings.length === 1 ? "Pairing" : "Pairings"}</span>
+            </div>
+            <button
+              type="button"
+              className="btn kasandigan-btn-primary"
+              onClick={() => typeof loadAdminPairings === "function" && loadAdminPairings()}
+              disabled={adminPairingsLoading}
+              title="Refresh confirmed pairings"
+            >
+              <RefreshOutlined fontSize="small" className={adminPairingsLoading ? "loading-rotate" : ""} />
+              <span>{adminPairingsLoading ? "Refreshing…" : "Refresh"}</span>
+            </button>
+          </div>
+        </header>
+
+        {/* KPI Metrics Ribbon */}
+        <div className="admin-paired-stats-grid">
+          <div className="admin-paired-stat-card">
+            <div className="admin-paired-stat-header">
+              <span className="admin-paired-stat-label">Active Partnerships</span>
+              <span className="admin-paired-stat-icon neu-icon-pod is-official">
+                <HandshakeOutlined fontSize="small" />
+              </span>
+            </div>
+            <div className="admin-paired-stat-value">{adminPairings.length}</div>
+            <div className="admin-paired-stat-sub">Confirmed mentor–mentee pairs</div>
+          </div>
+
+          <div className="admin-paired-stat-card">
+            <div className="admin-paired-stat-header">
+              <span className="admin-paired-stat-label">Average Compatibility</span>
+              <span className="admin-paired-stat-icon neu-icon-pod is-high">
+                <AutoAwesomeOutlined fontSize="small" />
+              </span>
+            </div>
+            <div className="admin-paired-stat-value">{avgScore}%</div>
+            <div className="admin-paired-stat-sub">Across all active pairings</div>
+          </div>
+
+          <div className="admin-paired-stat-card">
+            <div className="admin-paired-stat-header">
+              <span className="admin-paired-stat-label">High / Strong Fit</span>
+              <span className="admin-paired-stat-icon neu-icon-pod is-strong">
+                <CheckCircleOutline fontSize="small" />
+              </span>
+            </div>
+            <div className="admin-paired-stat-value">{highFitCount}</div>
+            <div className="admin-paired-stat-sub">Pairings with ≥ 75% match</div>
+          </div>
+
+          <div className="admin-paired-stat-card">
+            <div className="admin-paired-stat-header">
+              <span className="admin-paired-stat-label">Matching Algorithm</span>
+              <span className="admin-paired-stat-icon neu-icon-pod is-algo">
+                <GroupsOutlined fontSize="small" />
+              </span>
+            </div>
+            <div className="admin-paired-stat-value" style={{ fontSize: "1.1rem", fontWeight: 700 }}>
+              XGBoost ML
+            </div>
+            <div className="admin-paired-stat-sub">4-Pillar Explainable Diagnostics</div>
+          </div>
+        </div>
+
+        {/* Search & Filter Toolbar */}
+        <div className="admin-paired-toolbar">
+          <div className="admin-paired-search-field">
+            <SearchOutlined className="admin-paired-search-icon" fontSize="small" />
+            <input
+              type="search"
+              className="admin-paired-search-input"
+              placeholder="Search by mentor, mentee, subject, or email…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              aria-label="Search paired users"
+            />
+          </div>
+
+          <div className="admin-paired-filters-wrap">
+            <select
+              className="admin-paired-select"
+              value={tierFilter}
+              onChange={(e) => setTierFilter(e.target.value)}
+              aria-label="Filter by fit tier"
+            >
+              <option value="all">All Match Tiers</option>
+              <option value="exceptional">Exceptional Fit (≥85%)</option>
+              <option value="strong">Strong Fit (75–84%)</option>
+              <option value="good">Good Fit (60–74%)</option>
+              <option value="moderate">Moderate Fit (&lt;60%)</option>
+            </select>
+
+            <select
+              className="admin-paired-select"
+              value={sort}
+              onChange={(e) => setSort(e.target.value)}
+              aria-label="Sort pairings"
+            >
+              <option value="score-desc">Compatibility (High to Low)</option>
+              <option value="score-asc">Compatibility (Low to High)</option>
+              <option value="recent">Most Recently Paired</option>
+              <option value="mentor">Mentor Name (A–Z)</option>
+              <option value="mentee">Mentee Name (A–Z)</option>
+            </select>
+          </div>
+        </div>
+
+        {/* Pairings List */}
+        {adminPairingsLoading && adminPairings.length === 0 ? (
+          <div className="card text-center neu-card" style={{ padding: 48, borderRadius: 20 }}>
+            <p>Loading confirmed pairings…</p>
+          </div>
+        ) : filteredPairings.length === 0 ? (
+          <div className="card text-center neu-card" style={{ padding: "48px 24px", borderRadius: 20 }}>
+            <div className="neu-empty-icon-pod" style={{ margin: "0 auto 16px", width: 64, height: 64, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(14, 165, 233, 0.1)", color: "#0ea5e9" }}>
+              <HandshakeOutlined fontSize="large" />
+            </div>
+            <h2 className="section-title" style={{ fontSize: "1.2rem", marginBottom: 8 }}>
+              {adminPairings.length === 0 ? "No Confirmed Pairings Yet" : "No Matching Pairings Found"}
+            </h2>
+            <p className="page-subtitle" style={{ maxWidth: 520, margin: "0 auto" }}>
+              {adminPairings.length === 0
+                ? "When mentees request mentors and mentors accept pairing invitations, their confirmed partnerships and Explainable AI compatibility diagnostics will appear here."
+                : "No active pairings match your search or filter criteria. Try clearing the filter."}
+            </p>
+          </div>
+        ) : (
+          <div className="admin-paired-list" style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+            {filteredPairings.map((pair) => (
+              <AdminPairingCard
+                key={pair.id}
+                pair={pair}
+                onEmailMentor={handleEmailMentor}
+                onEmailMentee={handleEmailMentee}
+                onEmailBoth={handleEmailBoth}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
+
   function MatchingPage() {
     const ctx = useContext(AppContext);
     if (!ctx || !ctx.user) return null;
@@ -366,10 +939,13 @@ import GroupsOutlined from "@mui/icons-material/GroupsOutlined";
       loadMenteeRecommendations,
       chooseMentor,
       chosenMentorId,
+      pendingMentorIds = [],
       mentorRequestsLoading,
       mentorRequests,
       loadMentorRequests,
       myMentor,
+      myMentors = [],
+      menteePairingsCount = 0,
       loadMyMentor,
       menteeMatching,
       menteeRecUpdating,
@@ -382,18 +958,7 @@ import GroupsOutlined from "@mui/icons-material/GroupsOutlined";
       user?.is_staff || String(user?.role || "").toLowerCase() === "staff"
     );
     if (isStaff) {
-      return (
-        <div className="card matching-page page-shell">
-          <header className="kasandigan-header">
-            <div className="kasandigan-header-content">
-              <h1 className="page-title kasandigan-title">Access restricted</h1>
-              <p className="page-subtitle kasandigan-subtitle">
-                Matching is only available for mentors and mentees.
-              </p>
-            </div>
-          </header>
-        </div>
-      );
+      return <AdminPairedUsersView />;
     }
     const Spinner = LoadingSpinner;
     const MatchingLoading = MatchingLoadingAnimation;
@@ -406,12 +971,19 @@ import GroupsOutlined from "@mui/icons-material/GroupsOutlined";
     const [matchSubjectFilter, setMatchSubjectFilter] = useState("");
     const [matchAvailabilityFilter, setMatchAvailabilityFilter] = useState("");
 
-    const isMentee = String(user?.role || "").toLowerCase() === "mentee";
+    const isMentee =
+      String(user?.role || "").toLowerCase() === "mentee" ||
+      String(user?.role || "").toLowerCase() === "both";
     const menteeQuestionnaireCompleted = !!(
       user.mentee_questionnaire_completed ?? user.questionnaire_completed
     );
 
-    // We currently just display the mentor's own availability ranges.
+    const activePairingsCount = Math.max(
+      (myMentors && myMentors.length) || (myMentor ? 1 : 0),
+      menteePairingsCount || 0,
+      menteeRecMeta?.paired_mentors_count || 0
+    );
+    const isLimitReached = isMentee && activePairingsCount >= 2;
 
     const sortedMenteeRecs = (menteeRecommendations || [])
       .slice()
@@ -428,8 +1000,18 @@ import GroupsOutlined from "@mui/icons-material/GroupsOutlined";
       });
 
     const visibleMenteeRecs = useMemo(() => {
+      const activeMentorIds = new Set(
+        [
+          myMentor?.id,
+          myMentor?.mentor_id,
+          myMentor?.user_id,
+          ...(myMentors || []).flatMap((m) => [m.id, m.mentor_id, m.user_id]),
+        ].filter(Boolean).map(Number)
+      );
       return sortedMenteeRecs.filter((match) => {
         if (myMentor && isSameMentorMatch(match, myMentor)) return false;
+        if (Array.isArray(myMentors) && myMentors.some((m) => isSameMentorMatch(match, m))) return false;
+        if (activeMentorIds.has(Number(match.mentor_id))) return false;
         if (
           chosenMentorId != null &&
           Number(match.mentor_id) === Number(chosenMentorId)
@@ -438,7 +1020,7 @@ import GroupsOutlined from "@mui/icons-material/GroupsOutlined";
         }
         return true;
       });
-    }, [sortedMenteeRecs, myMentor, chosenMentorId]);
+    }, [sortedMenteeRecs, myMentor, myMentors, chosenMentorId]);
 
     const matchSubjectOptions = useMemo(() => {
       const subjects = new Set();
@@ -621,6 +1203,40 @@ import GroupsOutlined from "@mui/icons-material/GroupsOutlined";
                 : "View your official mentees. New mentee requests are auto-accepted when you have available slots."}
             </p>
           </div>
+          {isMentee && (
+            <div className="kasandigan-header-actions" style={{ display: "flex", alignItems: "center" }}>
+              <div
+                className={`neu-badge ${
+                  isLimitReached
+                    ? "neu-badge--high"
+                    : activePairingsCount === 1
+                    ? "neu-badge--medium"
+                    : "neu-badge--neutral"
+                }`}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  padding: "8px 16px",
+                  borderRadius: "24px",
+                  fontSize: "0.875rem",
+                  fontWeight: 600,
+                }}
+              >
+                <span
+                  style={{
+                    width: 9,
+                    height: 9,
+                    borderRadius: "50%",
+                    backgroundColor: isLimitReached ? "#ef4444" : activePairingsCount === 1 ? "#3b82f6" : "#10b981",
+                  }}
+                />
+                {isLimitReached
+                  ? `Mentor Limit Reached (${activePairingsCount}/2)`
+                  : `Mentors: ${activePairingsCount}/2 Slots`}
+              </div>
+            </div>
+          )}
         </header>
 
 
@@ -764,9 +1380,10 @@ import GroupsOutlined from "@mui/icons-material/GroupsOutlined";
             return null;
           })()}
 
-        {isMentee && myMentor ? (
+        {isMentee && (myMentor || (myMentors && myMentors.length > 0)) ? (
           <OfficialMentorSpotlight
             myMentor={myMentor}
+            myMentors={myMentors}
             menteeMatching={menteeMatching}
           />
         ) : null}
@@ -779,7 +1396,7 @@ import GroupsOutlined from "@mui/icons-material/GroupsOutlined";
             }
 
             if (visibleMenteeRecs.length === 0) {
-              if (myMentor) {
+              if (myMentor || (myMentors && myMentors.length > 0)) {
                 return null;
               }
               const emptyMessage =
@@ -851,6 +1468,24 @@ import GroupsOutlined from "@mui/icons-material/GroupsOutlined";
                     </div>
                   ) : null}
                 </div>
+
+                {isLimitReached && (
+                  <div className="mentee-limit-banner" role="alert">
+                    <div className="mentee-limit-icon">
+                      <InfoOutlined fontSize="medium" />
+                    </div>
+                    <div className="mentee-limit-text">
+                      <div className="mentee-limit-title">
+                        Mentor Limit Reached ({activePairingsCount}/2 Mentors)
+                      </div>
+                      <div className="mentee-limit-desc">
+                        Under AMU guidelines, each mentee is limited to a maximum of 2 mentors concurrently. Because you already have {activePairingsCount} active mentorships, new pairing requests are disabled.
+                      </div>
+                    </div>
+                    <span className="neu-badge neu-badge--high">2/2 Limit Reached</span>
+                  </div>
+                )}
+
                 <MentorMatchFilterBar
                   search={matchSearch}
                   onSearchChange={setMatchSearch}
@@ -873,8 +1508,11 @@ import GroupsOutlined from "@mui/icons-material/GroupsOutlined";
                         key={match.mentor_id + "-" + idx}
                         match={match}
                         myMentor={myMentor}
+                        myMentors={myMentors}
                         chosenMentorId={chosenMentorId}
                         unavailableMentorIds={unavailableMentorIds}
+                        isLimitReached={isLimitReached}
+                        isPending={pendingMentorIds.includes(match.mentor_id) || !!match.is_pending}
                         onRequestPairing={handleChooseMentor}
                         onViewProfile={openMentorProfileInNewTab}
                         menteeMatching={menteeMatching}
@@ -903,6 +1541,21 @@ import GroupsOutlined from "@mui/icons-material/GroupsOutlined";
                 Scroll to explore additional mentors that fit your subjects and
                 topics.
               </p>
+              {isLimitReached && (
+                <div className="mentee-limit-banner" style={{ margin: "12px 0 16px" }} role="alert">
+                  <div className="mentee-limit-icon">
+                    <InfoOutlined fontSize="small" />
+                  </div>
+                  <div className="mentee-limit-text">
+                    <div className="mentee-limit-title" style={{ fontSize: "0.9rem" }}>
+                      Mentor limit reached ({activePairingsCount}/2)
+                    </div>
+                    <div className="mentee-limit-desc" style={{ fontSize: "0.8rem" }}>
+                      Pairing requests are disabled because you have reached the 2-mentor capacity limit.
+                    </div>
+                  </div>
+                </div>
+              )}
               <div className="matching-modal-grid">
                 {filteredMenteeRecs.length === 0 && !menteeRecLoading && (
                   <p className="muted match-filter-empty">
@@ -914,11 +1567,15 @@ import GroupsOutlined from "@mui/icons-material/GroupsOutlined";
                     key={"modal-" + match.mentor_id + "-" + idx}
                     match={match}
                     myMentor={myMentor}
+                    myMentors={myMentors}
                     chosenMentorId={chosenMentorId}
                     unavailableMentorIds={unavailableMentorIds}
+                    isLimitReached={isLimitReached}
+                    isPending={pendingMentorIds.includes(match.mentor_id) || !!match.is_pending}
                     compact
                     menteeMatching={menteeMatching}
                     onRequestPairing={(mentorId) => {
+                      if (isLimitReached) return;
                       handleChooseMentor(mentorId);
                       setShowMoreMentors(false);
                     }}
@@ -965,7 +1622,10 @@ import GroupsOutlined from "@mui/icons-material/GroupsOutlined";
                 );
                 const isOfficialPair =
                   (myMentor && isSameMentorMatch(match, myMentor)) ||
+                  (Array.isArray(myMentors) && myMentors.some((m) => isSameMentorMatch(match, m))) ||
                   chosenMentorId === match.mentor_id;
+                const isPending =
+                  pendingMentorIds.includes(match.mentor_id) || !!match.is_pending;
                 const isNotAvailable = unavailableMentorIds.includes(
                   match.mentor_id,
                 );
@@ -1071,16 +1731,21 @@ import GroupsOutlined from "@mui/icons-material/GroupsOutlined";
                         type="button"
                         className="btn small"
                         onClick={() => {
+                          if (isLimitReached || isPending) return;
                           handleChooseMentor(match.mentor_id);
                           setSelectedMentorDetails(null);
                         }}
-                        disabled={isOfficialPair || isNotAvailable}
+                        disabled={isOfficialPair || isPending || isNotAvailable || isLimitReached}
                       >
                         {isOfficialPair
                           ? "Official Pair"
-                          : isNotAvailable
-                            ? "Not Available"
-                            : "Choose this mentor"}
+                          : isPending
+                            ? "Request Sent"
+                            : isNotAvailable
+                              ? "Not Available"
+                              : isLimitReached
+                                ? "Limit Reached (2/2)"
+                                : "Choose this mentor"}
                       </button>
                     </div>
                   </>
@@ -1096,4 +1761,5 @@ import GroupsOutlined from "@mui/icons-material/GroupsOutlined";
   window.DashboardApp = window.DashboardApp || {};
   window.DashboardApp.Pages = window.DashboardApp.Pages || {};
   window.DashboardApp.Pages.matching = MatchingPage;
+  window.DashboardApp.AdminPairedUsersView = AdminPairedUsersView;
 })();

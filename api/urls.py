@@ -78,7 +78,7 @@ from .controllers.drive_controller import (
     drive_list,
     drive_connected,
 )
-from .controllers.activity_controller import activity_logs_list
+from .controllers.activity_controller import activity_logs_list, activity_logs_export
 from .controllers.search_controller import search, user_public_profile
 from .controllers.posts_controller import (
     posts_list,
@@ -207,6 +207,7 @@ urlpatterns = [
     path('drive/upload/', drive_upload, name='api-drive-upload'),
     path('drive/files/', drive_list, name='api-drive-list'),
     path('activity-logs/', activity_logs_list, name='api-activity-logs'),
+    path('activity-logs/export/', activity_logs_export, name='api-activity-logs-export'),
     path('search/', search, name='api-search'),
     path('users/<int:user_id>/profile/', user_public_profile, name='api-user-public-profile'),
     path('posts/', posts_list, name='api-posts-list'),

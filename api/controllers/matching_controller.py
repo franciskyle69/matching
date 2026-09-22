@@ -1,8 +1,8 @@
+from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.core.mail import send_mail
-from django.conf import settings
 from django.db import transaction
-from django.db.models import Count
+from django.db.models import Count, Q
 from django.http import JsonResponse
 from django.views.decorators.http import require_GET, require_http_methods
 
@@ -305,6 +305,13 @@ def mentee_recommendations(request):
         int(row["mentor_id"]): int(row["total"] or 0) for row in accepted_rows
     }
     paired_mentor_ids = _paired_mentor_ids_for_mentee(mentee_profile)
+    pending_mentor_ids = list(
+        MenteeMentorRequest.objects.filter(
+            mentee=mentee_profile,
+            accepted=False,
+        ).values_list("mentor_id", flat=True)
+    )
+    pending_mentor_ids_set = set(pending_mentor_ids)
     data = []
 
     for mentor, score in recommendations:
@@ -313,6 +320,7 @@ def mentee_recommendations(request):
         capacity = max(int(getattr(mentor, "capacity", 0) or 0), 0)
         slots_left = max(capacity - int(accepted_counts.get(mentor.id, 0)), 0)
         match_details = _build_match_details(mentee_profile, mentor)
+        is_pending = mentor.id in pending_mentor_ids_set
         data.append(
             {
                 "mentor_id": mentor.id,
@@ -321,6 +329,7 @@ def mentee_recommendations(request):
                 "mentor": _serialize_mentor_for_matching(mentor, request),
                 "slots_left": slots_left,
                 "is_available": slots_left > 0,
+                "is_pending": is_pending,
                 "mentee_id": mentee_profile.id,
                 "mentee_username": mentee_profile.user.username,
                 "mentee_display_name": get_user_display_name(mentee_profile.user) or mentee_profile.user.username,
@@ -335,11 +344,18 @@ def mentee_recommendations(request):
         "mentee_recommendations",
         extra={"count": len(data), "user_id": request.user.id},
     )
+    paired_mentors_count = len(paired_mentor_ids)
+    max_mentors_limit = 2
+    can_request_pairing = paired_mentors_count < max_mentors_limit
     payload = {
         "count": len(data),
         "results": data,
         "from_cache": bool(filter_meta.get("from_cache")),
         "elapsed_ms": int(filter_meta.get("elapsed_ms") or 0),
+        "paired_mentors_count": paired_mentors_count,
+        "max_mentors_limit": max_mentors_limit,
+        "can_request_pairing": can_request_pairing,
+        "pending_mentor_ids": pending_mentor_ids,
     }
     if len(data) == 0:
         empty_reason = filter_meta.get("empty_reason")
@@ -354,7 +370,8 @@ def mentee_recommendations(request):
 def mentee_choose_mentor(request):
     """
     Allow a mentee to choose a mentor from their recommendations.
-    Requests are auto-accepted unless the mentor has reached mentee capacity.
+    Requests are auto-accepted unless the mentor has reached mentee capacity,
+    or the mentee has reached their maximum limit of 2 mentors.
     """
     mentee_profile, error = _require_mentee(request)
     if error:
@@ -406,16 +423,14 @@ def mentee_choose_mentor(request):
             mentee=mentee_profile,
             accepted=True,
         ).exclude(mentor=mentor).count()
-        if active_mentee_pairings >= 3:
+        if active_mentee_pairings >= 2:
             return JsonResponse(
                 {
-                    "error": "You have reached the maximum allowed mentor pairings (3).",
+                    "error": "You have reached the maximum allowed mentor pairings (2). Mentees are limited to a maximum of 2 mentors.",
                     "code": "mentee_max_pairings_reached",
                 },
                 status=409,
             )
-
-        from django.utils import timezone
 
         req, _created = MenteeMentorRequest.objects.get_or_create(
             mentee=mentee_profile,
@@ -429,61 +444,58 @@ def mentee_choose_mentor(request):
                 "accepted_at": req.accepted_at.isoformat() if req.accepted_at else None,
             })
 
-        if not req.accepted:
-            req.accepted = True
-            req.accepted_at = timezone.now()
-            req.save(update_fields=["accepted", "accepted_at"])
+        if not _created and not req.accepted:
+            return JsonResponse({
+                "status": "ok",
+                "message": "Pairing request already sent to mentor. Waiting for mentor acceptance.",
+                "accepted": False,
+                "request_sent": True,
+            })
+
+        if _created:
+            req.accepted = False
+            req.save(update_fields=["accepted"])
 
     mentee_name = get_user_display_name(mentee_profile.user) or mentee_profile.user.username
     mentor_name = get_user_display_name(mentor.user) or mentor.user.username
 
     Notification.objects.create(
         user=mentor.user,
-        message=f"{mentee_name} has chosen you as a mentor. The pairing is now active.",
-        action_tab="matching",
+        message=f"{mentee_name} has requested you as a mentor. Please review and accept the pairing request.",
+        action_tab="mentees",
     )
     Notification.objects.create(
         user=mentee_profile.user,
-        message=f"You are now paired with {mentor_name}. Open Matching to view your mentor.",
+        message=f"Pairing request sent to {mentor_name}. Waiting for mentor acceptance.",
         action_tab="matching",
     )
-    _notify_coordinators_of_match(mentee_name, mentor_name)
 
     _send_pairing_email(
         getattr(mentor.user, "email", "") or "",
-        "New mentee pairing confirmed",
+        "New mentee pairing request",
         (
             f"Hi {mentor_name},\n\n"
-            f"{mentee_name} has been paired with you as a mentee.\n\n"
-            "Open Matching in the dashboard to continue."
-        ),
-    )
-    _send_pairing_email(
-        getattr(mentee_profile.user, "email", "") or "",
-        "Mentor pairing confirmed",
-        (
-            f"Hi {mentee_name},\n\n"
-            f"You are now paired with {mentor_name}.\n\n"
-            "Open Matching in the dashboard to view your mentor and stay in touch."
+            f"{mentee_name} has requested you as a mentor.\n\n"
+            "Open Mentees in your dashboard to review and accept the pairing request."
         ),
     )
 
     audit_log(request.user, "create", "mentee_mentor_request", req.id)
     logger.info(
-        "mentee_chose_mentor_auto_accepted",
+        "mentee_pairing_request_sent",
         extra={
             "mentee_id": mentee_profile.id,
             "mentor_id": mentor.id,
-            "accepted_at": req.accepted_at.isoformat() if req.accepted_at else None,
+            "accepted": False,
         },
     )
-    return JsonResponse(
-        {
-            "status": "ok",
-            "accepted": True,
-            "accepted_at": req.accepted_at.isoformat() if req.accepted_at else None,
-        }
-    )
+
+    return JsonResponse({
+        "status": "ok",
+        "message": "Pairing request sent to mentor. Waiting for mentor acceptance.",
+        "accepted": False,
+        "request_sent": True,
+    })
 
 
 @login_required
@@ -513,17 +525,6 @@ def mentor_requests(request):
         )
         accepted_count = sum(1 for r in requests_list if r.accepted)
         capacity = max(int(getattr(mentor_locked, "capacity", 0) or 0), 0)
-        for r in requests_list:
-            if r.accepted:
-                continue
-            if accepted_count >= capacity:
-                continue
-            from django.utils import timezone
-
-            r.accepted = True
-            r.accepted_at = timezone.now()
-            r.save(update_fields=["accepted", "accepted_at"])
-            accepted_count += 1
 
     data = []
     for r in requests_list:
@@ -531,7 +532,7 @@ def mentor_requests(request):
         subjects = e.subjects if isinstance(e.subjects, list) else ([e.subjects] if e.subjects else [])
         topics = e.topics if isinstance(e.topics, list) else ([e.topics] if e.topics else [])
         slots_left = max(capacity - accepted_count, 0)
-        status = "official" if r.accepted else "not_available"
+        status = "official" if r.accepted else "pending"
         mentee_avatar = ""
         if getattr(e, "avatar_url", None):
             from api.views.helpers import _avatar_url
@@ -573,14 +574,127 @@ def mentor_requests(request):
 @login_required
 @require_http_methods(["POST"])
 def mentor_accept_mentee(request):
-    """Legacy endpoint retained for compatibility. Manual acceptance is disabled."""
-    return JsonResponse(
-        {
-            "error": "Manual acceptance is disabled. Requests are auto-accepted when a mentor has available slots.",
-            "code": "manual_accept_disabled",
-        },
-        status=410,
+    """Mentor accepts a pending mentee pairing request."""
+    mentor_profile = getattr(request.user, "mentor_profile", None)
+    if not mentor_profile:
+        return JsonResponse({"error": "Mentor profile required."}, status=403)
+    approval_error = _require_coordinator_approval(request)
+    if approval_error:
+        return approval_error
+    if not get_mentor_approved(mentor_profile) and not request.user.is_staff:
+        return JsonResponse(
+            {"error": "Mentor account pending approval."},
+            status=403,
+        )
+    payload = _get_payload(request)
+    mentee_id = _get_int(payload, "mentee_id")
+    if not mentee_id:
+        return JsonResponse({"error": "mentee_id is required."}, status=400)
+
+    from django.utils import timezone
+
+    with transaction.atomic():
+        mentor_locked = MentorProfile.objects.select_for_update().filter(id=mentor_profile.id).first()
+        if not mentor_locked:
+            return JsonResponse({"error": "Mentor profile required."}, status=403)
+
+        capacity = max(int(getattr(mentor_locked, "capacity", 0) or 0), 0)
+        accepted_count = MenteeMentorRequest.objects.filter(
+            mentor=mentor_locked,
+            accepted=True,
+        ).count()
+        if accepted_count >= capacity:
+            return JsonResponse(
+                {
+                    "error": "You have reached your maximum mentee capacity.",
+                    "code": "mentor_capacity_full",
+                },
+                status=409,
+            )
+
+        req = (
+            MenteeMentorRequest.objects.select_for_update()
+            .select_related("mentee", "mentee__user")
+            .filter(mentor=mentor_locked)
+            .filter(Q(mentee_id=mentee_id) | Q(mentee__user_id=mentee_id))
+            .first()
+        )
+        if not req:
+            return JsonResponse({"error": "Pairing request not found."}, status=404)
+
+        if req.accepted:
+            return JsonResponse({
+                "status": "ok",
+                "message": "Mentee already accepted.",
+                "accepted": True,
+            })
+
+        active_mentee_pairings = MenteeMentorRequest.objects.filter(
+            mentee=req.mentee,
+            accepted=True,
+        ).exclude(mentor=mentor_locked).count()
+        if active_mentee_pairings >= 2:
+            return JsonResponse(
+                {
+                    "error": "This mentee has reached their maximum allowed mentor pairings (2).",
+                    "code": "mentee_max_pairings_reached",
+                },
+                status=409,
+            )
+
+        req.accepted = True
+        req.accepted_at = timezone.now()
+        req.save(update_fields=["accepted", "accepted_at"])
+
+    mentee_name = get_user_display_name(req.mentee.user) or req.mentee.user.username
+    mentor_name = get_user_display_name(mentor_locked.user) or mentor_locked.user.username
+
+    Notification.objects.create(
+        user=req.mentee.user,
+        message=f"{mentor_name} has accepted your pairing request! You are now paired.",
+        action_tab="matching",
     )
+    Notification.objects.create(
+        user=mentor_locked.user,
+        message=f"You have accepted {mentee_name} as your mentee.",
+        action_tab="mentees",
+    )
+    _notify_coordinators_of_match(mentee_name, mentor_name)
+
+    _send_pairing_email(
+        getattr(mentor_locked.user, "email", "") or "",
+        "Mentee pairing accepted",
+        (
+            f"Hi {mentor_name},\n\n"
+            f"You accepted {mentee_name} as your mentee.\n\n"
+            "Open your dashboard to view your mentees."
+        ),
+    )
+    _send_pairing_email(
+        getattr(req.mentee.user, "email", "") or "",
+        "Mentor pairing accepted",
+        (
+            f"Hi {mentee_name},\n\n"
+            f"{mentor_name} has accepted your pairing request! You are now officially paired.\n\n"
+            "Open Matching in the dashboard to connect."
+        ),
+    )
+
+    audit_log(request.user, "accept", "mentee_mentor_request", req.id)
+    logger.info(
+        "mentor_accepted_mentee",
+        extra={
+            "mentor_id": mentor_locked.id,
+            "mentee_id": req.mentee.id,
+            "accepted_at": req.accepted_at.isoformat(),
+        },
+    )
+
+    return JsonResponse({
+        "status": "ok",
+        "message": "Mentee accepted successfully.",
+        "accepted": True,
+    })
 
 
 @login_required
@@ -612,29 +726,41 @@ def mentor_profile_by_user_id(request, user_id):
 @login_required
 @require_GET
 def my_mentor(request):
-    """For mentees: return the mentor who has accepted them (official mentor), if any."""
+    """For mentees: return the mentors who have accepted them (official mentors, max 2)."""
     mentee_profile, error = _require_mentee(request)
     if error:
         return error
     approval_error = _require_coordinator_approval(request)
     if approval_error:
         return approval_error
-    req = (
+    reqs = list(
         MenteeMentorRequest.objects.filter(mentee=mentee_profile, accepted=True)
         .select_related("mentor", "mentor__user", "mentee")
         .prefetch_related("mentor__competencies", "mentee__competencies")
         .order_by("-accepted_at")
-        .first()
     )
-    if not req:
-        return JsonResponse({"mentor": None})
-    m = req.mentor
-    mentor_payload = _serialize_mentor_for_matching(m, request)
-    mentor_payload["accepted_at"] = req.accepted_at.isoformat()
-    mentor_payload["match_details"] = _build_match_details(mentee_profile, m)
-    mentor_payload["score_breakdown"] = mentor_payload["match_details"].get("score_breakdown")
-    mentor_payload["score"] = round(float(compute_score(m, mentee_profile)), 4)
-    return JsonResponse({"mentor": mentor_payload})
+    if not reqs:
+        return JsonResponse({"mentor": None, "mentors": [], "paired_count": 0, "max_limit": 2})
+
+    mentors_payload = []
+    for req in reqs:
+        m = req.mentor
+        mp = _serialize_mentor_for_matching(m, request)
+        mp["accepted_at"] = req.accepted_at.isoformat() if req.accepted_at else None
+        mp["match_details"] = _build_match_details(mentee_profile, m)
+        mp["score_breakdown"] = mp["match_details"].get("score_breakdown")
+        try:
+            mp["score"] = round(float(compute_score(m, mentee_profile)), 4)
+        except Exception:
+            mp["score"] = 0.85
+        mentors_payload.append(mp)
+
+    return JsonResponse({
+        "mentor": mentors_payload[0] if mentors_payload else None,
+        "mentors": mentors_payload,
+        "paired_count": len(mentors_payload),
+        "max_limit": 2,
+    })
 
 
 @login_required

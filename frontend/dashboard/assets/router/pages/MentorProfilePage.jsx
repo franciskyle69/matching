@@ -15,6 +15,7 @@
       setActiveTab,
       chooseMentor,
       chosenMentorId,
+      pendingMentorIds = [],
       myMentor,
       menteeMatching,
     } = ctx;
@@ -75,6 +76,7 @@
             variant="detail"
             kind="mentor"
             isOfficial={!!isOfficial}
+            isPending={pendingMentorIds.includes(match.mentor_id) || !!match.is_pending}
             menteeMatching={menteeMatching}
             slotsLeft={match.slots_left}
             savedId={mentor.user_id || match.mentor_id}

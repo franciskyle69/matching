@@ -642,6 +642,12 @@
               prominent
               className="sp-mentor-type-badge"
             />
+          ) : isMentee && MentorRoleBadge ? (
+            <MentorRoleBadge
+              role="mentee"
+              prominent
+              className="sp-mentor-type-badge"
+            />
           ) : null}
           <h1 className="sp-profile-name">{user.display_name || user.full_name || user.username}</h1>
           <p className="sp-profile-subtitle">
@@ -715,7 +721,7 @@
 
   /* ── Viewed Mentor Profile (from matching page) ── */
 
-  function ViewedMentorProfile({ match, onBack, chooseMentor, chosenMentorId, isMentee }) {
+  function ViewedMentorProfile({ match, onBack, chooseMentor, chosenMentorId, isMentee, pendingMentorIds = [] }) {
     const mentor = match.mentor || {};
     const d = match.match_details || {};
     const mentorSubjects = mentor.subjects?.length ? mentor.subjects : d.mentor_subjects || [];
@@ -752,11 +758,21 @@
               <span className="sp-profile-email">{mentorEmail || "Email not available"}</span>
             </div>
             <div className="sp-profile-actions">
-              {isMentee && typeof chooseMentor === "function" && match.mentor_id && (
-                <button className="btn small sp-action-full" onClick={() => chooseMentor(match.mentor_id)} disabled={chosenMentorId === match.mentor_id}>
-                  {chosenMentorId === match.mentor_id ? "Requested" : "Request this mentor"}
-                </button>
-              )}
+              {isMentee && typeof chooseMentor === "function" && match.mentor_id && (() => {
+                const isPending = (pendingMentorIds || []).includes(match.mentor_id) || !!match.is_pending;
+                return (
+                  <button
+                    className="btn small sp-action-full"
+                    onClick={() => {
+                      if (isPending) return;
+                      chooseMentor(match.mentor_id);
+                    }}
+                    disabled={isPending || chosenMentorId === match.mentor_id}
+                  >
+                    {isPending ? "Request Sent" : chosenMentorId === match.mentor_id ? "Requested" : "Request this mentor"}
+                  </button>
+                );
+              })()}
               <button className="btn secondary small sp-action-full" onClick={onBack}>Back to Matching</button>
             </div>
             <div className="sp-sidebar-card">
@@ -1039,7 +1055,7 @@
     const {
       user, menteeProfile, mentorProfile, menteeMatching,
       viewedMentorProfile, setViewedMentorProfile, mentorProfileHashId, setMentorProfileHashId,
-      setActiveTab, chooseMentor, chosenMentorId, loadMe,
+      setActiveTab, chooseMentor, chosenMentorId, pendingMentorIds = [], loadMe,
       viewedUserProfile, setViewedUserProfile,
       setPostsFeed,
     } = ctx;
@@ -1209,7 +1225,7 @@
     }
 
     if (viewedMentorProfile) {
-      return <ViewedMentorProfile match={viewedMentorProfile} isMentee={isMentee} chooseMentor={chooseMentor} chosenMentorId={chosenMentorId} onBack={() => { setViewedMentorProfile(null); setMentorProfileHashId && setMentorProfileHashId(null); }} />;
+      return <ViewedMentorProfile match={viewedMentorProfile} isMentee={isMentee} chooseMentor={chooseMentor} chosenMentorId={chosenMentorId} pendingMentorIds={pendingMentorIds} onBack={() => { setViewedMentorProfile(null); setMentorProfileHashId && setMentorProfileHashId(null); }} />;
     }
 
     const avatarUrl = user.avatar_url || menteeProfile?.avatar_url || mentorProfile?.avatar_url;

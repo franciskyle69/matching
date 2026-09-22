@@ -8,6 +8,7 @@ import {
   Typography,
 } from "@mui/material";
 import RegisterSuccess from "../../../src/components/RegisterSuccess.jsx";
+import VerifyEmail from "../../../src/components/VerifyEmail.jsx";
 
 (function () {
   "use strict";
@@ -1641,167 +1642,24 @@ import RegisterSuccess from "../../../src/components/RegisterSuccess.jsx";
   }
 
   function VerifyEmailPage() {
-    const [loading, setLoading] = useState(true);
-    const [success, setSuccess] = useState(false);
-    const [message, setMessage] = useState("");
-    const [errorMessage, setErrorMessage] = useState("");
-
-    useEffect(() => {
-      const pathname = window.location.pathname || "";
-      const hash = window.location.hash || "";
-
-      let uid = "";
-      let tok = "";
-
-      // Match path: /verify-email/:uid/:token (optional trailing slash)
-      const pathMatch = pathname.match(/\/verify-email\/([^/?#]+)\/([^/?#]+)/);
-      if (pathMatch) {
-        uid = pathMatch[1];
-        tok = pathMatch[2];
-      }
-
-      if (!uid || !tok) {
-        const hashMatch = hash.match(/verify-email\/([^/?#]+)\/([^/?#]+)/);
-        if (hashMatch) {
-          uid = hashMatch[1];
-          tok = hashMatch[2];
-        }
-      }
-
-      if (!uid || !tok) {
-        const searchParams = new URLSearchParams(window.location.search || "");
-        const hashQuery = hash.includes("?") ? new URLSearchParams(hash.split("?")[1]) : null;
-        uid = uid || searchParams.get("uid") || searchParams.get("uidb64") || (hashQuery ? hashQuery.get("uid") || hashQuery.get("uidb64") : "");
-        tok = tok || searchParams.get("token") || (hashQuery ? hashQuery.get("token") : "");
-      }
-
-      if (uid) uid = decodeURIComponent(uid).replace(/\/+$/, "").trim();
-      if (tok) tok = decodeURIComponent(tok).replace(/\/+$/, "").trim();
-
-      if (!uid || !tok) {
-        setLoading(false);
-        setErrorMessage("Invalid or missing email verification parameters.");
-        return;
-      }
-
-      const payload = JSON.stringify({ uid: uid, uidb64: uid, token: tok });
-      const headers = { "Content-Type": "application/json" };
-      const csrfCookie = typeof document !== "undefined"
-        ? (document.cookie.match(/(?:^|; )csrftoken=([^;]*)/) || [])[1]
-        : null;
-      if (csrfCookie) {
-        headers["X-CSRFToken"] = decodeURIComponent(csrfCookie);
-      }
-
-      const executeVerification = async () => {
-        try {
-          let response = await fetch("/api/verify-email/", {
-            method: "POST",
-            headers,
-            body: payload,
-          });
-
-          // Fallback to /api/auth/verify-email/ if 404
-          if (response.status === 404) {
-            response = await fetch("/api/auth/verify-email/", {
-              method: "POST",
-              headers,
-              body: payload,
-            });
-          }
-
-          const data = await response.json().catch(() => ({}));
-          setLoading(false);
-
-          if (response.ok) {
-            setSuccess(true);
-            setMessage(data?.message || "Email verified successfully! You can now log in.");
-          } else {
-            setSuccess(false);
-            setErrorMessage(data?.error || data?.detail || "Verification token is invalid or has expired.");
-          }
-        } catch (err) {
-          console.error("Email verification error:", err);
-          setLoading(false);
-          setSuccess(false);
-          setErrorMessage("Network error verifying email. Please try again later.");
-        }
-      };
-
-      executeVerification();
-    }, []);
-
-    const goToLogin = () => {
-      window.location.href = "/app/#signin";
-    };
-
     return (
-      <div className="auth-page">
-        <div className="auth-card" style={{ maxWidth: "540px", margin: "40px auto", padding: "32px", textAlign: "center" }}>
-          <h2 style={{ color: "#002855", marginBottom: "16px" }}>BukSU IT PeerLink</h2>
-          {loading && (
-            <div style={{ padding: "32px 0" }}>
-              <div className="spinner" style={{ margin: "0 auto 16px" }} />
-              <p style={{ fontWeight: 600, fontSize: "16px" }}>Verifying your BukSU email address...</p>
-              <p style={{ color: "#64748b", fontSize: "14px" }}>Please wait while we confirm your credentials.</p>
-            </div>
-          )}
-          {!loading && success && (
-            <div style={{ padding: "24px 0" }}>
-              <div style={{ fontSize: "48px", color: "#16a34a", marginBottom: "16px" }}>✓</div>
-              <h3 style={{ color: "#16a34a", marginBottom: "8px" }}>Email Verified Successfully!</h3>
-              <p style={{ color: "#475569", marginBottom: "24px", fontSize: "15px" }}>
-                {message || "Your BukSU institutional email has been verified. You can now log in to PeerLink."}
-              </p>
-              <button
-                type="button"
-                className="btn btn-primary"
-                onClick={goToLogin}
-                style={{
-                  width: "100%",
-                  padding: "12px",
-                  fontSize: "16px",
-                  backgroundColor: "#002855",
-                  color: "#fff",
-                  borderRadius: "8px",
-                  border: "none",
-                  cursor: "pointer",
-                  fontWeight: 600,
-                }}
-              >
-                Proceed to Login
-              </button>
-            </div>
-          )}
-          {!loading && !success && (
-            <div style={{ padding: "24px 0" }}>
-              <div style={{ fontSize: "48px", color: "#dc2626", marginBottom: "16px" }}>⚠</div>
-              <h3 style={{ color: "#dc2626", marginBottom: "8px" }}>Verification Failed</h3>
-              <p style={{ color: "#475569", marginBottom: "24px", fontSize: "15px" }}>
-                {errorMessage || "Activation link is invalid or expired."}
-              </p>
-              <button
-                type="button"
-                className="btn btn-secondary"
-                onClick={goToLogin}
-                style={{
-                  width: "100%",
-                  padding: "12px",
-                  fontSize: "16px",
-                  backgroundColor: "#002855",
-                  color: "#fff",
-                  borderRadius: "8px",
-                  border: "none",
-                  cursor: "pointer",
-                  fontWeight: 600,
-                }}
-              >
-                Go to Sign In
-              </button>
-            </div>
-          )}
-        </div>
-      </div>
+      <Box
+        sx={{
+          minHeight: "75vh",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          width: "100%",
+          px: { xs: 2, sm: 3 },
+          py: 4,
+        }}
+      >
+        <VerifyEmail
+          onNavigateToLogin={() => {
+            window.location.href = "/app/#signin";
+          }}
+        />
+      </Box>
     );
   }
 

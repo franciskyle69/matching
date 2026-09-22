@@ -224,11 +224,12 @@ def user_create(request):
             suffix += 1
             username = f"{base_username}{suffix}"
 
-        temp_password = _generate_temp_password()
+        admin_password = (cleaned.get("password") or "").strip()
+        password = admin_password if admin_password else _generate_temp_password()
         user = User.objects.create_user(
             username=username,
             email=email,
-            password=temp_password,
+            password=password,
             first_name=first_name,
             last_name=last_name,
         )
@@ -239,7 +240,8 @@ def user_create(request):
         user.is_active = True
         user.save(update_fields=["is_active"])
 
-        if role == "mentor":
+        # Role → Profile creation (explicit branching for each role)
+        if role in ("mentor", "both"):
             MentorProfile.objects.create(
                 user=user,
                 program="BSIT",
@@ -248,7 +250,7 @@ def user_create(request):
                 verification_document="",
                 approved=False,
             )
-        else:
+        if role in ("mentee", "both"):
             MenteeProfile.objects.create(
                 user=user,
                 program="BSIT",
@@ -261,6 +263,7 @@ def user_create(request):
                 verification_document="",
                 approved=False,
             )
+        # "staff" role: no profile needed — only is_staff=True (already handled above)
 
         set_must_change_password(user, True)
 
@@ -268,7 +271,7 @@ def user_create(request):
             "user": user,
             "domain": public_host(request),
             "protocol": public_protocol(request),
-            "password": temp_password,
+            "password": password,
             "role": role,
         }
         subject = "Your account has been created"
@@ -278,7 +281,7 @@ def user_create(request):
         email_message.attach_alternative(html_message, "text/html")
         email_message.send()
 
-        audit_log(request.user, "user_create", f"Created user: {user.username}", "success")
+        audit_log(request.user, "create", "user_account", f"{user.username} ({role})")
         return JsonResponse({
             "ok": True,
             "message": "User created and password emailed.",
@@ -485,20 +488,20 @@ def user_delete(request, user_id):
         if user.id == request.user.id:
             return JsonResponse({"ok": False, "error": "Cannot delete your own account"}, status=400)
         
-        # Soft delete - deactivate instead of hard delete
-        user.is_active = False
-        user.save()
+        # Hard delete - remove the account entirely
+        deleted_username = user.username
+        user.delete()
         
         audit_log(
             request.user,
-            "user_delete",
-            f"Deleted user: {user.username}",
-            "success"
+            "delete",
+            "user_account",
+            deleted_username
         )
         
         return JsonResponse({
             "ok": True,
-            "message": "User deleted successfully",
+            "message": "User account permanently deleted.",
         })
     except Exception as e:
         logger.exception(f"Error in user_delete: {e}")

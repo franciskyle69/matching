@@ -1370,6 +1370,9 @@ def me(request):
                 and request.user.profile.role == "COORDINATOR"
             )
         )
+        else "both"
+        if (role_flags["is_mentor"] and role_flags["is_mentee"])
+        or (getattr(request.user, "profile", None) and request.user.profile.role == "both")
         else "mentor"
         if role_flags["is_mentor"]
         else "mentee"
@@ -1457,6 +1460,22 @@ def update_account(request):
         errors = {k: list(v) for k, v in form.errors.items()}
         return JsonResponse({"errors": errors}, status=400)
     form.save()
+
+    display_name = raw.get("display_name")
+    if display_name is not None:
+        display_name = str(display_name).strip()
+        parts = display_name.split(None, 1)
+        if len(parts) == 0:
+            request.user.first_name = ""
+            request.user.last_name = ""
+        elif len(parts) == 1:
+            request.user.first_name = parts[0]
+            request.user.last_name = ""
+        else:
+            request.user.first_name = parts[0]
+            request.user.last_name = parts[1]
+        request.user.save(update_fields=["first_name", "last_name"])
+
     _clear_me_cache(request.user.id)
     audit_log(request.user, "update", "account", request.user.id)
     logger.info("account_updated", extra={"user_id": request.user.id})
@@ -1612,9 +1631,9 @@ def change_password_with_code(request):
 
 
 @login_required
-@require_http_methods(["POST"])
+@require_http_methods(["POST", "DELETE"])
 def upload_avatar(request):
-    """Handle profile picture upload and return its URL."""
+    """Handle profile picture upload or removal and return its URL."""
     import os
     import uuid
     from io import BytesIO
@@ -1624,6 +1643,37 @@ def upload_avatar(request):
     from PIL import Image
 
     from ..views import _avatar_url
+
+    # Check for removal request (DELETE or POST with action="delete" / "remove")
+    payload = _get_payload(request) if request.method == "POST" else {}
+    action = (
+        payload.get("action")
+        if isinstance(payload, dict)
+        else (request.POST.get("action") if hasattr(request, "POST") else None)
+    )
+    if request.method == "DELETE" or action in ("remove", "delete"):
+        mentor = getattr(request.user, "mentor_profile", None)
+        mentee = getattr(request.user, "mentee_profile", None)
+        user_prof = getattr(request.user, "profile", None)
+        if not user_prof:
+            try:
+                from accounts.models import get_user_profile
+                user_prof = get_user_profile(request.user)
+            except Exception:
+                pass
+        if mentor:
+            mentor.avatar_url = ""
+            mentor.save(update_fields=["avatar_url"])
+        if mentee:
+            mentee.avatar_url = ""
+            mentee.save(update_fields=["avatar_url"])
+        if user_prof:
+            user_prof.avatar_url = ""
+            user_prof.save(update_fields=["avatar_url"])
+
+        _clear_me_cache(request.user.id)
+        audit_log(request.user, "delete", "avatar", request.user.id)
+        return JsonResponse({"avatar_url": ""})
 
     file = request.FILES.get("avatar")
     if not file:
@@ -1976,7 +2026,15 @@ def complete_onboarding(request):
                 pass
 
     user_profile = get_user_profile(request.user)
-    profile = getattr(request.user, "mentor_profile", None) or getattr(request.user, "mentee_profile", None)
+    target_role = (payload.get("role") or user_profile.role or "").strip().upper()
+    mentor_prof = getattr(request.user, "mentor_profile", None)
+    mentee_prof = getattr(request.user, "mentee_profile", None)
+    if "MENTOR" in target_role and mentor_prof:
+        profile = mentor_prof
+    elif "MENTEE" in target_role and mentee_prof:
+        profile = mentee_prof
+    else:
+        profile = mentor_prof or mentee_prof
     
     if profile is None:
         is_mentor = user_profile.role in ("STUDENT_MENTOR", "INSTRUCTOR_MENTOR")
@@ -2604,18 +2662,22 @@ def update_bio(request):
     mentor = getattr(request.user, "mentor_profile", None)
     mentee = getattr(request.user, "mentee_profile", None)
     user_prof = getattr(request.user, "profile", None)
+    updated = False
     if mentor:
         mentor.bio = bio
         mentor.save(update_fields=["bio"])
-    elif mentee:
+        updated = True
+    if mentee:
         mentee.bio = bio
         mentee.save(update_fields=["bio"])
-    elif user_prof:
+        updated = True
+    if user_prof:
         user_prof.bio = bio
         user_prof.save(update_fields=["bio"])
-    else:
+        updated = True
+    if not updated:
         from accounts.models import get_user_profile
-        user_prof = get_user_profile(request.user, create_default=True)
+        user_prof = get_user_profile(request.user)
         if user_prof:
             user_prof.bio = bio
             user_prof.save(update_fields=["bio"])
@@ -2660,15 +2722,19 @@ def update_tags(request):
     mentor = getattr(request.user, "mentor_profile", None)
     mentee = getattr(request.user, "mentee_profile", None)
     user_prof = getattr(request.user, "profile", None)
+    updated = False
     if mentor:
         mentor.interest_tags.set(tag_objects)
-    elif mentee:
+        updated = True
+    if mentee:
         mentee.interest_tags.set(tag_objects)
-    elif user_prof:
+        updated = True
+    if user_prof:
         user_prof.interest_tags.set(tag_objects)
-    else:
+        updated = True
+    if not updated:
         from accounts.models import get_user_profile
-        user_prof = get_user_profile(request.user, create_default=True)
+        user_prof = get_user_profile(request.user)
         if user_prof:
             user_prof.interest_tags.set(tag_objects)
         else:

@@ -99,6 +99,9 @@ import "./components/Sidebar.jsx";
       isPendingApproval,
       pendingApprovalLandingTab,
       mentorProfile,
+      myMentor,
+      myMentors = [],
+      menteePairingsCount,
     } = ctx;
 
     const sidebarCollapsed = false;
@@ -163,7 +166,6 @@ import "./components/Sidebar.jsx";
         if (
           tabId === "onboarding" ||
           tabId === "complete-profile" ||
-          tabId === "matching" ||
           tabId === "profile" ||
           tabId === "mentees" ||
           tabId === "mentoring-preferences" ||
@@ -199,10 +201,6 @@ import "./components/Sidebar.jsx";
           }
         }
       }
-      if (isStaff && tabId === "matching") {
-        finishNavigation("home");
-        return;
-      }
       finishNavigation(tabId);
     };
 
@@ -219,7 +217,7 @@ import "./components/Sidebar.jsx";
 
     const TAB_TITLES = {
       home: "Overview",
-      matching: "Matching",
+      matching: isStaff ? "Paired Users" : "Matching",
       announcements: "Announcements",
       approvals: "User Approvals",
       users: "User Directory",
@@ -249,7 +247,6 @@ import "./components/Sidebar.jsx";
         if (
           tab.id === "onboarding" ||
           tab.id === "complete-profile" ||
-          tab.id === "matching" ||
           tab.id === "mentees" ||
           tab.id === "mentoring-preferences" ||
           tab.id === "mentor-matching-profile" ||
@@ -296,7 +293,7 @@ import "./components/Sidebar.jsx";
       if (tab.id === "users") return isStaff;
       if (tab.id === "activity-logs") return isStaff;
       if (tab.id === "backup") return isStaff;
-      if (tab.id === "matching") return !isStaff;
+      if (tab.id === "matching") return true;
       if (tab.id === "approvals") return isStaff;
       if (tab.id === "complete-profile") {
         if (isStaff) return false;
@@ -309,7 +306,28 @@ import "./components/Sidebar.jsx";
       }
       return true;
     });
-    const tabsWithDynamicLabels = filteredTabs;
+    const isMenteeUser = (user?.role === "mentee" || user?.role === "both") && !isStaff;
+    const menteeActiveCount = Math.max(
+      (myMentors && myMentors.length) || (myMentor ? 1 : 0),
+      menteePairingsCount || 0
+    );
+    const isMenteeLimitReached = isMenteeUser && menteeActiveCount >= 2;
+
+    const tabsWithDynamicLabels = filteredTabs.map((tab) => {
+      if (tab.id === "matching") {
+        if (isStaff) {
+          return { ...tab, label: "Paired Users" };
+        }
+        if (isMenteeUser) {
+          return {
+            ...tab,
+            badge: isMenteeLimitReached ? "2/2 Limit" : menteeActiveCount === 1 ? "1/2 Slots" : undefined,
+            badgeType: isMenteeLimitReached ? "danger" : "info",
+          };
+        }
+      }
+      return tab;
+    });
     const dashboardTab = tabsWithDynamicLabels.find((tab) => tab.id === "home");
     const activityTabIds = new Set([
       "newsfeed",
@@ -355,6 +373,14 @@ import "./components/Sidebar.jsx";
             label: "Go to Matching",
             hint: "See mentor/mentee matches",
             roles: ["mentor", "mentee"],
+            type: "shortcut",
+            actionTab: "matching",
+          },
+          {
+            id: "matching-staff",
+            label: "Go to Paired Users",
+            hint: "Review matched mentor and mentee pairs and why they match",
+            roles: ["staff"],
             type: "shortcut",
             actionTab: "matching",
           },

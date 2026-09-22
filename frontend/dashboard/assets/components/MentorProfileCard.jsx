@@ -21,6 +21,7 @@ import ExpandLess from "@mui/icons-material/ExpandLess";
   const {
     formatMatchScore,
     getMentorRoleBadgeMeta,
+    MentorRoleBadge,
     getAvatarInitials: getAvatarInitialsFromUtils,
   } = Utils;
 
@@ -448,10 +449,15 @@ import ExpandLess from "@mui/icons-material/ExpandLess";
   }
 
   function RolePill({ role }) {
+    if (!role) return null;
+    if (MentorRoleBadge) {
+      return <MentorRoleBadge role={role} prominent className="pmc-role-badge" />;
+    }
     const meta = getMentorRoleBadgeMeta ? getMentorRoleBadgeMeta(role) : null;
     const label = meta ? meta.label : String(role || "").trim();
     if (!label) return null;
-    return <span className="pmc-role">{label.toUpperCase()}</span>;
+    const kind = meta ? meta.kind : "student";
+    return <span className={`pmc-role pmc-role--${kind}`}>{label.toUpperCase()}</span>;
   }
 
   function ScorePill({ score, breakdown, isExpanded, onToggle }) {
@@ -525,9 +531,11 @@ import ExpandLess from "@mui/icons-material/ExpandLess";
     kind = "mentor",
     isOfficial = false,
     isUnavailable = false,
+    isPending = false,
     menteeMatching = null,
     slotsLeft = null,
     compact = false,
+    isLimitReached = false,
     onRequestPairing,
     onViewProfile,
     savedId,
@@ -641,25 +649,33 @@ import ExpandLess from "@mui/icons-material/ExpandLess";
 
     const primaryLabel = isOfficial
       ? "View profile"
-      : isUnavailable
-        ? "Not available"
-        : kind === "mentee"
-          ? "Official pairing pending"
-          : "Request pairing";
+      : isPending
+        ? "Request Sent"
+        : isUnavailable
+          ? "Not available"
+          : kind === "mentee"
+            ? "Official pairing pending"
+            : isLimitReached
+              ? "Limit reached (2/2)"
+              : "Request pairing";
     const showPrimary =
-      (!isOfficial && kind === "mentor" && !!onRequestPairing) ||
+      (!isOfficial && kind === "mentor" && (!!onRequestPairing || isLimitReached || isPending)) ||
       (isOfficial && kind === "mentee" && !!onViewProfile) ||
       (!isOfficial && isUnavailable && kind === "mentor");
     const primaryDisabled =
+      isPending ||
       (!isOfficial && isUnavailable) ||
+      (!isOfficial && isLimitReached) ||
       (kind === "mentee" && !isOfficial) ||
       (isOfficial && kind === "mentee" && !onViewProfile);
 
     function handlePrimary() {
+      if (isPending) return;
       if (isOfficial && onViewProfile) {
         onViewProfile();
         return;
       }
+      if (isLimitReached) return;
       if (onRequestPairing) onRequestPairing();
     }
 
@@ -673,17 +689,31 @@ import ExpandLess from "@mui/icons-material/ExpandLess";
     const officialLabel =
       kind === "mentee" ? "Official mentee" : "Official mentor";
 
+    const buttonElement = (
+      <Button
+        variant="contained"
+        className="pmc-cta"
+        onClick={handlePrimary}
+        disabled={primaryDisabled}
+      >
+        {primaryLabel}
+      </Button>
+    );
+
     const actionButtons = (
       <>
         {showPrimary ? (
-          <Button
-            variant="contained"
-            className="pmc-cta"
-            onClick={handlePrimary}
-            disabled={primaryDisabled}
-          >
-            {primaryLabel}
-          </Button>
+          isLimitReached && !isOfficial ? (
+            <Tooltip title="You have reached the maximum allowed limit of 2 mentors. Additional pairings cannot be requested.">
+              <span>{buttonElement}</span>
+            </Tooltip>
+          ) : isPending && !isOfficial ? (
+            <Tooltip title="Pairing request sent. Waiting for mentor acceptance.">
+              <span>{buttonElement}</span>
+            </Tooltip>
+          ) : (
+            buttonElement
+          )
         ) : null}
         {onViewProfile && !isOfficial ? (
           <Button
@@ -758,6 +788,17 @@ import ExpandLess from "@mui/icons-material/ExpandLess";
                   ) : null}
                   {isOfficial ? (
                     <span className="pmc-official">{officialLabel}</span>
+                  ) : isPending ? (
+                    <span
+                      className="pmc-official pmc-pending-badge"
+                      style={{
+                        background: "rgba(245, 158, 11, 0.15)",
+                        color: "#d97706",
+                        border: "1px solid rgba(245, 158, 11, 0.3)",
+                      }}
+                    >
+                      Request Sent
+                    </span>
                   ) : null}
                 </div>
               </div>

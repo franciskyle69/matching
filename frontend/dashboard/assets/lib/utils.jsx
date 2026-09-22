@@ -445,11 +445,17 @@
     const label = String(role || "").trim();
     if (!label) return null;
     const lower = label.toLowerCase();
-    if (lower.includes("instructor")) {
-      return { kind: "instructor", label: "Instructor", fullLabel: label };
+    if (lower.includes("staff") || lower.includes("admin")) {
+      return { kind: "staff", label: "Staff", fullLabel: label || "Operations Staff" };
     }
-    if (lower.includes("senior") || lower.includes("student")) {
-      return { kind: "student", label: "Student", fullLabel: label || "Senior IT Student" };
+    if (lower.includes("instructor") || lower.includes("faculty")) {
+      return { kind: "instructor", label: "Instructor", fullLabel: label || "Faculty Instructor" };
+    }
+    if (lower.includes("mentee")) {
+      return { kind: "mentee", label: "Mentee", fullLabel: label || "Student Mentee" };
+    }
+    if (lower.includes("senior") || lower.includes("student") || lower.includes("mentor")) {
+      return { kind: "student", label: "Student Mentor", fullLabel: label || "Senior IT Student Mentor" };
     }
     return { kind: "other", label, fullLabel: label };
   }
@@ -466,6 +472,13 @@
       strokeLinejoin: "round",
       "aria-hidden": true,
     };
+    if (kind === "staff" || kind === "admin") {
+      return (
+        <svg {...common} className="mentor-role-badge__icon">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+        </svg>
+      );
+    }
     if (kind === "instructor") {
       return (
         <svg {...common} className="mentor-role-badge__icon">
@@ -474,11 +487,20 @@
         </svg>
       );
     }
+    if (kind === "mentee") {
+      return (
+        <svg {...common} className="mentor-role-badge__icon">
+          <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
+          <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
+        </svg>
+      );
+    }
     if (kind === "student") {
       return (
         <svg {...common} className="mentor-role-badge__icon">
-          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-          <circle cx="12" cy="7" r="4" />
+          <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+          <circle cx="9" cy="7" r="4" />
+          <path d="M19 8l2 2 4-4" strokeWidth="2.5" />
         </svg>
       );
     }

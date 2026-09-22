@@ -1383,12 +1383,14 @@
 }
 
 [data-theme="light"] .approval-badge-incomplete {
-  color: #d97706;
+  color: #be123c !important;
+  background: #fff1f2 !important;
+  border-color: rgba(244, 63, 94, 0.38) !important;
 }
 
 [data-theme="light"] .approval-badge-incomplete .dot-incomplete {
-  background: #f59e0b;
-  box-shadow: 0 0 6px rgba(245, 158, 11, 0.6);
+  background: #e11d48 !important;
+  box-shadow: 0 0 6px rgba(225, 29, 72, 0.65) !important;
 }
 
 [data-theme="light"] .approval-expand-btn.btn.small {
@@ -1427,22 +1429,11 @@
   flex-wrap: wrap;
 }
 
-[data-theme="light"] .approval-mentor-type-badge {
-  box-shadow: inset 1px 1px 2.5px var(--neu-dark, #ccd5e2), inset -1px -1px 2.5px var(--neu-light, #ffffff) !important;
-  background: #f8fafc !important;
-  border: 1px solid #e2e8f0 !important;
-  font-size: 11px;
-  padding: 3px 12px;
-  border-radius: 9999px;
-  color: #0284c7 !important;
-  font-weight: 700;
-}
-
 [data-theme="light"] .approval-mentor-type-missing {
-  box-shadow: inset 1px 1px 2.5px var(--neu-dark, #ccd5e2), inset -1px -1px 2.5px var(--neu-light, #ffffff);
-  background: #fef3c7;
-  border: 1px solid rgba(245, 158, 11, 0.3);
-  color: #b45309;
+  box-shadow: inset 1px 1px 2.5px rgba(225, 29, 72, 0.15), inset -1px -1px 2.5px var(--neu-light, #ffffff);
+  background: #fff1f2;
+  border: 1px solid rgba(244, 63, 94, 0.35);
+  color: #be123c;
   font-size: 11px;
   font-weight: 700;
   padding: 3px 12px;

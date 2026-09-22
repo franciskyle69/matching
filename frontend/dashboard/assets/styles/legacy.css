@@ -6839,9 +6839,9 @@ button:focus-visible {
 }
 
 .approval-badge-incomplete {
-  color: #a16207;
-  background: #fef9c3;
-  border: 1px solid rgba(202, 138, 4, 0.35);
+  color: #be123c;
+  background: #fff1f2;
+  border: 1px solid rgba(244, 63, 94, 0.35);
 }
 
 .approval-card-body {
@@ -7793,9 +7793,9 @@ button:focus-visible {
 }
 
 .approval-badge-incomplete {
-  background: #fef3c7;
-  color: #92400e;
-  border: 1px solid #fde68a;
+  background: #fff1f2;
+  color: #be123c;
+  border: 1px solid rgba(244, 63, 94, 0.35);
 }
 
 .approval-accept-btn {
@@ -7863,9 +7863,9 @@ button:focus-visible {
 }
 
 [data-theme="dark"] .approval-badge-incomplete {
-  background: rgba(202, 138, 4, 0.18);
-  color: #fcd34d;
-  border-color: rgba(202, 138, 4, 0.45);
+  background: rgba(225, 29, 72, 0.18);
+  color: #fda4af;
+  border-color: rgba(244, 63, 94, 0.45);
 }
 
 [data-theme="dark"] .approval-accept-btn {

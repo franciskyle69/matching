@@ -65,7 +65,11 @@
 
   function roleVariant(user) {
     if (user.role === "both") return "both";
-    if (user.role === "mentor") return "mentor";
+    if (user.role === "mentor") {
+      const mRole = String(user.mentor_profile?.role || user.mentor_role || "").toLowerCase();
+      if (mRole.includes("instructor") || mRole.includes("faculty")) return "instructor";
+      return "student-mentor";
+    }
     if (user.role === "mentee") return "mentee";
     if (user.role === "staff" || user.is_staff) return "staff";
     return "none";
@@ -150,8 +154,16 @@
   }
 
   function getRoleDisplay(user) {
-    if (user.role === "both") return "Mentor & Mentee";
-    if (user.role === "mentor") return "Mentor";
+    if (user.role === "both") {
+      const mRole = String(user.mentor_profile?.role || user.mentor_role || "").toLowerCase();
+      const isInst = mRole.includes("instructor") || mRole.includes("faculty");
+      return `${isInst ? "Instructor" : "Student Mentor"} & Mentee`;
+    }
+    if (user.role === "mentor") {
+      const mRole = String(user.mentor_profile?.role || user.mentor_role || "").toLowerCase();
+      if (mRole.includes("instructor") || mRole.includes("faculty")) return "Instructor";
+      return "Student Mentor";
+    }
     if (user.role === "mentee") return "Mentee";
     if (user.role === "staff") return "Staff";
     return "—";
@@ -213,6 +225,13 @@
       description:
         "Has a mentee profile. Receives mentor recommendations and participates in mentoring.",
       icon: "E",
+    },
+    {
+      id: "both",
+      title: "Both (Mentor & Mentee)",
+      description:
+        "Has both mentor and mentee profiles. Can participate in both capacities.",
+      icon: "B",
     },
     {
       id: "staff",
@@ -339,8 +358,10 @@
       middle_name: "",
       last_name: "",
       email: "",
+      password: "",
       selected_role: "mentor",
     });
+    const [showPassword, setShowPassword] = useState(false);
     const [showValidation, setShowValidation] = useState(false);
     const [saving, setSaving] = useState(false);
 
@@ -361,6 +382,7 @@
     const errors = useMemo(() => {
       const nextErrors = {};
       const email = String(formData.email || "").trim();
+      const pwd = String(formData.password || "").trim();
       if (!String(formData.first_name || "").trim()) {
         nextErrors.first_name = "First name is required.";
       }
@@ -372,8 +394,11 @@
       } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
         nextErrors.email = "Please enter a valid email address.";
       }
+      if (pwd && pwd.length < 8) {
+        nextErrors.password = "Custom password must be at least 8 characters.";
+      }
       return nextErrors;
-    }, [formData.email, formData.first_name, formData.last_name]);
+    }, [formData.email, formData.first_name, formData.last_name, formData.password]);
 
     const saveDisabled = saving || Object.keys(errors).length > 0;
 
@@ -393,6 +418,7 @@
             middle_name: String(formData.middle_name || "").trim(),
             last_name: String(formData.last_name || "").trim(),
             email: String(formData.email || "").trim(),
+            password: String(formData.password || "").trim(),
             role: formData.selected_role,
           }),
         });
@@ -424,7 +450,7 @@
           <div className="users-edit-header">
             <div>
               <h2 className="users-edit-title">Add User</h2>
-              <p className="users-edit-subtitle">Create a mentor or mentee account without file upload. A temporary password will be emailed automatically.</p>
+              <p className="users-edit-subtitle">Create a user account. If no password is specified, a secure temporary password will be generated and emailed.</p>
             </div>
             <button type="button" className="users-edit-close" onClick={onClose} aria-label="Close create modal">
               <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
@@ -492,6 +518,52 @@
                   />
                   {showValidation && errors.email && <p className="users-edit-error">{errors.email}</p>}
                 </div>
+                <div className="users-edit-field-wrap full-width" style={{ gridColumn: "1 / -1" }}>
+                  <label className="users-edit-label" htmlFor="create-user-password">
+                    Password <span style={{ fontWeight: "normal", color: "var(--users-muted, #64748b)", fontSize: "11px" }}>(Optional - leave blank to auto-generate)</span>
+                  </label>
+                  <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
+                    <input
+                      id="create-user-password"
+                      type={showPassword ? "text" : "password"}
+                      className={`users-edit-input ${showValidation && errors.password ? "is-invalid" : ""}`}
+                      style={{ paddingRight: "40px", width: "100%" }}
+                      value={formData.password}
+                      onChange={(e) => onFieldChange("password", e.target.value)}
+                      placeholder="Custom password or leave empty to auto-generate"
+                      autoComplete="new-password"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      aria-label={showPassword ? "Hide password" : "Show password"}
+                      style={{
+                        position: "absolute",
+                        right: "8px",
+                        background: "transparent",
+                        border: "none",
+                        cursor: "pointer",
+                        color: "var(--users-muted, #64748b)",
+                        display: "flex",
+                        alignItems: "center",
+                        padding: "4px",
+                      }}
+                    >
+                      {showPassword ? (
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
+                          <line x1="1" y1="1" x2="23" y2="23" />
+                        </svg>
+                      ) : (
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                          <circle cx="12" cy="12" r="3" />
+                        </svg>
+                      )}
+                    </button>
+                  </div>
+                  {showValidation && errors.password && <p className="users-edit-error">{errors.password}</p>}
+                </div>
               </div>
             </section>
 
@@ -504,7 +576,7 @@
                 onSelect={(roleId) => onFieldChange("selected_role", roleId)}
                 options={ROLE_OPTIONS}
               />
-              <p className="users-edit-warning">The account will be created active, and the temporary password will be sent to the email address above.</p>
+              <p className="users-edit-warning">The account will be created with the selected role. The login credentials and password will be emailed to the user automatically.</p>
             </section>
           </div>
 
@@ -819,7 +891,37 @@
                 </div>
                 <div>
                   <span className="users-edit-meta-label">Approval status</span>
-                  <span className="users-edit-meta-value">{getApprovalStatus(user)}</span>
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap", marginTop: "4px" }}>
+                    <span className="users-edit-meta-value">{getApprovalStatus(user)}</span>
+                    {(user.role === "mentor" || user.role === "both") && user.mentor_approved === false && (
+                      <button
+                        type="button"
+                        className="users-action-btn approve-btn"
+                        onClick={async () => {
+                          await handleApprove(user.id, "mentor");
+                          handleViewUser(user.id);
+                        }}
+                        disabled={actionLoading === user.id}
+                        style={{ padding: "3px 10px", fontSize: "12px" }}
+                      >
+                        ✓ Approve Mentor
+                      </button>
+                    )}
+                    {(user.role === "mentee" || user.role === "both") && user.mentee_approved === false && (
+                      <button
+                        type="button"
+                        className="users-action-btn approve-btn"
+                        onClick={async () => {
+                          await handleApprove(user.id, "mentee");
+                          handleViewUser(user.id);
+                        }}
+                        disabled={actionLoading === user.id}
+                        style={{ padding: "3px 10px", fontSize: "12px" }}
+                      >
+                        ✓ Approve Mentee
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -905,6 +1007,8 @@
     const [modalStartInEdit, setModalStartInEdit] = useState(false);
     const [actionLoading, setActionLoading] = useState(null);
     const [showCreateUserModal, setShowCreateUserModal] = useState(false);
+    const [userTab, setUserTab] = useState("all");
+    const adminPairings = ctx.adminPairings || [];
 
     const filters = useMemo(
       () => ({ search, roleFilter, statusFilter, staffFilter }),
@@ -1051,7 +1155,7 @@
 
       const targetLabel = targetUser.full_name || targetUser.username || "this user";
       const confirmed = window.confirm(
-        `Delete ${targetLabel}? This will deactivate their account and prevent login.`,
+        `Are you sure you want to permanently delete ${targetLabel}? This will delete their account entirely.`,
       );
       if (!confirmed) return;
 
@@ -1067,7 +1171,7 @@
           if (selectedUser && Number(selectedUser.id) === Number(userId)) {
             setSelectedUser(null);
           }
-          notify("success", "Account Deleted", `${targetLabel} was deactivated.`);
+          notify("success", "Account Deleted", `${targetLabel}'s account was permanently deleted.`);
         } else {
           notify("error", "Delete Failed", result.data?.error || "Unable to delete user.");
         }
@@ -1127,11 +1231,17 @@
           body: JSON.stringify({ approved: true }),
         });
         if (result.ok) {
+          const updatedUser = result.data?.user;
+          if (updatedUser) {
+            setUsersById((prev) => ({ ...prev, [userId]: updatedUser }));
+            setUsers((prev) => prev.map((u) => (u.id === userId ? updatedUser : u)));
+          }
           clearUsersCache();
           reloadTable();
-          if (selectedUser) {
-            setSelectedUser(result.data.user);
+          if (selectedUser && Number(selectedUser.id) === Number(userId)) {
+            setSelectedUser(updatedUser || result.data.user);
           }
+          notify("success", "Approved", `${roleType === "mentor" ? "Mentor" : "Mentee"} role approved successfully.`);
         } else {
           notify("error", "Approval Failed", result.data?.error || "Unable to update approval.");
         }
@@ -1257,7 +1367,34 @@
           </div>
         </header>
 
-        <div className="users-management-card kasandigan-card">
+        {/* Section View Switcher */}
+        <div className="users-nav-pills-row" style={{ display: "flex", gap: 10, margin: "14px 0 20px 0" }}>
+          <button
+            type="button"
+            className={`btn small ${userTab === "all" ? "primary" : "secondary"}`}
+            onClick={() => setUserTab("all")}
+            style={{ borderRadius: 10, fontWeight: 600 }}
+          >
+            All Accounts ({total})
+          </button>
+          <button
+            type="button"
+            className={`btn small ${userTab === "paired" ? "primary" : "secondary"}`}
+            onClick={() => setUserTab("paired")}
+            style={{ borderRadius: 10, fontWeight: 600 }}
+          >
+            Paired Users ({adminPairings.length})
+          </button>
+        </div>
+
+        {userTab === "paired" ? (
+          window.DashboardApp.AdminPairedUsersView ? (
+            <window.DashboardApp.AdminPairedUsersView />
+          ) : (
+            <div className="card text-center" style={{ padding: 48 }}>Loading paired users…</div>
+          )
+        ) : (
+          <div className="users-management-card kasandigan-card">
           <div className="users-toolbar">
             <div className="users-search-field">
               <svg
@@ -1495,40 +1632,56 @@
                           <div className="action-buttons users-action-buttons">
                             <button
                               type="button"
-                              className="btn small users-action-btn view-btn"
+                              className="users-action-btn view-btn"
                               onClick={() => handleViewUser(row.id, false)}
                               disabled={isActionBusy}
                             >
-                              View
+                              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                                <circle cx="12" cy="12" r="3" />
+                              </svg>
+                              <span>View</span>
                             </button>
                             {(row.role === "mentor" || row.role === "both") && row.mentor_approved === false && (
                               <button
                                 type="button"
-                                className="btn small users-action-btn approve-btn"
+                                className="users-action-btn approve-btn"
                                 onClick={() => handleApprove(row.id, "mentor")}
                                 disabled={isActionBusy}
                               >
-                                Approve Mentor
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                  <polyline points="20 6 9 17 4 12" />
+                                </svg>
+                                <span>Approve Mentor</span>
                               </button>
                             )}
                             {(row.role === "mentee" || row.role === "both") && row.mentee_approved === false && (
                               <button
                                 type="button"
-                                className="btn small users-action-btn approve-btn"
+                                className="users-action-btn approve-btn"
                                 onClick={() => handleApprove(row.id, "mentee")}
                                 disabled={isActionBusy}
                               >
-                                Approve Mentee
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                  <polyline points="20 6 9 17 4 12" />
+                                </svg>
+                                <span>Approve Mentee</span>
                               </button>
                             )}
                             {!isCurrentUser && (
                               <button
                                 type="button"
-                                className="btn small users-action-btn delete-btn"
+                                className="users-action-btn delete-btn"
                                 onClick={() => handleDeleteUser(row.id)}
                                 disabled={isActionBusy}
                               >
-                                Delete
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                  <polyline points="3 6 5 6 21 6" />
+                                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                                  <line x1="10" y1="11" x2="10" y2="17" />
+                                  <line x1="14" y1="11" x2="14" y2="17" />
+                                </svg>
+                                <span>Delete</span>
                               </button>
                             )}
                           </div>
@@ -1565,6 +1718,7 @@
             </div>
           </div>
         </div>
+        )}
 
         {showCreateUserModal && (
           <CreateUserModal

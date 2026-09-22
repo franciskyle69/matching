@@ -1,0 +1,48 @@
+name: PeerLink Automated Database Backup
+
+on:
+  schedule:
+    # Runs everyday at midnight UTC (8:00 AM PHT)
+    - cron: '0 0 * * *'
+  workflow_dispatch:
+    # Allows manual backup trigger from GitHub Actions UI anytime
+
+jobs:
+  backup:
+    name: Database Snapshot & Archive
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run PeerLink Backup
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DB_NAME: ${{ secrets.DB_NAME }}
+          DB_USER: ${{ secrets.DB_USER }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          DB_HOST: ${{ secrets.DB_HOST }}
+          DB_PORT: ${{ secrets.DB_PORT }}
+          DJANGO_SECRET_KEY: ${{ secrets.DJANGO_SECRET_KEY || 'github-actions-backup-key-32charslong!' }}
+          DJANGO_DEBUG: "False"
+        run: |
+          python manage.py backup_system --keep 30
+
+      - name: Upload Backup Artifact to GitHub Storage
+        uses: actions/upload-artifact@v4
+        with:
+          name: peerlink-database-backups
+          path: backups/
+          retention-days: 30

@@ -68,3 +68,17 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
+
+# Scratch & Local QA automation artifacts
+.edge_profile_*/
+qa_evidence/
+qa_sessions.json
+debug_*.js
+snap_*.js
+test_session.js
+capture_pairing_screenshots.js
+prepare_screenshot_data.py
+run_peerlink_qa_audit.py
+*.docx
+RESTORED_*.png
+*.gz

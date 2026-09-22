@@ -238,11 +238,14 @@
     );
     const [menteeMatchingSaving, setMenteeMatchingSaving] = useState(false);
     const [chosenMentorId, setChosenMentorId] = useState(null);
+    const [pendingMentorIds, setPendingMentorIds] = useState([]);
     const [mentorRequestsLoading, setMentorRequestsLoading] = useState(false);
     const [mentorRequests, setMentorRequests] = useState([]);
     const [adminPairingsLoading, setAdminPairingsLoading] = useState(false);
     const [adminPairings, setAdminPairings] = useState([]);
     const [myMentor, setMyMentor] = useState(null);
+    const [myMentors, setMyMentors] = useState([]);
+    const [menteePairingsCount, setMenteePairingsCount] = useState(0);
     const [acceptMenteeLoading, setAcceptMenteeLoading] = useState(null);
     const [announcements, setAnnouncements] = useState([]);
     const [announcementsLoading, setAnnouncementsLoading] = useState(false);
@@ -271,6 +274,7 @@
     const [activityLogsPageSize, setActivityLogsPageSize] = useState(20);
     const [activityLogsTotal, setActivityLogsTotal] = useState(0);
     const [activityLogsTotalPages, setActivityLogsTotalPages] = useState(1);
+    const [activityLogsStats, setActivityLogsStats] = useState({ total_records: 0, today_records: 0 });
     const activityLogsCacheRef = useRef(new Map());
     const [globalSearchResults, setGlobalSearchResults] = useState([]);
     const [postsFeed, setPostsFeed] = useState([]);
@@ -1254,14 +1258,21 @@
 
     async function loadMyMentor(options = {}) {
       const role = options.role || user?.role;
-      if (role !== "mentee") return;
+      if (role !== "mentee" && role !== "both") return;
       const result = await fetchJSON("/api/matching/my-mentor/");
       if (result.ok) {
         const mentor = result.data.mentor || null;
+        const mentors = Array.isArray(result.data.mentors)
+          ? result.data.mentors
+          : (mentor ? [mentor] : []);
         setMyMentor(mentor);
+        setMyMentors(mentors);
+        setMenteePairingsCount(result.data.paired_count ?? mentors.length);
         setChosenMentorId(mentor?.id ?? null);
       } else {
         setMyMentor(null);
+        setMyMentors([]);
+        setMenteePairingsCount(0);
         setChosenMentorId(null);
       }
     }
@@ -1321,29 +1332,37 @@
       } else {
         setMenteeRecLoading(true);
       }
-      setError("");
-      const params = new URLSearchParams();
-      if (limit) params.set("limit", String(limit));
-      const url = params.toString()
-        ? `/api/matching/mentee-recommendations/?${params.toString()}`
-        : "/api/matching/mentee-recommendations/";
+      const url =
+        typeof limit === "number" && limit > 0
+          ? `/api/matching/recommendations/?limit=${limit}`
+          : "/api/matching/recommendations/";
       const result = await fetchJSON(url);
       if (!result.ok) {
-        setError(
-          result.data?.error || "Unable to load mentor recommendations.",
-        );
+        setMenteeRecommendations([]);
+        setPendingMentorIds([]);
         setMenteeRecMeta({
-          empty_reason: null,
-          message: "",
-          suggested_time_slots: [],
+          empty_reason: result.data?.empty_reason || null,
+          message:
+            result.data?.message ||
+            result.data?.error ||
+            "Unable to load mentor recommendations.",
+          suggested_time_slots: Array.isArray(
+            result.data?.suggested_time_slots,
+          )
+            ? result.data.suggested_time_slots
+            : [],
           from_cache: false,
           elapsed_ms: 0,
+          paired_mentors_count: 0,
+          max_mentors_limit: 2,
+          can_request_pairing: true,
         });
         setMenteeRecLoading(false);
         setMenteeRecUpdating(false);
         return;
       }
       setMenteeRecommendations(result.data.results || []);
+      setPendingMentorIds(result.data.pending_mentor_ids || []);
       setMenteeRecMeta({
         empty_reason: result.data.empty_reason || null,
         message: result.data.message || "",
@@ -1355,6 +1374,9 @@
           typeof result.data.elapsed_ms === "number"
             ? result.data.elapsed_ms
             : 0,
+        paired_mentors_count: result.data.paired_mentors_count ?? 0,
+        max_mentors_limit: result.data.max_mentors_limit ?? 2,
+        can_request_pairing: result.data.can_request_pairing ?? true,
       });
       setMenteeRecLoading(false);
       setMenteeRecUpdating(false);
@@ -1363,6 +1385,12 @@
     async function chooseMentor(mentorId) {
       if (!user || user.role !== "mentee") return { ok: false };
       setError("");
+      if (myMentors.length >= 2 || (menteeRecMeta && menteeRecMeta.can_request_pairing === false)) {
+        const limitMsg = "You have reached the maximum allowed mentor pairings (2). You cannot request pairing with additional mentors.";
+        setError(limitMsg);
+        addToast(limitMsg, "error");
+        return { ok: false, code: "mentee_max_pairings_reached", error: limitMsg };
+      }
       const result = await fetchJSON("/api/matching/mentee-choose-mentor/", {
         method: "POST",
         headers: { "X-CSRFToken": getCookie("csrftoken") },
@@ -1374,14 +1402,25 @@
         addToast(message, "error");
         return { ok: false, code: result.data?.code || null, error: message };
       }
-      const successMessage = "Mentor matched successfully.";
-      setAuthMessage(successMessage);
-      addToast(successMessage, "success");
-      setChosenMentorId(mentorId);
-      await loadMyMentor();
+      if (result.data?.accepted) {
+        const successMessage = "Mentor matched successfully.";
+        setAuthMessage(successMessage);
+        addToast(successMessage, "success");
+        setChosenMentorId(mentorId);
+        await loadMyMentor();
+      } else {
+        const successMessage =
+          result.data?.message ||
+          "Pairing request sent to mentor. Waiting for mentor acceptance.";
+        setAuthMessage(successMessage);
+        addToast(successMessage, "success");
+        setPendingMentorIds((prev) =>
+          prev.includes(mentorId) ? prev : [...prev, mentorId],
+        );
+      }
       await loadMenteeRecommendations();
       loadMentorRequests();
-      return { ok: true };
+      return { ok: true, accepted: !!result.data?.accepted, request_sent: true };
     }
 
     async function handleSignIn() {
@@ -2242,6 +2281,16 @@
         return false;
       }
       addToast("Settings saved.");
+      setUser((prev) =>
+        prev
+          ? {
+              ...prev,
+              email: result.data?.email || settingsForm.email,
+              display_name: result.data?.display_name || settingsForm.display_name,
+              full_name: result.data?.full_name || settingsForm.display_name,
+            }
+          : prev,
+      );
       await loadMe({ force: true });
       setSettingsSaving(false);
       return true;
@@ -2280,7 +2329,7 @@
     }
 
     async function handleMenteeProfileSave() {
-      if (!user || user.role !== "mentee") return false;
+      if (!user || (user.role !== "mentee" && user.role !== "both" && !user.mentee_profile)) return false;
       setError("");
       const requiredFields = ["campus", "student_id_no", "contact_no", "sex"];
       const missing = requiredFields.filter(
@@ -2295,11 +2344,12 @@
       }
       setMenteeProfileSaving(true);
       const payload = {
-        program: "BSIT",
-        year_level: 1,
+        program: menteeProfile.program || "BSIT",
+        year_level: Number(menteeProfile.year_level) || 1,
         campus: menteeProfile.campus,
         student_id_no: menteeProfile.student_id_no,
         contact_no: menteeProfile.contact_no,
+        admission_type: menteeProfile.admission_type || "",
         sex: menteeProfile.sex,
       };
       const result = await fetchJSON("/api/me/mentee-profile/", {
@@ -2694,12 +2744,16 @@
       const normalizedSearch = (params.search || "").trim();
       const normalizedDateFrom = params.date_from || "";
       const normalizedDateTo = params.date_to || "";
+      const normalizedCategory = (params.category || "").trim();
+      const normalizedRole = (params.role || "").trim();
       const cacheKey = JSON.stringify({
         page,
         pageSize,
         search: normalizedSearch,
         date_from: normalizedDateFrom,
         date_to: normalizedDateTo,
+        category: normalizedCategory,
+        role: normalizedRole,
       });
       const cached = activityLogsCacheRef.current.get(cacheKey);
       if (cached) {
@@ -2708,6 +2762,7 @@
         setActivityLogsPageSize(cached.page_size);
         setActivityLogsTotal(cached.total);
         setActivityLogsTotalPages(cached.total_pages);
+        if (cached.stats) setActivityLogsStats(cached.stats);
         setActivityLogsLoading(false);
         return cached;
       }
@@ -2719,6 +2774,9 @@
       if (normalizedSearch) q.set("search", normalizedSearch);
       if (normalizedDateFrom) q.set("date_from", normalizedDateFrom);
       if (normalizedDateTo) q.set("date_to", normalizedDateTo);
+      if (normalizedCategory && normalizedCategory !== "all") q.set("category", normalizedCategory);
+      if (normalizedRole && normalizedRole !== "all") q.set("role", normalizedRole);
+
       const result = await fetchJSON(
         "/api/activity-logs/" + (q.toString() ? "?" + q.toString() : ""),
       );
@@ -2729,17 +2787,20 @@
         const resolvedPageSize = response.page_size || pageSize;
         const resolvedTotal = response.total || logs.length || 0;
         const resolvedTotalPages = response.total_pages || 1;
+        const resolvedStats = response.stats || { total_records: resolvedTotal, today_records: 0 };
         setActivityLogs(logs);
         setActivityLogsPage(resolvedPage);
         setActivityLogsPageSize(resolvedPageSize);
         setActivityLogsTotal(resolvedTotal);
         setActivityLogsTotalPages(resolvedTotalPages);
+        setActivityLogsStats(resolvedStats);
         activityLogsCacheRef.current.set(cacheKey, {
           logs,
           page: resolvedPage,
           page_size: resolvedPageSize,
           total: resolvedTotal,
           total_pages: resolvedTotalPages,
+          stats: resolvedStats,
         });
       } else {
         setActivityLogs([]);
@@ -2915,6 +2976,31 @@
       }
     }
 
+    async function handleRemoveAvatar() {
+      if (!settingsForm.avatar_url && !user?.avatar_url) return;
+      try {
+        const response = await fetch("/api/me/avatar/", {
+          method: "DELETE",
+          credentials: "include",
+          headers: { "X-CSRFToken": getCookie("csrftoken") },
+        });
+        const data = (await response.json()) || {};
+        if (!response.ok) {
+          const msg = data.error || "Unable to remove profile picture.";
+          setError(msg);
+          addToast(msg, "error");
+          return;
+        }
+        setUser((prev) => (prev ? { ...prev, avatar_url: "" } : prev));
+        setSettingsForm((prev) => ({ ...prev, avatar_url: "" }));
+        addToast("Profile photo removed.");
+      } catch (err) {
+        const msg = "Network error while removing profile picture.";
+        setError(msg);
+        addToast(msg, "error");
+      }
+    }
+
     const isAuthenticated = !authRequired && user;
     const isPendingApproval = getIsPendingApproval(user);
     const showSignInPrompt =
@@ -3002,6 +3088,8 @@
       acceptMentee,
       acceptMenteeLoading,
       myMentor,
+      myMentors,
+      menteePairingsCount,
       loadMyMentor,
       notificationsLoading,
       notifications,
@@ -3015,6 +3103,7 @@
       handleBioSave,
       handleTagsSave,
       handleAvatarChange,
+      handleRemoveAvatar,
       avatarUploading,
       menteeProfile,
       setMenteeProfile,
@@ -3060,6 +3149,7 @@
       activityLogsPageSize,
       activityLogsTotal,
       activityLogsTotalPages,
+      activityLogsStats,
       loadActivityLogs,
       postsFeed,
       postsFeedLoaded,
@@ -3069,6 +3159,8 @@
       postsFeedHasMore,
       postsFeedLoadingMore,
       chosenMentorId,
+      pendingMentorIds,
+      setPendingMentorIds,
       announcements,
       announcementsLoading,
       announcementMessage,

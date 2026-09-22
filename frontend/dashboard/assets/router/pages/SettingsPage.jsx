@@ -403,6 +403,7 @@ import MenteePreferencesPage from "./MenteePreferencesPage.jsx";
       handleBioSave,
       handleTagsSave,
       handleAvatarChange,
+      handleRemoveAvatar: ctxHandleRemoveAvatar,
       avatarUploading,
       menteeProfile,
       setMenteeProfile,
@@ -496,10 +497,28 @@ import MenteePreferencesPage from "./MenteePreferencesPage.jsx";
     }
 
     async function handleRemoveAvatar() {
-      if (!settingsForm.avatar_url) return;
-      setSettingsForm((prev) => ({ ...prev, avatar_url: "" }));
-      setUser((prev) => (prev ? { ...prev, avatar_url: "" } : prev));
-      addToast("Profile photo removed from preview. Upload a new photo to save one.");
+      if (typeof ctxHandleRemoveAvatar === "function") {
+        await ctxHandleRemoveAvatar();
+        return;
+      }
+      if (!settingsForm.avatar_url && !user?.avatar_url) return;
+      try {
+        const response = await fetch("/api/me/avatar/", {
+          method: "DELETE",
+          credentials: "include",
+          headers: { "X-CSRFToken": getCookie("csrftoken") },
+        });
+        const data = (await response.json()) || {};
+        if (!response.ok) {
+          addToast(data.error || "Unable to remove profile picture.", "error");
+          return;
+        }
+        setSettingsForm((prev) => ({ ...prev, avatar_url: "" }));
+        setUser((prev) => (prev ? { ...prev, avatar_url: "" } : prev));
+        addToast("Profile photo removed.");
+      } catch (err) {
+        addToast("Network error while removing profile picture.", "error");
+      }
     }
 
     async function handleSendPasswordCode() {
@@ -674,7 +693,23 @@ import MenteePreferencesPage from "./MenteePreferencesPage.jsx";
       (field) => !String((menteeProfile || {})[field] || "").trim(),
     ).length;
 
-    const isMentee = user.role === "mentee";
+    const isStaff = Boolean(
+      user.is_staff ||
+      user.role === "staff" ||
+      user.role === "coordinator" ||
+      user.is_superuser
+    );
+    const isMentee =
+      user.role === "mentee" ||
+      user.role === "both" ||
+      Boolean(user.mentee_profile || user.mentee_info);
+    const hasPreferences =
+      !isStaff &&
+      (user.role === "mentor" ||
+        user.role === "mentee" ||
+        user.role === "both" ||
+        Boolean(user.mentor_profile || user.mentee_profile));
+
     const serializedGeneral = JSON.stringify(menteeProfile || {});
     if (!generalEditedRef.current) {
       generalSavedRef.current = serializedGeneral;
@@ -705,10 +740,21 @@ import MenteePreferencesPage from "./MenteePreferencesPage.jsx";
         label: "Academic & Personal Info",
       });
     }
-    settingsTabs.push({
-      id: "preferences",
-      label: "Matching Preferences",
-    });
+    if (hasPreferences) {
+      settingsTabs.push({
+        id: "preferences",
+        label: "Matching Preferences",
+      });
+    }
+
+    useEffect(() => {
+      if (
+        settingsTabs.length > 0 &&
+        !settingsTabs.some((t) => t.id === activeTab)
+      ) {
+        setActiveTab("account");
+      }
+    }, [settingsTabs.map((t) => t.id).join(","), activeTab]);
 
     useEffect(() => {
       if (typeof setUnsavedChangesDirty === "function") {
@@ -853,7 +899,9 @@ import MenteePreferencesPage from "./MenteePreferencesPage.jsx";
                     ? "#0284c7"
                     : user.role === "mentor"
                       ? "#0ea5e9"
-                      : "#10b981",
+                      : user.role === "both"
+                        ? "#8b5cf6"
+                        : "#10b981",
                 }}
               />
               <span>
@@ -863,7 +911,9 @@ import MenteePreferencesPage from "./MenteePreferencesPage.jsx";
                     ? "Peer Mentor"
                     : user.role === "mentee"
                       ? "Mentee"
-                      : "User Account"}
+                      : user.role === "both"
+                        ? "Peer Mentor & Mentee"
+                        : "User Account"}
               </span>
             </span>
           </div>
@@ -992,7 +1042,7 @@ import MenteePreferencesPage from "./MenteePreferencesPage.jsx";
                         type="button"
                         className="settings-btn-text"
                         onClick={handleRemoveAvatar}
-                        disabled={avatarUploading || !settingsForm.avatar_url}
+                        disabled={avatarUploading || (!settingsForm.avatar_url && !user.avatar_url)}
                       >
                         Remove
                       </button>
@@ -1581,7 +1631,9 @@ import MenteePreferencesPage from "./MenteePreferencesPage.jsx";
                             ? "Mentor"
                             : user.role === "mentee"
                               ? "Mentee"
-                              : "User"}
+                              : user.role === "both"
+                                ? "Mentor & Mentee"
+                                : "User"}
                       </span>
                     </div>
                   </div>

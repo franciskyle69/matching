@@ -39,10 +39,11 @@ export default function MenteePreferencesPage({ defaultRole = "MENTEE" }) {
   const currentUser = ctx?.user;
 
   // Derive initial role
+  const isBoth = currentUser?.role === "both" || (Boolean(currentUser?.mentor_profile) && Boolean(currentUser?.mentee_profile));
   const resolvedRole = (currentUser?.role || defaultRole).toUpperCase();
   const normalizedRole = resolvedRole.includes("MENTOR")
     ? (resolvedRole.includes("INSTRUCTOR") ? "INSTRUCTOR_MENTOR" : "STUDENT_MENTOR")
-    : "MENTEE";
+    : (resolvedRole === "BOTH" ? "STUDENT_MENTOR" : "MENTEE");
 
   const [role, setRole] = useState(normalizedRole);
   const [loading, setLoading] = useState(true);
@@ -121,6 +122,7 @@ export default function MenteePreferencesPage({ defaultRole = "MENTEE" }) {
 
     try {
       const payload = {
+        role: role,
         subjects: selectedSubjects,
         topics: selectedTopics,
         competencies: selectedCompetencies,
@@ -206,6 +208,28 @@ export default function MenteePreferencesPage({ defaultRole = "MENTEE" }) {
             <Typography variant="body2" color={theme.palette.text?.secondary || neu.textSecondary}>
               Configure your subjects, topics, and competencies to optimize recommendation scoring.
             </Typography>
+            {isBoth && (
+              <Stack direction="row" spacing={1} sx={{ mt: 1.5 }}>
+                <Chip
+                  label="Peer Mentor Preferences"
+                  clickable
+                  color={role.includes("MENTOR") ? "primary" : "default"}
+                  onClick={() => setRole("STUDENT_MENTOR")}
+                  variant={role.includes("MENTOR") ? "filled" : "outlined"}
+                  size="small"
+                  sx={{ fontWeight: 600 }}
+                />
+                <Chip
+                  label="Mentee Preferences"
+                  clickable
+                  color={role === "MENTEE" ? "primary" : "default"}
+                  onClick={() => setRole("MENTEE")}
+                  variant={role === "MENTEE" ? "filled" : "outlined"}
+                  size="small"
+                  sx={{ fontWeight: 600 }}
+                />
+              </Stack>
+            )}
           </Box>
 
           <Stack direction="row" spacing={2} alignItems="center">

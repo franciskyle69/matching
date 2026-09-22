@@ -256,7 +256,10 @@
                 }
               }}
             >
-              <div className="approval-avatar" aria-hidden="true">
+              <div
+                className={`approval-avatar ${type === "mentor" ? "approval-avatar--mentor" : "approval-avatar--mentee"}`}
+                aria-hidden="true"
+              >
                 {initials}
               </div>
               <div className="approval-card-info">
@@ -298,15 +301,15 @@
           <div className="approval-card-meta">
             {type === "mentor" && (
               m.role && MentorRoleBadge ? (
-                <MentorRoleBadge
-                  role={m.role}
-                  className="approval-mentor-type-badge"
-                />
+                <MentorRoleBadge role={m.role} prominent />
               ) : (
                 <span className="approval-badge approval-badge-incomplete approval-mentor-type-missing">
                   Mentor type not set
                 </span>
               )
+            )}
+            {type === "mentee" && MentorRoleBadge && (
+              <MentorRoleBadge role="mentee" prominent />
             )}
             {summary && summary !== "—" && (
               <span className="approval-meta-pill">
@@ -333,7 +336,20 @@
                       onApprove(m.id);
                     }}
                   >
-                    Accept
+                    <svg
+                      width="13"
+                      height="13"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      aria-hidden="true"
+                    >
+                      <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                    <span>Accept</span>
                   </button>
                   <button
                     type="button"
@@ -343,7 +359,21 @@
                       onRejectAsk(type, m.id, displayName);
                     }}
                   >
-                    Reject
+                    <svg
+                      width="13"
+                      height="13"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      aria-hidden="true"
+                    >
+                      <line x1="18" y1="6" x2="6" y2="18" />
+                      <line x1="6" y1="6" x2="18" y2="18" />
+                    </svg>
+                    <span>Reject</span>
                   </button>
                 </>
               )}
@@ -1321,7 +1351,14 @@
 
               {pendingMentors.length === 0 && (
                 <div className="approvals-empty-state kasandigan-card">
-                  <p className="muted">No pending mentors to review.</p>
+                  <div className="approvals-empty-icon-pod" aria-hidden="true">
+                    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                      <path d="m9 12 2 2 4-4" />
+                    </svg>
+                  </div>
+                  <h3 className="approvals-empty-title">All Caught Up!</h3>
+                  <p className="muted approvals-empty-desc">No mentors currently awaiting verification review.</p>
                 </div>
               )}
               {pendingMentors.length > 0 && (
@@ -1358,7 +1395,14 @@
 
               {pendingMentees.length === 0 && (
                 <div className="approvals-empty-state kasandigan-card">
-                  <p className="muted">No pending mentees to review.</p>
+                  <div className="approvals-empty-icon-pod" aria-hidden="true">
+                    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                      <path d="m9 12 2 2 4-4" />
+                    </svg>
+                  </div>
+                  <h3 className="approvals-empty-title">All Caught Up!</h3>
+                  <p className="muted approvals-empty-desc">No mentees currently awaiting verification review.</p>
                 </div>
               )}
               {pendingMentees.length > 0 && (

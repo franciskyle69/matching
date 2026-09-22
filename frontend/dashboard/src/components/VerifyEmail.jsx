@@ -10,6 +10,7 @@ import {
   Stack,
   Typography,
   Alert,
+  useTheme,
 } from "@mui/material";
 import MarkEmailReadOutlinedIcon from "@mui/icons-material/MarkEmailReadOutlined";
 import ErrorOutlineOutlinedIcon from "@mui/icons-material/ErrorOutlineOutlined";
@@ -20,6 +21,67 @@ export default function VerifyEmail({ uidb64: propUid, token: propToken, onNavig
   const [success, setSuccess] = useState(false);
   const [message, setMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
+
+  const muiTheme = useTheme();
+  const isDark =
+    muiTheme?.palette?.mode === "dark" ||
+    (typeof document !== "undefined" &&
+      (document.documentElement.getAttribute("data-theme") === "dark" ||
+        document.documentElement.classList.contains("dark")));
+
+  const neuCardStyle = {
+    p: { xs: 3.5, sm: 5 },
+    borderRadius: "24px",
+    backgroundColor: isDark ? "#151D2A" : "#FFFFFF",
+    boxShadow: isDark
+      ? "8px 8px 20px #080d16, -8px -8px 20px #1e2b3c"
+      : "0 10px 30px rgba(0, 40, 85, 0.08), 0 1px 3px rgba(0, 0, 0, 0.05)",
+    border: isDark
+      ? "1px solid rgba(255, 255, 255, 0.08)"
+      : "1px solid rgba(226, 232, 240, 0.8)",
+    textAlign: "center",
+    transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+  };
+
+  const neuIconPodStyle = (type = "neutral") => {
+    let tintBg = isDark ? "#101827" : "#E6ECF5";
+    if (type === "success") {
+      tintBg = isDark ? "rgba(34, 197, 94, 0.16)" : "rgba(46, 125, 50, 0.12)";
+    } else if (type === "error") {
+      tintBg = isDark ? "rgba(239, 68, 68, 0.16)" : "rgba(211, 47, 47, 0.12)";
+    }
+    return {
+      width: 80,
+      height: 80,
+      borderRadius: "50%",
+      backgroundColor: tintBg,
+      boxShadow: isDark
+        ? "inset 3px 3px 8px #080d16, inset -3px -3px 8px #182335"
+        : "inset 3px 3px 8px #c5d0e0, inset -3px -3px 8px #ffffff",
+      border: isDark
+        ? "1px solid rgba(255, 255, 255, 0.06)"
+        : "1px solid rgba(255, 255, 255, 0.8)",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      margin: "0 auto 20px auto",
+    };
+  };
+
+  const primaryBtnStyle = {
+    py: 1.5,
+    fontWeight: 600,
+    fontSize: "1rem",
+    borderRadius: 2,
+    backgroundColor: isDark ? "#38BDF8" : "#002855",
+    color: isDark ? "#0F172A" : "#FFFFFF",
+    "&:hover": {
+      backgroundColor: isDark ? "#0EA5E9" : "#001a38",
+    },
+    boxShadow: isDark
+      ? "0 4px 14px rgba(56, 189, 248, 0.3)"
+      : "0 4px 14px rgba(0, 40, 85, 0.25)",
+  };
 
   useEffect(() => {
     let uid = propUid;
@@ -119,34 +181,25 @@ export default function VerifyEmail({ uidb64: propUid, token: propToken, onNavig
   };
 
   return (
-    <Container maxWidth="sm" sx={{ py: 6 }}>
-      <Paper
-        elevation={3}
-        sx={{
-          p: { xs: 3, sm: 5 },
-          borderRadius: 3,
-          backgroundColor: "#ffffff",
-          textAlign: "center",
-          boxShadow: "0 10px 30px rgba(0, 40, 85, 0.08)",
-        }}
-      >
+    <Container maxWidth="sm" sx={{ py: { xs: 4, sm: 6 } }}>
+      <Paper elevation={0} sx={neuCardStyle}>
         <Box sx={{ mb: 3 }}>
-          <SchoolOutlinedIcon sx={{ fontSize: 48, color: "primary.main", mb: 1 }} />
-          <Typography variant="h5" fontWeight={700} color="#002855">
+          <SchoolOutlinedIcon sx={{ fontSize: 48, color: isDark ? "#38BDF8" : "#002855", mb: 1 }} />
+          <Typography variant="h5" fontWeight={700} sx={{ color: isDark ? "#F8FAFC" : "#002855" }}>
             BukSU IT PeerLink
           </Typography>
-          <Typography variant="body2" color="text.secondary">
+          <Typography variant="body2" sx={{ color: isDark ? "#94A3B8" : "text.secondary" }}>
             Academic Mentoring Ecosystem
           </Typography>
         </Box>
 
         {loading && (
           <Box sx={{ py: 4 }}>
-            <CircularProgress size={52} thickness={4} sx={{ color: "primary.main", mb: 2 }} />
-            <Typography variant="h6" fontWeight={600} gutterBottom>
+            <CircularProgress size={52} thickness={4} sx={{ color: isDark ? "#38BDF8" : "primary.main", mb: 2 }} />
+            <Typography variant="h6" fontWeight={600} gutterBottom sx={{ color: isDark ? "#F8FAFC" : "text.primary" }}>
               Verifying your BukSU email address...
             </Typography>
-            <Typography variant="body2" color="text.secondary">
+            <Typography variant="body2" sx={{ color: isDark ? "#94A3B8" : "text.secondary" }}>
               Please wait while we confirm your institutional credentials.
             </Typography>
           </Box>
@@ -154,25 +207,14 @@ export default function VerifyEmail({ uidb64: propUid, token: propToken, onNavig
 
         {!loading && success && (
           <Box sx={{ py: 2 }}>
-            <Box
-              sx={{
-                width: 72,
-                height: 72,
-                borderRadius: "50%",
-                backgroundColor: "rgba(46, 125, 50, 0.12)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                margin: "0 auto 16px auto",
-              }}
-            >
-              <MarkEmailReadOutlinedIcon sx={{ fontSize: 44, color: "success.main" }} />
+            <Box sx={neuIconPodStyle("success")}>
+              <MarkEmailReadOutlinedIcon sx={{ fontSize: 44, color: isDark ? "#4ADE80" : "success.main" }} />
             </Box>
 
-            <Typography variant="h5" fontWeight={700} color="success.main" gutterBottom>
+            <Typography variant="h5" fontWeight={700} gutterBottom sx={{ color: isDark ? "#4ADE80" : "success.main" }}>
               Email Verified Successfully!
             </Typography>
-            <Typography variant="body1" color="text.secondary" sx={{ mb: 4, maxWidth: 420, mx: "auto" }}>
+            <Typography variant="body1" sx={{ mb: 4, maxWidth: 420, mx: "auto", color: isDark ? "#CBD5E1" : "text.secondary" }}>
               {message || "Your BukSU institutional email address has been verified. You can now log in to PeerLink."}
             </Typography>
 
@@ -181,16 +223,7 @@ export default function VerifyEmail({ uidb64: propUid, token: propToken, onNavig
               size="large"
               fullWidth
               onClick={handleProceedLogin}
-              sx={{
-                py: 1.5,
-                fontWeight: 600,
-                fontSize: "1rem",
-                borderRadius: 2,
-                backgroundColor: "#002855",
-                "&:hover": {
-                  backgroundColor: "#001a38",
-                },
-              }}
+              sx={primaryBtnStyle}
             >
               Proceed to Login
             </Button>
@@ -199,28 +232,25 @@ export default function VerifyEmail({ uidb64: propUid, token: propToken, onNavig
 
         {!loading && !success && (
           <Box sx={{ py: 2 }}>
-            <Box
-              sx={{
-                width: 72,
-                height: 72,
-                borderRadius: "50%",
-                backgroundColor: "rgba(211, 47, 47, 0.12)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                margin: "0 auto 16px auto",
-              }}
-            >
-              <ErrorOutlineOutlinedIcon sx={{ fontSize: 44, color: "error.main" }} />
+            <Box sx={neuIconPodStyle("error")}>
+              <ErrorOutlineOutlinedIcon sx={{ fontSize: 44, color: isDark ? "#F87171" : "error.main" }} />
             </Box>
 
-            <Typography variant="h5" fontWeight={700} color="error.main" gutterBottom>
+            <Typography variant="h5" fontWeight={700} gutterBottom sx={{ color: isDark ? "#F87171" : "error.main" }}>
               Verification Failed
             </Typography>
-            <Alert severity="error" sx={{ mb: 3, textAlign: "left" }}>
+            <Alert
+              severity="error"
+              sx={{
+                mb: 3,
+                textAlign: "left",
+                backgroundColor: isDark ? "rgba(239, 68, 68, 0.12)" : undefined,
+                color: isDark ? "#FCA5A5" : undefined,
+              }}
+            >
               {errorMessage || "Activation link is invalid or expired."}
             </Alert>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+            <Typography variant="body2" sx={{ mb: 3, color: isDark ? "#94A3B8" : "text.secondary" }}>
               The verification link may have expired or already been used. Please log in to request a fresh verification link.
             </Typography>
 
@@ -228,14 +258,7 @@ export default function VerifyEmail({ uidb64: propUid, token: propToken, onNavig
               <Button
                 variant="contained"
                 onClick={handleProceedLogin}
-                sx={{
-                  py: 1.25,
-                  px: 3,
-                  fontWeight: 600,
-                  borderRadius: 2,
-                  backgroundColor: "#002855",
-                  "&:hover": { backgroundColor: "#001a38" },
-                }}
+                sx={primaryBtnStyle}
               >
                 Go to Sign In
               </Button>

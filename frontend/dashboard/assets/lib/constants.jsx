@@ -63,7 +63,7 @@
       role: "mentor",
     },
     { id: "mentees", label: "Mentees", role: "mentor" },
-    { id: "matching", label: "Matching", role: "non-staff" },
+    { id: "matching", label: "Matching", role: "any" },
     { id: "announcements", label: "Announcements", role: "any" },
     { id: "approvals", label: "User approvals", role: "staff" },
     { id: "users", label: "Users", role: "staff" },
