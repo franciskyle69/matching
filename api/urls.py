@@ -1,4 +1,5 @@
 from django.urls import path, re_path
+from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 
 from .controllers.account_controller import (
     health,
@@ -229,4 +230,6 @@ urlpatterns = [
     path('users/<int:user_id>/delete/', user_delete, name='api-users-delete'),
     path('users/<int:user_id>/mentor-approve/', mentor_approve_reject, name='api-users-mentor-approve'),
     path('users/<int:user_id>/mentee-approve/', mentee_approve_reject, name='api-users-mentee-approve'),
+    path('schema/', SpectacularAPIView.as_view(permission_classes=[]), name='api-schema'),
+    path('docs/', SpectacularSwaggerView.as_view(url_name='api-schema', permission_classes=[]), name='api-docs'),
 ]

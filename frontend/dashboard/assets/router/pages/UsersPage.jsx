@@ -1189,6 +1189,15 @@
       );
       if (!confirmed) return;
 
+      const prevUsers = [...users];
+      const prevTotal = total;
+      // Optimistic delete
+      setUsers((prev) => prev.filter((u) => u.id !== userId));
+      setTotal((prev) => Math.max(0, prev - 1));
+      if (selectedUser && Number(selectedUser.id) === Number(userId)) {
+        setSelectedUser(null);
+      }
+
       setActionLoading(userId);
       try {
         const result = await fetchJSON(`/api/users/${userId}/delete/`, {
@@ -1197,21 +1206,29 @@
         });
         if (result.ok) {
           clearUsersCache();
-          reloadTable();
-          if (selectedUser && Number(selectedUser.id) === Number(userId)) {
-            setSelectedUser(null);
-          }
           notify("success", "Account Deleted", `${targetLabel}'s account was permanently deleted.`);
         } else {
+          // Rollback on error
+          setUsers(prevUsers);
+          setTotal(prevTotal);
           notify("error", "Delete Failed", result.data?.error || "Unable to delete user.");
         }
       } catch (e) {
+        setUsers(prevUsers);
+        setTotal(prevTotal);
         notify("error", "Delete Failed", e.message || "Unable to delete user.");
       }
       setActionLoading(null);
     }
 
     async function handleActivate(userId) {
+      const prevUsers = [...users];
+      // Optimistic activation
+      setUsers((prev) => prev.map((u) => (u.id === userId ? { ...u, is_active: true } : u)));
+      if (selectedUser && Number(selectedUser.id) === Number(userId)) {
+        setSelectedUser((prev) => (prev ? { ...prev, is_active: true } : prev));
+      }
+
       setActionLoading(userId);
       try {
         const result = await fetchJSON(`/api/users/${userId}/activate-deactivate/`, {
@@ -1221,18 +1238,26 @@
         });
         if (result.ok) {
           clearUsersCache();
-          reloadTable();
           notify("success", "User Activated", "User account has been activated.");
         } else {
+          setUsers(prevUsers);
           notify("error", "Action Failed", result.data?.error || "Unable to activate user.");
         }
       } catch (e) {
+        setUsers(prevUsers);
         notify("error", "Action Failed", e.message || "Unable to activate user.");
       }
       setActionLoading(null);
     }
 
     async function handleDeactivate(userId) {
+      const prevUsers = [...users];
+      // Optimistic deactivation
+      setUsers((prev) => prev.map((u) => (u.id === userId ? { ...u, is_active: false } : u)));
+      if (selectedUser && Number(selectedUser.id) === Number(userId)) {
+        setSelectedUser((prev) => (prev ? { ...prev, is_active: false } : prev));
+      }
+
       setActionLoading(userId);
       try {
         const result = await fetchJSON(`/api/users/${userId}/activate-deactivate/`, {
@@ -1242,18 +1267,42 @@
         });
         if (result.ok) {
           clearUsersCache();
-          reloadTable();
           notify("info", "User Deactivated", "User account has been deactivated.");
         } else {
+          setUsers(prevUsers);
           notify("error", "Action Failed", result.data?.error || "Unable to deactivate user.");
         }
       } catch (e) {
+        setUsers(prevUsers);
         notify("error", "Action Failed", e.message || "Unable to deactivate user.");
       }
       setActionLoading(null);
     }
 
     async function handleApprove(userId, roleType) {
+      const prevUsers = [...users];
+      // Optimistic approval
+      setUsers((prev) =>
+        prev.map((u) => {
+          if (u.id !== userId) return u;
+          return roleType === "mentor"
+            ? { ...u, mentor_approved: true }
+            : { ...u, mentee_approved: true };
+        }),
+      );
+      if (selectedUser && Number(selectedUser.id) === Number(userId)) {
+        setSelectedUser((prev) =>
+          prev
+            ? {
+                ...prev,
+                ...(roleType === "mentor"
+                  ? { mentor_approved: true }
+                  : { mentee_approved: true }),
+              }
+            : prev,
+        );
+      }
+
       setActionLoading(userId);
       try {
         const endpoint = roleType === "mentor" ? "mentor-approve" : "mentee-approve";
@@ -1269,15 +1318,13 @@
             setUsers((prev) => prev.map((u) => (u.id === userId ? updatedUser : u)));
           }
           clearUsersCache();
-          reloadTable();
-          if (selectedUser && Number(selectedUser.id) === Number(userId)) {
-            setSelectedUser(updatedUser || result.data.user);
-          }
           notify("success", "Approved", `${roleType === "mentor" ? "Mentor" : "Mentee"} role approved successfully.`);
         } else {
+          setUsers(prevUsers);
           notify("error", "Approval Failed", result.data?.error || "Unable to update approval.");
         }
       } catch (e) {
+        setUsers(prevUsers);
         notify("error", "Approval Failed", e.message || "Unable to update approval.");
       }
       setActionLoading(null);
@@ -1596,11 +1643,34 @@
               </thead>
               <tbody>
                 {loading && users.length === 0 ? (
-                  <tr>
-                    <td colSpan="5" className="users-td-loading" style={{ textAlign: "center", padding: "36px" }}>
-                      <div className="users-table-loading-spinner">Loading users…</div>
-                    </td>
-                  </tr>
+                  [1, 2, 3, 4, 5].map((idx) => (
+                    <tr key={`skeleton-${idx}`} className="users-table-row users-skeleton-row" aria-hidden="true">
+                      <td>
+                        <div className="users-user-cell">
+                          <div className="users-skeleton-avatar" />
+                          <div className="users-user-info" style={{ width: "70%" }}>
+                            <div className="users-skeleton-line" style={{ width: "60%", height: 14, marginBottom: 6 }} />
+                            <div className="users-skeleton-line" style={{ width: "85%", height: 11 }} />
+                          </div>
+                        </div>
+                      </td>
+                      <td>
+                        <div className="users-skeleton-line" style={{ width: 84, height: 22, borderRadius: 12 }} />
+                      </td>
+                      <td className="dt-center">
+                        <div className="users-skeleton-line" style={{ width: 64, height: 22, borderRadius: 12, margin: "0 auto" }} />
+                      </td>
+                      <td>
+                        <div className="users-skeleton-line" style={{ width: 75, height: 13 }} />
+                      </td>
+                      <td className="dt-center">
+                        <div style={{ display: "flex", gap: 6, justifyContent: "center" }}>
+                          <div className="users-skeleton-line" style={{ width: 50, height: 26, borderRadius: 6 }} />
+                          <div className="users-skeleton-line" style={{ width: 50, height: 26, borderRadius: 6 }} />
+                        </div>
+                      </td>
+                    </tr>
+                  ))
                 ) : users.length === 0 ? (
                   <tr>
                     <td colSpan="5" className="users-td-empty" style={{ textAlign: "center", padding: "36px" }}>

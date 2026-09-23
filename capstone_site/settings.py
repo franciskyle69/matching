@@ -150,6 +150,7 @@ INSTALLED_APPS = [
     'django.contrib.sites',
     'axes',  # Login attempt rate limiting
     'rest_framework',
+    'drf_spectacular',
     'accounts.apps.AccountsConfig',
     'profiles',
     'matching',
@@ -160,6 +161,14 @@ INSTALLED_APPS = [
     'allauth.socialaccount',
     'allauth.socialaccount.providers.google',
 ]
+
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'Academic Mentoring Unit (Kasandigan) API',
+    'DESCRIPTION': 'REST API for Mentor-Mentee Matching, User Management, and Onboarding.',
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
+    'SERVE_PERMISSIONS': ['rest_framework.permissions.AllowAny'],
+}
 
 MIDDLEWARE = [
     'django.middleware.gzip.GZipMiddleware',
@@ -209,7 +218,18 @@ force_sqlite = os.environ.get("FORCE_SQLITE", "").lower() == "true"
 database_url = os.environ.get("DATABASE_URL")
 db_name = os.environ.get("DB_NAME")
 
-if database_url and not force_sqlite:
+import sys
+
+is_running_tests = 'test' in sys.argv or os.environ.get("TESTING", "").lower() == "true"
+
+if is_running_tests:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': ':memory:',
+        }
+    }
+elif database_url and not force_sqlite:
     import dj_database_url
     DATABASES = {
         'default': dj_database_url.config(
@@ -403,6 +423,7 @@ REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticated',
     ],
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
 }
 
 # Upload ceilings (verification docs are capped at 5 MB in forms)

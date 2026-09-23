@@ -2141,6 +2141,11 @@ def complete_onboarding(request):
     mark_profile_complete(profile, True)
     _ensure_onboarding_state(request.user, True)
     _clear_me_cache(request.user.id)
+    try:
+        from matching.services import invalidate_matching_cache_for_user
+        invalidate_matching_cache_for_user(request.user.id)
+    except Exception:
+        pass
     audit_log(request.user, "update", "complete_onboarding", request.user.id)
     return JsonResponse({
         "status": "ok",

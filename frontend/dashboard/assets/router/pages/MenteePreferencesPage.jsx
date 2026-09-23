@@ -68,6 +68,10 @@ export default function MenteePreferencesPage({ defaultRole = "MENTEE" }) {
     severity: "success",
   });
 
+  const DRAFT_KEY = `peerlink.survey_draft_${currentUser?.id || "guest"}_${role}`;
+  const [draftAvailable, setDraftAvailable] = useState(false);
+  const isInitialLoadRef = useRef(true);
+
   const roleLimits = getRoleLimits(role);
 
   // Fetch saved preferences on mount via GET /api/user/preferences/
@@ -91,17 +95,72 @@ export default function MenteePreferencesPage({ defaultRole = "MENTEE" }) {
       setSelectedCompetencies(data.competencies || []);
       if (data.support_need !== undefined) setSupportNeed(data.support_need);
       if (Array.isArray(data.availability)) setAvailability(data.availability);
+
+      // Check if an unsubmitted localStorage draft exists
+      try {
+        const draftRaw = window.localStorage.getItem(DRAFT_KEY);
+        if (draftRaw) {
+          const draft = JSON.parse(draftRaw);
+          if (draft && (draft.selectedSubjects?.length || draft.selectedTopics?.length || draft.selectedCompetencies?.length || draft.availability?.length)) {
+            setDraftAvailable(true);
+          }
+        }
+      } catch {}
     } catch (err) {
       console.error("Error fetching preferences:", err);
       setError(err.message || "Failed to load preferences.");
     } finally {
       setLoading(false);
+      isInitialLoadRef.current = false;
     }
   };
 
   useEffect(() => {
     fetchPreferences();
   }, []);
+
+  // Debounced auto-save of current questionnaire answers to localStorage
+  useEffect(() => {
+    if (loading || isInitialLoadRef.current) return;
+    const timer = setTimeout(() => {
+      try {
+        window.localStorage.setItem(DRAFT_KEY, JSON.stringify({
+          selectedSubjects,
+          selectedTopics,
+          selectedCompetencies,
+          supportNeed,
+          availability,
+          savedAt: Date.now(),
+        }));
+      } catch {}
+    }, 750);
+    return () => clearTimeout(timer);
+  }, [selectedSubjects, selectedTopics, selectedCompetencies, supportNeed, availability, loading, DRAFT_KEY]);
+
+  const handleApplyDraft = () => {
+    try {
+      const raw = window.localStorage.getItem(DRAFT_KEY);
+      if (raw) {
+        const draft = JSON.parse(raw);
+        if (Array.isArray(draft.selectedSubjects)) setSelectedSubjects(draft.selectedSubjects);
+        if (Array.isArray(draft.selectedTopics)) setSelectedTopics(draft.selectedTopics);
+        if (Array.isArray(draft.selectedCompetencies)) setSelectedCompetencies(draft.selectedCompetencies);
+        if (draft.supportNeed !== undefined) setSupportNeed(draft.supportNeed);
+        if (Array.isArray(draft.availability)) setAvailability(draft.availability);
+      }
+      setDraftAvailable(false);
+      if (window.DashboardApp && typeof window.DashboardApp.notify === "function") {
+        window.DashboardApp.notify("info", "Draft Restored", "Your previously saved survey draft has been restored.");
+      }
+    } catch {}
+  };
+
+  const handleDiscardDraft = () => {
+    try {
+      window.localStorage.removeItem(DRAFT_KEY);
+    } catch {}
+    setDraftAvailable(false);
+  };
 
   // Save updates via PUT /api/user/preferences/ with explicit Save Preferences button
   const handleSavePreferences = async () => {
@@ -158,6 +217,11 @@ export default function MenteePreferencesPage({ defaultRole = "MENTEE" }) {
         throw new Error(data.error || data.detail || "Failed to update preferences.");
       }
 
+      try {
+        window.localStorage.removeItem(DRAFT_KEY);
+      } catch {}
+      setDraftAvailable(false);
+
       setToast({
         open: true,
         message: "Preferences saved successfully!",
@@ -195,6 +259,68 @@ export default function MenteePreferencesPage({ defaultRole = "MENTEE" }) {
       }}
     >
       <Container maxWidth="lg">
+        {draftAvailable && (
+          <Paper
+            sx={{
+              ...neu.elevatedCard,
+              p: 2,
+              mb: 3,
+              borderRadius: 3,
+              display: "flex",
+              flexDirection: { xs: "column", sm: "row" },
+              alignItems: { xs: "flex-start", sm: "center" },
+              justifyContent: "space-between",
+              gap: 2,
+              border: `1.5px solid ${neu.accentBlue}`,
+              backgroundColor: isDark ? "rgba(37, 99, 235, 0.12)" : "rgba(25, 118, 210, 0.08)",
+            }}
+          >
+            <Stack direction="row" spacing={1.5} alignItems="center">
+              <TuneIcon sx={{ color: neu.accentBlue }} />
+              <Box>
+                <Typography variant="subtitle2" fontWeight={700} color={neu.titleColor}>
+                  Unsaved Survey Draft Detected
+                </Typography>
+                <Typography variant="caption" color={theme.palette.text?.secondary || neu.textSecondary}>
+                  You have draft selections saved from your previous session.
+                </Typography>
+              </Box>
+            </Stack>
+            <Stack direction="row" spacing={1} sx={{ alignSelf: { xs: "flex-end", sm: "center" } }}>
+              <Button
+                size="small"
+                variant="contained"
+                onClick={handleApplyDraft}
+                sx={{
+                  borderRadius: "14px",
+                  textTransform: "none",
+                  fontWeight: 600,
+                  fontSize: "0.8rem",
+                  px: 2,
+                  backgroundColor: neu.accentBlue,
+                }}
+              >
+                Resume Draft
+              </Button>
+              <Button
+                size="small"
+                variant="text"
+                color="inherit"
+                onClick={handleDiscardDraft}
+                sx={{
+                  borderRadius: "14px",
+                  textTransform: "none",
+                  fontWeight: 600,
+                  fontSize: "0.8rem",
+                  px: 1.5,
+                  opacity: 0.75,
+                }}
+              >
+                Discard
+              </Button>
+            </Stack>
+          </Paper>
+        )}
         {/* Header Bar */}
         <Paper
           sx={{

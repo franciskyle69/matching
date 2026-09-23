@@ -457,13 +457,27 @@ def _heuristic_score(mentor: MentorProfile, mentee: MenteeProfile) -> float:
     )
 
 
+def get_matching_profiles_version() -> int:
+    return cache.get("matching:profiles_version", 1)
+
+
+def invalidate_matching_cache_for_user(user_id: int):
+    """Invalidate all cached user vectors and bump matching version to force real-time recalculation."""
+    cache.delete(f"user_vector_{user_id}")
+    try:
+        cache.incr("matching:profiles_version")
+    except Exception:
+        cache.set("matching:profiles_version", 2)
+
+
 def _score_with_model(mentor: MentorProfile, mentee: MenteeProfile) -> Optional[float]:
     model, meta = _get_model()
     if model is None or meta is None:
         return None
 
-    # Check feature vector cache first.
-    cache_key = f"matching:fv:v1:{mentor.id}:{mentee.id}"
+    # Check versioned feature vector cache first.
+    version = get_matching_profiles_version()
+    cache_key = f"matching:fv:v2:{version}:{mentor.id}:{mentee.id}"
     cached_score = cache.get(cache_key)
     if cached_score is not None:
         return float(cached_score)
@@ -517,10 +531,11 @@ def _batch_score_with_model(
     task = meta.get("task", "regression")
 
     # ── 1. Check cache for each (mentor, mentee) pair. ──────────────
+    version = get_matching_profiles_version()
     scores: Dict[int, float] = {}
     uncached_mentors: List[MentorProfile] = []
     for mentor in mentors:
-        cache_key = f"matching:fv:v1:{mentor.id}:{mentee.id}"
+        cache_key = f"matching:fv:v2:{version}:{mentor.id}:{mentee.id}"
         cached = cache.get(cache_key)
         if cached is not None:
             scores[mentor.id] = float(cached)
@@ -563,7 +578,7 @@ def _batch_score_with_model(
             score *= (0.85 + 0.15 * topic_confidence)
         score = max(0.0, min(1.0, score))
         scores[mentor.id] = score
-        cache.set(f"matching:fv:v1:{mentor.id}:{mentee.id}", score, timeout=_FV_CACHE_TTL)
+        cache.set(f"matching:fv:v2:{version}:{mentor.id}:{mentee.id}", score, timeout=_FV_CACHE_TTL)
 
     return scores
 

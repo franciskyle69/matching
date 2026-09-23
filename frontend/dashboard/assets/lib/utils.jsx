@@ -128,7 +128,32 @@
   }
 
   function MatchingLoadingAnimation() {
-    return <LoadingSpinner title="Running matching…" subtitle="Finding mentor–mentee pairs" />;
+    return (
+      <div className="matching-skeleton-grid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: 20, width: "100%", marginTop: 16 }}>
+        {[1, 2, 3].map((n) => (
+          <div key={n} className="matching-card profile-matching-card pmc-card pmc-skeleton-card" aria-hidden="true" style={{ minHeight: 240, padding: 20 }}>
+            <div style={{ display: "flex", gap: 14, alignItems: "center", marginBottom: 16 }}>
+              <div className="users-skeleton-avatar" style={{ width: 52, height: 52, borderRadius: "50%" }} />
+              <div style={{ flex: 1 }}>
+                <div className="users-skeleton-line" style={{ width: "60%", height: 16, marginBottom: 8 }} />
+                <div className="users-skeleton-line" style={{ width: "40%", height: 12 }} />
+              </div>
+              <div className="users-skeleton-line" style={{ width: 68, height: 26, borderRadius: 14 }} />
+            </div>
+            <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
+              <div className="users-skeleton-line" style={{ width: 70, height: 22, borderRadius: 12 }} />
+              <div className="users-skeleton-line" style={{ width: 90, height: 22, borderRadius: 12 }} />
+              <div className="users-skeleton-line" style={{ width: 60, height: 22, borderRadius: 12 }} />
+            </div>
+            <div className="users-skeleton-line" style={{ width: "100%", height: 36, borderRadius: 8, marginBottom: 16 }} />
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div className="users-skeleton-line" style={{ width: 110, height: 34, borderRadius: 18 }} />
+              <div className="users-skeleton-line" style={{ width: 34, height: 34, borderRadius: 18 }} />
+            </div>
+          </div>
+        ))}
+      </div>
+    );
   }
 
   let csrfTokenCache = "";

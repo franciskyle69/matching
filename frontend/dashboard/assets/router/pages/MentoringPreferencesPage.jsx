@@ -191,6 +191,56 @@ import Slider from "@mui/material/Slider";
     const isPristine = savedSnapshotRef.current === serializedPrefs;
     const justSaved = savedAt > 0;
 
+    const DRAFT_STORAGE_KEY = `peerlink.survey_draft_${user?.id || user?.username || "mentee"}`;
+    const [draftAvailable, setDraftAvailable] = useState(false);
+
+    useEffect(() => {
+      try {
+        const raw = window.localStorage.getItem(DRAFT_STORAGE_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (parsed && (Array.isArray(parsed.subjects) ? parsed.subjects.length > 0 : parsed.selectedSubjects?.length > 0)) {
+            setDraftAvailable(true);
+          }
+        }
+      } catch (e) {}
+    }, [DRAFT_STORAGE_KEY]);
+
+    useEffect(() => {
+      if (!hasUserEditedRef.current || isPristine) return;
+      const timer = setTimeout(() => {
+        try {
+          window.localStorage.setItem(
+            DRAFT_STORAGE_KEY,
+            JSON.stringify({
+              ...menteeMatching,
+              savedAt: Date.now(),
+            })
+          );
+        } catch (e) {}
+      }, 800);
+      return () => clearTimeout(timer);
+    }, [menteeMatching, isPristine, DRAFT_STORAGE_KEY]);
+
+    const handleResumeDraft = () => {
+      try {
+        const raw = window.localStorage.getItem(DRAFT_STORAGE_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          setMenteeMatching((prev) => ({ ...prev, ...parsed }));
+          hasUserEditedRef.current = true;
+          setDraftAvailable(false);
+        }
+      } catch (e) {}
+    };
+
+    const handleDiscardDraft = () => {
+      try {
+        window.localStorage.removeItem(DRAFT_STORAGE_KEY);
+        setDraftAvailable(false);
+      } catch (e) {}
+    };
+
     useEffect(() => {
       if (!savedAt) return undefined;
       const timeoutId = window.setTimeout(() => setSavedAt(0), 2200);
@@ -569,6 +619,10 @@ import Slider from "@mui/material/Slider";
       const saved = await handleMenteeMatchingSave({ availability });
       if (saved) {
         hasUserEditedRef.current = false;
+        try {
+          window.localStorage.removeItem(DRAFT_STORAGE_KEY);
+        } catch (e) {}
+        setDraftAvailable(false);
         setSavedAt(Date.now());
         savedSnapshotRef.current = serializePreferences({
           ...menteeMatching,
@@ -676,6 +730,64 @@ import Slider from "@mui/material/Slider";
               </button>
             </div>
           </header>
+        )}
+
+        {draftAvailable && (
+          <div
+            className="mentee-draft-banner"
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              background: "linear-gradient(135deg, rgba(30, 41, 59, 0.75), rgba(15, 23, 42, 0.85))",
+              border: "1px solid rgba(56, 189, 248, 0.3)",
+              boxShadow: "inset 2px 2px 5px rgba(0, 0, 0, 0.4), inset -2px -2px 5px rgba(255, 255, 255, 0.04), 0 4px 12px rgba(0, 0, 0, 0.3)",
+              borderRadius: "16px",
+              padding: "14px 20px",
+              marginBottom: "20px",
+              backdropFilter: "blur(12px)",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+              <span style={{ fontSize: "1.4rem" }}>💾</span>
+              <div>
+                <strong style={{ display: "block", color: "#38bdf8", fontSize: "0.95rem" }}>
+                  Unsaved Survey Draft Found
+                </strong>
+                <span style={{ fontSize: "0.82rem", opacity: 0.8 }}>
+                  You have previously auto-saved survey responses. Would you like to resume?
+                </span>
+              </div>
+            </div>
+            <div style={{ display: "flex", gap: "10px" }}>
+              <button
+                type="button"
+                className="btn small"
+                style={{
+                  background: "#0284c7",
+                  color: "#fff",
+                  fontWeight: 600,
+                  borderRadius: "10px",
+                  padding: "6px 14px",
+                }}
+                onClick={handleResumeDraft}
+              >
+                Resume Draft
+              </button>
+              <button
+                type="button"
+                className="btn small ghost"
+                style={{
+                  borderRadius: "10px",
+                  padding: "6px 12px",
+                  opacity: 0.75,
+                }}
+                onClick={handleDiscardDraft}
+              >
+                Discard
+              </button>
+            </div>
+          </div>
         )}
 
         <div className="mp-layout">

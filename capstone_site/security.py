@@ -20,6 +20,8 @@ PUBLIC_API_PATHS = {
     "/api/auth/refresh/",
     "/api/auth/logout/",
     "/api/auth/check-lockout/",
+    "/api/schema/",
+    "/api/docs/",
 }
 
 
@@ -46,7 +48,7 @@ def _csp_header(nonce: str, debug: bool) -> str:
     parts = [
         "default-src 'self'",
         f"script-src 'self' 'nonce-{nonce}' https://cdn.jsdelivr.net",
-        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com",
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net",
         "font-src 'self' https://fonts.gstatic.com data:",
         "img-src 'self' data: blob: https:",
         "connect-src 'self'",
@@ -80,7 +82,11 @@ class SecurityHeadersMiddleware:
         response.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
 
         admin_prefix = "/" + getattr(settings, "ADMIN_URL", "admin/")
-        if (request.path or "").startswith(admin_prefix):
+        if (
+            (request.path or "").startswith(admin_prefix)
+            or (request.path or "").startswith("/api/docs")
+            or (request.path or "").startswith("/api/schema")
+        ):
             return response
 
         response.setdefault(

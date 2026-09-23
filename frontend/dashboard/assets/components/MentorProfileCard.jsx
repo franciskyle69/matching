@@ -463,25 +463,81 @@ import ExpandLess from "@mui/icons-material/ExpandLess";
   function ScorePill({ score, breakdown, isExpanded, onToggle }) {
     if (score == null || !formatMatchScore) return null;
     const info = formatMatchScore(score);
+    const factors = breakdown?.factors || {};
+    const academicPct = factors.academic?.score != null ? Math.round(factors.academic.score) : null;
+    const compPct = factors.competency?.score != null ? Math.round(factors.competency.score) : null;
+    const schedPct = factors.schedule?.score != null ? Math.round(factors.schedule.score) : null;
+    const diffPct = factors.difficulty?.score != null ? Math.round(factors.difficulty.score) : null;
+
+    const tooltipContent = (
+      <div className="score-xai-tooltip" style={{ padding: "4px 2px", minWidth: 190 }}>
+        <div style={{ fontWeight: 700, fontSize: "0.82rem", marginBottom: 6, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <span>Explainable AI Match</span>
+          <span style={{ color: "#60a5fa", fontWeight: 700 }}>{info.percentage}%</span>
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: "0.75rem" }}>
+          {academicPct != null && (
+            <div style={{ display: "flex", justifyContent: "space-between" }}>
+              <span style={{ opacity: 0.85 }}>Subject & Topic Fit:</span>
+              <strong style={{ fontWeight: 600 }}>{academicPct}%</strong>
+            </div>
+          )}
+          {compPct != null && (
+            <div style={{ display: "flex", justifyContent: "space-between" }}>
+              <span style={{ opacity: 0.85 }}>Skill Overlap:</span>
+              <strong style={{ fontWeight: 600 }}>{compPct}%</strong>
+            </div>
+          )}
+          {schedPct != null && (
+            <div style={{ display: "flex", justifyContent: "space-between" }}>
+              <span style={{ opacity: 0.85 }}>Availability Alignment:</span>
+              <strong style={{ fontWeight: 600 }}>{schedPct}%</strong>
+            </div>
+          )}
+          {diffPct != null && (
+            <div style={{ display: "flex", justifyContent: "space-between" }}>
+              <span style={{ opacity: 0.85 }}>Experience Balance:</span>
+              <strong style={{ fontWeight: 600 }}>{diffPct}%</strong>
+            </div>
+          )}
+        </div>
+        <div style={{ marginTop: 6, paddingTop: 4, borderTop: "1px solid rgba(255,255,255,0.15)", fontSize: "0.7rem", opacity: 0.75, textAlign: "center" }}>
+          {isExpanded ? "Click to collapse details" : "Click to view full breakdown"}
+        </div>
+      </div>
+    );
+
     if (!onToggle) {
-      return (
+      const staticPill = (
         <span className="pmc-score">
           {info.percentage}% Match
         </span>
       );
+      return Tooltip ? (
+        <Tooltip title={tooltipContent} arrow placement="top">
+          {staticPill}
+        </Tooltip>
+      ) : staticPill;
     }
-    return (
+
+    const interactivePill = (
       <button
         type="button"
         className={"pmc-score pmc-score--interactive" + (isExpanded ? " pmc-score--active" : "")}
         onClick={onToggle}
-        title={isExpanded ? "Collapse Explainable AI match breakdown" : "Click to view Transparent Match Breakdown (Explainable AI)"}
         aria-expanded={isExpanded}
+        aria-label={`${info.percentage}% Match. Click to toggle explainable AI details.`}
       >
         <span>{info.percentage}% Match</span>
         <span className="pmc-score-caret" aria-hidden="true">{isExpanded ? "▴" : "▾"}</span>
       </button>
     );
+
+    return Tooltip ? (
+      <Tooltip title={tooltipContent} arrow placement="top">
+        {interactivePill}
+      </Tooltip>
+    ) : interactivePill;
   }
 
   function StatItem({ label, value }) {

@@ -1145,3 +1145,45 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* ── Neumorphic Soft UI Skeleton Loading ─────────────────── */
+.users-skeleton-row td {
+  padding: 12px 14px !important;
+}
+
+.users-skeleton-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: linear-gradient(90deg, rgba(200, 210, 225, 0.3) 25%, rgba(225, 235, 250, 0.6) 50%, rgba(200, 210, 225, 0.3) 75%);
+  background-size: 200% 100%;
+  animation: neuSkeletonShimmer 1.5s infinite;
+  flex-shrink: 0;
+}
+
+[data-theme="dark"] .users-skeleton-avatar {
+  background: linear-gradient(90deg, rgba(30, 41, 59, 0.6) 25%, rgba(51, 65, 85, 0.8) 50%, rgba(30, 41, 59, 0.6) 75%);
+  background-size: 200% 100%;
+}
+
+.users-skeleton-line {
+  border-radius: 6px;
+  background: linear-gradient(90deg, rgba(200, 210, 225, 0.35) 25%, rgba(225, 235, 250, 0.65) 50%, rgba(200, 210, 225, 0.35) 75%);
+  background-size: 200% 100%;
+  animation: neuSkeletonShimmer 1.5s infinite;
+}
+
+[data-theme="dark"] .users-skeleton-line {
+  background: linear-gradient(90deg, rgba(30, 41, 59, 0.65) 25%, rgba(51, 65, 85, 0.85) 50%, rgba(30, 41, 59, 0.65) 75%);
+  background-size: 200% 100%;
+}
+
+@keyframes neuSkeletonShimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
