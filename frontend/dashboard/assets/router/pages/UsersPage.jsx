@@ -647,7 +647,16 @@
     );
   }
 
-  function UserDetailsModal({ user, onClose, onUpdate, startInEdit = false }) {
+  function UserDetailsModal({
+    user,
+    onClose,
+    onUpdate,
+    startInEdit = false,
+    onDeleteUser,
+    onApproveUser,
+    actionLoading,
+  }) {
+    const ctx = useContext(AppContext);
     const initialForm = useMemo(() => buildInitialForm(user), [user]);
     const [formData, setFormData] = useState(initialForm);
     const [editMode, setEditMode] = useState(!!startInEdit);
@@ -912,8 +921,9 @@
                         type="button"
                         className="users-action-btn approve-btn"
                         onClick={async () => {
-                          await handleApprove(user.id, "mentor");
-                          handleViewUser(user.id);
+                          if (onApproveUser) {
+                            await onApproveUser("mentor");
+                          }
                         }}
                         disabled={actionLoading === user.id}
                         style={{ padding: "3px 10px", fontSize: "12px" }}
@@ -926,8 +936,9 @@
                         type="button"
                         className="users-action-btn approve-btn"
                         onClick={async () => {
-                          await handleApprove(user.id, "mentee");
-                          handleViewUser(user.id);
+                          if (onApproveUser) {
+                            await onApproveUser("mentee");
+                          }
                         }}
                         disabled={actionLoading === user.id}
                         style={{ padding: "3px 10px", fontSize: "12px" }}
@@ -979,8 +990,13 @@
             }}
             onSave={handleSave}
             onStartEdit={() => setEditMode(true)}
-            onDelete={() => handleDeleteUser(user.id)}
-            deleteDisabled={!!(user.id && ctx.user && Number(user.id) === Number(ctx.user.id)) || actionLoading === user.id}
+            onDelete={() => {
+              if (onDeleteUser) onDeleteUser();
+            }}
+            deleteDisabled={
+              !!(user?.id && ctx?.user && Number(user.id) === Number(ctx.user.id)) ||
+              actionLoading === user?.id
+            }
           />
         </div>
       </div>
@@ -1757,6 +1773,12 @@
               clearUsersCache();
               reloadTable();
             }}
+            onDeleteUser={() => handleDeleteUser(selectedUser.id)}
+            onApproveUser={async (roleType) => {
+              await handleApprove(selectedUser.id, roleType);
+              handleViewUser(selectedUser.id);
+            }}
+            actionLoading={actionLoading}
           />
         )}
       </div>
