@@ -1008,49 +1008,49 @@
   width: 100%;
 }
 
-/* ── Quick Start Guide Banner (Addresses U1: Ease of Learning, U2: Navigation) ── */
+/* ── Neumorphic Quick Start Guide Banner (Soft UI Dual Shadows) ── */
 
 .kasandigan-quick-guide-banner {
   margin-bottom: 24px;
-  padding: 20px 24px;
-  background: linear-gradient(135deg, rgba(14, 165, 233, 0.06) 0%, rgba(99, 102, 241, 0.04) 100%);
-  border: 1px solid rgba(14, 165, 233, 0.22);
-  border-radius: 16px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.02);
+  padding: 22px 24px;
+  background: #ffffff !important;
+  border: 1px solid rgba(203, 213, 225, 0.85) !important;
+  border-radius: 20px !important;
+  box-shadow: 6px 8px 22px rgba(148, 163, 184, 0.28), -4px -4px 14px rgba(255, 255, 255, 0.9) !important;
+  transition: all 0.25s ease;
 }
 
 .kasandigan-quick-guide-banner--mentor {
-  background: linear-gradient(135deg, rgba(16, 185, 129, 0.06) 0%, rgba(14, 165, 233, 0.04) 100%);
-  border-color: rgba(16, 185, 129, 0.22);
+  border-color: rgba(16, 185, 129, 0.35) !important;
 }
 
 .kasandigan-quick-guide-header {
-  margin-bottom: 16px;
+  margin-bottom: 18px;
 }
 
 .kasandigan-quick-guide-title-wrap {
   display: flex;
   align-items: flex-start;
-  gap: 12px;
+  gap: 14px;
 }
 
 .kasandigan-quick-guide-icon {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 38px;
-  height: 38px;
-  border-radius: 10px;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
   background: #0284c7;
   color: #ffffff;
-  font-size: 20px;
+  font-size: 22px;
   flex-shrink: 0;
-  box-shadow: 0 2px 8px rgba(2, 132, 199, 0.25);
+  box-shadow: 3px 4px 10px rgba(2, 132, 199, 0.35), inset 1px 1px 2px rgba(255, 255, 255, 0.4);
 }
 
 .kasandigan-quick-guide-banner--mentor .kasandigan-quick-guide-icon {
   background: #059669;
-  box-shadow: 0 2px 8px rgba(5, 150, 105, 0.25);
+  box-shadow: 3px 4px 10px rgba(5, 150, 105, 0.35), inset 1px 1px 2px rgba(255, 255, 255, 0.4);
 }
 
 .kasandigan-quick-guide-title {
@@ -1076,17 +1076,18 @@
 @media (max-width: 768px) {
   .kasandigan-guide-steps-grid {
     grid-template-columns: 1fr;
-    gap: 10px;
+    gap: 12px;
   }
 }
 
 .kasandigan-guide-step-card {
   display: flex;
   flex-direction: column;
-  padding: 14px 16px;
-  background: var(--surface-card, #ffffff);
-  border: 1px solid rgba(203, 213, 225, 0.7);
-  border-radius: 12px;
+  padding: 16px 18px;
+  background: #f0f4f8 !important;
+  border: 1px solid rgba(203, 213, 225, 0.75) !important;
+  border-radius: 14px !important;
+  box-shadow: 4px 6px 14px rgba(148, 163, 184, 0.22), -3px -3px 10px rgba(255, 255, 255, 0.9) !important;
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   position: relative;
@@ -1095,8 +1096,13 @@
 
 .kasandigan-guide-step-card:hover {
   transform: translateY(-2px);
-  border-color: #0284c7;
-  box-shadow: 0 6px 18px rgba(2, 132, 199, 0.12);
+  border-color: #0284c7 !important;
+  box-shadow: 6px 8px 20px rgba(14, 165, 233, 0.25), -3px -3px 10px rgba(255, 255, 255, 0.95) !important;
+}
+
+.kasandigan-guide-step-card:active {
+  transform: translateY(0);
+  box-shadow: inset 2px 2px 5px rgba(148, 163, 184, 0.3), inset -2px -2px 5px rgba(255, 255, 255, 0.9) !important;
 }
 
 .kasandigan-step-badge {
@@ -1106,16 +1112,18 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  padding: 2px 8px;
-  border-radius: 6px;
-  background: rgba(14, 165, 233, 0.12);
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: #e0f2fe;
   color: #0284c7;
-  margin-bottom: 8px;
+  margin-bottom: 10px;
+  box-shadow: inset 1px 1px 3px rgba(14, 165, 233, 0.2), inset -1px -1px 3px rgba(255, 255, 255, 0.9);
 }
 
 .kasandigan-guide-step-card--done .kasandigan-step-badge {
-  background: rgba(16, 185, 129, 0.14);
+  background: #d1fae5;
   color: #059669;
+  box-shadow: inset 1px 1px 3px rgba(16, 185, 129, 0.2), inset -1px -1px 3px rgba(255, 255, 255, 0.9);
 }
 
 .kasandigan-step-title {
@@ -1788,16 +1796,17 @@
   border-color: #181b20 !important;
 }
 
-/* Dark Theme — Quick Guide Banner & Interactive Timeline */
-[data-theme="dark"] .kasandigan-quick-guide-banner {
-  background: linear-gradient(135deg, rgba(14, 165, 233, 0.12) 0%, rgba(99, 102, 241, 0.08) 100%) !important;
-  border-color: rgba(56, 189, 248, 0.25) !important;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3) !important;
+/* Dark Theme — Neumorphic Quick Guide Banner & Interactive Timeline */
+[data-theme="dark"] .kasandigan-quick-guide-banner,
+.dark .kasandigan-quick-guide-banner {
+  background: #181b20 !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  box-shadow: 10px 10px 24px rgba(0, 0, 0, 0.85), -8px -8px 20px rgba(255, 255, 255, 0.07) !important;
 }
 
-[data-theme="dark"] .kasandigan-quick-guide-banner--mentor {
-  background: linear-gradient(135deg, rgba(16, 185, 129, 0.12) 0%, rgba(14, 165, 233, 0.08) 100%) !important;
-  border-color: rgba(16, 185, 129, 0.25) !important;
+[data-theme="dark"] .kasandigan-quick-guide-banner--mentor,
+.dark .kasandigan-quick-guide-banner--mentor {
+  border-color: rgba(16, 185, 129, 0.3) !important;
 }
 
 [data-theme="dark"] .kasandigan-quick-guide-title {
@@ -1808,19 +1817,29 @@
   color: #94a3b8 !important;
 }
 
-[data-theme="dark"] .kasandigan-guide-step-card {
-  background: #13161a !important;
-  border-color: rgba(255, 255, 255, 0.08) !important;
+[data-theme="dark"] .kasandigan-guide-step-card,
+.dark .kasandigan-guide-step-card {
+  background: #14171c !important;
+  border: 1px solid rgba(255, 255, 255, 0.07) !important;
+  box-shadow: 6px 6px 16px rgba(0, 0, 0, 0.7), -4px -4px 12px rgba(255, 255, 255, 0.05) !important;
 }
 
-[data-theme="dark"] .kasandigan-guide-step-card:hover {
+[data-theme="dark"] .kasandigan-guide-step-card:hover,
+.dark .kasandigan-guide-step-card:hover {
   border-color: #38bdf8 !important;
   background: #181c23 !important;
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4) !important;
+  box-shadow: 8px 8px 20px rgba(0, 0, 0, 0.85), -4px -4px 12px rgba(56, 189, 248, 0.2) !important;
 }
 
-[data-theme="dark"] .kasandigan-quick-guide-banner--mentor .kasandigan-guide-step-card:hover {
+[data-theme="dark"] .kasandigan-guide-step-card:active,
+.dark .kasandigan-guide-step-card:active {
+  box-shadow: inset 2px 2px 6px rgba(0, 0, 0, 0.9), inset -2px -2px 6px rgba(255, 255, 255, 0.05) !important;
+}
+
+[data-theme="dark"] .kasandigan-quick-guide-banner--mentor .kasandigan-guide-step-card:hover,
+.dark .kasandigan-quick-guide-banner--mentor .kasandigan-guide-step-card:hover {
   border-color: #34d399 !important;
+  box-shadow: 8px 8px 20px rgba(0, 0, 0, 0.85), -4px -4px 12px rgba(52, 211, 153, 0.2) !important;
 }
 
 [data-theme="dark"] .kasandigan-step-title {
@@ -1839,18 +1858,24 @@
   color: #34d399 !important;
 }
 
-[data-theme="dark"] .kasandigan-step-badge {
+[data-theme="dark"] .kasandigan-step-badge,
+.dark .kasandigan-step-badge {
   background: rgba(56, 189, 248, 0.15) !important;
   color: #38bdf8 !important;
+  box-shadow: inset 1px 1px 3px rgba(0, 0, 0, 0.6), inset -1px -1px 3px rgba(255, 255, 255, 0.08) !important;
 }
 
-[data-theme="dark"] .kasandigan-guide-step-card--done .kasandigan-step-badge {
-  background: rgba(16, 185, 129, 0.18) !important;
+[data-theme="dark"] .kasandigan-guide-step-card--done .kasandigan-step-badge,
+.dark .kasandigan-guide-step-card--done .kasandigan-step-badge {
+  background: rgba(16, 185, 129, 0.15) !important;
   color: #34d399 !important;
+  box-shadow: inset 1px 1px 3px rgba(0, 0, 0, 0.6), inset -1px -1px 3px rgba(255, 255, 255, 0.08) !important;
 }
 
 [data-theme="dark"] .mentee-timeline-item--interactive:hover {
-  background: rgba(56, 189, 248, 0.1) !important;
+  background: #14171c !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
+  box-shadow: 4px 4px 12px rgba(0, 0, 0, 0.6), -2px -2px 6px rgba(255, 255, 255, 0.05) !important;
 }
 
 [data-theme="dark"] .mentee-timeline-action-badge {

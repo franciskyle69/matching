@@ -14,16 +14,16 @@
     // Guard: Staff-only routes
     if (STAFF_TABS.includes(activeTab) && !isStaff) {
       return (
-        <div className="card cta-card page-shell" style={{ textAlign: "center", padding: "48px 24px", maxWidth: "560px", margin: "40px auto" }}>
+        <div className="card cta-card kasandigan-card" style={{ textAlign: "center", padding: "48px 24px", maxWidth: "560px", margin: "40px auto" }}>
           <div style={{ fontSize: "42px", marginBottom: "14px" }} role="img" aria-label="Restricted">🔒</div>
-          <h2 className="page-title" style={{ fontSize: "1.5rem" }}>Access Restricted</h2>
-          <p className="page-subtitle" style={{ maxWidth: "420px", margin: "0 auto 20px" }}>
+          <h2 className="page-title kasandigan-title" style={{ fontSize: "1.5rem", marginBottom: "10px" }}>Access Restricted</h2>
+          <p className="page-subtitle kasandigan-subtitle" style={{ maxWidth: "420px", margin: "0 auto 24px" }}>
             This section is restricted to Coordinator and Administrator accounts. Please navigate using the available menu options.
           </p>
           <div className="btn-row" style={{ justifyContent: "center" }}>
             <button
               type="button"
-              className="btn"
+              className="btn kasandigan-btn-primary"
               onClick={() => {
                 if (typeof ctx?.setActiveTab === "function") {
                   ctx.setActiveTab("home");
@@ -42,16 +42,16 @@
     const Page = window.DashboardApp.Pages[activeTab];
     if (!Page) {
       return (
-        <div className="card cta-card page-shell" style={{ textAlign: "center", padding: "48px 24px", maxWidth: "560px", margin: "40px auto" }}>
+        <div className="card cta-card kasandigan-card" style={{ textAlign: "center", padding: "48px 24px", maxWidth: "560px", margin: "40px auto" }}>
           <div style={{ fontSize: "42px", marginBottom: "14px" }} role="img" aria-label="Not Found">🔍</div>
-          <h2 className="page-title" style={{ fontSize: "1.5rem" }}>Section Not Found</h2>
-          <p className="page-subtitle" style={{ maxWidth: "420px", margin: "0 auto 20px" }}>
+          <h2 className="page-title kasandigan-title" style={{ fontSize: "1.5rem", marginBottom: "10px" }}>Section Not Found</h2>
+          <p className="page-subtitle kasandigan-subtitle" style={{ maxWidth: "420px", margin: "0 auto 24px" }}>
             The requested page does not exist or has been moved.
           </p>
           <div className="btn-row" style={{ justifyContent: "center" }}>
             <button
               type="button"
-              className="btn"
+              className="btn kasandigan-btn-primary"
               onClick={() => {
                 if (typeof ctx?.setActiveTab === "function") {
                   ctx.setActiveTab("home");
