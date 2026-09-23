@@ -106,8 +106,13 @@
       .replace(/^#\/?/, "")
       .replace(/^\//, "");
     if (!value) return null;
-    const base = value.split("/")[0];
+    let base = value.split("/")[0];
     if (base === "verify-email") return "verify-email";
+    if (base === "mentee-matching-profile" || base === "mentee-preferences") {
+      base = "mentoring-preferences";
+    } else if (base === "mentor-preferences") {
+      base = "mentor-matching-profile";
+    }
     if (MAIN_TABS.some((tab) => tab.id === base)) return base;
     const hiddenTabs =
       (window.DashboardApp && window.DashboardApp.HIDDEN_TABS) || [];
@@ -141,6 +146,8 @@
       ) {
         return "complete-profile";
       }
+      const resolvedFromHash = resolveTabFromHash(hash);
+      if (resolvedFromHash) return resolvedFromHash;
       return "home";
     });
     const [user, setUser] = useState(null);
@@ -321,13 +328,49 @@
       return path.endsWith("/app/signin");
     }
 
-    function addToast(message, type = "success") {
+    const toastTimersRef = useRef(new Map());
+
+    function removeToast(id) {
+      if (toastTimersRef.current.has(id)) {
+        clearTimeout(toastTimersRef.current.get(id));
+        toastTimersRef.current.delete(id);
+      }
+      setToasts((prev) => prev.filter((t) => t.id !== id));
+    }
+
+    function addToast(itemOrMessage, defaultType = "success", options = {}) {
+      if (!itemOrMessage) return;
       const id = ++toastIdRef.current;
-      setToasts((prev) => [...prev, { id, message, type }]);
-      setTimeout(
-        () => setToasts((prev) => prev.filter((t) => t.id !== id)),
-        3200,
-      );
+      let toastItem = {};
+      if (typeof itemOrMessage === "object" && itemOrMessage !== null) {
+        toastItem = { ...itemOrMessage };
+      } else {
+        toastItem = { message: String(itemOrMessage) };
+      }
+      const type = toastItem.type || defaultType || "success";
+      const title = toastItem.title || options.title || "";
+      const message = toastItem.message || "";
+      const duration =
+        toastItem.duration ||
+        options.duration ||
+        (type === "error" || type === "warning" ? 5000 : 3500);
+
+      const newToast = {
+        id,
+        title,
+        message,
+        type,
+        createdAt: Date.now(),
+      };
+
+      // Keep at most 4 active toasts stacked
+      setToasts((prev) => [...prev.slice(-3), newToast]);
+
+      const timerId = setTimeout(() => {
+        removeToast(id);
+      }, duration);
+      toastTimersRef.current.set(id, timerId);
+      return id;
     }
 
     function setUnsavedChangesDirty(dirty) {
@@ -408,9 +451,30 @@
 
     useEffect(() => {
       window.DashboardApp = window.DashboardApp || {};
-      const notifyBridge = (message, type = "success") => {
-        if (!message) return;
-        addToast(String(message), type);
+      const notifyBridge = (typeOrMessage, title, text) => {
+        if (!typeOrMessage) return;
+        if (typeof typeOrMessage === "object") {
+          addToast(typeOrMessage);
+          return;
+        }
+        const str = String(typeOrMessage).toLowerCase();
+        if (["success", "error", "warning", "info"].includes(str)) {
+          const type = str;
+          const msg = text || title || "";
+          const heading = text ? title : "";
+          addToast({ title: heading, message: msg, type });
+          return;
+        }
+        const type =
+          typeof title === "string" &&
+          ["success", "error", "warning", "info"].includes(title.toLowerCase())
+            ? title.toLowerCase()
+            : "success";
+        addToast({
+          message: String(typeOrMessage),
+          type,
+          title: text || "",
+        });
       };
       window.DashboardApp.notify = notifyBridge;
       return () => {
@@ -1314,10 +1378,20 @@
       });
       setAcceptMenteeLoading(null);
       if (!result.ok) {
-        setError(result.data?.error || "Failed to accept mentee.");
+        const err = result.data?.error || "Failed to accept mentee.";
+        setError(err);
+        addToast({
+          title: "Accept Failed",
+          message: err,
+          type: "error",
+        });
         return;
       }
-      addToast("Mentee accepted.");
+      addToast({
+        title: "Mentee Accepted",
+        message: "You have accepted the mentee pairing request.",
+        type: "success",
+      });
       loadMentorRequests();
       setActiveTab("matching");
     }
@@ -1375,7 +1449,7 @@
             ? result.data.elapsed_ms
             : 0,
         paired_mentors_count: result.data.paired_mentors_count ?? 0,
-        max_mentors_limit: result.data.max_mentors_limit ?? 2,
+        max_mentors_limit: 2,
         can_request_pairing: result.data.can_request_pairing ?? true,
       });
       setMenteeRecLoading(false);
@@ -1388,7 +1462,11 @@
       if (myMentors.length >= 2 || (menteeRecMeta && menteeRecMeta.can_request_pairing === false)) {
         const limitMsg = "You have reached the maximum allowed mentor pairings (2). You cannot request pairing with additional mentors.";
         setError(limitMsg);
-        addToast(limitMsg, "error");
+        addToast({
+          title: "Pairing Limit Reached",
+          message: limitMsg,
+          type: "warning",
+        });
         return { ok: false, code: "mentee_max_pairings_reached", error: limitMsg };
       }
       const result = await fetchJSON("/api/matching/mentee-choose-mentor/", {
@@ -1399,13 +1477,21 @@
       if (!result.ok) {
         const message = result.data?.error || "Unable to choose this mentor.";
         setError(message);
-        addToast(message, "error");
+        addToast({
+          title: "Request Failed",
+          message: message,
+          type: "error",
+        });
         return { ok: false, code: result.data?.code || null, error: message };
       }
       if (result.data?.accepted) {
         const successMessage = "Mentor matched successfully.";
         setAuthMessage(successMessage);
-        addToast(successMessage, "success");
+        addToast({
+          title: "Mentor Matched",
+          message: successMessage,
+          type: "success",
+        });
         setChosenMentorId(mentorId);
         await loadMyMentor();
       } else {
@@ -1413,7 +1499,11 @@
           result.data?.message ||
           "Pairing request sent to mentor. Waiting for mentor acceptance.";
         setAuthMessage(successMessage);
-        addToast(successMessage, "success");
+        addToast({
+          title: "Request Sent",
+          message: successMessage,
+          type: "success",
+        });
         setPendingMentorIds((prev) =>
           prev.includes(mentorId) ? prev : [...prev, mentorId],
         );
@@ -1428,6 +1518,23 @@
       setAuthMessage("");
       clearLockoutCountdown();
       setAuthAlert(null);
+
+      if (!signInForm.identifier?.trim() || !signInForm.password) {
+        const guidanceMsg =
+          !signInForm.identifier?.trim() && !signInForm.password
+            ? "Please enter your username or BukSU email and password."
+            : !signInForm.identifier?.trim()
+              ? "Please enter your username or BukSU email."
+              : "Please enter your password.";
+        addToast({
+          title: "Missing Credentials",
+          message: guidanceMsg,
+          type: "warning",
+        });
+        setError(guidanceMsg);
+        return;
+      }
+
       setSignInLoading(true);
       try {
         const loginBody = { ...signInForm };
@@ -1538,6 +1645,11 @@
             lockoutData.detail ||
               "Account locked due to too many failed attempts.",
           );
+          addToast({
+            title: "Account Locked",
+            message: "Too many failed attempts. Please wait for the lockout countdown.",
+            type: "error",
+          });
           return;
         }
 
@@ -1562,6 +1674,11 @@
               : "Cannot sign in with this role",
             message: errText,
             email: result.data.email || signInForm.identifier,
+          });
+          addToast({
+            title: isEmailVerification ? "Verification Required" : "Sign In Blocked",
+            message: errText,
+            type: isEmailVerification ? "warning" : "error",
           });
           return;
         }
@@ -1593,11 +1710,21 @@
                   message: "Invalid credentials.",
                   detail: `You have ${remaining} attempt(s) remaining before your account is locked.`,
                 });
+                addToast({
+                  title: "Invalid Credentials",
+                  message: `Login failed. ${remaining} attempt(s) remaining before lockout.`,
+                  type: "warning",
+                });
               } else {
                 setAuthAlert({
                   severity: "error",
                   title: "Login failed",
                   message: errorMsg,
+                });
+                addToast({
+                  title: "Login Failed",
+                  message: errorMsg,
+                  type: "error",
                 });
               }
             } else {
@@ -1606,12 +1733,22 @@
                 title: "Login failed",
                 message: errorMsg,
               });
+              addToast({
+                title: "Login Failed",
+                message: errorMsg,
+                type: "error",
+              });
             }
           } else {
             setAuthAlert({
               severity: "error",
               title: "Login failed",
               message: errorMsg,
+            });
+            addToast({
+              title: "Login Failed",
+              message: errorMsg,
+              type: "error",
             });
           }
           return;
@@ -1620,6 +1757,12 @@
         setAuthAlert(null);
         const profile = await loadMe({ force: true });
         if (!profile) return;
+        const displayName = profile.first_name || profile.username || "User";
+        addToast({
+          title: "Welcome back!",
+          message: `Signed in successfully as ${displayName}.`,
+          type: "success",
+        });
         setActiveTab("home");
       } finally {
         setSignInLoading(false);
@@ -1640,18 +1783,32 @@
           const password = String(signUpForm.password || "");
           const confirmPassword = String(signUpForm.confirm_password || "");
           const institutionalEmail = /^[^\s@]+@(student\.)?buksu\.edu\.ph$/i;
-          if (
-            !displayName ||
-            !institutionalEmail.test(email) ||
-            !password ||
-            password !== confirmPassword
-          ) {
-            setAuthAlert({
-              severity: "error",
-              title: "Check your details",
-              message:
-                "Enter your name, institutional email, and matching passwords.",
-            });
+          if (!displayName) {
+            const title = "Name Required";
+            const message = "Please enter your full name.";
+            setAuthAlert({ severity: "error", title, message });
+            addToast({ title, message, type: "warning" });
+            return;
+          }
+          if (!institutionalEmail.test(email)) {
+            const title = "Institutional Email Required";
+            const message = "Please enter your official BukSU email address (@student.buksu.edu.ph or @buksu.edu.ph).";
+            setAuthAlert({ severity: "error", title, message });
+            addToast({ title, message, type: "warning" });
+            return;
+          }
+          if (!password || password.length < 8) {
+            const title = "Password Too Short";
+            const message = "Password must be at least 8 characters long.";
+            setAuthAlert({ severity: "error", title, message });
+            addToast({ title, message, type: "warning" });
+            return;
+          }
+          if (password !== confirmPassword) {
+            const title = "Passwords Do Not Match";
+            const message = "Make sure both password fields match.";
+            setAuthAlert({ severity: "error", title, message });
+            addToast({ title, message, type: "warning" });
             return;
           }
           const body = new FormData();
@@ -1678,6 +1835,7 @@
               title: "Sign up failed",
               message,
             });
+            addToast({ title: "Sign Up Failed", message, type: "error" });
             return;
           }
           const message =
@@ -1692,17 +1850,20 @@
             email,
           });
           setAuthMessage(message);
+          addToast({ title: "Account Created!", message, type: "success" });
           return;
         }
         const portalRole = getPortalAuthRole();
         if (portalRole === "staff") {
+          const title = "Staff Accounts Restricted";
+          const message = "Staff accounts must be created by an administrator.";
           setAuthAlert({
             severity: "error",
-            title: "Staff accounts",
-            message: "Staff accounts are created by an administrator.",
-            detail:
-              "Use Sign In with your staff credentials, or contact your coordinator.",
+            title,
+            message,
+            detail: "Use Sign In with your staff credentials, or contact your coordinator.",
           });
+          addToast({ title, message, type: "warning" });
           return;
         }
         const registerRole =
@@ -1724,51 +1885,78 @@
         const password2 = String(signUpForm.password2 || "");
 
         if (!firstName) {
-          setAuthAlert({
-            severity: "error",
-            title: "First name required",
-            message: "Enter your first name to continue signup.",
-          });
+          const title = "First Name Required";
+          const message = "Enter your first name to continue signup.";
+          setAuthAlert({ severity: "error", title, message });
+          addToast({ title, message, type: "warning" });
           return;
         }
         if (!lastName) {
-          setAuthAlert({
-            severity: "error",
-            title: "Last name required",
-            message: "Enter your last name to continue signup.",
-          });
+          const title = "Last Name Required";
+          const message = "Enter your last name to continue signup.";
+          setAuthAlert({ severity: "error", title, message });
+          addToast({ title, message, type: "warning" });
           return;
         }
         if (!email) {
-          setAuthAlert({
-            severity: "error",
-            title: "Email required",
-            message: "Enter your email address to continue signup.",
-          });
+          const title = "Email Required";
+          const message = "Enter your email address to continue signup.";
+          setAuthAlert({ severity: "error", title, message });
+          addToast({ title, message, type: "warning" });
+          return;
+        }
+        const institutionalEmail = /^[^\s@]+@(student\.)?buksu\.edu\.ph$/i;
+        if (!institutionalEmail.test(email)) {
+          const title = "Institutional Email Required";
+          const message = "Please enter your official BukSU email address (@student.buksu.edu.ph or @buksu.edu.ph).";
+          setAuthAlert({ severity: "error", title, message });
+          addToast({ title, message, type: "warning" });
           return;
         }
         if (!password1) {
-          setAuthAlert({
-            severity: "error",
-            title: "Password required",
-            message: "Create a password to continue signup.",
-          });
+          const title = "Password Required";
+          const message = "Create a password to continue signup.";
+          setAuthAlert({ severity: "error", title, message });
+          addToast({ title, message, type: "warning" });
+          return;
+        }
+        if (password1.length < 8) {
+          const title = "Password Too Short";
+          const message = "Password must be at least 8 characters long.";
+          setAuthAlert({ severity: "error", title, message });
+          addToast({ title, message, type: "warning" });
           return;
         }
         if (!password2) {
-          setAuthAlert({
-            severity: "error",
-            title: "Confirm password required",
-            message: "Confirm your password to continue signup.",
-          });
+          const title = "Confirm Password Required";
+          const message = "Confirm your password to continue signup.";
+          setAuthAlert({ severity: "error", title, message });
+          addToast({ title, message, type: "warning" });
           return;
         }
         if (password1 !== password2) {
-          setAuthAlert({
-            severity: "error",
-            title: "Passwords do not match",
-            message: "Make sure both password fields are the same.",
-          });
+          const title = "Passwords Do Not Match";
+          const message = "Make sure both password fields are the same.";
+          setAuthAlert({ severity: "error", title, message });
+          addToast({ title, message, type: "warning" });
+          return;
+        }
+
+        // File size check (>5MB)
+        const allUploadedFiles = [
+          ...(signUpForm.letter_of_intent || []),
+          ...(signUpForm.study_load || []),
+          ...(signUpForm.grade || []),
+          ...(signUpForm.student_verification_documents || []),
+        ];
+        const oversizeFile = allUploadedFiles.find(
+          (f) => f && f.size > 5 * 1024 * 1024,
+        );
+        if (oversizeFile) {
+          const title = "File Too Large";
+          const message = `"${oversizeFile.name}" exceeds the 5MB file size limit. Please upload a smaller file.`;
+          setAuthAlert({ severity: "error", title, message });
+          addToast({ title, message, type: "warning" });
           return;
         }
 
@@ -1785,12 +1973,10 @@
         formData.append("password2", password2);
         if (registerRole === "mentor") {
           if (!signUpForm.mentor_role) {
-            setAuthAlert({
-              severity: "error",
-              title: "Mentor type required",
-              message:
-                "Select whether you are signing up as a student mentor or an instructor.",
-            });
+            const title = "Mentor Type Required";
+            const message = "Select whether you are signing up as a student mentor or an instructor.";
+            setAuthAlert({ severity: "error", title, message });
+            addToast({ title, message, type: "warning" });
             return;
           }
           if (
@@ -1798,11 +1984,10 @@
               String(signUpForm.gender || "").toLowerCase(),
             )
           ) {
-            setAuthAlert({
-              severity: "error",
-              title: "Biological sex required",
-              message: "Select your biological sex to continue signup.",
-            });
+            const title = "Biological Sex Required";
+            const message = "Select your biological sex to continue signup.";
+            setAuthAlert({ severity: "error", title, message });
+            addToast({ title, message, type: "warning" });
             return;
           }
           formData.append("mentor_role", signUpForm.mentor_role);
@@ -1810,12 +1995,10 @@
           if (signUpForm.mentor_role === "Senior IT Student") {
             const yearLevel = Number(signUpForm.year_level);
             if (yearLevel !== 3 && yearLevel !== 4) {
-              setAuthAlert({
-                severity: "error",
-                title: "Year level required",
-                message:
-                  "Select whether you are a 3rd year or 4th year student mentor.",
-              });
+              const title = "Year Level Required";
+              const message = "Select whether you are a 3rd year or 4th year student mentor.";
+              setAuthAlert({ severity: "error", title, message });
+              addToast({ title, message, type: "warning" });
               return;
             }
             formData.append("year_level", String(yearLevel));
@@ -1835,13 +2018,10 @@
             ([key]) => !(signUpForm[key] || []).length,
           );
           if (missingDocs.length) {
-            setAuthAlert({
-              severity: "error",
-              title: "Required documents",
-              message: `Upload ${missingDocs
-                .map(([, label]) => label.toLowerCase())
-                .join(", ")}.`,
-            });
+            const title = "Required Documents Missing";
+            const message = `Please upload ${missingDocs.map(([, label]) => label.toLowerCase()).join(", ")}.`;
+            setAuthAlert({ severity: "error", title, message });
+            addToast({ title, message, type: "warning" });
             return;
           }
           requiredDocs.forEach(([key]) => {
@@ -1852,12 +2032,10 @@
         } else {
           const files = signUpForm.student_verification_documents || [];
           if (!files.length) {
-            setAuthAlert({
-              severity: "error",
-              title: "Application form required",
-              message:
-                "Upload your academic mentoring application form to continue signup.",
-            });
+            const title = "Application Form Required";
+            const message = "Upload your academic mentoring application form to continue signup.";
+            setAuthAlert({ severity: "error", title, message });
+            addToast({ title, message, type: "warning" });
             return;
           }
           files.forEach((file) => {
@@ -1886,7 +2064,7 @@
             message,
             detail: result.data?.detail || "",
           });
-          addToast(message, "error");
+          addToast({ title: "Sign Up Failed", message, type: "error" });
           return;
         }
         const message =
@@ -1901,6 +2079,7 @@
           email,
         });
         setAuthMessage(message);
+        addToast({ title: "Account Created!", message, type: "success" });
         const keepRole =
           portalRole === "mentor" || portalRole === "mentee"
             ? portalRole
@@ -2042,7 +2221,25 @@
 
     async function postAnnouncement() {
       const msg = (announcementMessage || "").trim();
-      if (!msg) return;
+      if (!msg) {
+        addToast({
+          title: "Message Required",
+          message: "Please enter your message before posting.",
+          type: "warning",
+        });
+        return;
+      }
+      if (
+        announcementTargetType === "specific" &&
+        (!announcementRecipientIds || announcementRecipientIds.length === 0)
+      ) {
+        addToast({
+          title: "Recipient Required",
+          message: "Please select at least one mentee recipient.",
+          type: "warning",
+        });
+        return;
+      }
       setError("");
       setPostAnnouncementLoading(true);
       try {
@@ -2062,11 +2259,21 @@
           body: JSON.stringify(body),
         });
         if (!result.ok) {
-          setError(result.data?.error || "Failed to post announcement.");
+          const errorMsg = result.data?.error || "Failed to post announcement.";
+          setError(errorMsg);
+          addToast({
+            title: "Post Failed",
+            message: errorMsg,
+            type: "error",
+          });
           return;
         }
         setAnnouncementMessage("");
-        addToast("Announcement posted.");
+        addToast({
+          title: "Announcement Posted",
+          message: "Your announcement was published successfully.",
+          type: "success",
+        });
         // Force refresh and keep cache in sync
         setAnnouncementsLoaded(false);
         loadAnnouncements();
@@ -2082,10 +2289,20 @@
         { method: "POST", headers: { "X-CSRFToken": getCookie("csrftoken") } },
       );
       if (!result.ok) {
-        setError(result.data?.error || "Failed to delete announcement.");
+        const errorMsg = result.data?.error || "Failed to delete announcement.";
+        setError(errorMsg);
+        addToast({
+          title: "Delete Failed",
+          message: errorMsg,
+          type: "error",
+        });
         return;
       }
-      addToast("Announcement removed.");
+      addToast({
+        title: "Announcement Deleted",
+        message: "The announcement has been removed.",
+        type: "success",
+      });
       setAnnouncementsLoaded(false);
       loadAnnouncements();
     }
@@ -2109,7 +2326,14 @@
 
     async function addComment(targetType, targetId, content) {
       const trimmed = (content || "").trim();
-      if (!trimmed) return;
+      if (!trimmed) {
+        addToast({
+          title: "Comment Required",
+          message: "Please write a comment before posting.",
+          type: "warning",
+        });
+        return;
+      }
       const result = await fetchJSON("/api/comments/create/", {
         method: "POST",
         headers: {
@@ -2123,7 +2347,13 @@
         }),
       });
       if (!result.ok) {
-        setError(result.data?.error || "Failed to add comment.");
+        const errorMsg = result.data?.error || "Failed to add comment.";
+        setError(errorMsg);
+        addToast({
+          title: "Comment Failed",
+          message: errorMsg,
+          type: "error",
+        });
         return;
       }
       const key = commentKey(targetType, targetId);
@@ -2131,6 +2361,11 @@
         ...prev,
         [key]: [...(prev[key] || []), result.data.comment],
       }));
+      addToast({
+        title: "Comment Posted",
+        message: "Your comment was added.",
+        type: "success",
+      });
     }
 
     async function handleApproveMentor(mentorId) {
@@ -2146,10 +2381,21 @@
           body: JSON.stringify({ mentor_id: mentorId }),
         });
         if (!result.ok) {
-          setError(result.data?.error || "Failed to approve mentor.");
+          const errorMsg = result.data?.error || "Failed to approve mentor.";
+          setError(errorMsg);
+          addToast({
+            title: "Approval Failed",
+            message: errorMsg,
+            type: "error",
+          });
           return;
         }
         setAuthMessage("Mentor approved.");
+        addToast({
+          title: "Mentor Approved",
+          message: "Mentor application has been approved.",
+          type: "success",
+        });
         setPendingMentors((prev) => prev.filter((m) => m.id !== mentorId));
       } finally {
         setApprovalActionKey(null);
@@ -2169,10 +2415,21 @@
           body: JSON.stringify({ mentor_id: mentorId }),
         });
         if (!result.ok) {
-          setError(result.data?.error || "Failed to reject mentor.");
+          const errorMsg = result.data?.error || "Failed to reject mentor.";
+          setError(errorMsg);
+          addToast({
+            title: "Action Failed",
+            message: errorMsg,
+            type: "error",
+          });
           return;
         }
         setAuthMessage("Mentor rejected.");
+        addToast({
+          title: "Application Rejected",
+          message: "Mentor application was rejected.",
+          type: "info",
+        });
         setPendingMentors((prev) => prev.filter((m) => m.id !== mentorId));
       } finally {
         setApprovalActionKey(null);
@@ -2192,10 +2449,21 @@
           body: JSON.stringify({ mentee_id: menteeId }),
         });
         if (!result.ok) {
-          setError(result.data?.error || "Failed to approve mentee.");
+          const errorMsg = result.data?.error || "Failed to approve mentee.";
+          setError(errorMsg);
+          addToast({
+            title: "Approval Failed",
+            message: errorMsg,
+            type: "error",
+          });
           return;
         }
         setAuthMessage("Mentee approved.");
+        addToast({
+          title: "Mentee Approved",
+          message: "Mentee application has been approved.",
+          type: "success",
+        });
         setPendingMentees((prev) => prev.filter((m) => m.id !== menteeId));
       } finally {
         setApprovalActionKey(null);
@@ -2215,10 +2483,21 @@
           body: JSON.stringify({ mentee_id: menteeId }),
         });
         if (!result.ok) {
-          setError(result.data?.error || "Failed to reject mentee.");
+          const errorMsg = result.data?.error || "Failed to reject mentee.";
+          setError(errorMsg);
+          addToast({
+            title: "Action Failed",
+            message: errorMsg,
+            type: "error",
+          });
           return;
         }
         setAuthMessage("Mentee rejected.");
+        addToast({
+          title: "Application Rejected",
+          message: "Mentee application was rejected.",
+          type: "info",
+        });
         setPendingMentees((prev) => prev.filter((m) => m.id !== menteeId));
       } finally {
         setApprovalActionKey(null);
@@ -2231,13 +2510,24 @@
         headers: { "X-CSRFToken": getCookie("csrftoken") },
       });
       if (!result.ok) {
-        setError(result.data?.error || "Unable to mark notifications as read.");
+        const errorMsg =
+          result.data?.error || "Unable to mark notifications as read.";
+        setError(errorMsg);
+        addToast({
+          title: "Action Failed",
+          message: errorMsg,
+          type: "error",
+        });
         return;
       }
       loadNotifications();
       setUnreadCount(0);
       setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
-      addToast("All notifications marked as read.", "success");
+      addToast({
+        title: "Notifications Updated",
+        message: "All notifications marked as read.",
+        type: "success",
+      });
     }
 
     async function handleMarkRead(notificationId) {
@@ -2249,7 +2539,14 @@
         },
       );
       if (!result.ok) {
-        setError(result.data?.error || "Unable to mark notification as read.");
+        const errorMsg =
+          result.data?.error || "Unable to mark notification as read.";
+        setError(errorMsg);
+        addToast({
+          title: "Action Failed",
+          message: errorMsg,
+          type: "error",
+        });
         return;
       }
       loadNotifications();
@@ -2259,6 +2556,11 @@
           n.id === notificationId ? { ...n, is_read: true } : n,
         ),
       );
+      addToast({
+        title: "Notification",
+        message: "Marked as read.",
+        type: "info",
+      });
     }
 
     async function handleSettingsSave() {
@@ -2277,10 +2579,19 @@
               "Unable to update account."
             : result.data?.error || "Unable to update account.";
         setError(message);
+        addToast({
+          title: "Save Failed",
+          message,
+          type: "error",
+        });
         setSettingsSaving(false);
         return false;
       }
-      addToast("Settings saved.");
+      addToast({
+        title: "Settings Saved",
+        message: "Your account details were updated.",
+        type: "success",
+      });
       setUser((prev) =>
         prev
           ? {
@@ -2303,12 +2614,22 @@
         body: JSON.stringify({ bio }),
       });
       if (!result.ok) {
-        setError(result.data?.error || "Unable to update bio.");
+        const errorMsg = result.data?.error || "Unable to update bio.";
+        setError(errorMsg);
+        addToast({
+          title: "Update Failed",
+          message: errorMsg,
+          type: "error",
+        });
         return false;
       }
       setUser((prev) => (prev ? { ...prev, bio: result.data.bio } : prev));
       setSettingsForm((prev) => ({ ...prev, bio: result.data.bio }));
-      addToast("Bio updated.");
+      addToast({
+        title: "Bio Saved",
+        message: "Your biography has been updated.",
+        type: "success",
+      });
       return true;
     }
 
@@ -2319,12 +2640,22 @@
         body: JSON.stringify({ tags }),
       });
       if (!result.ok) {
-        setError(result.data?.error || "Unable to update tags.");
+        const errorMsg = result.data?.error || "Unable to update tags.";
+        setError(errorMsg);
+        addToast({
+          title: "Update Failed",
+          message: errorMsg,
+          type: "error",
+        });
         return false;
       }
       setUser((prev) => (prev ? { ...prev, tags: result.data.tags } : prev));
       setSettingsForm((prev) => ({ ...prev, tags: result.data.tags }));
-      addToast("Interests updated.");
+      addToast({
+        title: "Interests Saved",
+        message: "Your subject interests were updated.",
+        type: "success",
+      });
       return true;
     }
 
@@ -2337,9 +2668,13 @@
       );
       if (missing.length > 0) {
         const message =
-          "Please complete all general information fields before saving.";
+          "Please complete all required fields (Campus, Student ID, Contact No, Sex).";
         setError(message);
-        addToast(message, "warning");
+        addToast({
+          title: "Required Fields Missing",
+          message,
+          type: "warning",
+        });
         return false;
       }
       setMenteeProfileSaving(true);
@@ -2358,7 +2693,14 @@
         body: JSON.stringify(payload),
       });
       if (!result.ok) {
-        setError(result.data?.error || "Unable to update mentee profile.");
+        const errorMsg =
+          result.data?.error || "Unable to update mentee profile.";
+        setError(errorMsg);
+        addToast({
+          title: "Save Failed",
+          message: errorMsg,
+          type: "error",
+        });
         setMenteeProfileSaving(false);
         return false;
       }
@@ -2366,7 +2708,11 @@
       setUser((prev) =>
         prev ? { ...prev, mentee_general_info_completed: true } : prev,
       );
-      addToast("Profile saved.");
+      addToast({
+        title: "Profile Saved",
+        message: "Your general information was updated.",
+        type: "success",
+      });
       setShowMenteeInfoModal(false);
       setAuthMessage("Your general information was updated.");
       setMenteeProfileSaving(false);
@@ -2454,7 +2800,11 @@
             ? "Could not save profile. Refresh the page and try again."
             : "Please complete the required fields.");
         setError(message);
-        addToast(message, "warning");
+        addToast({
+          title: "Incomplete Profile",
+          message,
+          type: "warning",
+        });
         return {
           ok: false,
           errors: (result.data && result.data.errors) || {},
@@ -2487,7 +2837,11 @@
           prev ? { ...prev, is_profile_complete: true } : prev,
         );
       }
-      addToast("Account details saved.");
+      addToast({
+        title: "Profile Saved",
+        message: "Account details saved successfully.",
+        type: "success",
+      });
       setCompleteProfileSaving(false);
       await loadMe({ force: true });
       return { ok: true, data: result.data };
@@ -2519,7 +2873,11 @@
             "Unable to complete onboarding. Please verify your details and try again.";
         }
         setError(message);
-        addToast(message, "warning");
+        addToast({
+          title: "Onboarding Incomplete",
+          message,
+          type: "warning",
+        });
         setOnboardingSaving(false);
         return { ok: false, message };
       }
@@ -2536,7 +2894,11 @@
       }));
       setOnboardingSaving(false);
       await loadMe({ force: true });
-      addToast("Onboarding complete! Welcome to PeerLink Matching.", "success");
+      addToast({
+        title: "Welcome!",
+        message: "Onboarding complete! Welcome to PeerLink Matching.",
+        type: "success",
+      });
       setActiveTab("matching");
       replaceAppUrl("matching");
       return { ok: true, data: result.data.user };
@@ -2564,7 +2926,11 @@
         const message =
           "Please set at least one matching preference (subjects, topics, expertise, or availability).";
         setError(message);
-        addToast(message, "warning");
+        addToast({
+          title: "Incomplete Preferences",
+          message,
+          type: "warning",
+        });
         return false;
       }
       setMentorProfileSaving(true);
@@ -2602,7 +2968,13 @@
           body: JSON.stringify(payload),
         });
         if (!result.ok) {
-          setError(result.data?.error || "Unable to update mentor profile.");
+          const err = result.data?.error || "Unable to update mentor profile.";
+          setError(err);
+          addToast({
+            title: "Update Failed",
+            message: err,
+            type: "error",
+          });
           return false;
         }
         setMentorProfile((prev) => {
@@ -2620,10 +2992,18 @@
         );
         setShowMentorInfoModal(false);
         if (result.data?.mentor_role_locked && result.data?.message) {
-          addToast(result.data.message, "warning");
+          addToast({
+            title: "Mentor Role Locked",
+            message: result.data.message,
+            type: "warning",
+          });
         } else {
           setAuthMessage("Your mentor profile was updated.");
-          addToast("Profile saved.");
+          addToast({
+            title: "Profile Saved",
+            message: "Your mentor profile was updated successfully.",
+            type: "success",
+          });
         }
         setActiveTab((prev) => {
           if (prev === "onboarding") return "onboarding";
@@ -2660,7 +3040,11 @@
         const message =
           "Please set at least one matching preference (subjects, topics, difficulty, preferred gender, or availability).";
         setError(message);
-        addToast(message, "warning");
+        addToast({
+          title: "Incomplete Preferences",
+          message,
+          type: "warning",
+        });
         return false;
       }
       setMenteeMatchingSaving(true);
@@ -2690,9 +3074,14 @@
           body: JSON.stringify(payload),
         });
         if (!result.ok) {
-          setError(
-            result.data?.error || "Unable to update mentoring preferences.",
-          );
+          const err =
+            result.data?.error || "Unable to update mentoring preferences.";
+          setError(err);
+          addToast({
+            title: "Save Failed",
+            message: err,
+            type: "error",
+          });
           return false;
         }
         setMenteeMatching((prev) => {
@@ -2714,7 +3103,11 @@
           loadMenteeRecommendations();
         }
         setAuthMessage("Your mentoring preferences were updated.");
-        addToast("Mentoring preferences saved.");
+        addToast({
+          title: "Preferences Saved",
+          message: "Your mentoring preferences were updated successfully.",
+          type: "success",
+        });
         setUser((prev) =>
           prev
             ? {
@@ -2849,17 +3242,34 @@
       });
       setBackupCreateLoading(false);
       if (!result.ok) {
-        setError(result.data?.error || "Failed to create backup.");
+        const errorMsg = result.data?.error || "Failed to create backup.";
+        setError(errorMsg);
+        addToast({
+          title: "Backup Failed",
+          message: errorMsg,
+          type: "error",
+        });
         return;
       }
-      addToast("Backup created.");
+      addToast({
+        title: "Backup Created",
+        message: "Database snapshot created successfully.",
+        type: "success",
+      });
       loadBackups();
     }
 
     async function restoreBackup(file) {
       const allowed = /\.(json|gz|zip|bz2|sql|psql|dump|backup)$/i;
       if (!file || !allowed.test(file.name)) {
-        setError("Please select a valid backup file.");
+        const msg =
+          "Please select a valid backup file (.json, .gz, .sql, .zip).";
+        setError(msg);
+        addToast({
+          title: "Invalid File Format",
+          message: msg,
+          type: "warning",
+        });
         return;
       }
       setBackupRestoreLoading(true);
@@ -2875,10 +3285,20 @@
         });
         const data = await response.json().catch(() => ({}));
         if (!response.ok) {
-          setError(data.error || "Restore failed.");
+          const errorMsg = data.error || "Restore failed.";
+          setError(errorMsg);
+          addToast({
+            title: "Restore Failed",
+            message: errorMsg,
+            type: "error",
+          });
           return;
         }
-        addToast("Restore completed. Reloading…");
+        addToast({
+          title: "Restore Completed",
+          message: "Database restored. Reloading system…",
+          type: "success",
+        });
         setTimeout(() => window.location.reload(), 1500);
       } finally {
         setBackupRestoreLoading(false);
@@ -2894,10 +3314,20 @@
       });
       setBackupRestoreLoading(false);
       if (!result.ok) {
-        setError(result.data?.error || "Restore failed.");
+        const errorMsg = result.data?.error || "Restore failed.";
+        setError(errorMsg);
+        addToast({
+          title: "Restore Failed",
+          message: errorMsg,
+          type: "error",
+        });
         return;
       }
-      addToast("Restore completed. Reloading…");
+      addToast({
+        title: "Restore Completed",
+        message: "Database restored. Reloading system…",
+        type: "success",
+      });
       setTimeout(() => window.location.reload(), 1500);
     }
 
@@ -2908,10 +3338,20 @@
         headers: { "X-CSRFToken": getCookie("csrftoken") },
       });
       if (!result.ok) {
-        setError(result.data?.error || "Failed to delete backup.");
+        const errorMsg = result.data?.error || "Failed to delete backup.";
+        setError(errorMsg);
+        addToast({
+          title: "Delete Failed",
+          message: errorMsg,
+          type: "error",
+        });
         return;
       }
-      addToast("Backup deleted.");
+      addToast({
+        title: "Backup Deleted",
+        message: "Backup snapshot removed.",
+        type: "success",
+      });
       loadBackups();
     }
 
@@ -2920,7 +3360,14 @@
         const response = await fetch(`/api/backup/${backupId}/download/`, {
           credentials: "include",
         });
-        if (!response.ok) return;
+        if (!response.ok) {
+          addToast({
+            title: "Download Failed",
+            message: "Unable to download backup file.",
+            type: "error",
+          });
+          return;
+        }
         const blob = await response.blob();
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
@@ -2928,9 +3375,18 @@
         a.download = "backup_" + backupId + ".json";
         a.click();
         URL.revokeObjectURL(url);
-        addToast("Download started.");
+        addToast({
+          title: "Download Started",
+          message: "Backup archive is downloading.",
+          type: "info",
+        });
       } catch (e) {
         setError("Download failed.");
+        addToast({
+          title: "Download Failed",
+          message: "Network error while downloading backup file.",
+          type: "error",
+        });
       }
     }
 
@@ -2941,7 +3397,11 @@
       if (file.size > maxBytes) {
         const msg = "Please choose an image smaller than 2 MB.";
         setError(msg);
-        addToast(msg, "warning");
+        addToast({
+          title: "Image Too Large",
+          message: msg,
+          type: "warning",
+        });
         event.target.value = "";
         return;
       }
@@ -2960,16 +3420,29 @@
         if (!response.ok) {
           const msg = data.error || "Unable to upload profile picture.";
           setError(msg);
-          addToast(msg, "error");
+          addToast({
+            title: "Upload Failed",
+            message: msg,
+            type: "error",
+          });
           return;
         }
         const newUrl = data.avatar_url || "";
         setUser((prev) => (prev ? { ...prev, avatar_url: newUrl } : prev));
         setSettingsForm((prev) => ({ ...prev, avatar_url: newUrl }));
+        addToast({
+          title: "Photo Updated",
+          message: "Profile picture updated successfully.",
+          type: "success",
+        });
       } catch (err) {
         const msg = "Network error while uploading profile picture.";
         setError(msg);
-        addToast(msg, "error");
+        addToast({
+          title: "Upload Error",
+          message: msg,
+          type: "error",
+        });
       } finally {
         setAvatarUploading(false);
         event.target.value = "";
@@ -2988,16 +3461,28 @@
         if (!response.ok) {
           const msg = data.error || "Unable to remove profile picture.";
           setError(msg);
-          addToast(msg, "error");
+          addToast({
+            title: "Remove Failed",
+            message: msg,
+            type: "error",
+          });
           return;
         }
         setUser((prev) => (prev ? { ...prev, avatar_url: "" } : prev));
         setSettingsForm((prev) => ({ ...prev, avatar_url: "" }));
-        addToast("Profile photo removed.");
+        addToast({
+          title: "Photo Removed",
+          message: "Profile picture removed.",
+          type: "info",
+        });
       } catch (err) {
         const msg = "Network error while removing profile picture.";
         setError(msg);
-        addToast(msg, "error");
+        addToast({
+          title: "Remove Error",
+          message: msg,
+          type: "error",
+        });
       }
     }
 
@@ -3191,6 +3676,7 @@
       showSignInPrompt,
       menteeRecUpdating,
       addToast,
+      removeToast,
       setUnsavedChangesDirty,
       globalSearchResults,
       loadGlobalSearch,
@@ -3268,12 +3754,109 @@
             </div>
           </div>
         ) : null}
-        <div className="toast-container" aria-live="polite">
-          {toasts.map((t) => (
-            <div key={t.id} className={"toast toast-" + (t.type || "success")}>
-              {t.message}
-            </div>
-          ))}
+        <div
+          className="toast-container"
+          aria-live="polite"
+          role="region"
+          aria-label="Notifications"
+        >
+          {toasts.map((t) => {
+            const type = t.type || "success";
+            return (
+              <div
+                key={t.id}
+                className={"toast toast--" + type + " toast-" + type}
+                role={type === "error" ? "alert" : "status"}
+              >
+                <span className={"toast-icon-badge toast-icon-badge--" + type}>
+                  {type === "success" && (
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      aria-hidden="true"
+                    >
+                      <path d="M20 6L9 17l-5-5" />
+                    </svg>
+                  )}
+                  {type === "error" && (
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      aria-hidden="true"
+                    >
+                      <circle cx="12" cy="12" r="10" />
+                      <line x1="15" y1="9" x2="9" y2="15" />
+                      <line x1="9" y1="9" x2="15" y2="15" />
+                    </svg>
+                  )}
+                  {type === "warning" && (
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      aria-hidden="true"
+                    >
+                      <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+                      <line x1="12" y1="9" x2="12" y2="13" />
+                      <line x1="12" y1="17" x2="12.01" y2="17" />
+                    </svg>
+                  )}
+                  {type === "info" && (
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      aria-hidden="true"
+                    >
+                      <circle cx="12" cy="12" r="10" />
+                      <line x1="12" y1="16" x2="12" y2="12" />
+                      <line x1="12" y1="8" x2="12.01" y2="8" />
+                    </svg>
+                  )}
+                </span>
+                <div className="toast-content">
+                  {t.title ? (
+                    <strong className="toast-title">{t.title}</strong>
+                  ) : null}
+                  <span className="toast-message">{t.message}</span>
+                </div>
+                <button
+                  type="button"
+                  className="toast-close-btn"
+                  onClick={() => removeToast(t.id)}
+                  aria-label="Dismiss notification"
+                  title="Dismiss"
+                >
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden="true"
+                  >
+                    <line x1="18" y1="6" x2="6" y2="18" />
+                    <line x1="6" y1="6" x2="18" y2="18" />
+                  </svg>
+                </button>
+              </div>
+            );
+          })}
         </div>
       </AppContext.Provider>
     );

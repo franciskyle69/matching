@@ -68,7 +68,7 @@ import MenteePreferencesPage from "./MenteePreferencesPage.jsx";
         onChange={handleTabChange}
         scrollButtons={false}
         value={activeTab}
-        variant="standard"
+        variant="scrollable"
       >
         {tabs.map((tab) => (
           <Tab key={tab.id} label={tab.label} value={tab.id} />
@@ -169,11 +169,19 @@ import MenteePreferencesPage from "./MenteePreferencesPage.jsx";
       const trimmed = tagName.trim();
       if (!trimmed) return;
       if (localTags.length >= MAX_TAGS) {
-        setTagError("Maximum " + MAX_TAGS + " tags allowed.");
+        const msg = "Maximum " + MAX_TAGS + " tags allowed.";
+        setTagError(msg);
+        if (typeof addToast === "function") {
+          addToast({ title: "Tag Limit", message: msg, type: "warning" });
+        }
         return;
       }
       if (localTags.some((t) => t.toLowerCase() === trimmed.toLowerCase())) {
-        setTagError("Tag already added.");
+        const msg = `Interest "${trimmed}" has already been added.`;
+        setTagError(msg);
+        if (typeof addToast === "function") {
+          addToast({ title: "Duplicate Interest", message: msg, type: "warning" });
+        }
         return;
       }
       setLocalTags([...localTags, trimmed]);
@@ -526,9 +534,15 @@ import MenteePreferencesPage from "./MenteePreferencesPage.jsx";
       setPasswordStatus({ tone: "muted", message: "" });
       const email = String(passwordEmail || "").trim();
       if (!email) {
+        const msg = "Enter the email address that should receive the code.";
         setPasswordStatus({
           tone: "error",
-          message: "Enter the email address that should receive the code.",
+          message: msg,
+        });
+        addToast({
+          title: "Email Required",
+          message: msg,
+          type: "warning",
         });
         return;
       }
@@ -551,6 +565,11 @@ import MenteePreferencesPage from "./MenteePreferencesPage.jsx";
             : result.data?.error || "Unable to send verification code.";
         setPasswordCodeVerified(false);
         setPasswordStatus({ tone: "error", message });
+        addToast({
+          title: "Send Failed",
+          message,
+          type: "error",
+        });
         return;
       }
       setPasswordCodeSent(true);
@@ -562,7 +581,11 @@ import MenteePreferencesPage from "./MenteePreferencesPage.jsx";
         tone: "success",
         message: result.data?.message || "Verification code sent.",
       });
-      addToast(result.data?.message || "Verification code sent.");
+      addToast({
+        title: "Code Sent",
+        message: result.data?.message || "Verification code sent to your email.",
+        type: "success",
+      });
       window.setTimeout(() => {
         passwordCodeInputRef.current?.focus();
       }, 0);
@@ -572,9 +595,15 @@ import MenteePreferencesPage from "./MenteePreferencesPage.jsx";
       setError("");
       setPasswordStatus({ tone: "muted", message: "" });
       if (String(passwordVerificationCode || "").trim().length !== 6) {
+        const msg = "Please enter the 6-digit verification code.";
         setPasswordStatus({
           tone: "error",
-          message: "Enter the 6-digit verification code.",
+          message: msg,
+        });
+        addToast({
+          title: "Invalid Code",
+          message: msg,
+          type: "warning",
         });
         return;
       }
@@ -597,6 +626,11 @@ import MenteePreferencesPage from "./MenteePreferencesPage.jsx";
             : result.data?.error || "Invalid verification code.";
         setPasswordCodeVerified(false);
         setPasswordStatus({ tone: "error", message });
+        addToast({
+          title: "Verification Failed",
+          message,
+          type: "error",
+        });
         return;
       }
       setPasswordCodeVerified(true);
@@ -606,7 +640,11 @@ import MenteePreferencesPage from "./MenteePreferencesPage.jsx";
           result.data?.message ||
           "Code verified. You can now set a new password.",
       });
-      addToast(result.data?.message || "Code verified.");
+      addToast({
+        title: "Code Verified",
+        message: result.data?.message || "Security code verified. You can now set your new password.",
+        type: "success",
+      });
       window.setTimeout(() => {
         passwordNewPasswordRef.current?.focus();
       }, 0);
@@ -616,12 +654,37 @@ import MenteePreferencesPage from "./MenteePreferencesPage.jsx";
       setError("");
       setPasswordStatus({ tone: "muted", message: "" });
       if (!passwordCodeVerified) {
+        const msg = "Please enter and verify the security code before updating your password.";
         setPasswordStatus({
           tone: "error",
-          message: "Verify the code before updating your password.",
+          message: msg,
+        });
+        addToast({
+          title: "Verification Required",
+          message: msg,
+          type: "warning",
         });
         return;
       }
+      if (!passwordForm.new_password1) {
+        const msg = "Please enter your new password.";
+        setPasswordStatus({ tone: "error", message: msg });
+        addToast({ title: "Password Required", message: msg, type: "warning" });
+        return;
+      }
+      if (!passwordMeetsRules) {
+        const msg = "Password must be at least 10 characters and contain uppercase, lowercase, and numbers.";
+        setPasswordStatus({ tone: "error", message: msg });
+        addToast({ title: "Password Complexity", message: msg, type: "warning" });
+        return;
+      }
+      if (!passwordsMatch) {
+        const msg = "The confirmation password does not match the new password.";
+        setPasswordStatus({ tone: "error", message: msg });
+        addToast({ title: "Passwords Mismatch", message: msg, type: "warning" });
+        return;
+      }
+
       setPasswordChanging(true);
       const result = await fetchJSON("/api/me/password-code/change/", {
         method: "POST",
@@ -640,6 +703,11 @@ import MenteePreferencesPage from "./MenteePreferencesPage.jsx";
               "Unable to change password."
             : result.data?.error || "Unable to change password.";
         setPasswordStatus({ tone: "error", message });
+        addToast({
+          title: "Update Failed",
+          message,
+          type: "error",
+        });
         return;
       }
       setPasswordForm({
@@ -654,7 +722,11 @@ import MenteePreferencesPage from "./MenteePreferencesPage.jsx";
         tone: "success",
         message: result.data?.message || "Password updated successfully.",
       });
-      addToast(result.data?.message || "Password updated successfully.");
+      addToast({
+        title: "Password Updated",
+        message: result.data?.message || "Your password has been changed successfully.",
+        type: "success",
+      });
     }
 
     const passwordChecks = getPasswordChecks(passwordForm.new_password1);
@@ -849,6 +921,11 @@ import MenteePreferencesPage from "./MenteePreferencesPage.jsx";
           /* keep current values when the snapshot is unreadable */
         }
       }
+      addToast({
+        title: "Changes Discarded",
+        message: "All unsaved changes were reverted.",
+        type: "info",
+      });
     }
 
     const displayBio = bioDraft.bio || settingsForm.bio || "";
@@ -1360,7 +1437,7 @@ import MenteePreferencesPage from "./MenteePreferencesPage.jsx";
                     type="button"
                     className="settings-btn-upload"
                     onClick={handleChangePasswordWithCode}
-                    disabled={!canUpdatePassword}
+                    disabled={passwordChanging}
                   >
                     {passwordChanging ? "Saving..." : "Save new password"}
                   </button>

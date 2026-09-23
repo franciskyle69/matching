@@ -110,12 +110,20 @@ export default function MenteePreferencesPage({ defaultRole = "MENTEE" }) {
 
     // Validate min limits
     if (selectedSubjects.length < roleLimits.minSubjects) {
-      setError(`Please select at least ${roleLimits.minSubjects} subject.`);
+      const msg = `Please select at least ${roleLimits.minSubjects} subject.`;
+      setError(msg);
+      if (window.DashboardApp && typeof window.DashboardApp.notify === "function") {
+        window.DashboardApp.notify("warning", "Incomplete Preferences", msg);
+      }
       setSaving(false);
       return;
     }
     if (selectedCompetencies.length < roleLimits.minGlobalCompetencies) {
-      setError(`Please select at least ${roleLimits.minGlobalCompetencies} competency.`);
+      const msg = `Please select at least ${roleLimits.minGlobalCompetencies} competency.`;
+      setError(msg);
+      if (window.DashboardApp && typeof window.DashboardApp.notify === "function") {
+        window.DashboardApp.notify("warning", "Incomplete Preferences", msg);
+      }
       setSaving(false);
       return;
     }
@@ -155,14 +163,21 @@ export default function MenteePreferencesPage({ defaultRole = "MENTEE" }) {
         message: "Preferences saved successfully!",
         severity: "success",
       });
+      if (window.DashboardApp && typeof window.DashboardApp.notify === "function") {
+        window.DashboardApp.notify("success", "Preferences Saved", "Your matching preferences were updated successfully.");
+      }
     } catch (err) {
       console.error("Error saving preferences:", err);
-      setError(err.message || "Failed to save preferences.");
+      const errMsg = err.message || "Failed to save preferences.";
+      setError(errMsg);
       setToast({
         open: true,
-        message: err.message || "Error saving preferences.",
+        message: errMsg,
         severity: "error",
       });
+      if (window.DashboardApp && typeof window.DashboardApp.notify === "function") {
+        window.DashboardApp.notify("error", "Save Failed", errMsg);
+      }
     } finally {
       setSaving(false);
     }

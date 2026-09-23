@@ -710,10 +710,18 @@
               </p>
             </div>
             <div className="kasandigan-header-actions">
-              <span className="kasandigan-badge">
+              <span className="kasandigan-badge kasandigan-badge--role">
                 <span className="kasandigan-badge-dot" style={{ background: "#0ea5e9" }} />
                 <span>Peer Mentor</span>
               </span>
+              <button
+                type="button"
+                className="btn primary small mp-header-save-btn"
+                onClick={handleSave}
+                disabled={mentorProfileSaving || isPristine || !canSave}
+              >
+                {mentorProfileSaving ? "Saving…" : "Save Preferences"}
+              </button>
             </div>
           </header>
         )}
@@ -1294,7 +1302,7 @@
             <p className="mp-sticky-subtitle">
               {justSaved && isPristine
                 ? "Your mentor matching profile was updated."
-                : "Use Save Preferences in the summary panel to keep these updates."}
+                : "Save your preferences to keep these updates."}
             </p>
             {submitAttempted && !canSave && !isPristine && (
               <p
@@ -1307,6 +1315,30 @@
                     : "Select a subject, a topic, and an expertise level before saving."
                   : "Select at least one subject and an expertise level before saving."}
               </p>
+            )}
+          </div>
+          <div className="mp-sticky-actions">
+            <button
+              type="button"
+              className="btn primary small mp-sticky-save-btn"
+              onClick={handleSave}
+              disabled={mentorProfileSaving || (!canSave && !isPristine)}
+            >
+              {mentorProfileSaving
+                ? "Saving…"
+                : embedded
+                  ? "Save & finish"
+                  : "Save Preferences"}
+            </button>
+            {!isPristine && (
+              <button
+                type="button"
+                className="btn secondary small mp-sticky-discard-btn"
+                onClick={handleReset}
+                disabled={mentorProfileSaving}
+              >
+                Discard
+              </button>
             )}
           </div>
         </div>

@@ -1968,25 +1968,60 @@ body {
   }
 }
 
-@media (max-width: 640px) {
+@media (max-width: 768px) {
   #hero {
     min-height: 0 !important;
-    padding-top: 7rem !important;
-    padding-bottom: 4rem !important;
+    padding-top: 5.5rem !important;
+    padding-bottom: 2.75rem !important;
+  }
+
+  #hero-headline,
+  .hero-title-glow {
+    font-size: 1.85rem !important;
+    line-height: 1.22 !important;
+    min-height: 4.25rem !important;
+  }
+
+  #hero p,
+  .hero-shell p {
+    font-size: 0.92rem !important;
+    line-height: 1.55 !important;
+    max-width: 90% !important;
+    margin-top: 0.85rem !important;
+  }
+
+  .hero-cta-pulse {
+    height: 48px !important;
+    min-width: 220px !important;
+    font-size: 0.95rem !important;
+    padding: 0 24px !important;
   }
 
   #features,
   #how,
+  #teams,
   #footer-contact {
     padding-left: 1rem !important;
     padding-right: 1rem !important;
-    padding-top: 3.5rem !important;
-    padding-bottom: 3.5rem !important;
+    padding-top: 2.75rem !important;
+    padding-bottom: 2.75rem !important;
+    min-height: auto !important;
   }
 
   #features .font-banner,
-  #how .font-banner {
-    font-size: clamp(3.25rem, 17vw, 6rem) !important;
+  #how .font-banner,
+  #teams .font-banner {
+    font-size: 1.75rem !important;
+    line-height: 1.15 !important;
+    letter-spacing: 0.02em !important;
+    text-shadow: none !important;
+  }
+
+  #features span[aria-hidden="true"].flex-none,
+  #teams span[aria-hidden="true"].flex-none {
+    width: 5px !important;
+    border-radius: 9999px !important;
+    align-self: stretch !important;
   }
 
   #features article.card-hover-lift,
@@ -2878,9 +2913,10 @@ html.dark article.card-hover-lift p {
   line-height: 1.65 !important;
 }
 
-@media (max-width: 640px) {
+@media (max-width: 768px) {
   #how > div.relative.mx-auto > p.font-banner {
-    font-size: clamp(3.5rem, 17vw, 6rem) !important;
+    font-size: 1.75rem !important;
+    line-height: 1.2 !important;
   }
 
   #how > div.relative.mx-auto > div.grid::before {

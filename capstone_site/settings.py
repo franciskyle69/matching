@@ -93,6 +93,25 @@ if _render_host:
     if _render_origin not in CSRF_TRUSTED_ORIGINS:
         CSRF_TRUSTED_ORIGINS.append(_render_origin)
 
+if DEBUG:
+    # Allow local IP connections (e.g. mobile testing on LAN)
+    _local_dev_origins = [
+        'http://127.0.0.1:8000',
+        'http://localhost:8000',
+    ]
+    for _orig in _local_dev_origins:
+        if _orig not in CSRF_TRUSTED_ORIGINS:
+            CSRF_TRUSTED_ORIGINS.append(_orig)
+    try:
+        import socket
+        _hostname = socket.gethostname()
+        for _ip in socket.gethostbyname_ex(_hostname)[2]:
+            _dynamic_orig = f"http://{_ip}:8000"
+            if _dynamic_orig not in CSRF_TRUSTED_ORIGINS:
+                CSRF_TRUSTED_ORIGINS.append(_dynamic_orig)
+    except Exception:
+        pass
+
 # 3. CORS_ALLOWED_ORIGINS:
 # Read from CORS_ALLOWED_ORIGINS, split by commas, strip whitespace, and filter empty strings.
 CORS_ALLOWED_ORIGINS = _env_csv("CORS_ALLOWED_ORIGINS")

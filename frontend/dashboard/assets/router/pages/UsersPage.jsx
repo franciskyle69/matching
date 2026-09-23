@@ -196,15 +196,14 @@
   }
 
   function notify(type, title, text) {
-    const message = text || title;
     if (
       window.DashboardApp &&
       typeof window.DashboardApp.notify === "function"
     ) {
-      window.DashboardApp.notify(message, type || "success");
+      window.DashboardApp.notify(type, title, text);
       return;
     }
-    alert(message);
+    alert(text || title);
   }
 
   function ensureDataTablesLoaded() {
@@ -403,10 +402,13 @@
     const saveDisabled = saving || Object.keys(errors).length > 0;
 
     async function handleCreate() {
-      if (saveDisabled) {
+      if (Object.keys(errors).length > 0) {
         setShowValidation(true);
+        const firstError = Object.values(errors)[0] || "Please fill in all required fields.";
+        notify("warning", "Incomplete Form", firstError);
         return;
       }
+      if (saving) return;
 
       setSaving(true);
       try {
@@ -434,7 +436,7 @@
           return;
         }
 
-        notify("success", "User Created", result.data?.message || "User created and password emailed.");
+        notify("success", "User Created", result.data?.message || "User created and credentials emailed.");
         onCreated(result.data?.user);
         onClose();
       } catch (e) {
@@ -582,7 +584,7 @@
 
           <div className="users-edit-footer">
             <button type="button" className="btn secondary" onClick={onClose} disabled={saving}>Cancel</button>
-            <button type="button" className="btn" onClick={handleCreate} disabled={saveDisabled}>
+            <button type="button" className="btn" onClick={handleCreate} disabled={saving}>
               {saving ? "Creating..." : "Create User"}
             </button>
           </div>
@@ -609,7 +611,7 @@
             <button type="button" className="btn secondary" onClick={onCancelEdit} disabled={saving}>
               Cancel
             </button>
-            <button type="button" className="btn" onClick={onSave} disabled={saveDisabled}>
+            <button type="button" className="btn" onClick={onSave} disabled={saving}>
               {saving ? "Saving Changes..." : "Save Changes"}
             </button>
           </>
@@ -708,10 +710,21 @@
       saving || !hasChanges || Object.keys(errors).length > 0 || !roleSupport.supported;
 
     async function handleSave() {
-      if (saveDisabled) {
+      if (Object.keys(errors).length > 0) {
         setShowValidation(true);
+        const firstError = Object.values(errors)[0] || "Please check the required fields.";
+        notify("warning", "Invalid Input", firstError);
         return;
       }
+      if (!roleSupport.supported) {
+        notify("warning", "Unsupported Role", roleSupport.message || "This role change cannot be saved.");
+        return;
+      }
+      if (!hasChanges) {
+        notify("info", "No Changes", "No changes were made to save.");
+        return;
+      }
+      if (saving) return;
 
       setSaving(true);
       try {
@@ -757,6 +770,7 @@
           latestUser = statusResult.data.user;
         }
 
+        notify("success", "User Updated", "User details saved successfully.");
         onUpdate(latestUser);
         onClose();
       } catch (e) {
@@ -1192,6 +1206,7 @@
         if (result.ok) {
           clearUsersCache();
           reloadTable();
+          notify("success", "User Activated", "User account has been activated.");
         } else {
           notify("error", "Action Failed", result.data?.error || "Unable to activate user.");
         }
@@ -1212,6 +1227,7 @@
         if (result.ok) {
           clearUsersCache();
           reloadTable();
+          notify("info", "User Deactivated", "User account has been deactivated.");
         } else {
           notify("error", "Action Failed", result.data?.error || "Unable to deactivate user.");
         }

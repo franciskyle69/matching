@@ -192,59 +192,104 @@
               No backups yet. Create one above.
             </p>
           ) : (
-            <div className="table-wrapper">
-              <table className="table backup-table">
-                <thead>
-                  <tr>
-                    <th>Created</th>
-                    <th>Size</th>
-                    <th>Records</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {backups.map((b) => (
-                    <tr key={b.id}>
-                      <td>
-                        <div>{formatBackupDate(b.created)}</div>
-                        <div className="backup-id">{b.id}</div>
-                      </td>
-                      <td>{b.size_display}</td>
-                      <td>{b.records}</td>
-                      <td>
-                        <div className="backup-actions">
-                          <button
-                            type="button"
-                            className="btn btn-warning small"
-                            onClick={() => restoreBackupById(b.id)}
-                            disabled={backupRestoreLoading}
-                            title="Restore to this backup"
-                          >
-                            Restore
-                          </button>
-                          <button
-                            type="button"
-                            className="btn btn-info small"
-                            onClick={() => downloadBackup(b.id)}
-                            title="Download backup file"
-                          >
-                            Download
-                          </button>
-                          <button
-                            type="button"
-                            className="btn danger small"
-                            onClick={() => deleteBackup(b.id)}
-                            title="Delete backup file"
-                          >
-                            Delete
-                          </button>
-                        </div>
-                      </td>
+            <React.Fragment>
+              <div className="table-wrapper backup-desktop-table">
+                <table className="table backup-table">
+                  <thead>
+                    <tr>
+                      <th>Created</th>
+                      <th>Size</th>
+                      <th>Records</th>
+                      <th>Actions</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    {backups.map((b) => (
+                      <tr key={b.id}>
+                        <td>
+                          <div>{formatBackupDate(b.created)}</div>
+                          <div className="backup-id">{b.id}</div>
+                        </td>
+                        <td>{b.size_display}</td>
+                        <td>{b.records}</td>
+                        <td>
+                          <div className="backup-actions">
+                            <button
+                              type="button"
+                              className="btn btn-warning small"
+                              onClick={() => restoreBackupById(b.id)}
+                              disabled={backupRestoreLoading}
+                              title="Restore to this backup"
+                            >
+                              Restore
+                            </button>
+                            <button
+                              type="button"
+                              className="btn btn-info small"
+                              onClick={() => downloadBackup(b.id)}
+                              title="Download backup file"
+                            >
+                              Download
+                            </button>
+                            <button
+                              type="button"
+                              className="btn danger small"
+                              onClick={() => deleteBackup(b.id)}
+                              title="Delete backup file"
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Mobile Card List for Backups */}
+              <div className="backup-mobile-list">
+                {backups.map((b) => (
+                  <div key={b.id} className="backup-mobile-card">
+                    <div className="backup-mobile-card-top">
+                      <span className="backup-mobile-card-date">{formatBackupDate(b.created)}</span>
+                      <span className="backup-mobile-card-size">{b.size_display}</span>
+                    </div>
+                    <div className="backup-mobile-card-id">{b.id}</div>
+                    <div className="backup-mobile-card-meta">
+                      <span className="backup-mobile-card-meta-label">Records:</span> {b.records}
+                    </div>
+                    <div className="backup-mobile-card-actions">
+                      <button
+                        type="button"
+                        className="btn btn-warning small"
+                        onClick={() => restoreBackupById(b.id)}
+                        disabled={backupRestoreLoading}
+                        title="Restore to this backup"
+                      >
+                        Restore
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-info small"
+                        onClick={() => downloadBackup(b.id)}
+                        title="Download backup file"
+                      >
+                        Download
+                      </button>
+                      <button
+                        type="button"
+                        className="btn danger small"
+                        onClick={() => deleteBackup(b.id)}
+                        title="Delete backup file"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </React.Fragment>
           )}
         </section>
       </div>

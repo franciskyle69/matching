@@ -482,7 +482,7 @@ import Skeleton from "@mui/material/Skeleton";
                 onClick={() => setActiveTab("mentoring-preferences")}
               >
                 <TuneOutlined fontSize="inherit" />
-                <span>Mentoring Preferences</span>
+                <span>Matching Profile</span>
               </button>
             </div>
           </header>

@@ -35,8 +35,8 @@
 @import "./styles/components/topbar.css?v=222";
 @import "./styles/components/avatars.css";
 @import "./styles/components/complete-profile-onboarding.css";
-@import "./styles/layout/mobile-shell.css";
 @import "./styles/components/neumorphism.css?v=222";
+@import "./styles/layout/mobile-shell.css?v=224";
 
 /* Global font rendering — loaded after tokens so --font-sans is available */
 *,

@@ -11108,23 +11108,94 @@ html[data-theme="dark"] .auth-password-toggle:hover,
 }
 
 @media (max-width: 1024px) {
-  .mentor-matching-profile-page .mp-layout {
+  .mentor-matching-profile-page .mp-layout,
+  .mentoring-preferences-page .mp-layout,
+  [data-theme="light"] .mentor-matching-profile-page .mp-layout,
+  [data-theme="light"] .mentoring-preferences-page .mp-layout,
+  [data-theme="dark"] .mentor-matching-profile-page .mp-layout,
+  [data-theme="dark"] .mentoring-preferences-page .mp-layout,
+  .dark .mentor-matching-profile-page .mp-layout,
+  .dark .mentoring-preferences-page .mp-layout {
+    display: flex !important;
+    flex-direction: column !important;
     grid-template-columns: 1fr !important;
+    gap: 20px !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin-top: 16px !important;
   }
-  .mentor-matching-profile-page .mp-preview.matching-card {
+
+  .mentor-matching-profile-page .mp-main,
+  .mentoring-preferences-page .mp-main,
+  [data-theme="light"] .mentor-matching-profile-page .mp-main,
+  [data-theme="light"] .mentoring-preferences-page .mp-main,
+  [data-theme="dark"] .mentor-matching-profile-page .mp-main,
+  [data-theme="dark"] .mentoring-preferences-page .mp-main,
+  .dark .mentor-matching-profile-page .mp-main,
+  .dark .mentoring-preferences-page .mp-main {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  .mentor-matching-profile-page .mp-preview,
+  .mentoring-preferences-page .mp-preview,
+  .mentor-matching-profile-page .mp-preview.matching-card,
+  .mentoring-preferences-page .mp-preview.matching-card,
+  [data-theme="light"] .mentor-matching-profile-page .mp-preview,
+  [data-theme="light"] .mentoring-preferences-page .mp-preview,
+  [data-theme="light"] .mentor-matching-profile-page .mp-preview.matching-card,
+  [data-theme="light"] .mentoring-preferences-page .mp-preview.matching-card,
+  [data-theme="dark"] .mentor-matching-profile-page .mp-preview,
+  [data-theme="dark"] .mentoring-preferences-page .mp-preview,
+  [data-theme="dark"] .mentor-matching-profile-page .mp-preview.matching-card,
+  [data-theme="dark"] .mentoring-preferences-page .mp-preview.matching-card,
+  .dark .mentor-matching-profile-page .mp-preview,
+  .dark .mentoring-preferences-page .mp-preview,
+  .dark .mentor-matching-profile-page .mp-preview.matching-card,
+  .dark .mentoring-preferences-page .mp-preview.matching-card {
     position: static !important;
+    top: auto !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    order: 99 !important;
   }
 }
 
 @media (max-width: 768px) {
-  .mentor-matching-profile-page .mp-section {
-    padding: 22px 20px !important;
+  .mentor-matching-profile-page .mp-section,
+  .mentoring-preferences-page .mp-section,
+  [data-theme="dark"] .mentor-matching-profile-page .mp-section,
+  [data-theme="dark"] .mentoring-preferences-page .mp-section,
+  [data-theme="light"] .mentor-matching-profile-page .mp-section,
+  [data-theme="light"] .mentoring-preferences-page .mp-section {
+    padding: 18px 16px !important;
+    border-radius: 20px !important;
   }
-  .mentor-matching-profile-page .complete-profile-expertise-group {
-    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)) !important;
-  }
-  .mentor-matching-profile-page .complete-profile-subject-grid {
+
+  .mentor-matching-profile-page .complete-profile-expertise-group,
+  .mentoring-preferences-page .complete-profile-expertise-group {
     grid-template-columns: 1fr !important;
+    gap: 8px !important;
+  }
+
+  .mentor-matching-profile-page .complete-profile-subject-grid,
+  .mentoring-preferences-page .complete-profile-subject-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .mentor-matching-profile-page .mp-preview,
+  .mentoring-preferences-page .mp-preview,
+  .mentor-matching-profile-page .mp-preview.matching-card,
+  .mentoring-preferences-page .mp-preview.matching-card,
+  [data-theme="dark"] .mentor-matching-profile-page .mp-preview.matching-card,
+  [data-theme="dark"] .mentoring-preferences-page .mp-preview.matching-card,
+  [data-theme="light"] .mentor-matching-profile-page .mp-preview.matching-card,
+  [data-theme="light"] .mentoring-preferences-page .mp-preview.matching-card {
+    padding: 18px 16px !important;
+    border-radius: 20px !important;
+    margin-top: 14px !important;
   }
 }
 

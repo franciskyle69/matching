@@ -666,6 +666,14 @@ import Slider from "@mui/material/Slider";
                 />
                 <span>Student Mentee</span>
               </span>
+              <button
+                type="button"
+                className="btn primary small mp-header-save-btn"
+                onClick={handleSave}
+                disabled={menteeMatchingSaving || isPristine || !canSave}
+              >
+                {menteeMatchingSaving ? "Saving…" : "Save Preferences"}
+              </button>
             </div>
           </header>
         )}
@@ -1267,7 +1275,7 @@ import Slider from "@mui/material/Slider";
               <p className="mp-sticky-subtitle">
                 {justSaved && isPristine
                   ? "Your mentee matching profile was updated."
-                  : "Use Save Preferences in the summary panel to keep these updates."}
+                  : "Save your preferences to keep these updates."}
               </p>
               {submitAttempted && !canSave && !isPristine && (
                 <p
@@ -1280,6 +1288,30 @@ import Slider from "@mui/material/Slider";
                       : "Select a subject, a topic, and a support need before saving."
                     : "Select at least one subject and a support need before saving."}
                 </p>
+              )}
+            </div>
+            <div className="mp-sticky-actions">
+              <button
+                type="button"
+                className="btn primary small mp-sticky-save-btn"
+                onClick={handleSave}
+                disabled={menteeMatchingSaving || (!canSave && !isPristine)}
+              >
+                {menteeMatchingSaving
+                  ? "Saving…"
+                  : embedded
+                    ? "Save & finish"
+                    : "Save Preferences"}
+              </button>
+              {!isPristine && (
+                <button
+                  type="button"
+                  className="btn secondary small mp-sticky-discard-btn"
+                  onClick={handleReset}
+                  disabled={menteeMatchingSaving}
+                >
+                  Discard
+                </button>
               )}
             </div>
           </div>

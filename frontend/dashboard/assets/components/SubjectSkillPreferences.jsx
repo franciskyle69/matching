@@ -229,6 +229,9 @@ export default function SubjectSkillPreferences({
   const triggerWarning = (msg) => {
     setValidationError(msg);
     setToastMessage(msg);
+    if (window.DashboardApp && typeof window.DashboardApp.notify === "function") {
+      window.DashboardApp.notify("warning", "Preference Limit", msg);
+    }
   };
 
   // Filter curriculum to only selected subjects

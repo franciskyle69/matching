@@ -333,6 +333,7 @@ import "./components/Sidebar.jsx";
       "newsfeed",
       "matching",
       "mentees",
+      "notifications",
       "announcements",
       "approvals",
       "users",
@@ -696,14 +697,63 @@ import "./components/Sidebar.jsx";
                 </div>
               </div>
               <div className="mobile-app-header-actions">
-                <IconButton
-                  className="mobile-header-icon-btn"
-                  onClick={toggleTheme}
-                  aria-label="Light mode active"
-                  aria-pressed="true"
+                <button
+                  type="button"
+                  className="sidebar-icon-btn mobile-header-icon-btn mobile-header-bell-btn app-topbar-bell"
+                  onClick={() => {
+                    closeMobileMenu();
+                    goTo("notifications");
+                  }}
+                  aria-label={
+                    unreadCount > 0
+                      ? "Notifications, " + unreadCount + " unread"
+                      : "Notifications"
+                  }
+                  title={
+                    unreadCount > 0
+                      ? "Notifications (" + unreadCount + " unread)"
+                      : "Notifications"
+                  }
                 >
-                  <LightModeOutlinedIcon />
-                </IconButton>
+                  <svg
+                    className="sidebar-icon-bell"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                    <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+                  </svg>
+                  <span
+                    className={
+                      "app-topbar-bell-dot" +
+                      (unreadCount > 0 ? " is-active" : "")
+                    }
+                    aria-hidden="true"
+                  />
+                  {unreadCount > 0 && (
+                    <span className="nav-badge mobile-nav-badge">
+                      {unreadCount > 99 ? "99+" : unreadCount}
+                    </span>
+                  )}
+                </button>
+                <button
+                  type="button"
+                  className="sidebar-icon-btn mobile-header-icon-btn app-topbar-theme-btn"
+                  onClick={toggleTheme}
+                  aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+                  title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+                >
+                  {theme === "dark" ? (
+                    <LightModeOutlinedIcon fontSize="small" aria-hidden="true" />
+                  ) : (
+                    <DarkModeOutlinedIcon fontSize="small" aria-hidden="true" />
+                  )}
+                </button>
                 <div className="app-topbar-profile" ref={profileMenuRef}>
                   <IconButton
                     className={
