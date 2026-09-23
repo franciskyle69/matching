@@ -169,6 +169,8 @@
         ? "Faculty Mentor"
         : "Student Mentee";
 
+    const isMentor = user?.role === "mentor" || user?.role === "instructor_mentor";
+
     const partnerRole = user?.role === "mentor" ? "mentees" : "mentors";
 
     // Trigger celebration & confetti
@@ -441,7 +443,7 @@
 
               <div className="neu-detail-tile">
                 <div style={{ fontSize: "0.72rem", opacity: 0.65, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "4px" }}>
-                  Student ID
+                  {isMentor ? "ID No." : "Student ID"}
                 </div>
                 <div style={{ fontSize: "0.95rem", fontWeight: 700 }}>{user?.student_id_no || "Registered"}</div>
               </div>
@@ -577,7 +579,7 @@
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
                   <div className="neu-detail-tile">
                     <div style={{ fontSize: "0.72rem", opacity: 0.65, fontWeight: 700, textTransform: "uppercase", marginBottom: "4px" }}>
-                      Student ID No.
+                      {isMentor ? "ID No." : "Student ID No."}
                     </div>
                     <div style={{ fontSize: "0.95rem", fontWeight: 700 }}>{user?.student_id_no || "—"}</div>
                   </div>

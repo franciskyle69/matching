@@ -7042,6 +7042,43 @@ html[data-theme="dark"] .auth-password-toggle:hover,
   color: #0f172a !important;
 }
 
+[data-theme="dark"] .dialog-panel,
+[data-theme="dark"] .dialog-paper,
+[data-theme="dark"] .modal-content,
+[data-theme="dark"] .MuiDialog-paper,
+[data-theme="dark"] .MuiMenu-paper,
+[data-theme="dark"] .MuiPopover-paper,
+[data-theme="dark"] .auth-oauth-modal,
+html[data-theme="dark"] .dialog-panel,
+html[data-theme="dark"] .dialog-paper,
+html[data-theme="dark"] .modal-content,
+html[data-theme="dark"] .MuiDialog-paper,
+html[data-theme="dark"] .MuiMenu-paper,
+html[data-theme="dark"] .MuiPopover-paper,
+html[data-theme="dark"] .auth-oauth-modal {
+  background: #151D2A !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.55) !important;
+  color: #F8FAFC !important;
+}
+
+[data-theme="dark"] .MuiMenuItem-root,
+html[data-theme="dark"] .MuiMenuItem-root {
+  color: #F8FAFC !important;
+}
+
+[data-theme="dark"] .MuiMenuItem-root:hover,
+html[data-theme="dark"] .MuiMenuItem-root:hover {
+  background-color: rgba(56, 189, 248, 0.15) !important;
+  color: #38BDF8 !important;
+}
+
+[data-theme="dark"] .MuiMenuItem-root.Mui-selected,
+html[data-theme="dark"] .MuiMenuItem-root.Mui-selected {
+  background-color: rgba(56, 189, 248, 0.22) !important;
+  color: #38BDF8 !important;
+}
+
 .dialog-panel h2,
 .dialog-panel h3,
 .auth-oauth-modal-title,

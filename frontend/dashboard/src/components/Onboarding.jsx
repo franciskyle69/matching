@@ -70,6 +70,7 @@ export default function Onboarding({ user, onComplete }) {
   const [errorMessage, setErrorMessage] = useState("");
 
   const isMentee = user?.role === "mentee" || user?.role === "MENTEE";
+  const isMentor = !isMentee;
   const defaultYearLevel = isMentee ? 1 : 3;
 
   const [personalInfo, setPersonalInfo] = useState({
@@ -96,7 +97,9 @@ export default function Onboarding({ user, onComplete }) {
     const errors = {};
     const idNo = String(personalInfo.student_id_no || "").trim();
     if (!idNo) {
-      errors.student_id_no = "Student ID No. is required (e.g., 2021-123456).";
+      errors.student_id_no = isMentor
+        ? "ID No. is required (e.g., 2021-123456)."
+        : "Student ID No. is required (e.g., 2021-123456).";
     }
 
     const cleanContact = String(personalInfo.contact_no || "").replace(/[\s-]/g, "");
@@ -498,17 +501,17 @@ export default function Onboarding({ user, onComplete }) {
                 <Box sx={{ p: 2.5, ...neu.sunkenPanel }}>
                   <Typography variant="subtitle1" fontWeight={700} color={neu.titleColor} sx={{ display: "flex", alignItems: "center", gap: 1, mb: 2 }}>
                     <SchoolIcon sx={{ color: isDark ? "#60A5FA" : "#1976D2", fontSize: 20 }} />
-                    Mandatory Student Credentials
+                    {isMentor ? "Mandatory Credentials" : "Mandatory Student Credentials"}
                   </Typography>
 
                   <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" }, gap: 2.5 }}>
                     <TextField
-                      label="Student ID No."
+                      label={isMentor ? "ID No." : "Student ID No."}
                       required
                       value={personalInfo.student_id_no}
                       onChange={handlePersonalChange("student_id_no")}
                       error={!!personalErrors.student_id_no}
-                      helperText={personalErrors.student_id_no || "Institutional ID (e.g., 2021-123456)"}
+                      helperText={personalErrors.student_id_no || (isMentor ? "Institutional ID (e.g., 2021-123456)" : "Institutional ID (e.g., 2021-123456)")}
                       placeholder="2021-123456"
                       size="small"
                       slotProps={{ inputLabel: { shrink: true } }}
@@ -538,12 +541,58 @@ export default function Onboarding({ user, onComplete }) {
                       slotProps={{
                         inputLabel: { shrink: true },
                         htmlInput: { "data-testid": "admission-select-input" },
+                        select: {
+                          MenuProps: {
+                            PaperProps: {
+                              sx: {
+                                bgcolor: isDark ? "#151D2A" : "#FFFFFF",
+                                color: isDark ? "#F8FAFC" : "#1E293B",
+                                border: isDark ? "1px solid rgba(255,255,255,0.12)" : "1px solid rgba(0,0,0,0.1)",
+                                boxShadow: isDark ? "0 10px 25px rgba(0,0,0,0.5)" : "0 10px 25px rgba(0,0,0,0.1)",
+                                "& .MuiMenuItem-root": {
+                                  color: isDark ? "#F8FAFC" : "#1E293B",
+                                  "&:hover": {
+                                    bgcolor: isDark ? "rgba(56, 189, 248, 0.15)" : "rgba(2, 132, 199, 0.08)",
+                                    color: isDark ? "#38BDF8" : "#0284c7",
+                                  },
+                                  "&.Mui-selected": {
+                                    bgcolor: isDark ? "rgba(56, 189, 248, 0.22)" : "rgba(2, 132, 199, 0.14)",
+                                    color: isDark ? "#38BDF8" : "#0284c7",
+                                  },
+                                },
+                              },
+                            },
+                          },
+                        },
+                      }}
+                      SelectProps={{
+                        MenuProps: {
+                          PaperProps: {
+                            sx: {
+                              bgcolor: isDark ? "#151D2A" : "#FFFFFF",
+                              color: isDark ? "#F8FAFC" : "#1E293B",
+                              border: isDark ? "1px solid rgba(255,255,255,0.12)" : "1px solid rgba(0,0,0,0.1)",
+                              boxShadow: isDark ? "0 10px 25px rgba(0,0,0,0.5)" : "0 10px 25px rgba(0,0,0,0.1)",
+                              "& .MuiMenuItem-root": {
+                                color: isDark ? "#F8FAFC" : "#1E293B",
+                                "&:hover": {
+                                  bgcolor: isDark ? "rgba(56, 189, 248, 0.15)" : "rgba(2, 132, 199, 0.08)",
+                                  color: isDark ? "#38BDF8" : "#0284c7",
+                                },
+                                "&.Mui-selected": {
+                                  bgcolor: isDark ? "rgba(56, 189, 248, 0.22)" : "rgba(2, 132, 199, 0.14)",
+                                  color: isDark ? "#38BDF8" : "#0284c7",
+                                },
+                              },
+                            },
+                          },
+                        },
                       }}
                     >
-                      <MenuItem value="Regular">Regular</MenuItem>
-                      <MenuItem value="Transferee">Transferee</MenuItem>
-                      <MenuItem value="Ladderized">Ladderized</MenuItem>
-                      <MenuItem value="Returnee">Returnee</MenuItem>
+                      <MenuItem value="Regular" sx={{ color: isDark ? "#F8FAFC" : "#1E293B" }}>Regular</MenuItem>
+                      <MenuItem value="Transferee" sx={{ color: isDark ? "#F8FAFC" : "#1E293B" }}>Transferee</MenuItem>
+                      <MenuItem value="Ladderized" sx={{ color: isDark ? "#F8FAFC" : "#1E293B" }}>Ladderized</MenuItem>
+                      <MenuItem value="Returnee" sx={{ color: isDark ? "#F8FAFC" : "#1E293B" }}>Returnee</MenuItem>
                     </TextField>
 
                     <TextField
@@ -558,10 +607,56 @@ export default function Onboarding({ user, onComplete }) {
                       slotProps={{
                         inputLabel: { shrink: true },
                         htmlInput: { "data-testid": "sex-select-input" },
+                        select: {
+                          MenuProps: {
+                            PaperProps: {
+                              sx: {
+                                bgcolor: isDark ? "#151D2A" : "#FFFFFF",
+                                color: isDark ? "#F8FAFC" : "#1E293B",
+                                border: isDark ? "1px solid rgba(255,255,255,0.12)" : "1px solid rgba(0,0,0,0.1)",
+                                boxShadow: isDark ? "0 10px 25px rgba(0,0,0,0.5)" : "0 10px 25px rgba(0,0,0,0.1)",
+                                "& .MuiMenuItem-root": {
+                                  color: isDark ? "#F8FAFC" : "#1E293B",
+                                  "&:hover": {
+                                    bgcolor: isDark ? "rgba(56, 189, 248, 0.15)" : "rgba(2, 132, 199, 0.08)",
+                                    color: isDark ? "#38BDF8" : "#0284c7",
+                                  },
+                                  "&.Mui-selected": {
+                                    bgcolor: isDark ? "rgba(56, 189, 248, 0.22)" : "rgba(2, 132, 199, 0.14)",
+                                    color: isDark ? "#38BDF8" : "#0284c7",
+                                  },
+                                },
+                              },
+                            },
+                          },
+                        },
+                      }}
+                      SelectProps={{
+                        MenuProps: {
+                          PaperProps: {
+                            sx: {
+                              bgcolor: isDark ? "#151D2A" : "#FFFFFF",
+                              color: isDark ? "#F8FAFC" : "#1E293B",
+                              border: isDark ? "1px solid rgba(255,255,255,0.12)" : "1px solid rgba(0,0,0,0.1)",
+                              boxShadow: isDark ? "0 10px 25px rgba(0,0,0,0.5)" : "0 10px 25px rgba(0,0,0,0.1)",
+                              "& .MuiMenuItem-root": {
+                                color: isDark ? "#F8FAFC" : "#1E293B",
+                                "&:hover": {
+                                  bgcolor: isDark ? "rgba(56, 189, 248, 0.15)" : "rgba(2, 132, 199, 0.08)",
+                                  color: isDark ? "#38BDF8" : "#0284c7",
+                                },
+                                "&.Mui-selected": {
+                                  bgcolor: isDark ? "rgba(56, 189, 248, 0.22)" : "rgba(2, 132, 199, 0.14)",
+                                  color: isDark ? "#38BDF8" : "#0284c7",
+                                },
+                              },
+                            },
+                          },
+                        },
                       }}
                     >
-                      <MenuItem value="Male">Male</MenuItem>
-                      <MenuItem value="Female">Female</MenuItem>
+                      <MenuItem value="Male" sx={{ color: isDark ? "#F8FAFC" : "#1E293B" }}>Male</MenuItem>
+                      <MenuItem value="Female" sx={{ color: isDark ? "#F8FAFC" : "#1E293B" }}>Female</MenuItem>
                     </TextField>
                   </Box>
                 </Box>

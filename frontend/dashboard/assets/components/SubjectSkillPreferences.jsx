@@ -38,7 +38,7 @@ export const ROLE_PREFERENCE_LIMITS = {
     roleLabel: "Mentees",
   },
   STUDENT_MENTOR: {
-    maxSubjects: 2,
+    maxSubjects: 3,
     minSubjects: 1,
     maxTopicsPerSubject: 3,
     minTopicsPerSubject: 1,
@@ -404,7 +404,7 @@ export default function SubjectSkillPreferences({
                   : (isDark ? "#F87171" : "#D32F2F")
               }
             >
-              Subjects: {selectedSubjects.length} / {currentLimits.maxSubjects} selected
+              Subjects: {selectedSubjects.length} / {currentLimits.maxSubjects} (Min {currentLimits.minSubjects}, Max {currentLimits.maxSubjects})
             </Typography>
           </Box>
         </Stack>
@@ -523,7 +523,7 @@ export default function SubjectSkillPreferences({
                 fontWeight={700}
                 color={isGlobalCompCapReached ? (isDark ? "#F59E0B" : "#E65100") : (isDark ? "#60A5FA" : "#0D47A1")}
               >
-                Competencies: {selectedCompetencies.length} / {maxTotalComps} selected
+                Competencies: {selectedCompetencies.length} / {maxTotalComps} (Max {maxTotalComps})
               </Typography>
             </Box>
           </Box>

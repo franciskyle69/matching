@@ -245,4 +245,22 @@ describe("Onboarding Component", () => {
     expect(neuLight.isDark).toBe(false);
     expect(neuLight.bgBase).toBe("#E6ECF5");
   });
+
+  it("Step 2 (Mentor): displays 'Mandatory Credentials' and 'ID No.' instead of student-specific wording", () => {
+    render(<Onboarding user={{ role: "mentor", email: "mentor@student.buksu.edu.ph" }} />);
+
+    // Advance to Step 2
+    fireEvent.click(screen.getByRole("button", { name: /I Understand & Accept — Continue/i }));
+    expect(screen.getByRole("heading", { name: /Personal & Academic Profile/i })).toBeInTheDocument();
+
+    // Verify mentor wording
+    expect(screen.getByText("Mandatory Credentials")).toBeInTheDocument();
+    expect(screen.queryByText("Mandatory Student Credentials")).not.toBeInTheDocument();
+    expect(screen.getByLabelText(/ID No\./i)).toBeInTheDocument();
+
+    // Click continue with empty fields -> should show mentor-specific error
+    const continueBtn = screen.getByRole("button", { name: /Continue to Preferences/i });
+    fireEvent.click(continueBtn);
+    expect(screen.getByText(/ID No\. is required/i)).toBeInTheDocument();
+  });
 });
