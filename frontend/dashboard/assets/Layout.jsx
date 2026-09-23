@@ -658,23 +658,6 @@ import "./components/Sidebar.jsx";
           ))}
 
         <div className="app-main-shell">
-          {!isAuthenticated && (
-            <div className="auth-floating-topbar">
-              <button
-                type="button"
-                className="sidebar-icon-btn app-topbar-theme-btn auth-floating-theme-btn"
-                onClick={toggleTheme}
-                aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-                title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-              >
-                {theme === "dark" ? (
-                  <LightModeOutlinedIcon fontSize="small" aria-hidden="true" />
-                ) : (
-                  <DarkModeOutlinedIcon fontSize="small" aria-hidden="true" />
-                )}
-              </button>
-            </div>
-          )}
           {isAuthenticated && isMobileView && (
             <header className="mobile-app-header">
               <IconButton
