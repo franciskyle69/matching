@@ -94,6 +94,75 @@ class ApiAuthTests(TestCase):
 
         self.assertEqual(res.status_code, 200)
 
+    def test_login_lockout_after_failures_and_structured_payload(self):
+        from axes.models import AccessAttempt
+        AccessAttempt.objects.all().delete()
+
+        # Perform failed login attempts up to limit
+        for _ in range(4):
+            res = self.client.post(
+                "/api/auth/login/",
+                data=json.dumps({"identifier": "mentor1", "password": "WrongPassword!"}),
+                content_type="application/json",
+            )
+            self.assertEqual(res.status_code, 401)
+
+        # 5th failed attempt reaches failure limit and triggers lockout (429)
+        res5 = self.client.post(
+            "/api/auth/login/",
+            data=json.dumps({"identifier": "mentor1", "password": "WrongPassword!"}),
+            content_type="application/json",
+        )
+        self.assertEqual(res5.status_code, 429)
+        data5 = res5.json()
+        self.assertEqual(data5.get("error"), "account_locked")
+        self.assertEqual(data5.get("message"), "Too many failed login attempts. Account locked.")
+        self.assertIn("cooloff_seconds", data5)
+        self.assertIn("unlock_time", data5)
+        self.assertGreaterEqual(data5["cooloff_seconds"], 890)
+        self.assertLessEqual(data5["cooloff_seconds"], 900)
+
+        # 6th attempt while locked out returns 429 with remaining cooloff seconds without compounding timer
+        res6 = self.client.post(
+            "/api/auth/login/",
+            data=json.dumps({"identifier": "mentor1", "password": "WrongPassword!"}),
+            content_type="application/json",
+        )
+        self.assertEqual(res6.status_code, 429)
+        data6 = res6.json()
+        self.assertEqual(data6.get("error"), "account_locked")
+        self.assertLessEqual(data6["cooloff_seconds"], data5["cooloff_seconds"])
+
+        # Check-lockout endpoint confirms locked state
+        check_res = self.client.post(
+            "/api/auth/check-lockout/",
+            data=json.dumps({"identifier": "mentor1"}),
+            content_type="application/json",
+        )
+        self.assertEqual(check_res.status_code, 200)
+        check_data = check_res.json()
+        self.assertTrue(check_data.get("is_locked"))
+        self.assertEqual(check_data.get("error"), "account_locked")
+
+        # Other user is NOT locked out (locks out specific username, not entire IP)
+        other_user = User.objects.create_user(
+            username="othermentor",
+            email="othermentor@student.buksu.edu.ph",
+            password=self.password,
+        )
+        UserProfile.objects.create(
+            user=other_user,
+            role=UserProfile.ROLE_STUDENT_MENTOR,
+            is_email_verified=True,
+            approval_status=UserProfile.STATUS_ACTIVE,
+        )
+        other_res = self.client.post(
+            "/api/auth/login/",
+            data=json.dumps({"identifier": "othermentor", "password": self.password}),
+            content_type="application/json",
+        )
+        self.assertEqual(other_res.status_code, 200)
+
     def test_login_unverified_email_fails_with_403(self):
         unverified_user = User.objects.create_user(
             username="unverified1",
@@ -309,7 +378,76 @@ class ApiAuthTests(TestCase):
             content_type="application/json",
         )
         self.assertEqual(response.status_code, 429)
-        self.assertEqual(response.json().get("error"), "Account locked")
+        self.assertEqual(response.json().get("error"), "account_locked")
+
+    def test_password_reset_confirm_endpoint(self):
+        from django.contrib.auth.tokens import default_token_generator
+        from django.utils.http import urlsafe_base64_encode
+        from django.utils.encoding import force_bytes
+
+        # Missing uid or token
+        res_missing = self.client.post(
+            "/api/auth/password-reset-confirm/",
+            data=json.dumps({"token": "abc"}),
+            content_type="application/json",
+        )
+        self.assertEqual(res_missing.status_code, 400)
+        self.assertIn("missing", res_missing.json().get("error", "").lower())
+
+        # Invalid token
+        uidb64 = urlsafe_base64_encode(force_bytes(self.user.pk))
+        res_invalid = self.client.post(
+            "/api/auth/password-reset-confirm/",
+            data=json.dumps({
+                "uidb64": uidb64,
+                "token": "invalid-token",
+                "new_password1": "NewPassword123!",
+                "new_password2": "NewPassword123!",
+            }),
+            content_type="application/json",
+        )
+        self.assertEqual(res_invalid.status_code, 400)
+        self.assertIn("expired", res_invalid.json().get("error", "").lower())
+
+        # Passwords mismatch
+        valid_token = default_token_generator.make_token(self.user)
+        res_mismatch = self.client.post(
+            "/api/auth/password-reset-confirm/",
+            data=json.dumps({
+                "uidb64": uidb64,
+                "token": valid_token,
+                "new_password1": "NewPassword123!",
+                "new_password2": "MismatchPassword123!",
+            }),
+            content_type="application/json",
+        )
+        self.assertEqual(res_mismatch.status_code, 400)
+
+        # Successful password reset
+        new_pass = "BrandNewPass999!"
+        res_success = self.client.post(
+            "/api/auth/password-reset-confirm/",
+            data=json.dumps({
+                "uidb64": uidb64,
+                "token": valid_token,
+                "new_password1": new_pass,
+                "new_password2": new_pass,
+            }),
+            content_type="application/json",
+        )
+        self.assertEqual(res_success.status_code, 200)
+        self.assertEqual(res_success.json().get("status"), "ok")
+
+        # Verify login succeeds with the newly set password
+        res_login = self.client.post(
+            "/api/auth/login/",
+            data=json.dumps({
+                "email": self.user.email,
+                "password": new_pass,
+            }),
+            content_type="application/json",
+        )
+        self.assertEqual(res_login.status_code, 200)
 
 
 @override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")

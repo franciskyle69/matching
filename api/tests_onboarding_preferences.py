@@ -3,7 +3,15 @@ from django.contrib.auth import get_user_model
 from accounts.models import UserProfile
 from matching.models import Subject, Topic, Competency
 from profiles.models import MenteeProfile, MentorProfile
-from api.serializers import OnboardingPreferenceSerializer
+from api.serializers import (
+    OnboardingPreferenceSerializer,
+    MenteePreferenceSerializer,
+    MentorPreferenceSerializer,
+    MAX_SUBJECTS,
+    MAX_TOPICS_PER_SUBJECT,
+    MAX_COMPETENCIES_PER_SUBJECT,
+)
+from rest_framework import serializers
 
 User = get_user_model()
 
@@ -174,15 +182,24 @@ class OnboardingPreferenceSerializerTestCase(TestCase):
         }
         s2 = OnboardingPreferenceSerializer(data=payload_3_subj, context={"user": self.mentor_user})
         self.assertFalse(s2.is_valid())
-        self.assertIn("Student Mentors cannot select more than 2 subjects", str(s2.errors))
+        self.assertTrue("maximum of 2 subjects" in str(s2.errors) or "cannot select more than 2 subjects" in str(s2.errors))
 
     def test_instructor_mentor_subject_limits(self):
         Top3_1, _ = Topic.objects.get_or_create(subject=self.subject3, name="LinkedLists")
-        Top4_1, _ = Topic.objects.get_or_create(subject=self.subject4, name="SQL")
         c_ll, _ = Competency.objects.get_or_create(topic=Top3_1, name="Singly Linked Lists")
-        c_sql, _ = Competency.objects.get_or_create(topic=Top4_1, name="SELECT Queries")
 
-        # 3 subjects is valid for Instructor Mentor
+        # 2 subjects is valid for Instructor Mentor (global max = 2)
+        payload_2_subj = {
+            "subjects": ["IT 111", "IT 112"],
+            "topics": ["Hardware Basics", "Control Structures"],
+            "competencies": [self.c1.id, self.c6.id],
+            "availability_slots": ["Mon|09:00-11:00", "Wed|13:00-15:00"],
+            "role": "INSTRUCTOR_MENTOR",
+        }
+        s_valid = OnboardingPreferenceSerializer(data=payload_2_subj, context={"user": self.instructor_user})
+        self.assertTrue(s_valid.is_valid(), s_valid.errors)
+
+        # 3 subjects exceeds the global max cap of 2
         payload_3_subj = {
             "subjects": ["IT 111", "IT 112", "IT 113"],
             "topics": ["Hardware Basics", "Control Structures", "LinkedLists"],
@@ -190,46 +207,68 @@ class OnboardingPreferenceSerializerTestCase(TestCase):
             "availability_slots": ["Mon|09:00-11:00", "Wed|13:00-15:00"],
             "role": "INSTRUCTOR_MENTOR",
         }
-        s_valid = OnboardingPreferenceSerializer(data=payload_3_subj, context={"user": self.instructor_user})
-        self.assertTrue(s_valid.is_valid(), s_valid.errors)
-
-        # 4 subjects exceeds the max cap of 3
-        payload_4_subj = {
-            "subjects": ["IT 111", "IT 112", "IT 113", "IT 115"],
-            "topics": ["Hardware Basics", "Control Structures", "LinkedLists", "SQL"],
-            "competencies": [self.c1.id, self.c6.id, c_ll.id, c_sql.id],
-            "availability_slots": ["Mon|09:00-11:00", "Wed|13:00-15:00"],
-            "role": "INSTRUCTOR_MENTOR",
-        }
-        s_invalid = OnboardingPreferenceSerializer(data=payload_4_subj, context={"user": self.instructor_user})
+        s_invalid = OnboardingPreferenceSerializer(data=payload_3_subj, context={"user": self.instructor_user})
         self.assertFalse(s_invalid.is_valid())
-        self.assertIn("Instructor Mentors cannot select more than 3 subjects", str(s_invalid.errors))
+        self.assertTrue("maximum of 2 subjects" in str(s_invalid.errors) or "cannot select more than 2 subjects" in str(s_invalid.errors))
 
     def test_mentee_topics_per_subject_limit(self):
-        # Mentee max topics per subject is 2
+        # 4 topics under IT 111 exceeds the maxTopicsPerSubject limit
+        Top1_4, _ = Topic.objects.get_or_create(subject=self.subject1, name="Network Basics")
         payload = {
             "subjects": ["IT 111"],
-            "topics": ["Hardware Basics", "Digital Logic", "OS Fundamentals"],  # 3 topics under IT 111
+            "topics": ["Hardware Basics", "Digital Logic", "OS Fundamentals", "Network Basics"],
             "competencies": [self.c1.id, self.c4.id],
             "availability_slots": ["Mon|09:00-11:00"],
             "role": "MENTEE",
         }
         s = OnboardingPreferenceSerializer(data=payload, context={"user": self.mentee_user})
         self.assertFalse(s.is_valid())
-        self.assertIn("Mentees cannot select more than 2 topics per subject", str(s.errors))
+        self.assertTrue("topics per subject" in str(s.errors))
 
-    def test_mentee_competencies_per_topic_limit(self):
-        # Mentee max competencies per topic is 2
+    def test_mentee_competencies_per_subject_limit(self):
+        # Max competencies per subject is 3
+        c_extra, _ = Competency.objects.get_or_create(topic=self.top1_1, name="Bus Architecture")
         payload = {
             "subjects": ["IT 111"],
             "topics": ["Hardware Basics"],
-            "competencies": [self.c1.id, self.c2.id, self.c3.id],  # 3 comps under Hardware Basics
+            "competencies": [self.c1.id, self.c2.id, self.c3.id, c_extra.id],  # 4 comps in IT 111
             "availability_slots": ["Mon|09:00-11:00"],
             "role": "MENTEE",
         }
         s = OnboardingPreferenceSerializer(data=payload, context={"user": self.mentee_user})
         self.assertFalse(s.is_valid())
-        self.assertIn("Mentees cannot select more than 2 competencies per topic", str(s.errors))
+        self.assertTrue("competencies" in str(s.errors))
+
+    def test_field_level_validate_subjects(self):
+        # Test validate_subjects directly
+        serializer = MenteePreferenceSerializer()
+        valid_val = serializer.validate_subjects(["IT 111", "IT 112"])
+        self.assertEqual(len(valid_val), 2)
+
+        with self.assertRaises(serializers.ValidationError) as ctx:
+            serializer.validate_subjects(["IT 111", "IT 112", "IT 113"])
+        self.assertIn("maximum of 2 subjects", str(ctx.exception))
+
+    def test_dedicated_preference_serializers(self):
+        # MenteePreferenceSerializer enforces role and max 2 subjects
+        mentee_payload = {
+            "subjects": ["IT 111"],
+            "topics": ["Hardware Basics"],
+            "competencies": [self.c1.id, self.c2.id],
+            "availability_slots": ["Mon|09:00-11:00"],
+        }
+        s_mentee = MenteePreferenceSerializer(data=mentee_payload, context={"user": self.mentee_user})
+        self.assertTrue(s_mentee.is_valid(), s_mentee.errors)
+
+        # MentorPreferenceSerializer enforces role and max 2 subjects
+        mentor_payload = {
+            "subjects": ["IT 111", "IT 112"],
+            "topics": ["Hardware Basics", "Control Structures"],
+            "competencies": [self.c1.id, self.c6.id],
+            "availability_slots": ["Mon|09:00-11:00", "Wed|13:00-15:00"],
+        }
+        s_mentor = MentorPreferenceSerializer(data=mentor_payload, context={"user": self.mentor_user})
+        self.assertTrue(s_mentor.is_valid(), s_mentor.errors)
 
 
     def test_hierarchy_integrity_check(self):

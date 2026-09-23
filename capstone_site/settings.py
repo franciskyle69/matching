@@ -12,7 +12,10 @@ https://docs.djangoproject.com/en/5.0/ref/settings/
 
 from pathlib import Path
 import os
+import sys
 from dotenv import load_dotenv
+
+is_running_tests = 'test' in sys.argv or os.environ.get("TESTING", "").lower() == "true"
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -162,6 +165,9 @@ INSTALLED_APPS = [
     'allauth.socialaccount.providers.google',
 ]
 
+if is_running_tests:
+    INSTALLED_APPS = [app for app in INSTALLED_APPS if app not in ('cloudinary_storage', 'cloudinary')]
+
 SPECTACULAR_SETTINGS = {
     'TITLE': 'Academic Mentoring Unit (Kasandigan) API',
     'DESCRIPTION': 'REST API for Mentor-Mentee Matching, User Management, and Onboarding.',
@@ -217,10 +223,6 @@ WSGI_APPLICATION = 'capstone_site.wsgi.application'
 force_sqlite = os.environ.get("FORCE_SQLITE", "").lower() == "true"
 database_url = os.environ.get("DATABASE_URL")
 db_name = os.environ.get("DB_NAME")
-
-import sys
-
-is_running_tests = 'test' in sys.argv or os.environ.get("TESTING", "").lower() == "true"
 
 if is_running_tests:
     DATABASES = {
@@ -334,7 +336,7 @@ CLOUDINARY_CLOUD_NAME = CLOUDINARY_STORAGE["CLOUD_NAME"]
 CLOUDINARY_API_KEY = CLOUDINARY_STORAGE["API_KEY"]
 CLOUDINARY_API_SECRET = CLOUDINARY_STORAGE["API_SECRET"]
 
-if CLOUDINARY_CLOUD_NAME:
+if CLOUDINARY_CLOUD_NAME and not is_running_tests:
     import cloudinary
     cloudinary.config(
         cloud_name=CLOUDINARY_CLOUD_NAME,
@@ -347,14 +349,14 @@ if CLOUDINARY_CLOUD_NAME:
 STORAGES = {
     "default": {
         "BACKEND": "cloudinary_storage.storage.MediaCloudinaryStorage"
-        if CLOUDINARY_CLOUD_NAME
+        if CLOUDINARY_CLOUD_NAME and not is_running_tests
         else "django.core.files.storage.FileSystemStorage",
     },
     "staticfiles": {
         "BACKEND": "capstone_site.storage.WhiteNoiseStaticFilesStorage",
     },
 }
-if not CLOUDINARY_CLOUD_NAME:
+if not CLOUDINARY_CLOUD_NAME or is_running_tests:
     STORAGES["default"]["OPTIONS"] = {"location": MEDIA_ROOT, "base_url": MEDIA_URL}
 
 # WhiteNoise for serving static files in production (legacy setting, STORAGES used above)
@@ -543,12 +545,12 @@ from datetime import timedelta
 
 AXES_FAILURE_LIMIT = 5  # Lock account after 5 failed attempts
 AXES_COOLOFF_TIME = timedelta(minutes=15)  # Lockout duration: 15 minutes
-AXES_LOCKOUT_TEMPLATE = None  # Use DRF response for API lockouts
+AXES_LOCKOUT_PARAMETERS = ["username"]  # Lock out specific account, not entire IP
+AXES_RESET_ON_SUCCESS = True  # Reset counter on successful login
+AXES_RESET_COOL_OFF_ON_FAILURE_DURING_LOCKOUT = False  # Do not reset/compound cooloff timer on subsequent attempts during lockout
+AXES_LOCKOUT_TEMPLATE = None  # Use DRF/JSON response for API lockouts
 AXES_LOCKOUT_CALLABLE = "accounts.lockout_utils.axes_lockout_response"
 AXES_VERBOSE = True  # Log detailed information about attempts
-AXES_RESET_ON_SUCCESS = True  # Reset counter on successful login
-AXES_LOCKOUT_BY_COMBINATION_USER_AND_IP = True
-AXES_LOCKOUT_PARAMETERS = [["username", "ip_address"]]
 _behind_proxy = _env_bool("TRUST_X_FORWARDED_PROTO", default=not DEBUG)
 if _behind_proxy:
     AXES_IPWARE_PROXY_COUNT = 1

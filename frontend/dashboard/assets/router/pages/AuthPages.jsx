@@ -599,7 +599,8 @@ import VerifyEmail from "../../../src/components/VerifyEmail.jsx";
       user &&
       ((user.role === "mentor" && user.mentor_approved === false) ||
         (user.role === "mentee" && user.mentee_approved === false));
-    const isAuthLoading = signInLoading;
+    const isLockedOut = !!ctx.isLockedOut;
+    const isAuthLoading = signInLoading || isLockedOut;
 
     function goBackToLanding() {
       window.location.href = "/landing/";
@@ -667,6 +668,7 @@ import VerifyEmail from "../../../src/components/VerifyEmail.jsx";
               className="auth-form"
               onSubmit={(e) => {
                 e.preventDefault();
+                if (isLockedOut) return;
                 handleSignIn();
               }}
             >
@@ -683,6 +685,7 @@ import VerifyEmail from "../../../src/components/VerifyEmail.jsx";
                   autoComplete="username"
                   placeholder="you@example.com or username"
                   value={signInForm.identifier}
+                  disabled={isAuthLoading}
                   onChange={(e) => {
                     setSignInForm({ ...signInForm, identifier: e.target.value });
                     if (authAlert) setAuthAlert(null);
@@ -700,6 +703,7 @@ import VerifyEmail from "../../../src/components/VerifyEmail.jsx";
                     type={showPassword ? "text" : "password"}
                     autoComplete="current-password"
                     value={signInForm.password}
+                    disabled={isAuthLoading}
                     onChange={(e) => {
                       setSignInForm({ ...signInForm, password: e.target.value });
                       if (authAlert) setAuthAlert(null);
@@ -708,6 +712,7 @@ import VerifyEmail from "../../../src/components/VerifyEmail.jsx";
                   <button
                     type="button"
                     className="auth-password-toggle"
+                    disabled={isAuthLoading}
                     onClick={() => setShowPassword((v) => !v)}
                     title={showPassword ? "Hide password" : "Show password"}
                     aria-label={
@@ -761,7 +766,7 @@ import VerifyEmail from "../../../src/components/VerifyEmail.jsx";
               <button
                 type="submit"
                 className="auth-primary"
-                disabled={signInLoading}
+                disabled={isAuthLoading}
               >
                 {signInLoading ? <LoadingSpinner inline /> : "Sign In"}
               </button>
@@ -801,7 +806,9 @@ import VerifyEmail from "../../../src/components/VerifyEmail.jsx";
                   <button
                     className="auth-social-btn"
                     type="button"
+                    disabled={isAuthLoading}
                     onClick={() => {
+                      if (isLockedOut) return;
                       window.location.href = getGoogleLoginUrl();
                     }}
                   >

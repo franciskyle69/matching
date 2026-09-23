@@ -430,6 +430,12 @@ def auth_login(request):
             {"error": "Email/username and password are required."}, status=400
         )
 
+    # Check if the account is already locked out BEFORE authenticating
+    # This prevents incrementing failure counts or compounding/resetting the cooloff timer.
+    lockout_info = get_lockout_info(identifier, ip_address=client_ip)
+    if lockout_info["is_locked"]:
+        return create_lockout_response(identifier, ip_address=client_ip)
+
     # Run django-axes before the email/username backend so locked accounts are
     # rejected even when the submitted password is correct.
     user = authenticate(request, username=identifier, password=password)
@@ -600,6 +606,55 @@ def auth_forgot_password(request):
             or "Invalid email or username."
         )
         return JsonResponse({"error": str(error_msg)}, status=400)
+
+
+@require_http_methods(["POST"])
+def auth_password_reset_confirm(request):
+    """API endpoint to confirm password reset with uidb64, token, and new password."""
+    payload = _get_payload(request)
+    uidb64 = _get_str(payload, "uidb64") or _get_str(payload, "uid")
+    token = _get_str(payload, "token")
+    new_password1 = _get_str(payload, "new_password1") or _get_str(payload, "password")
+    new_password2 = _get_str(payload, "new_password2") or new_password1
+
+    if not uidb64 or not token:
+        return JsonResponse({"error": "Reset link is missing user ID or token."}, status=400)
+
+    UserModel = get_user_model()
+    try:
+        uid = force_str(urlsafe_base64_decode(uidb64))
+        user = UserModel.objects.get(pk=uid)
+    except (TypeError, ValueError, OverflowError, UserModel.DoesNotExist):
+        user = None
+
+    if user is None or not default_token_generator.check_token(user, token):
+        return JsonResponse(
+            {"error": "This password reset link is invalid or has expired. Please request a new one."},
+            status=400,
+        )
+
+    if not new_password1 or not new_password2:
+        return JsonResponse({"error": "Please enter and confirm your new password."}, status=400)
+
+    from django.contrib.auth.forms import SetPasswordForm
+    form = SetPasswordForm(user, data={"new_password1": new_password1, "new_password2": new_password2})
+    if form.is_valid():
+        form.save()
+        try:
+            reset_lockout_progress(user.username, user.email, ip_address=_client_ip(request))
+        except Exception:
+            pass
+
+        return JsonResponse({
+            "status": "ok",
+            "message": "Password reset successful.",
+        })
+    else:
+        errors = []
+        for field, errs in form.errors.items():
+            errors.extend(errs)
+        error_msg = errors[0] if errors else "Password validation failed."
+        return JsonResponse({"error": error_msg, "errors": form.errors}, status=400)
 
 
 @require_http_methods(["POST"])
@@ -815,6 +870,10 @@ def check_lockout(request):
     if lockout_info["is_locked"]:
         return JsonResponse({
             "is_locked": True,
+            "error": "account_locked",
+            "message": "Too many failed login attempts. Account locked.",
+            "cooloff_seconds": lockout_info.get("cooloff_seconds"),
+            "unlock_time": lockout_info.get("unlock_time"),
             "remaining_minutes": lockout_info.get("remaining_minutes"),
             "locked_until": lockout_info.get("locked_until"),
             "penalty_minutes": lockout_info.get("penalty_minutes"),

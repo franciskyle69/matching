@@ -122,18 +122,22 @@ describe("Onboarding Component", () => {
     const historyTopic = screen.getByRole("checkbox", { name: /History & Hardware Evolution/i });
     fireEvent.click(historyTopic);
 
-    // Select Computing Generations (total 4)
+    // Select Computing Generations in IT 111 (IT 111 now has 3 comps: Figma UI Design, Flexbox & Grid, Computing Generations - Subject Cap 3 reached!)
     const compGenBox = screen.getByRole("checkbox", { name: /Computing Generations/i });
     fireEvent.click(compGenBox);
 
-    // Select Processor Architecture (total 5 - Global Cap reached!)
+    // IT 111 subject cap of 3 reached; remaining unselected competencies in IT 111 (like Processor Architecture) are disabled
     const procBox = screen.getByRole("checkbox", { name: /Processor Architecture/i });
-    fireEvent.click(procBox);
+    expect(procBox).toBeDisabled();
+
+    // Select Conditional Logic in IT 112 (total 5 - Global Cap reached!)
+    const condBox = screen.getByRole("checkbox", { name: /Conditional Logic/i });
+    fireEvent.click(condBox);
 
     // Global cap of 5 reached!
     expect(screen.getByText(/Competencies: 5 \/ 5 \(Max 5\)/i)).toBeInTheDocument();
 
-    // Unchecked competencies should now have disabled={true}
+    // Unchecked competencies across all topics should now have disabled={true}
     const html5Box = screen.getByRole("checkbox", { name: /HTML5 Semantic Structure/i });
     expect(html5Box).toBeDisabled();
     expect(html5Box).not.toBeChecked();
@@ -141,13 +145,15 @@ describe("Onboarding Component", () => {
     // Checked ones should NOT be disabled so user can uncheck them
     expect(compGenBox).not.toBeDisabled();
     expect(compGenBox).toBeChecked();
+    expect(condBox).not.toBeDisabled();
+    expect(condBox).toBeChecked();
   });
 
-  it("Mentor Test: student mentor has max 10 competencies cap, up to 3 subjects, and requires at least 2 availability slots", () => {
+  it("Mentor Test: student mentor has max 10 competencies cap, up to 2 subjects, and requires at least 2 availability slots", () => {
     goToStep3({ role: "student_mentor" });
 
-    // Verify limits reflected in visual trackers
-    expect(screen.getByText(/Subjects: \d+ \/ 3 \(Min 1, Max 3\)/i)).toBeInTheDocument();
+    // Verify limits reflected in visual trackers (Max 2 subjects, max 10 competencies, min 2 slots)
+    expect(screen.getByText(/Subjects: \d+ \/ 2/i)).toBeInTheDocument();
     expect(screen.getByText(/Competencies: \d+ \/ 10 \(Max 10\)/i)).toBeInTheDocument();
     expect(screen.getByText(/Availability Slots: 2 \/ 6 \(Min 2, Max 6\)/i)).toBeInTheDocument();
 
@@ -157,10 +163,10 @@ describe("Onboarding Component", () => {
     const firstDeleteBtn = deleteButtons[0].closest("button");
     expect(firstDeleteBtn).toBeDisabled();
 
-    // Mentor can select up to 3 subjects
+    // Mentor has 2 subjects selected initially; 3rd subject (IT 113) must be disabled due to MAX_SUBJECTS = 2
     const it113Box = screen.getByRole("checkbox", { name: "IT 113" });
     expect(it113Box).toBeInTheDocument();
-    expect(it113Box).not.toBeDisabled();
+    expect(it113Box).toBeDisabled();
     expect(screen.getByText("IT 113")).toBeInTheDocument();
   });
 

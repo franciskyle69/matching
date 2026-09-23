@@ -20,13 +20,20 @@ import MenuBookIcon from "@mui/icons-material/MenuBook";
 import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
 import AutoStoriesIcon from "@mui/icons-material/AutoStories";
 
+// Global Sparsity Constants
+export const MAX_SUBJECTS = 2;
+export const MAX_TOPICS_PER_SUBJECT = 3;
+export const MAX_COMPETENCIES_PER_SUBJECT = 3;
+export const MAX_COMPETENCIES_PER_TOPIC = 3;
+
 export const ROLE_PREFERENCE_LIMITS = {
   MENTEE: {
-    maxSubjects: 2,
+    maxSubjects: MAX_SUBJECTS,
     minSubjects: 1,
-    maxTopicsPerSubject: 2,
+    maxTopicsPerSubject: MAX_TOPICS_PER_SUBJECT,
     minTopicsPerSubject: 1,
-    maxCompetenciesPerTopic: 2,
+    maxCompetenciesPerSubject: MAX_COMPETENCIES_PER_SUBJECT,
+    maxCompetenciesPerTopic: MAX_COMPETENCIES_PER_TOPIC,
     minCompetenciesPerTopic: 1,
     minTotalCompetencies: 1,
     maxTotalCompetencies: 5,
@@ -38,11 +45,12 @@ export const ROLE_PREFERENCE_LIMITS = {
     roleLabel: "Mentees",
   },
   STUDENT_MENTOR: {
-    maxSubjects: 3,
+    maxSubjects: MAX_SUBJECTS,
     minSubjects: 1,
-    maxTopicsPerSubject: 3,
+    maxTopicsPerSubject: MAX_TOPICS_PER_SUBJECT,
     minTopicsPerSubject: 1,
-    maxCompetenciesPerTopic: 3,
+    maxCompetenciesPerSubject: MAX_COMPETENCIES_PER_SUBJECT,
+    maxCompetenciesPerTopic: MAX_COMPETENCIES_PER_TOPIC,
     minCompetenciesPerTopic: 1,
     minTotalCompetencies: 2,
     maxTotalCompetencies: 10,
@@ -54,11 +62,12 @@ export const ROLE_PREFERENCE_LIMITS = {
     roleLabel: "Student Mentors",
   },
   INSTRUCTOR_MENTOR: {
-    maxSubjects: 3,
+    maxSubjects: MAX_SUBJECTS,
     minSubjects: 1,
-    maxTopicsPerSubject: 3,
+    maxTopicsPerSubject: MAX_TOPICS_PER_SUBJECT,
     minTopicsPerSubject: 1,
-    maxCompetenciesPerTopic: 3,
+    maxCompetenciesPerSubject: MAX_COMPETENCIES_PER_SUBJECT,
+    maxCompetenciesPerTopic: MAX_COMPETENCIES_PER_TOPIC,
     minCompetenciesPerTopic: 1,
     minTotalCompetencies: 2,
     maxTotalCompetencies: 10,
@@ -317,7 +326,7 @@ export default function SubjectSkillPreferences({
   };
 
   // Toggle Competency
-  const handleToggleCompetency = (compName, topicObj) => {
+  const handleToggleCompetency = (compName, topicObj, subjectObj) => {
     if (readOnly) return;
     setValidationError("");
     const isSelected = selectedCompetencies.includes(compName);
@@ -333,6 +342,22 @@ export default function SubjectSkillPreferences({
           `${currentLimits.roleLabel} can select a maximum of ${currentLimits.maxSubjects} subjects and ${maxTotalComps} total competencies.`
         );
         return;
+      }
+
+      if (subjectObj) {
+        const allCompsInThisSubj = (subjectObj.topics || []).flatMap((t) =>
+          typeof t.competencies[0] === "string" ? t.competencies : t.competencies.map((c) => c.name)
+        );
+        const selectedCompsInThisSubj = selectedCompetencies.filter((c) =>
+          allCompsInThisSubj.includes(c)
+        );
+        const maxCompsPerSubj = currentLimits.maxCompetenciesPerSubject || MAX_COMPETENCIES_PER_SUBJECT;
+        if (selectedCompsInThisSubj.length >= maxCompsPerSubj) {
+          triggerWarning(
+            `You can select a maximum of ${maxCompsPerSubj} competencies for subject '${subjectObj.code}'.`
+          );
+          return;
+        }
       }
 
       const compsInThisTopic =
@@ -575,6 +600,15 @@ export default function SubjectSkillPreferences({
               const isTopicCapReached =
                 selectedTopicsInThisSubject.length >= currentLimits.maxTopicsPerSubject;
 
+              const allCompsInThisSubj = subjectObj.topics.flatMap((t) =>
+                typeof t.competencies[0] === "string" ? t.competencies : t.competencies.map((c) => c.name)
+              );
+              const selectedCompsInThisSubject = selectedCompetencies.filter((c) =>
+                allCompsInThisSubj.includes(c)
+              );
+              const maxCompsPerSubj = currentLimits.maxCompetenciesPerSubject || MAX_COMPETENCIES_PER_SUBJECT;
+              const isSubjCompCapReached = selectedCompsInThisSubject.length >= maxCompsPerSubj;
+
               return (
                 <Accordion
                   key={subjectObj.code}
@@ -608,11 +642,18 @@ export default function SubjectSkillPreferences({
                       </Typography>
                     </Box>
 
-                    {/* Topic-level badge showing [Count] / role-specific limit */}
-                    <Box sx={neu.counterPill}>
-                      <Typography variant="caption" fontWeight={600} color={isDark ? "#60A5FA" : "#0D47A1"}>
-                        Topics: {selectedTopicsInThisSubject.length} / {currentLimits.maxTopicsPerSubject} selected
-                      </Typography>
+                    {/* Topic and Competency badges showing [Count] / limit selected */}
+                    <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap", alignItems: "center" }}>
+                      <Box sx={neu.counterPill}>
+                        <Typography variant="caption" fontWeight={600} color={isDark ? "#60A5FA" : "#0D47A1"}>
+                          Topics: {selectedTopicsInThisSubject.length} / {currentLimits.maxTopicsPerSubject} selected
+                        </Typography>
+                      </Box>
+                      <Box sx={neu.counterPill}>
+                        <Typography variant="caption" fontWeight={600} color={isDark ? "#60A5FA" : "#0D47A1"}>
+                          Competencies: {selectedCompsInThisSubject.length} / {maxCompsPerSubj} selected
+                        </Typography>
+                      </Box>
                     </Box>
                   </AccordionSummary>
 
@@ -722,9 +763,10 @@ export default function SubjectSkillPreferences({
                                 >
                                   {compList.map((compName) => {
                                     const isCompSelected = selectedCompetencies.includes(compName);
-                                    // Auto-disable remaining unchecked checkboxes once global or per-topic cap is reached
+                                    // Auto-disable remaining unchecked checkboxes once global, per-subject, or per-topic cap is reached
                                     const isCompDisabled =
-                                      !isCompSelected && (isGlobalCompCapReached || isCompCapReachedInTopic);
+                                      !isCompSelected &&
+                                      (isGlobalCompCapReached || isCompCapReachedInTopic || isSubjCompCapReached);
 
                                     const handleCompClick = () => {
                                       if (readOnly) return;
@@ -733,6 +775,10 @@ export default function SubjectSkillPreferences({
                                           triggerWarning(
                                             `${currentLimits.roleLabel} can select a maximum of ${currentLimits.maxSubjects} subjects and ${maxTotalComps} total competencies.`
                                           );
+                                        } else if (isSubjCompCapReached) {
+                                          triggerWarning(
+                                            `You can select a maximum of ${maxCompsPerSubj} competencies for subject '${subjectObj.code}'.`
+                                          );
                                         } else {
                                           triggerWarning(
                                             `${currentLimits.roleLabel} can select a maximum of ${currentLimits.maxCompetenciesPerTopic} competencies per topic.`
@@ -740,7 +786,7 @@ export default function SubjectSkillPreferences({
                                         }
                                         return;
                                       }
-                                      handleToggleCompetency(compName, topicObj);
+                                      handleToggleCompetency(compName, topicObj, subjectObj);
                                     };
 
                                     return (
@@ -833,4 +879,5 @@ export default function SubjectSkillPreferences({
 if (typeof window !== "undefined") {
   window.DashboardApp = window.DashboardApp || {};
   window.DashboardApp.SubjectSkillPreferences = SubjectSkillPreferences;
+  window.DashboardApp.SubjectPreferences = SubjectSkillPreferences;
 }

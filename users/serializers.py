@@ -4,7 +4,14 @@ DRF Preference Update & Onboarding Serializers with strict role-based limiter va
 """
 
 from rest_framework import serializers
-from users.constants import ROLE_PREFERENCE_LIMITS, get_role_preference_limits
+from users.constants import (
+    MAX_SUBJECTS,
+    MAX_TOPICS_PER_SUBJECT,
+    MAX_COMPETENCIES_PER_SUBJECT,
+    MAX_COMPETENCIES_PER_TOPIC,
+    ROLE_PREFERENCE_LIMITS,
+    get_role_preference_limits,
+)
 
 
 class UserPreferenceUpdateSerializer(serializers.Serializer):
@@ -23,6 +30,25 @@ class UserPreferenceUpdateSerializer(serializers.Serializer):
     support_need = serializers.IntegerField(required=False, default=3, min_value=1, max_value=5)
     difficulty_level = serializers.IntegerField(required=False, default=None, allow_null=True)
     role = serializers.CharField(required=False, allow_blank=True)
+
+    def validate_subjects(self, value):
+        if not isinstance(value, list):
+            raise serializers.ValidationError("Subjects must be provided as a list.")
+        if len(value) > MAX_SUBJECTS:
+            raise serializers.ValidationError(
+                f"You can select a maximum of {MAX_SUBJECTS} subjects."
+            )
+        return value
+
+    def validate_topics(self, value):
+        if not isinstance(value, list):
+            raise serializers.ValidationError("Topics must be provided as a list.")
+        return value
+
+    def validate_competencies(self, value):
+        if not isinstance(value, list):
+            raise serializers.ValidationError("Competencies must be provided as a list.")
+        return value
 
     def _resolve_subject(self, item):
         from matching.models import Subject
@@ -176,22 +202,22 @@ class UserPreferenceUpdateSerializer(serializers.Serializer):
             avail_in_attrs = attrs.get("availability")
         availability = avail_in_attrs or []
 
-        # 5. Strict Role-Based Count Validations
+        # 5. Strict Role-Based and Global Sparsity Count Validations
         # A. Subjects Count
         num_subjects = len(resolved_subjects)
         min_subjects = limits["minSubjects"]
-        max_subjects = limits["maxSubjects"]
+        max_subjects = min(limits["maxSubjects"], MAX_SUBJECTS)
         if num_subjects < min_subjects:
             raise serializers.ValidationError({
                 "subjects": f"{role_label} must select at least {min_subjects} subject{'s' if min_subjects > 1 else ''}."
             })
         if num_subjects > max_subjects:
             raise serializers.ValidationError({
-                "subjects": f"{role_label} cannot select more than {max_subjects} subjects."
+                "subjects": f"You can select a maximum of {MAX_SUBJECTS} subjects."
             })
 
         # B. Topics per Subject
-        max_topics_per_subj = limits["maxTopicsPerSubject"]
+        max_topics_per_subj = min(limits["maxTopicsPerSubject"], MAX_TOPICS_PER_SUBJECT)
         min_topics_per_subj = limits.get("minTopicsPerSubject", 1)
         for s_id, subject in resolved_subjects.items():
             topics_in_subj = [t for t in resolved_topics.values() if t.subject_id == s_id]
@@ -204,7 +230,16 @@ class UserPreferenceUpdateSerializer(serializers.Serializer):
                     "topics": f"{role_label} must select at least {min_topics_per_subj} topic{'s' if min_topics_per_subj > 1 else ''} for subject '{subject.name}'."
                 })
 
-        # C. Global Competency Limits
+        # C. Competencies per Subject
+        max_comps_per_subj = limits.get("maxCompetenciesPerSubject", MAX_COMPETENCIES_PER_SUBJECT)
+        for s_id, subject in resolved_subjects.items():
+            comps_in_subj = [c for c in resolved_competencies.values() if getattr(c.topic, "subject_id", None) == s_id]
+            if len(comps_in_subj) > max_comps_per_subj:
+                raise serializers.ValidationError({
+                    "competencies": f"{role_label} cannot select more than {max_comps_per_subj} competencies for subject '{subject.name}'."
+                })
+
+        # D. Global Competency Limits
         total_competencies = len(resolved_competencies)
         min_total_comps = limits["minTotalCompetencies"]
         max_total_comps = limits["maxTotalCompetencies"]
@@ -217,7 +252,7 @@ class UserPreferenceUpdateSerializer(serializers.Serializer):
                 "competencies": f"{role_label} must select at least {min_total_comps} competenc{'ies' if min_total_comps > 1 else 'y'} total."
             })
 
-        # D. Competencies per Topic
+        # E. Competencies per Topic
         max_comps_per_topic = limits["maxCompetenciesPerTopic"]
         min_comps_per_topic = limits.get("minCompetenciesPerTopic", 1)
         for t_id, topic in resolved_topics.items():
@@ -231,7 +266,7 @@ class UserPreferenceUpdateSerializer(serializers.Serializer):
                     "competencies": f"{role_label} must select at least {min_comps_per_topic} competenc{'ies' if min_comps_per_topic > 1 else 'y'} for topic '{topic.name}'."
                 })
 
-        # E. Availability Slots (if provided in payload)
+        # F. Availability Slots (if provided in payload)
         if avail_in_attrs is not None:
             min_slots = limits["minAvailabilitySlots"]
             max_slots = limits["maxAvailabilitySlots"]
@@ -244,8 +279,6 @@ class UserPreferenceUpdateSerializer(serializers.Serializer):
                     "availability": f"{role_label} cannot select more than {max_slots} availability slots."
                 })
 
-
-
         attrs["resolved_role"] = resolved_role
         attrs["resolved_subjects"] = list(resolved_subjects.values())
         attrs["resolved_topics"] = list(resolved_topics.values())
@@ -255,6 +288,26 @@ class UserPreferenceUpdateSerializer(serializers.Serializer):
         attrs["competency_ids"] = [c.id for c in resolved_competencies.values()]
         attrs["availability_slots"] = availability
         return attrs
+
+
+class MenteePreferenceSerializer(UserPreferenceUpdateSerializer):
+    """
+    Preference serializer specialized for Mentees with hard sparsity bounds.
+    """
+    def validate(self, attrs):
+        if not attrs.get("role"):
+            attrs["role"] = "MENTEE"
+        return super().validate(attrs)
+
+
+class MentorPreferenceSerializer(UserPreferenceUpdateSerializer):
+    """
+    Preference serializer specialized for Mentors with hard sparsity bounds.
+    """
+    def validate(self, attrs):
+        if not attrs.get("role"):
+            attrs["role"] = "STUDENT_MENTOR"
+        return super().validate(attrs)
 
 
 # Alias OnboardingPreferenceSerializer to UserPreferenceUpdateSerializer for backwards compatibility

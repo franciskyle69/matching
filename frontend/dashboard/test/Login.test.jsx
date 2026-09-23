@@ -127,5 +127,96 @@ describe("Login Component", () => {
       await screen.findByText(/A verification email has been sent\. Please check your inbox\./i)
     ).toBeInTheDocument();
   });
+
+  it("captures 429 lockout response, stores lockout in localStorage, disables controls, and shows live countdown", async () => {
+    localStorage.clear();
+    const unlockTime = new Date(Date.now() + 900 * 1000).toISOString();
+    global.fetch = vi.fn().mockResolvedValueOnce({
+      ok: false,
+      status: 429,
+      json: async () => ({
+        error: "account_locked",
+        message: "Too many failed login attempts. Account locked.",
+        cooloff_seconds: 900,
+        unlock_time: unlockTime,
+      }),
+    });
+
+    render(<Login />);
+
+    fireEvent.change(
+      screen.getByPlaceholderText(/you@student\.buksu\.edu\.ph or username/i),
+      { target: { value: "locked_user@buksu.edu.ph" } }
+    );
+    fireEvent.change(screen.getByPlaceholderText(/••••••••/i), {
+      target: { value: "wrongpass" },
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /Sign In/i }));
+
+    expect(
+      await screen.findByText(/Too many failed login attempts\. Account locked\./i)
+    ).toBeInTheDocument();
+
+    expect(localStorage.getItem("peerlink_lockout_until")).toBe(unlockTime);
+
+    // Verify form controls are disabled
+    expect(screen.getByPlaceholderText(/you@student\.buksu\.edu\.ph or username/i)).toBeDisabled();
+    expect(screen.getByPlaceholderText(/••••••••/i)).toBeDisabled();
+    expect(screen.getByRole("button", { name: /Sign In/i })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /Log in with Google/i })).toBeDisabled();
+  });
+
+  it("restores lockout from localStorage on mount and disables controls", () => {
+    localStorage.clear();
+    const futureUnlock = new Date(Date.now() + 600 * 1000).toISOString();
+    localStorage.setItem("peerlink_lockout_until", futureUnlock);
+
+    render(<Login />);
+
+    expect(
+      screen.getByText(/Too many failed login attempts\. Account locked\./i)
+    ).toBeInTheDocument();
+
+    expect(screen.getByPlaceholderText(/you@student\.buksu\.edu\.ph or username/i)).toBeDisabled();
+    expect(screen.getByPlaceholderText(/••••••••/i)).toBeDisabled();
+    expect(screen.getByRole("button", { name: /Sign In/i })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /Log in with Google/i })).toBeDisabled();
+  });
+
+  it("clears expired lockout from localStorage on mount and leaves controls enabled", () => {
+    localStorage.clear();
+    const pastUnlock = new Date(Date.now() - 5000).toISOString();
+    localStorage.setItem("peerlink_lockout_until", pastUnlock);
+
+    render(<Login />);
+
+    expect(
+      screen.queryByText(/Too many failed login attempts\. Account locked\./i)
+    ).not.toBeInTheDocument();
+
+    expect(localStorage.getItem("peerlink_lockout_until")).toBeNull();
+    expect(screen.getByPlaceholderText(/you@student\.buksu\.edu\.ph or username/i)).not.toBeDisabled();
+    expect(screen.getByPlaceholderText(/••••••••/i)).not.toBeDisabled();
+    expect(screen.getByRole("button", { name: /Sign In/i })).not.toBeDisabled();
+    expect(screen.getByRole("button", { name: /Log in with Google/i })).not.toBeDisabled();
+  });
+
+  it("displays flash success banner when passed via Router state on mount", () => {
+    const { MemoryRouter } = require("react-router-dom");
+    const testMessage =
+      "Your password has been reset successfully. Please log in with your new password.";
+
+    render(
+      <MemoryRouter
+        initialEntries={[{ pathname: "/login", state: { message: testMessage } }]}
+      >
+        <Login />
+      </MemoryRouter>
+    );
+
+    const alert = screen.getByText(testMessage);
+    expect(alert).toBeInTheDocument();
+  });
 });
 

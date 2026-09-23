@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import {
   Box,
   Container,
@@ -42,7 +43,33 @@ function GoogleIcon() {
   );
 }
 
+const LOCKOUT_STORAGE_KEY = "peerlink_lockout_until";
+
+function useSafeLocation() {
+  try {
+    return useLocation();
+  } catch (e) {
+    return {
+      state:
+        typeof window !== "undefined"
+          ? window.history?.state?.usr || window.history?.state
+          : null,
+    };
+  }
+}
+
 export default function Login({ onLoginSuccess, onNavigateRegister }) {
+  const location = useSafeLocation();
+  const [successBanner, setSuccessBanner] = useState(
+    location?.state?.message || ""
+  );
+
+  useEffect(() => {
+    if (location?.state?.message) {
+      setSuccessBanner(location.state.message);
+    }
+  }, [location?.state?.message]);
+
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -54,6 +81,72 @@ export default function Login({ onLoginSuccess, onNavigateRegister }) {
   const [unverifiedEmail, setUnverifiedEmail] = useState("");
   const [resendLoading, setResendLoading] = useState(false);
   const [resendSuccess, setResendSuccess] = useState("");
+  const [isLockedOut, setIsLockedOut] = useState(false);
+  const [lockoutRemainingSeconds, setLockoutRemainingSeconds] = useState(0);
+
+  // Format total seconds into MM:SS format
+  const formatCountdown = (totalSeconds) => {
+    const safeSec = Math.max(0, Number(totalSeconds) || 0);
+    const m = Math.floor(safeSec / 60);
+    const s = safeSec % 60;
+    return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+  };
+
+  // Check localStorage for active lockout on component mount
+  useEffect(() => {
+    try {
+      const storedUntil = localStorage.getItem(LOCKOUT_STORAGE_KEY);
+      if (storedUntil) {
+        const unlockTime = new Date(storedUntil).getTime();
+        const now = Date.now();
+        if (!isNaN(unlockTime) && unlockTime > now) {
+          const remainingSec = Math.max(0, Math.ceil((unlockTime - now) / 1000));
+          setIsLockedOut(true);
+          setLockoutRemainingSeconds(remainingSec);
+        } else {
+          localStorage.removeItem(LOCKOUT_STORAGE_KEY);
+          setIsLockedOut(false);
+          setLockoutRemainingSeconds(0);
+        }
+      }
+    } catch (e) {
+      console.warn("Failed to check lockout in localStorage:", e);
+    }
+  }, []);
+
+  // Live 1-second countdown timer with auto-clear when reaching 00:00
+  useEffect(() => {
+    if (!isLockedOut) return;
+
+    const tick = () => {
+      try {
+        const storedUntil = localStorage.getItem(LOCKOUT_STORAGE_KEY);
+        if (!storedUntil) {
+          setIsLockedOut(false);
+          setLockoutRemainingSeconds(0);
+          return;
+        }
+        const unlockTime = new Date(storedUntil).getTime();
+        const now = Date.now();
+        const remainingSec = Math.max(0, Math.ceil((unlockTime - now) / 1000));
+
+        if (isNaN(unlockTime) || remainingSec <= 0) {
+          localStorage.removeItem(LOCKOUT_STORAGE_KEY);
+          setIsLockedOut(false);
+          setLockoutRemainingSeconds(0);
+        } else {
+          setLockoutRemainingSeconds(remainingSec);
+        }
+      } catch (e) {
+        setIsLockedOut(false);
+        setLockoutRemainingSeconds(0);
+      }
+    };
+
+    tick();
+    const intervalId = setInterval(tick, 1000);
+    return () => clearInterval(intervalId);
+  }, [isLockedOut]);
 
   // Check URL parameters for OAuth error responses
   useEffect(() => {
@@ -90,6 +183,8 @@ export default function Login({ onLoginSuccess, onNavigateRegister }) {
 
   const handlePasswordLogin = async (e) => {
     if (e) e.preventDefault();
+    if (isLockedOut) return;
+
     setErrorMessage("");
     setShowRegisterPrompt(false);
     setIsUnverified(false);
@@ -115,6 +210,25 @@ export default function Login({ onLoginSuccess, onNavigateRegister }) {
       const data = await response.json();
 
       if (!response.ok) {
+        // Enforce 429/423 lockout persistence and cooldown timer
+        if (response.status === 429 || response.status === 423 || data.error === "account_locked") {
+          let unlockIso = data.unlock_time || data.locked_until;
+          if (!unlockIso && typeof data.cooloff_seconds === "number") {
+            unlockIso = new Date(Date.now() + data.cooloff_seconds * 1000).toISOString();
+          } else if (!unlockIso && data.remaining_minutes) {
+            unlockIso = new Date(Date.now() + data.remaining_minutes * 60 * 1000).toISOString();
+          } else if (!unlockIso) {
+            unlockIso = new Date(Date.now() + 15 * 60 * 1000).toISOString();
+          }
+
+          localStorage.setItem(LOCKOUT_STORAGE_KEY, unlockIso);
+          const remainingSec = Math.max(0, Math.ceil((new Date(unlockIso).getTime() - Date.now()) / 1000));
+          setIsLockedOut(true);
+          setLockoutRemainingSeconds(remainingSec);
+          setErrorMessage("");
+          return;
+        }
+
         const errorText =
           data.error ||
           (data.errors && Object.values(data.errors).flat().join(" ")) ||
@@ -140,6 +254,11 @@ export default function Login({ onLoginSuccess, onNavigateRegister }) {
         }
         return;
       }
+
+      // Successful login clears any old lockout
+      localStorage.removeItem(LOCKOUT_STORAGE_KEY);
+      setIsLockedOut(false);
+      setLockoutRemainingSeconds(0);
 
       if (data.access_token) {
         localStorage.setItem("accessToken", data.access_token);
@@ -185,6 +304,8 @@ export default function Login({ onLoginSuccess, onNavigateRegister }) {
   };
 
   const handleGoogleLogin = async (googleTokenPayload = null) => {
+    if (isLockedOut) return;
+
     setErrorMessage("");
     setShowRegisterPrompt(false);
 
@@ -201,6 +322,21 @@ export default function Login({ onLoginSuccess, onNavigateRegister }) {
         const data = await response.json();
 
         if (!response.ok) {
+          if (response.status === 429 || response.status === 423 || data.error === "account_locked") {
+            let unlockIso = data.unlock_time || data.locked_until;
+            if (!unlockIso && typeof data.cooloff_seconds === "number") {
+              unlockIso = new Date(Date.now() + data.cooloff_seconds * 1000).toISOString();
+            } else if (!unlockIso) {
+              unlockIso = new Date(Date.now() + 15 * 60 * 1000).toISOString();
+            }
+            localStorage.setItem(LOCKOUT_STORAGE_KEY, unlockIso);
+            const remainingSec = Math.max(0, Math.ceil((new Date(unlockIso).getTime() - Date.now()) / 1000));
+            setIsLockedOut(true);
+            setLockoutRemainingSeconds(remainingSec);
+            setErrorMessage("");
+            return;
+          }
+
           const errorText =
             data.error ||
             "No account found with this email. Please complete the manual registration first.";
@@ -214,6 +350,11 @@ export default function Login({ onLoginSuccess, onNavigateRegister }) {
           }
           return;
         }
+
+        // Clear any lockout on success
+        localStorage.removeItem(LOCKOUT_STORAGE_KEY);
+        setIsLockedOut(false);
+        setLockoutRemainingSeconds(0);
 
         if (data.access_token) {
           localStorage.setItem("accessToken", data.access_token);
@@ -262,13 +403,26 @@ export default function Login({ onLoginSuccess, onNavigateRegister }) {
           </Typography>
         </Box>
 
-        {resendSuccess && (
+        {successBanner ? (
+          <Alert
+            severity="success"
+            sx={{ mb: 3 }}
+            onClose={() => setSuccessBanner("")}
+          >
+            {successBanner}
+          </Alert>
+        ) : null}
+
+        {isLockedOut ? (
+          <Alert severity="error" sx={{ mb: 3 }} role="alert">
+            Too many failed login attempts. Account locked. Cooldown remaining:{" "}
+            <strong>{formatCountdown(lockoutRemainingSeconds)}</strong>
+          </Alert>
+        ) : resendSuccess ? (
           <Alert severity="success" sx={{ mb: 3 }}>
             {resendSuccess}
           </Alert>
-        )}
-
-        {errorMessage && (
+        ) : errorMessage ? (
           <Alert
             severity={isUnverified ? "warning" : "error"}
             sx={{ mb: 3 }}
@@ -277,7 +431,7 @@ export default function Login({ onLoginSuccess, onNavigateRegister }) {
                 <Button
                   color="inherit"
                   size="small"
-                  disabled={resendLoading}
+                  disabled={resendLoading || isLockedOut}
                   onClick={handleResendVerification}
                   sx={{ fontWeight: 600, textDecoration: "underline" }}
                 >
@@ -292,7 +446,7 @@ export default function Login({ onLoginSuccess, onNavigateRegister }) {
           >
             {errorMessage}
           </Alert>
-        )}
+        ) : null}
 
         <form onSubmit={handlePasswordLogin} noValidate>
           <Stack spacing={3}>
@@ -307,6 +461,7 @@ export default function Login({ onLoginSuccess, onNavigateRegister }) {
               }}
               required
               fullWidth
+              disabled={loading || googleLoading || isLockedOut}
               autoComplete="username"
               placeholder="you@student.buksu.edu.ph or username"
               InputProps={{
@@ -329,6 +484,7 @@ export default function Login({ onLoginSuccess, onNavigateRegister }) {
               }}
               required
               fullWidth
+              disabled={loading || googleLoading || isLockedOut}
               autoComplete="current-password"
               placeholder="••••••••"
               InputProps={{
@@ -342,6 +498,7 @@ export default function Login({ onLoginSuccess, onNavigateRegister }) {
                     <IconButton
                       onClick={() => setShowPassword(!showPassword)}
                       edge="end"
+                      disabled={loading || googleLoading || isLockedOut}
                       aria-label="toggle password visibility"
                     >
                       {showPassword ? <VisibilityOff /> : <Visibility />}
@@ -374,7 +531,7 @@ export default function Login({ onLoginSuccess, onNavigateRegister }) {
               type="submit"
               variant="contained"
               size="large"
-              disabled={loading || googleLoading}
+              disabled={loading || googleLoading || isLockedOut}
               sx={{
                 py: 1.5,
                 fontWeight: 600,
@@ -402,7 +559,7 @@ export default function Login({ onLoginSuccess, onNavigateRegister }) {
           variant="outlined"
           size="large"
           fullWidth
-          disabled={loading || googleLoading}
+          disabled={loading || googleLoading || isLockedOut}
           startIcon={googleLoading ? <CircularProgress size={20} color="inherit" /> : <GoogleIcon />}
           onClick={() => handleGoogleLogin()}
           sx={{

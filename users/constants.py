@@ -5,22 +5,30 @@ Centralized role-based matching preference and availability limit configurations
 
 from typing import Dict, Any, Tuple, Optional
 
+# Global Sparsity Constants
+MAX_SUBJECTS = 2
+MAX_TOPICS_PER_SUBJECT = 3
+MAX_COMPETENCIES_PER_SUBJECT = 3
+MAX_COMPETENCIES_PER_TOPIC = 3
+
 ROLE_PREFERENCE_LIMITS: Dict[str, Dict[str, Any]] = {
     "MENTEE": {
         # Strict camelCase keys as specified
-        "maxSubjects": 2,
+        "maxSubjects": MAX_SUBJECTS,
         "minSubjects": 1,
-        "maxTopicsPerSubject": 2,
-        "maxCompetenciesPerTopic": 2,
+        "maxTopicsPerSubject": MAX_TOPICS_PER_SUBJECT,
+        "maxCompetenciesPerSubject": MAX_COMPETENCIES_PER_SUBJECT,
+        "maxCompetenciesPerTopic": MAX_COMPETENCIES_PER_TOPIC,
         "minTotalCompetencies": 1,
         "maxTotalCompetencies": 5,
         # Snake_case aliases for backwards compatibility
         "min_subjects": 1,
-        "max_subjects": 2,
+        "max_subjects": MAX_SUBJECTS,
         "min_topics_per_subject": 1,
-        "max_topics_per_subject": 2,
+        "max_topics_per_subject": MAX_TOPICS_PER_SUBJECT,
+        "max_competencies_per_subject": MAX_COMPETENCIES_PER_SUBJECT,
         "min_competencies_per_topic": 1,
-        "max_competencies_per_topic": 2,
+        "max_competencies_per_topic": MAX_COMPETENCIES_PER_TOPIC,
         "min_total_competencies": 1,
         "max_total_competencies": 5,
         "min_global_competencies": 1,
@@ -33,18 +41,20 @@ ROLE_PREFERENCE_LIMITS: Dict[str, Dict[str, Any]] = {
         "label": "Mentee",
     },
     "STUDENT_MENTOR": {
-        "maxSubjects": 2,
+        "maxSubjects": MAX_SUBJECTS,
         "minSubjects": 1,
-        "maxTopicsPerSubject": 3,
-        "maxCompetenciesPerTopic": 3,
+        "maxTopicsPerSubject": MAX_TOPICS_PER_SUBJECT,
+        "maxCompetenciesPerSubject": MAX_COMPETENCIES_PER_SUBJECT,
+        "maxCompetenciesPerTopic": MAX_COMPETENCIES_PER_TOPIC,
         "minTotalCompetencies": 2,
         "maxTotalCompetencies": 10,
         "min_subjects": 1,
-        "max_subjects": 2,
+        "max_subjects": MAX_SUBJECTS,
         "min_topics_per_subject": 1,
-        "max_topics_per_subject": 3,
+        "max_topics_per_subject": MAX_TOPICS_PER_SUBJECT,
+        "max_competencies_per_subject": MAX_COMPETENCIES_PER_SUBJECT,
         "min_competencies_per_topic": 1,
-        "max_competencies_per_topic": 3,
+        "max_competencies_per_topic": MAX_COMPETENCIES_PER_TOPIC,
         "min_total_competencies": 2,
         "max_total_competencies": 10,
         "min_global_competencies": 2,
@@ -57,18 +67,20 @@ ROLE_PREFERENCE_LIMITS: Dict[str, Dict[str, Any]] = {
         "label": "Student Mentor",
     },
     "INSTRUCTOR_MENTOR": {
-        "maxSubjects": 3,
+        "maxSubjects": MAX_SUBJECTS,
         "minSubjects": 1,
-        "maxTopicsPerSubject": 3,
-        "maxCompetenciesPerTopic": 3,
+        "maxTopicsPerSubject": MAX_TOPICS_PER_SUBJECT,
+        "maxCompetenciesPerSubject": MAX_COMPETENCIES_PER_SUBJECT,
+        "maxCompetenciesPerTopic": MAX_COMPETENCIES_PER_TOPIC,
         "minTotalCompetencies": 2,
         "maxTotalCompetencies": 10,
         "min_subjects": 1,
-        "max_subjects": 3,
+        "max_subjects": MAX_SUBJECTS,
         "min_topics_per_subject": 1,
-        "max_topics_per_subject": 3,
+        "max_topics_per_subject": MAX_TOPICS_PER_SUBJECT,
+        "max_competencies_per_subject": MAX_COMPETENCIES_PER_SUBJECT,
         "min_competencies_per_topic": 1,
-        "max_competencies_per_topic": 3,
+        "max_competencies_per_topic": MAX_COMPETENCIES_PER_TOPIC,
         "min_total_competencies": 2,
         "max_total_competencies": 10,
         "min_global_competencies": 2,

@@ -27,6 +27,10 @@ import SpeedIcon from "@mui/icons-material/Speed";
 import { useTheme } from "@mui/material/styles";
 
 import SubjectSkillPreferences, {
+  MAX_SUBJECTS,
+  MAX_TOPICS_PER_SUBJECT,
+  MAX_COMPETENCIES_PER_SUBJECT,
+  MAX_COMPETENCIES_PER_TOPIC,
   ROLE_LIMITS,
   getRoleLimits,
   CANONICAL_CURRICULUM,
@@ -34,7 +38,16 @@ import SubjectSkillPreferences, {
 } from "./SubjectSkillPreferences.jsx";
 import { getNeuStyles } from "../theme/neumorphism.js";
 
-export { ROLE_LIMITS, getRoleLimits, CANONICAL_CURRICULUM, NEU_STYLES };
+export {
+  MAX_SUBJECTS,
+  MAX_TOPICS_PER_SUBJECT,
+  MAX_COMPETENCIES_PER_SUBJECT,
+  MAX_COMPETENCIES_PER_TOPIC,
+  ROLE_LIMITS,
+  getRoleLimits,
+  CANONICAL_CURRICULUM,
+  NEU_STYLES,
+};
 
 export const DAYS_OF_WEEK = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
@@ -133,11 +146,35 @@ export default function PreferencesForm({
       return;
     }
     if (selectedSubjects.length > currentLimits.maxSubjects) {
-      setErrorMessage(`${currentLimits.roleLabel} cannot select more than ${currentLimits.maxSubjects} subjects.`);
+      setErrorMessage(`You can select a maximum of ${currentLimits.maxSubjects} subjects.`);
       return;
     }
 
-    // 2. Global competencies total validation
+    // 2. Per-subject topics & competencies validation
+    for (const subjCode of selectedSubjects) {
+      const subjObj = CANONICAL_CURRICULUM.find((s) => s.code === subjCode || s.name === subjCode);
+      if (subjObj) {
+        const topicsInSubj = subjObj.topics.map((t) => t.name);
+        const selectedTopicsInSubj = selectedTopics.filter((t) => topicsInSubj.includes(t));
+        const maxTopics = currentLimits.maxTopicsPerSubject || MAX_TOPICS_PER_SUBJECT;
+        if (selectedTopicsInSubj.length > maxTopics) {
+          setErrorMessage(`You can select a maximum of ${maxTopics} topics for subject '${subjCode}'.`);
+          return;
+        }
+
+        const allCompsInSubj = subjObj.topics.flatMap((t) =>
+          typeof t.competencies[0] === "string" ? t.competencies : t.competencies.map((c) => c.name)
+        );
+        const selectedCompsInSubj = selectedCompetencies.filter((c) => allCompsInSubj.includes(c));
+        const maxComps = currentLimits.maxCompetenciesPerSubject || MAX_COMPETENCIES_PER_SUBJECT;
+        if (selectedCompsInSubj.length > maxComps) {
+          setErrorMessage(`You can select a maximum of ${maxComps} competencies for subject '${subjCode}'.`);
+          return;
+        }
+      }
+    }
+
+    // 3. Global competencies total validation
     if (selectedCompetencies.length < currentLimits.minGlobalCompetencies) {
       setErrorMessage(
         `${currentLimits.roleLabel} must select at least ${currentLimits.minGlobalCompetencies} competency total.`
@@ -151,7 +188,7 @@ export default function PreferencesForm({
       return;
     }
 
-    // 3. Availability slots validation
+    // 4. Availability slots validation
     if (availabilitySlots.length < currentLimits.minAvailabilitySlots) {
       setErrorMessage(
         `${currentLimits.roleLabel} must select at least ${currentLimits.minAvailabilitySlots} availability slot.`

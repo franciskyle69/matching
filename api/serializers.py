@@ -428,7 +428,23 @@ class RegistrationSerializer(serializers.Serializer):
         return attrs
 
 
-from users.constants import ROLE_PREFERENCE_LIMITS, get_role_preference_limits
-from users.serializers import UserPreferenceUpdateSerializer, OnboardingPreferenceSerializer
+from users.constants import (
+    MAX_SUBJECTS,
+    MAX_TOPICS_PER_SUBJECT,
+    MAX_COMPETENCIES_PER_SUBJECT,
+    MAX_COMPETENCIES_PER_TOPIC,
+    ROLE_PREFERENCE_LIMITS,
+    get_role_preference_limits,
+)
+from users.serializers import (
+    MAX_SUBJECTS,
+    MAX_TOPICS_PER_SUBJECT,
+    MAX_COMPETENCIES_PER_SUBJECT,
+    UserPreferenceUpdateSerializer,
+    OnboardingPreferenceSerializer,
+    MenteePreferenceSerializer,
+    MentorPreferenceSerializer,
+)
+
 
 

@@ -366,7 +366,7 @@ class Command(BaseCommand):
             slot_min, slot_max = 2, 6
             target = UserTopicPreference.TARGET_MENTOR
         elif role == UserProfile.ROLE_INSTRUCTOR_MENTOR:
-            subj_min, subj_max = 1, 3
+            subj_min, subj_max = 1, 2
             top_min, top_max = 1, 3
             comp_min, comp_max = 1, 3
             global_min, global_max = 2, 10
@@ -390,6 +390,7 @@ class Command(BaseCommand):
             num_topics = rng.randint(top_min, min(top_max, len(avail_topics)))
             chosen_topics_for_subj = rng.sample(avail_topics, k=num_topics)
 
+            subj_comps = []
             for top in chosen_topics_for_subj:
                 avail_comps = comps_by_topic.get(top.id, [])
                 if not avail_comps:
@@ -397,8 +398,12 @@ class Command(BaseCommand):
                 num_comps = rng.randint(comp_min, min(comp_max, len(avail_comps)))
                 chosen_comps_for_top = rng.sample(avail_comps, k=num_comps)
 
-                chosen_comps.extend(chosen_comps_for_top)
-                chosen_topics_map[top.id] = top
+                for c in chosen_comps_for_top:
+                    if len(subj_comps) < 3:
+                        subj_comps.append(c)
+                        chosen_topics_map[top.id] = top
+
+            chosen_comps.extend(subj_comps)
 
         # 3. Enforce Global Competencies Cap
         if len(chosen_comps) > global_max:

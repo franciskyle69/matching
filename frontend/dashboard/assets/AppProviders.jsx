@@ -304,6 +304,7 @@
     const [mentorProfileHashId, setMentorProfileHashId] = useState(null);
     const [viewedUserProfile, setViewedUserProfile] = useState(null);
     const [menteeRecUpdating, setMenteeRecUpdating] = useState(false);
+    const [isLockedOut, setIsLockedOut] = useState(false);
     const prevActiveTabRef = useRef(activeTab);
     const lastMatchingRunRef = useRef(0);
     const lockoutCountdownRef = useRef(null);
@@ -504,6 +505,29 @@
         lockoutCountdownRef.current = null;
       }
     }
+
+    useEffect(() => {
+      try {
+        const storedUntil = localStorage.getItem("peerlink_lockout_until");
+        if (storedUntil) {
+          const unlockTime = new Date(storedUntil).getTime();
+          const now = Date.now();
+          if (!isNaN(unlockTime) && unlockTime > now) {
+            setIsLockedOut(true);
+            const remainingMinutes = Math.max(1, Math.ceil((unlockTime - now) / 60000));
+            setAuthAlert({
+              severity: "error",
+              title: "Account temporarily locked",
+              message: "Too many failed login attempts. Account locked.",
+              detail: `Retry available at ${new Date(unlockTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} (${remainingMinutes}m remaining).`,
+            });
+          } else {
+            localStorage.removeItem("peerlink_lockout_until");
+            setIsLockedOut(false);
+          }
+        }
+      } catch (e) {}
+    }, []);
 
     useEffect(() => {
       const activeTheme = theme === "dark" ? "dark" : "light";
@@ -1525,6 +1549,7 @@
     }
 
     async function handleSignIn() {
+      if (isLockedOut) return;
       setError("");
       setAuthMessage("");
       clearLockoutCountdown();
@@ -1556,25 +1581,36 @@
           body: JSON.stringify(loginBody),
         });
 
-        // Handle login attempt limit (429 Too Many Requests)
-        if (result.status === 429) {
+        // Handle login attempt limit (429 Too Many Requests / 423 Locked)
+        if (result.status === 429 || result.status === 423) {
           const lockoutData = result.data || {};
-          const attemptsCount = lockoutData.attempts || 0;
+          const attemptsCount = lockoutData.attempts || 5;
           const failureLimit = lockoutData.failure_limit || 5;
           const remainingMinutes = lockoutData.remaining_minutes || 1;
           const penaltyMinutes =
             lockoutData.penalty_minutes || remainingMinutes;
 
-          // Parse locked_until from response, or calculate from remaining_minutes
+          // Parse unlock_time / locked_until from response, or calculate from cooloff_seconds / remaining_minutes
           let lockedUntilTime = null;
-          if (lockoutData.locked_until) {
-            lockedUntilTime = new Date(lockoutData.locked_until);
+          let unlockIso = lockoutData.unlock_time || lockoutData.locked_until;
+          if (unlockIso) {
+            lockedUntilTime = new Date(unlockIso);
+          } else if (typeof lockoutData.cooloff_seconds === "number") {
+            lockedUntilTime = new Date(Date.now() + lockoutData.cooloff_seconds * 1000);
+            unlockIso = lockedUntilTime.toISOString();
           } else if (remainingMinutes > 0) {
-            // Fallback: calculate from remaining_minutes
             lockedUntilTime = new Date(
               Date.now() + remainingMinutes * 60 * 1000,
             );
+            unlockIso = lockedUntilTime.toISOString();
           }
+
+          if (unlockIso) {
+            try {
+              localStorage.setItem("peerlink_lockout_until", unlockIso);
+            } catch (e) {}
+          }
+          setIsLockedOut(true);
 
           // Set up countdown timer for real-time updates
           function updateCountdown() {
@@ -1621,6 +1657,10 @@
             // If penalty has expired, auto-poll to check if it's been lifted
             if (diffMs <= 0) {
               clearLockoutCountdown();
+              try {
+                localStorage.removeItem("peerlink_lockout_until");
+              } catch (e) {}
+              setIsLockedOut(false);
               // Poll once to confirm lockout is lifted
               fetchJSON("/api/auth/check-lockout/", {
                 method: "POST",
@@ -1765,6 +1805,10 @@
           return;
         }
         clearLockoutCountdown();
+        try {
+          localStorage.removeItem("peerlink_lockout_until");
+        } catch (e) {}
+        setIsLockedOut(false);
         setAuthAlert(null);
         const profile = await loadMe({ force: true });
         if (!profile) return;
@@ -3690,6 +3734,7 @@
       toggleTheme,
       isAuthenticated,
       isPendingApproval,
+      isLockedOut,
       showSignInPrompt,
       menteeRecUpdating,
       addToast,

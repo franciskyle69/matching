@@ -19,6 +19,10 @@ import RefreshIcon from "@mui/icons-material/Refresh";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 
 import SubjectSkillPreferences, {
+  MAX_SUBJECTS,
+  MAX_TOPICS_PER_SUBJECT,
+  MAX_COMPETENCIES_PER_SUBJECT,
+  CANONICAL_CURRICULUM,
   NEU_STYLES,
   getRoleLimits,
   getNeuStyles,
@@ -177,6 +181,50 @@ export default function MenteePreferencesPage({ defaultRole = "MENTEE" }) {
       setSaving(false);
       return;
     }
+    if (selectedSubjects.length > roleLimits.maxSubjects) {
+      const msg = `You can select a maximum of ${roleLimits.maxSubjects} subjects.`;
+      setError(msg);
+      if (window.DashboardApp && typeof window.DashboardApp.notify === "function") {
+        window.DashboardApp.notify("warning", "Limit Exceeded", msg);
+      }
+      setSaving(false);
+      return;
+    }
+
+    // Validate per-subject topics & competencies
+    for (const subjCode of selectedSubjects) {
+      const subjObj = CANONICAL_CURRICULUM.find((s) => s.code === subjCode || s.name === subjCode);
+      if (subjObj) {
+        const topicsInSubj = subjObj.topics.map((t) => t.name);
+        const selectedTopicsInSubj = selectedTopics.filter((t) => topicsInSubj.includes(t));
+        const maxTopics = roleLimits.maxTopicsPerSubject || MAX_TOPICS_PER_SUBJECT;
+        if (selectedTopicsInSubj.length > maxTopics) {
+          const msg = `You can select a maximum of ${maxTopics} topics for subject '${subjCode}'.`;
+          setError(msg);
+          if (window.DashboardApp && typeof window.DashboardApp.notify === "function") {
+            window.DashboardApp.notify("warning", "Limit Exceeded", msg);
+          }
+          setSaving(false);
+          return;
+        }
+
+        const allCompsInSubj = subjObj.topics.flatMap((t) =>
+          typeof t.competencies[0] === "string" ? t.competencies : t.competencies.map((c) => c.name)
+        );
+        const selectedCompsInSubj = selectedCompetencies.filter((c) => allCompsInSubj.includes(c));
+        const maxComps = roleLimits.maxCompetenciesPerSubject || MAX_COMPETENCIES_PER_SUBJECT;
+        if (selectedCompsInSubj.length > maxComps) {
+          const msg = `You can select a maximum of ${maxComps} competencies for subject '${subjCode}'.`;
+          setError(msg);
+          if (window.DashboardApp && typeof window.DashboardApp.notify === "function") {
+            window.DashboardApp.notify("warning", "Limit Exceeded", msg);
+          }
+          setSaving(false);
+          return;
+        }
+      }
+    }
+
     if (selectedCompetencies.length < roleLimits.minGlobalCompetencies) {
       const msg = `Please select at least ${roleLimits.minGlobalCompetencies} competency.`;
       setError(msg);

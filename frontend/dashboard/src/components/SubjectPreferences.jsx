@@ -10,5 +10,4 @@ export {
   getRoleLimits,
   CANONICAL_CURRICULUM,
   NEU_STYLES,
-} from "../../assets/components/SubjectSkillPreferences.jsx";
-
+} from "../../assets/components/SubjectPreferences.jsx";

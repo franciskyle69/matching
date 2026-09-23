@@ -17,6 +17,7 @@ PUBLIC_API_PATHS = {
     "/api/auth/verify-email/",
     "/api/auth/resend-verification/",
     "/api/auth/forgot-password/",
+    "/api/auth/password-reset-confirm/",
     "/api/auth/refresh/",
     "/api/auth/logout/",
     "/api/auth/check-lockout/",
