@@ -524,6 +524,48 @@
   color: var(--text-primary);
 }
 
+.mentee-timeline-item--interactive {
+  cursor: pointer;
+  padding: 8px 10px;
+  margin: -4px -10px;
+  border-radius: 10px;
+  transition: background 0.18s ease, transform 0.15s ease;
+}
+
+.mentee-timeline-item--interactive:hover {
+  background: rgba(14, 165, 233, 0.08);
+  transform: translateX(2px);
+}
+
+.mentee-timeline-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.mentee-timeline-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.mentee-timeline-action-badge {
+  font-size: 0.725rem;
+  font-weight: 600;
+  color: #0284c7;
+  white-space: nowrap;
+  transition: color 0.15s ease;
+}
+
+.mentee-timeline-action-badge--done {
+  color: #059669;
+}
+
+.mentee-timeline-icon--completed {
+  background: #ecfdf5 !important;
+  color: #059669 !important;
+}
+
 .mentee-empty,
 .mentee-inline-cta {
   display: grid;
@@ -964,6 +1006,145 @@
 
 .btn.full-width {
   width: 100%;
+}
+
+/* ── Quick Start Guide Banner (Addresses U1: Ease of Learning, U2: Navigation) ── */
+
+.kasandigan-quick-guide-banner {
+  margin-bottom: 24px;
+  padding: 20px 24px;
+  background: linear-gradient(135deg, rgba(14, 165, 233, 0.06) 0%, rgba(99, 102, 241, 0.04) 100%);
+  border: 1px solid rgba(14, 165, 233, 0.22);
+  border-radius: 16px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.02);
+}
+
+.kasandigan-quick-guide-banner--mentor {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.06) 0%, rgba(14, 165, 233, 0.04) 100%);
+  border-color: rgba(16, 185, 129, 0.22);
+}
+
+.kasandigan-quick-guide-header {
+  margin-bottom: 16px;
+}
+
+.kasandigan-quick-guide-title-wrap {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.kasandigan-quick-guide-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: #0284c7;
+  color: #ffffff;
+  font-size: 20px;
+  flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(2, 132, 199, 0.25);
+}
+
+.kasandigan-quick-guide-banner--mentor .kasandigan-quick-guide-icon {
+  background: #059669;
+  box-shadow: 0 2px 8px rgba(5, 150, 105, 0.25);
+}
+
+.kasandigan-quick-guide-title {
+  margin: 0 0 4px;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text-primary, #0f172a);
+}
+
+.kasandigan-quick-guide-desc {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--text-secondary, #64748b);
+  line-height: 1.45;
+}
+
+.kasandigan-guide-steps-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+@media (max-width: 768px) {
+  .kasandigan-guide-steps-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+}
+
+.kasandigan-guide-step-card {
+  display: flex;
+  flex-direction: column;
+  padding: 14px 16px;
+  background: var(--surface-card, #ffffff);
+  border: 1px solid rgba(203, 213, 225, 0.7);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+  text-decoration: none;
+}
+
+.kasandigan-guide-step-card:hover {
+  transform: translateY(-2px);
+  border-color: #0284c7;
+  box-shadow: 0 6px 18px rgba(2, 132, 199, 0.12);
+}
+
+.kasandigan-step-badge {
+  display: inline-block;
+  align-self: flex-start;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: rgba(14, 165, 233, 0.12);
+  color: #0284c7;
+  margin-bottom: 8px;
+}
+
+.kasandigan-guide-step-card--done .kasandigan-step-badge {
+  background: rgba(16, 185, 129, 0.14);
+  color: #059669;
+}
+
+.kasandigan-step-title {
+  margin: 0 0 4px;
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--text-primary, #0f172a);
+}
+
+.kasandigan-step-sub {
+  margin: 0 0 10px;
+  font-size: 0.78rem;
+  color: var(--text-secondary, #64748b);
+  line-height: 1.4;
+  flex: 1;
+}
+
+.kasandigan-step-cta {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #0284c7;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: auto;
+}
+
+.kasandigan-quick-guide-banner--mentor .kasandigan-step-cta {
+  color: #059669;
 }
 
 /* ── Kasandigan Metric Strip (Standalone Neumorphic Cards, No Outer Container) ── */
@@ -1606,3 +1787,83 @@
 [data-theme="dark"] .mentee-spotlight-status {
   border-color: #181b20 !important;
 }
+
+/* Dark Theme — Quick Guide Banner & Interactive Timeline */
+[data-theme="dark"] .kasandigan-quick-guide-banner {
+  background: linear-gradient(135deg, rgba(14, 165, 233, 0.12) 0%, rgba(99, 102, 241, 0.08) 100%) !important;
+  border-color: rgba(56, 189, 248, 0.25) !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3) !important;
+}
+
+[data-theme="dark"] .kasandigan-quick-guide-banner--mentor {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.12) 0%, rgba(14, 165, 233, 0.08) 100%) !important;
+  border-color: rgba(16, 185, 129, 0.25) !important;
+}
+
+[data-theme="dark"] .kasandigan-quick-guide-title {
+  color: #f8fafc !important;
+}
+
+[data-theme="dark"] .kasandigan-quick-guide-desc {
+  color: #94a3b8 !important;
+}
+
+[data-theme="dark"] .kasandigan-guide-step-card {
+  background: #13161a !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+[data-theme="dark"] .kasandigan-guide-step-card:hover {
+  border-color: #38bdf8 !important;
+  background: #181c23 !important;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4) !important;
+}
+
+[data-theme="dark"] .kasandigan-quick-guide-banner--mentor .kasandigan-guide-step-card:hover {
+  border-color: #34d399 !important;
+}
+
+[data-theme="dark"] .kasandigan-step-title {
+  color: #f8fafc !important;
+}
+
+[data-theme="dark"] .kasandigan-step-sub {
+  color: #94a3b8 !important;
+}
+
+[data-theme="dark"] .kasandigan-step-cta {
+  color: #38bdf8 !important;
+}
+
+[data-theme="dark"] .kasandigan-quick-guide-banner--mentor .kasandigan-step-cta {
+  color: #34d399 !important;
+}
+
+[data-theme="dark"] .kasandigan-step-badge {
+  background: rgba(56, 189, 248, 0.15) !important;
+  color: #38bdf8 !important;
+}
+
+[data-theme="dark"] .kasandigan-guide-step-card--done .kasandigan-step-badge {
+  background: rgba(16, 185, 129, 0.18) !important;
+  color: #34d399 !important;
+}
+
+[data-theme="dark"] .mentee-timeline-item--interactive:hover {
+  background: rgba(56, 189, 248, 0.1) !important;
+}
+
+[data-theme="dark"] .mentee-timeline-action-badge {
+  color: #38bdf8 !important;
+}
+
+[data-theme="dark"] .mentee-timeline-action-badge--done {
+  color: #34d399 !important;
+}
+
+[data-theme="dark"] .mentee-timeline-icon--completed {
+  background: rgba(16, 185, 129, 0.18) !important;
+  color: #34d399 !important;
+  border-color: rgba(52, 211, 153, 0.4) !important;
+}
+

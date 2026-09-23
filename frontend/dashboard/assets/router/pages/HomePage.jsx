@@ -487,6 +487,79 @@ import Skeleton from "@mui/material/Skeleton";
             </div>
           </header>
 
+          {/* Mentee Quick-Start Onboarding Guide (Addresses U1: Ease of Learning, U2: Navigation, U8: Ease of Interaction) */}
+          {(!hasQuestionnaire || activePairingsCount === 0) && (
+            <div className="kasandigan-quick-guide-banner" role="region" aria-label="Quick Start Guide">
+              <div className="kasandigan-quick-guide-header">
+                <div className="kasandigan-quick-guide-title-wrap">
+                  <span className="kasandigan-quick-guide-icon">
+                    <AutoAwesomeOutlined fontSize="inherit" />
+                  </span>
+                  <div>
+                    <h2 className="kasandigan-quick-guide-title">
+                      {activePairingsCount === 0 && !hasQuestionnaire
+                        ? "Get Started: Find Your Peer Mentor in 3 Easy Steps"
+                        : "Next Step: Connect With Your Recommended Mentor"}
+                    </h2>
+                    <p className="kasandigan-quick-guide-desc">
+                      Follow these steps to customize your learning preferences and get matched with qualified peer mentors.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="kasandigan-guide-steps-grid">
+                <div
+                  className={`kasandigan-guide-step-card ${hasQuestionnaire ? "kasandigan-guide-step-card--done" : "kasandigan-guide-step-card--active"}`}
+                  onClick={() => setActiveTab("mentoring-preferences")}
+                  role="button"
+                  tabIndex={0}
+                >
+                  <div className="kasandigan-step-badge">
+                    {hasQuestionnaire ? "✓ Completed" : "Step 1"}
+                  </div>
+                  <h3 className="kasandigan-step-title">Course Preferences</h3>
+                  <p className="kasandigan-step-sub">Select courses you need help with and subjects you want to master.</p>
+                  <span className="kasandigan-step-cta">
+                    {hasQuestionnaire ? "Review Preferences →" : "Set Preferences Now →"}
+                  </span>
+                </div>
+
+                <div
+                  className={`kasandigan-guide-step-card ${menteeSlots.length > 0 ? "kasandigan-guide-step-card--done" : hasQuestionnaire ? "kasandigan-guide-step-card--active" : ""}`}
+                  onClick={() => setActiveTab("availability")}
+                  role="button"
+                  tabIndex={0}
+                >
+                  <div className="kasandigan-step-badge">
+                    {menteeSlots.length > 0 ? "✓ Completed" : "Step 2"}
+                  </div>
+                  <h3 className="kasandigan-step-title">Availability Hours</h3>
+                  <p className="kasandigan-step-sub">Choose days and times when you are free for tutoring sessions.</p>
+                  <span className="kasandigan-step-cta">
+                    {menteeSlots.length > 0 ? "Update Schedule →" : "Set Availability →"}
+                  </span>
+                </div>
+
+                <div
+                  className={`kasandigan-guide-step-card ${myMentor ? "kasandigan-guide-step-card--done" : hasQuestionnaire ? "kasandigan-guide-step-card--active" : ""}`}
+                  onClick={() => setActiveTab("matching")}
+                  role="button"
+                  tabIndex={0}
+                >
+                  <div className="kasandigan-step-badge">
+                    {myMentor ? "✓ Completed" : "Step 3"}
+                  </div>
+                  <h3 className="kasandigan-step-title">AI Matching</h3>
+                  <p className="kasandigan-step-sub">Browse top-ranked mentors and send a mentorship request.</p>
+                  <span className="kasandigan-step-cta">
+                    {myMentor ? "View Mentor Profile →" : "Explore Recommendations →"}
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Kasandigan Unified Metric Strip (Pure Matching KPIs) */}
           <section
             className="mentee-stat-grid kasandigan-metric-strip"
@@ -1029,56 +1102,107 @@ import Skeleton from "@mui/material/Skeleton";
                     <span className="kasandigan-card-badge">Action Plan</span>
                   </div>
                   <ul className="mentee-timeline">
-                    <li className="mentee-timeline-item">
-                      <span className="mentee-timeline-icon">
+                    <li
+                      className="mentee-timeline-item mentee-timeline-item--interactive"
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => setActiveTab("mentoring-preferences")}
+                      title="Go to Mentoring Preferences"
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          setActiveTab("mentoring-preferences");
+                        }
+                      }}
+                    >
+                      <span className={`mentee-timeline-icon ${hasQuestionnaire ? "mentee-timeline-icon--completed" : ""}`}>
                         {hasQuestionnaire ? (
                           <CheckCircleOutline fontSize="inherit" />
                         ) : (
                           <AutoAwesomeOutlined fontSize="inherit" />
                         )}
                       </span>
-                      <div>
-                        <p className="mentee-timeline-title">
-                          1. Mentoring preferences
-                        </p>
+                      <div className="mentee-timeline-content">
+                        <div className="mentee-timeline-header-row">
+                          <p className="mentee-timeline-title">
+                            1. Mentoring preferences
+                          </p>
+                          <span className={`mentee-timeline-action-badge ${hasQuestionnaire ? "mentee-timeline-action-badge--done" : ""}`}>
+                            {hasQuestionnaire ? "Edit Preferences →" : "Start Setup →"}
+                          </span>
+                        </div>
                         <p className="mentee-muted">
                           {hasQuestionnaire
-                            ? "Preferences configured"
+                            ? "Preferences configured — ready for matching"
                             : "Select subjects and learning goals"}
                         </p>
                       </div>
                     </li>
-                    <li className="mentee-timeline-item">
-                      <span className="mentee-timeline-icon">
+                    <li
+                      className="mentee-timeline-item mentee-timeline-item--interactive"
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => setActiveTab("availability")}
+                      title="Set Your Availability Schedule"
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          setActiveTab("availability");
+                        }
+                      }}
+                    >
+                      <span className={`mentee-timeline-icon ${menteeSlots.length > 0 ? "mentee-timeline-icon--completed" : ""}`}>
                         {menteeSlots.length > 0 ? (
                           <CheckCircleOutline fontSize="inherit" />
                         ) : (
                           <ScheduleOutlined fontSize="inherit" />
                         )}
                       </span>
-                      <div>
-                        <p className="mentee-timeline-title">
-                          2. Availability schedule
-                        </p>
+                      <div className="mentee-timeline-content">
+                        <div className="mentee-timeline-header-row">
+                          <p className="mentee-timeline-title">
+                            2. Availability schedule
+                          </p>
+                          <span className={`mentee-timeline-action-badge ${menteeSlots.length > 0 ? "mentee-timeline-action-badge--done" : ""}`}>
+                            {menteeSlots.length > 0 ? "Update Schedule →" : "Set Hours →"}
+                          </span>
+                        </div>
                         <p className="mentee-muted">
                           {menteeSlots.length > 0
                             ? `${menteeSlots.length} slot${menteeSlots.length === 1 ? "" : "s"} selected`
-                            : "Add free days and times"}
+                            : "Add free days and times for sessions"}
                         </p>
                       </div>
                     </li>
-                    <li className="mentee-timeline-item">
-                      <span className="mentee-timeline-icon">
+                    <li
+                      className="mentee-timeline-item mentee-timeline-item--interactive"
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => setActiveTab("matching")}
+                      title="Find Mentors & View Matches"
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          setActiveTab("matching");
+                        }
+                      }}
+                    >
+                      <span className={`mentee-timeline-icon ${myMentor ? "mentee-timeline-icon--completed" : ""}`}>
                         {myMentor ? (
                           <CheckCircleOutline fontSize="inherit" />
                         ) : (
                           <GroupsOutlined fontSize="inherit" />
                         )}
                       </span>
-                      <div>
-                        <p className="mentee-timeline-title">
-                          3. Official pairing
-                        </p>
+                      <div className="mentee-timeline-content">
+                        <div className="mentee-timeline-header-row">
+                          <p className="mentee-timeline-title">
+                            3. Official pairing
+                          </p>
+                          <span className={`mentee-timeline-action-badge ${myMentor ? "mentee-timeline-action-badge--done" : ""}`}>
+                            {myMentor ? "View Pairing →" : "Browse Matches →"}
+                          </span>
+                        </div>
                         <p className="mentee-muted">
                           {myMentor
                             ? `Confirmed with ${mentorName}`
@@ -1250,6 +1374,71 @@ import Skeleton from "@mui/material/Skeleton";
               </button>
             </div>
           </header>
+
+          {/* Mentor Quick-Start Guide (Addresses U1: Ease of Learning, U4: Feature Access, U8: Ease of Interaction) */}
+          {(!profileReady || acceptedRequests.length === 0) && (
+            <div className="kasandigan-quick-guide-banner kasandigan-quick-guide-banner--mentor" role="region" aria-label="Mentor Quick Start Guide">
+              <div className="kasandigan-quick-guide-header">
+                <div className="kasandigan-quick-guide-title-wrap">
+                  <span className="kasandigan-quick-guide-icon">
+                    <AutoAwesomeOutlined fontSize="inherit" />
+                  </span>
+                  <div>
+                    <h2 className="kasandigan-quick-guide-title">
+                      {!profileReady
+                        ? "Welcome Mentor! Complete Your Profile to Start Guiding Students"
+                        : "Ready for Mentorship Requests"}
+                    </h2>
+                    <p className="kasandigan-quick-guide-desc">
+                      Ensure your subjects and schedule are up to date so student mentees can discover and match with you.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="kasandigan-guide-steps-grid">
+                <div
+                  className={`kasandigan-guide-step-card ${profileReady ? "kasandigan-guide-step-card--done" : "kasandigan-guide-step-card--active"}`}
+                  onClick={() => setActiveTab(profileReady ? "mentor-matching-profile" : "onboarding")}
+                  role="button"
+                  tabIndex={0}
+                >
+                  <div className="kasandigan-step-badge">
+                    {profileReady ? "✓ Configured" : "Step 1"}
+                  </div>
+                  <h3 className="kasandigan-step-title">Teaching Expertise</h3>
+                  <p className="kasandigan-step-sub">Set your expertise topics, bio, and student capacity limit.</p>
+                  <span className="kasandigan-step-cta">
+                    {profileReady ? "Edit Profile →" : "Complete Profile →"}
+                  </span>
+                </div>
+
+                <div
+                  className="kasandigan-guide-step-card kasandigan-guide-step-card--active"
+                  onClick={() => setActiveTab("availability")}
+                  role="button"
+                  tabIndex={0}
+                >
+                  <div className="kasandigan-step-badge">Step 2</div>
+                  <h3 className="kasandigan-step-title">Weekly Schedule</h3>
+                  <p className="kasandigan-step-sub">Specify which days and hours you are open for mentoring sessions.</p>
+                  <span className="kasandigan-step-cta">Manage Availability →</span>
+                </div>
+
+                <div
+                  className="kasandigan-guide-step-card kasandigan-guide-step-card--active"
+                  onClick={() => setActiveTab("mentees")}
+                  role="button"
+                  tabIndex={0}
+                >
+                  <div className="kasandigan-step-badge">Step 3</div>
+                  <h3 className="kasandigan-step-title">Mentee Requests</h3>
+                  <p className="kasandigan-step-sub">Review incoming requests from mentees and manage active pairings.</p>
+                  <span className="kasandigan-step-cta">Check Mentees →</span>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Kasandigan Unified Metric Strip (4 Columns) */}
           <section
@@ -1659,6 +1848,14 @@ import Skeleton from "@mui/material/Skeleton";
               onClick={() => setActiveTab("approvals")}
             >
               User Approvals
+            </button>
+            <button
+              type="button"
+              className="btn kasandigan-btn-secondary"
+              onClick={() => setActiveTab("backup")}
+              title="Database Backup & System Health"
+            >
+              Database & Backups
             </button>
           </div>
         </header>
