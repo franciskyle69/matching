@@ -95,14 +95,22 @@ import "./components/Sidebar.jsx";
       globalSearchResults,
       loadGlobalSearch,
       isAuthenticated,
-      loadUserProfile,
-      isPendingApproval,
+      isPendingApproval: rawIsPendingApproval,
       pendingApprovalLandingTab,
       mentorProfile,
       myMentor,
       myMentors = [],
       menteePairingsCount,
     } = ctx;
+
+    const isPendingApproval = Boolean(
+      rawIsPendingApproval &&
+      !(
+        user?.approval_status === "ACTIVE" ||
+        (user?.role === "mentor" && user?.mentor_approved === true) ||
+        (user?.role === "mentee" && user?.mentee_approved === true)
+      )
+    );
 
     const sidebarCollapsed = false;
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);

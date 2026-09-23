@@ -30,13 +30,24 @@ class MentorProfileAdmin(admin.ModelAdmin):
     actions = ("approve_mentors",)
 
     def approve_mentors(self, request, queryset):
-        updated = queryset.update(approved=True)
+        from accounts.models import UserProfile, get_user_profile
+        from api.views import invalidate_approval_cache_mentor, _clear_me_cache
+        count = 0
         for mentor in queryset:
+            mentor.approved = True
+            mentor.save(update_fields=["approved"])
+            up = getattr(mentor.user, "profile", None) or get_user_profile(mentor.user)
+            if up:
+                up.approval_status = UserProfile.STATUS_ACTIVE
+                up.save(update_fields=["approval_status"])
+            invalidate_approval_cache_mentor(mentor.id)
+            _clear_me_cache(mentor.user_id)
             Notification.objects.create(
                 user=mentor.user,
                 message="Your mentor account has been approved.",
             )
-        self.message_user(request, f"Approved {updated} mentor(s).")
+            count += 1
+        self.message_user(request, f"Approved {count} mentor(s).")
 
     approve_mentors.short_description = "Approve selected mentors"
 

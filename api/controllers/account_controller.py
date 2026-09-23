@@ -1343,6 +1343,22 @@ def me(request):
             ),
         }
 
+    mentor_appr = get_mentor_approved(mentor) if mentor else None
+    mentee_appr = get_mentee_approved(mentee) if mentee else None
+    resolved_approval_status = (
+        user_prof.approval_status
+        if user_prof
+        else ("ACTIVE" if request.user.is_staff else "PENDING")
+    )
+    if (mentor_appr is True or mentee_appr is True) and resolved_approval_status != UserProfile.STATUS_ACTIVE:
+        resolved_approval_status = UserProfile.STATUS_ACTIVE
+        if user_prof and user_prof.approval_status != UserProfile.STATUS_ACTIVE:
+            try:
+                user_prof.approval_status = UserProfile.STATUS_ACTIVE
+                user_prof.save(update_fields=["approval_status"])
+            except Exception:
+                pass
+
     response_payload = {
         "access_token": issue_access_token(request.user),
         "id": request.user.id,
@@ -1354,11 +1370,7 @@ def me(request):
         "full_name": get_user_display_name(request.user),
         "display_name": get_user_display_name(request.user),
         "is_onboarded": _user_is_onboarded(request.user),
-        "approval_status": (
-            user_prof.approval_status
-            if user_prof
-            else ("ACTIVE" if request.user.is_staff else "PENDING")
-        ),
+        "approval_status": resolved_approval_status,
         "is_staff": request.user.is_staff,
         "must_change_password": must_change_password(request.user),
         "role": "staff"

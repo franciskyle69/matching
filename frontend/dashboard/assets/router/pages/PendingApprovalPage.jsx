@@ -210,6 +210,7 @@
 
             if (nowApproved) {
               if (setUser) setUser(updatedUser);
+              if (loadMe) loadMe({ force: true }).catch(() => {});
               triggerCelebration();
             }
           }
@@ -221,7 +222,7 @@
         isMounted = false;
         clearInterval(intervalId);
       };
-    }, [isApproved, isRejected, setUser]);
+    }, [isApproved, isRejected, setUser, loadMe]);
 
     // Manual check status handler
     const handleManualCheck = async () => {
@@ -249,8 +250,21 @@
     };
 
     // Proceed to dashboard
-    const handleEnterDashboard = () => {
-      const targetTab = user?.role === "mentor" ? "home" : "matching";
+    const handleEnterDashboard = async () => {
+      let currentUser = user;
+      try {
+        if (loadMe) {
+          const fresh = await loadMe({ force: true });
+          if (fresh) currentUser = fresh;
+        } else {
+          const res = await fetchJSON("/api/me/?force=1");
+          if (res && res.ok && res.data) {
+            currentUser = res.data;
+            if (setUser) setUser(res.data);
+          }
+        }
+      } catch (_) {}
+      const targetTab = currentUser?.role === "mentor" ? "home" : "matching";
       if (setActiveTab) {
         setActiveTab(targetTab);
       }

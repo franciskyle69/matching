@@ -11,15 +11,26 @@
     React.createContext(null);
   const Layout = window.DashboardApp.Layout;
   function getIsPendingApproval(userData) {
+    if (!userData) return false;
+    if (
+      userData.is_staff ||
+      userData.role === "coordinator" ||
+      userData.role === "staff"
+    ) {
+      return false;
+    }
+    if (
+      userData.approval_status === "ACTIVE" ||
+      (userData.role === "mentor" && userData.mentor_approved === true) ||
+      (userData.role === "mentee" && userData.mentee_approved === true)
+    ) {
+      return false;
+    }
     return !!(
-      userData &&
-      !userData.is_staff &&
-      userData.role !== "coordinator" &&
-      userData.role !== "staff" &&
-      (userData.approval_status === "PENDING" ||
-        userData.approval_status === "PENDING_APPROVAL" ||
-        (userData.role === "mentor" && userData.mentor_approved === false) ||
-        (userData.role === "mentee" && userData.mentee_approved === false))
+      userData.approval_status === "PENDING" ||
+      userData.approval_status === "PENDING_APPROVAL" ||
+      (userData.role === "mentor" && userData.mentor_approved === false) ||
+      (userData.role === "mentee" && userData.mentee_approved === false)
     );
   }
   function getPendingApprovalLandingTab(userData) {
