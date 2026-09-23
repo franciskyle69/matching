@@ -175,9 +175,15 @@ import "./components/Sidebar.jsx";
           return;
         }
       }
+      if (user && user.is_onboarded === false && !isStaff) {
+        if (tabId !== "onboarding") {
+          finishNavigation("onboarding");
+          return;
+        }
+      }
       if (user && user.is_profile_complete === false && !isStaff) {
-        if (tabId !== "complete-profile") {
-          finishNavigation("complete-profile");
+        if (tabId !== "onboarding" && tabId !== "complete-profile") {
+          finishNavigation("onboarding");
           return;
         }
       }

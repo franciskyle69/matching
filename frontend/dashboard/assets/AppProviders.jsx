@@ -1763,7 +1763,13 @@
           message: `Signed in successfully as ${displayName}.`,
           type: "success",
         });
-        setActiveTab("home");
+        if (needsCompleteProfile(profile)) {
+          setActiveTab("onboarding");
+          replaceAppUrl("onboarding");
+        } else {
+          setActiveTab("home");
+          replaceAppUrl("home");
+        }
       } finally {
         setSignInLoading(false);
       }
