@@ -34,8 +34,11 @@
       <div className="subject-category-picker subject-category-picker--modern">
         <div className="complete-profile-subject-grid" role="list" aria-label="Subjects by category">
           {normalizedCatalog.map((entry) => {
-            const active = selected.includes(entry.name);
-            const isDisabled = !active && isCapReached;
+            const isSelected =
+              selected.includes(entry.name) ||
+              selected.includes(entry.code) ||
+              (entry.id && selected.includes(entry.id));
+            const isSubjectDisabled = !isSelected && selected.length >= maxSubjects;
             return (
               <button
                 key={entry.name}
@@ -43,14 +46,31 @@
                 role="listitem"
                 className={
                   "complete-profile-subject-card mp-subject-card" +
-                  (active ? " is-active" : "") +
-                  (isDisabled ? " is-disabled" : "")
+                  (isSelected ? " is-active" : "") +
+                  (isSubjectDisabled
+                    ? " is-disabled opacity-50 cursor-not-allowed pointer-events-none hover:border-gray-700"
+                    : "")
                 }
-                style={isDisabled ? { opacity: 0.5, cursor: "not-allowed", pointerEvents: "auto" } : undefined}
-                aria-pressed={active}
-                disabled={isDisabled}
-                onClick={() => {
-                  if (isDisabled) return;
+                style={
+                  isSubjectDisabled
+                    ? { opacity: 0.5, cursor: "not-allowed", pointerEvents: "auto" }
+                    : undefined
+                }
+                aria-pressed={isSelected}
+                aria-disabled={isSubjectDisabled}
+                disabled={isSubjectDisabled}
+                onClick={(e) => {
+                  if (isSubjectDisabled) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const msg = `You can only select up to ${maxSubjects} subjects.`;
+                    if (window.DashboardApp && typeof window.DashboardApp.notify === "function") {
+                      window.DashboardApp.notify("warning", "Subject Limit Reached", msg);
+                    } else {
+                      alert(msg);
+                    }
+                    return;
+                  }
                   onToggle(entry.name);
                 }}
               >
@@ -64,7 +84,7 @@
                           ? "NSTP"
                           : "PE"}
                   </span>
-                  {active ? (
+                  {isSelected ? (
                     <span className="mp-subject-check" aria-hidden="true">✓</span>
                   ) : (
                     <span className="mp-subject-check-placeholder" aria-hidden="true" />

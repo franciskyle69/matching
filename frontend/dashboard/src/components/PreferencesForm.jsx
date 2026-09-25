@@ -540,6 +540,11 @@ export default function PreferencesForm({
               size="large"
               onClick={validateAndSubmit}
               disabled={loading || isBoundsExceeded}
+              title={
+                isBoundsExceeded
+                  ? "Cannot submit: Maximum limit exceeded (Max 2 subjects, 3 topics per subject, 2 competencies per topic, max 6 total)."
+                  : "Complete Onboarding"
+              }
               sx={{
                 ml: "auto",
                 px: 5,

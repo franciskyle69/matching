@@ -112,6 +112,11 @@ export default function MenteePreferencesPage({ defaultRole = "MENTEE" }) {
     return false;
   }, [selectedSubjects, selectedTopics, selectedCompetencies, roleLimits]);
 
+  const isFormInvalid = isBoundsExceeded;
+  const saveTooltip = isFormInvalid
+    ? "Cannot save: Maximum limit exceeded (Max 2 subjects, 3 topics per subject, 2 competencies per topic, max 6 total)."
+    : "Save your preferences";
+
   // Fetch saved preferences on mount via GET /api/user/preferences/
   const fetchPreferences = async () => {
     setLoading(true);

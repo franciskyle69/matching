@@ -491,6 +491,10 @@
 
     const isSubjectCapExceeded = selectedSubjects.length > MAX_SUBJECTS;
     const isBoundsExceeded = isSubjectCapExceeded || isTopicCapExceeded || isCompetencyCapExceeded;
+    const isFormInvalid = isBoundsExceeded || isSubjectCapExceeded;
+    const saveTooltip = isFormInvalid
+      ? "Cannot save: selections exceed permitted limits (Max 2 subjects, 3 topics per subject, 2 competencies per topic, max 6 total)."
+      : "Click to save your preferences";
 
     const canSave =
       hasSelectedSubject &&
@@ -572,8 +576,11 @@
       markDirty();
       const isSelected = selectedSubjects.includes(subjectName);
       if (!isSelected && selectedSubjects.length >= MAX_SUBJECTS) {
+        const msg = `You can only select up to ${MAX_SUBJECTS} subjects.`;
         if (window.DashboardApp && typeof window.DashboardApp.notify === "function") {
-          window.DashboardApp.notify("warning", "Subject limit reached", `You can select up to ${MAX_SUBJECTS} subjects.`);
+          window.DashboardApp.notify("warning", "Subject Limit Reached", msg);
+        } else {
+          alert(msg);
         }
         return;
       }
@@ -604,8 +611,11 @@
         if (parentGroup) {
           const selectedInGroup = (parentGroup.topics || []).filter((t) => selectedTopicIds.includes(t.id)).length;
           if (selectedInGroup >= MAX_TOPICS_PER_SUBJECT) {
+            const msg = `You can only select up to ${MAX_TOPICS_PER_SUBJECT} topics per subject.`;
             if (window.DashboardApp && typeof window.DashboardApp.notify === "function") {
-              window.DashboardApp.notify("warning", "Topic limit reached", `You can select up to ${MAX_TOPICS_PER_SUBJECT} topics per subject.`);
+              window.DashboardApp.notify("warning", "Topic Limit Reached", msg);
+            } else {
+              alert(msg);
             }
             return;
           }
@@ -637,16 +647,22 @@
       const isSelected = selectedCompetencyIds.includes(competencyId);
       if (!isSelected) {
         if (selectedCompetencyIds.length >= MAX_COMPETENCIES_TOTAL) {
+          const msg = `You can only select a maximum of ${MAX_COMPETENCIES_TOTAL} competencies total.`;
           if (window.DashboardApp && typeof window.DashboardApp.notify === "function") {
-            window.DashboardApp.notify("warning", "Competency limit reached", `You can select a maximum of ${MAX_COMPETENCIES_TOTAL} competencies total.`);
+            window.DashboardApp.notify("warning", "Competency Limit Reached", msg);
+          } else {
+            alert(msg);
           }
           return;
         }
         const topicComps = competencyMap[topicId] || [];
         const selectedInTopic = topicComps.filter((c) => selectedCompetencyIds.includes(c.id)).length;
         if (selectedInTopic >= MAX_COMPETENCIES_PER_TOPIC) {
+          const msg = `You can only select up to ${MAX_COMPETENCIES_PER_TOPIC} competencies per topic.`;
           if (window.DashboardApp && typeof window.DashboardApp.notify === "function") {
-            window.DashboardApp.notify("warning", "Competency limit reached", `You can select up to ${MAX_COMPETENCIES_PER_TOPIC} competencies per topic.`);
+            window.DashboardApp.notify("warning", "Competency Limit Reached", msg);
+          } else {
+            alert(msg);
           }
           return;
         }
@@ -785,7 +801,8 @@
                 type="button"
                 className="btn primary small mp-header-save-btn"
                 onClick={handleSave}
-                disabled={mentorProfileSaving || isPristine || !canSave}
+                disabled={mentorProfileSaving || isPristine || !canSave || isFormInvalid}
+                title={saveTooltip}
               >
                 {mentorProfileSaving ? "Saving…" : "Save Preferences"}
               </button>
@@ -799,8 +816,28 @@
           title="Subject"
           description="Select up to 2 subjects. Topics and competencies will load for each selected subject."
         >
-          <div className="mp-inline-meta" aria-live="polite">
+          <div
+            className={
+              "mp-inline-meta" +
+              (selectedMajorSubjects.length >= MAX_SUBJECTS ? " is-max-reached" : "")
+            }
+            style={
+              selectedMajorSubjects.length >= MAX_SUBJECTS
+                ? {
+                    color: "#f59e0b",
+                    fontWeight: 700,
+                    backgroundColor: "rgba(245, 158, 11, 0.15)",
+                    border: "1px solid rgba(245, 158, 11, 0.4)",
+                    borderRadius: "20px",
+                    padding: "3px 10px",
+                    display: "inline-block",
+                  }
+                : undefined
+            }
+            aria-live="polite"
+          >
             {selectedMajorSubjects.length} / {MAX_SUBJECTS} selected
+            {selectedMajorSubjects.length >= MAX_SUBJECTS ? " (Max Reached)" : ""}
           </div>
           {SubjectCategoryPicker ? (
             <SubjectCategoryPicker
@@ -866,8 +903,26 @@
                         <span className="mp-subject-accordion-title">
                           {group.subjectName}
                         </span>
-                        <span className="mp-subject-accordion-count">
+                        <span
+                          className={
+                            "mp-subject-accordion-count" +
+                            (selectedInGroup >= MAX_TOPICS_PER_SUBJECT ? " is-max-reached" : "")
+                          }
+                          style={
+                            selectedInGroup >= MAX_TOPICS_PER_SUBJECT
+                              ? {
+                                  color: "#f59e0b",
+                                  fontWeight: 700,
+                                  backgroundColor: "rgba(245, 158, 11, 0.15)",
+                                  border: "1px solid rgba(245, 158, 11, 0.4)",
+                                  borderRadius: "20px",
+                                  padding: "2px 8px",
+                                }
+                              : undefined
+                          }
+                        >
                           {selectedInGroup} / {MAX_TOPICS_PER_SUBJECT} selected
+                          {selectedInGroup >= MAX_TOPICS_PER_SUBJECT ? " (Max Reached)" : ""}
                         </span>
                       </button>
                       {open && (
@@ -886,20 +941,37 @@
                                 type="button"
                                 role="listitem"
                                 className={
-                                  "mp-pill" + (active ? " is-active" : "") + (isTopicDisabled ? " is-disabled" : "")
+                                  "mp-pill" +
+                                  (active ? " is-active" : "") +
+                                  (isTopicDisabled ? " is-disabled opacity-40 cursor-not-allowed pointer-events-none" : "")
                                 }
-                                style={isTopicDisabled ? { opacity: 0.5, cursor: "not-allowed" } : undefined}
+                                style={
+                                  isTopicDisabled
+                                    ? { opacity: 0.4, cursor: "not-allowed", pointerEvents: "auto" }
+                                    : undefined
+                                }
                                 disabled={isTopicDisabled}
                                 aria-pressed={active}
-                                onClick={() => {
-                                  if (isTopicDisabled) return;
+                                aria-disabled={isTopicDisabled}
+                                onClick={(e) => {
+                                  if (isTopicDisabled) {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    const msg = `You can only select up to ${MAX_TOPICS_PER_SUBJECT} topics per subject.`;
+                                    if (window.DashboardApp && typeof window.DashboardApp.notify === "function") {
+                                      window.DashboardApp.notify("warning", "Topic Limit Reached", msg);
+                                    } else {
+                                      alert(msg);
+                                    }
+                                    return;
+                                  }
                                   toggleTopic(topic);
                                 }}
                               >
                                 {active ? (
                                   <span className="mp-chip-check">✓</span>
                                 ) : null}
-                                {topic.name}
+                                <span>{topic.name}</span>
                               </button>
                             );
                           })}
@@ -962,8 +1034,27 @@
                   <section key={topicId} className="mp-competency-group">
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
                       <h3 className="mp-competency-group-title" style={{ margin: 0 }}>{topic.name}</h3>
-                      <span className="mp-competency-count" style={{ fontSize: "0.85rem", opacity: 0.85 }}>
+                      <span
+                        className={
+                          "mp-competency-count" +
+                          (selectedInTopic >= MAX_COMPETENCIES_PER_TOPIC ? " is-max-reached" : "")
+                        }
+                        style={
+                          selectedInTopic >= MAX_COMPETENCIES_PER_TOPIC
+                            ? {
+                                fontSize: "0.85rem",
+                                color: "#f59e0b",
+                                fontWeight: 700,
+                                backgroundColor: "rgba(245, 158, 11, 0.15)",
+                                border: "1px solid rgba(245, 158, 11, 0.4)",
+                                borderRadius: "20px",
+                                padding: "2px 8px",
+                              }
+                            : { fontSize: "0.85rem", opacity: 0.85 }
+                        }
+                      >
                         {selectedInTopic} / {MAX_COMPETENCIES_PER_TOPIC} selected
+                        {selectedInTopic >= MAX_COMPETENCIES_PER_TOPIC ? " (Max Reached)" : ""}
                       </span>
                     </div>
                     <div
@@ -982,13 +1073,39 @@
                               key={competency.id}
                               type="button"
                               role="listitem"
-                              className={"mp-pill" + (active ? " is-active" : "") + (isCompDisabled ? " is-disabled" : "")}
-                              style={isCompDisabled ? { opacity: 0.5, cursor: "not-allowed" } : undefined}
+                              className={
+                                "mp-pill" +
+                                (active ? " is-active" : "") +
+                                (isCompDisabled ? " is-disabled opacity-40 cursor-not-allowed pointer-events-none" : "")
+                              }
+                              style={
+                                isCompDisabled
+                                  ? { opacity: 0.4, cursor: "not-allowed", pointerEvents: "auto" }
+                                  : undefined
+                              }
                               disabled={isCompDisabled}
                               aria-pressed={active}
-                              title={competency.description || competency.name}
-                              onClick={() => {
-                                if (isCompDisabled) return;
+                              aria-disabled={isCompDisabled}
+                              title={
+                                isCompDisabled
+                                  ? `Limit reached: Maximum ${MAX_COMPETENCIES_PER_TOPIC} competencies per topic.`
+                                  : competency.description || competency.name
+                              }
+                              onClick={(e) => {
+                                if (isCompDisabled) {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  const msg =
+                                    selectedInTopic >= MAX_COMPETENCIES_PER_TOPIC
+                                      ? `You can only select up to ${MAX_COMPETENCIES_PER_TOPIC} competencies per topic.`
+                                      : `You can only select up to ${MAX_COMPETENCIES_TOTAL} competencies total.`;
+                                  if (window.DashboardApp && typeof window.DashboardApp.notify === "function") {
+                                    window.DashboardApp.notify("warning", "Competency Limit Reached", msg);
+                                  } else {
+                                    alert(msg);
+                                  }
+                                  return;
+                                }
                                 toggleCompetency(competency);
                               }}
                             >
@@ -1349,7 +1466,8 @@
                 type="button"
                 className="btn mp-save-preferences"
                 onClick={handleSave}
-                disabled={mentorProfileSaving || !canSave}
+                disabled={mentorProfileSaving || !canSave || isFormInvalid}
+                title={saveTooltip}
               >
                 {mentorProfileSaving
                   ? "Saving…"
@@ -1415,7 +1533,8 @@
               type="button"
               className="btn primary small mp-sticky-save-btn"
               onClick={handleSave}
-              disabled={mentorProfileSaving || (!canSave && !isPristine)}
+              disabled={mentorProfileSaving || (!canSave && !isPristine) || isFormInvalid}
+              title={saveTooltip}
             >
               {mentorProfileSaving
                 ? "Saving…"

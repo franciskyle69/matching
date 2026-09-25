@@ -420,17 +420,30 @@ export default function SubjectSkillPreferences({
           </Box>
 
           {/* Header badge showing real-time counts vs role-specific limit */}
-          <Box sx={neu.counterPill}>
+          <Box
+            sx={{
+              ...neu.counterPill,
+              ...(selectedSubjects.length >= MAX_SUBJECTS
+                ? {
+                    border: isDark ? "1px solid #F59E0B" : "1px solid #FF9800",
+                    backgroundColor: isDark ? "rgba(245, 158, 11, 0.15)" : "#FFF3E0",
+                  }
+                : {}),
+            }}
+          >
             <Typography
               variant="caption"
               fontWeight={700}
               color={
-                selectedSubjects.length >= currentLimits.minSubjects
-                  ? (isDark ? "#60A5FA" : "#0D47A1")
-                  : (isDark ? "#F87171" : "#D32F2F")
+                selectedSubjects.length >= MAX_SUBJECTS
+                  ? (isDark ? "#F59E0B" : "#E65100")
+                  : selectedSubjects.length >= currentLimits.minSubjects
+                    ? (isDark ? "#60A5FA" : "#0D47A1")
+                    : (isDark ? "#F87171" : "#D32F2F")
               }
             >
-              Subjects: {selectedSubjects.length} / 2 selected
+              Subjects: {selectedSubjects.length} / {MAX_SUBJECTS} selected
+              {selectedSubjects.length >= MAX_SUBJECTS ? " (Max Reached)" : ""}
             </Typography>
           </Box>
         </Stack>
@@ -438,13 +451,13 @@ export default function SubjectSkillPreferences({
         <Grid container spacing={2}>
           {curriculum.map((sub) => {
             const isSelected = selectedSubjects.includes(sub.code) || selectedSubjects.includes(sub.name);
-            const isDisabled = !isSelected && isSubjectCapReached;
+            const isSubjectDisabled = !isSelected && selectedSubjects.length >= MAX_SUBJECTS;
 
             const handleSubjectClick = () => {
               if (readOnly) return;
-              if (isDisabled) {
+              if (isSubjectDisabled) {
                 triggerWarning(
-                  `You can select a maximum of ${MAX_SUBJECTS} subjects.`
+                  `You can only select up to ${MAX_SUBJECTS} subjects.`
                 );
                 return;
               }
@@ -455,24 +468,31 @@ export default function SubjectSkillPreferences({
               <Grid item xs={12} sm={6} md={4} key={sub.code}>
                 <Paper
                   onClick={handleSubjectClick}
+                  className={
+                    isSubjectDisabled
+                      ? "opacity-50 cursor-not-allowed pointer-events-none hover:border-gray-700"
+                      : ""
+                  }
+                  aria-disabled={isSubjectDisabled}
                   sx={{
                     ...(isSelected ? neu.pressedCard : neu.elevatedCard),
                     p: 2,
-                    cursor: readOnly ? "default" : (isDisabled ? "not-allowed" : "pointer"),
-                    opacity: isDisabled ? 0.45 : 1,
+                    cursor: readOnly ? "default" : (isSubjectDisabled ? "not-allowed" : "pointer"),
+                    opacity: isSubjectDisabled ? 0.5 : 1,
+                    pointerEvents: "auto",
                     display: "flex",
                     alignItems: "center",
                     gap: 1.5,
                     userSelect: "none",
                     transition: "all 0.2s ease",
                     "&:hover": {
-                      transform: isDisabled || readOnly || isSelected ? "none" : "translateY(-2px)",
+                      transform: isSubjectDisabled || readOnly || isSelected ? "none" : "translateY(-2px)",
                     },
                   }}
                 >
                   <Checkbox
                     checked={isSelected}
-                    disabled={isDisabled || readOnly}
+                    disabled={isSubjectDisabled || readOnly}
                     inputProps={{ "aria-label": sub.code }}
                     onChange={handleSubjectClick}
                     onClick={(e) => {
@@ -645,9 +665,28 @@ export default function SubjectSkillPreferences({
 
                     {/* Topic and Competency badges showing [Count] / limit selected */}
                     <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap", alignItems: "center" }}>
-                      <Box sx={neu.counterPill}>
-                        <Typography variant="caption" fontWeight={600} color={isDark ? "#60A5FA" : "#0D47A1"}>
-                          Topics: {selectedTopicsInThisSubject.length} / 3 selected
+                      <Box
+                        sx={{
+                          ...neu.counterPill,
+                          ...(selectedTopicsInThisSubject.length >= MAX_TOPICS_PER_SUBJECT
+                            ? {
+                                border: isDark ? "1px solid #F59E0B" : "1px solid #FF9800",
+                                backgroundColor: isDark ? "rgba(245, 158, 11, 0.15)" : "#FFF3E0",
+                              }
+                            : {}),
+                        }}
+                      >
+                        <Typography
+                          variant="caption"
+                          fontWeight={600}
+                          color={
+                            selectedTopicsInThisSubject.length >= MAX_TOPICS_PER_SUBJECT
+                              ? (isDark ? "#F59E0B" : "#E65100")
+                              : (isDark ? "#60A5FA" : "#0D47A1")
+                          }
+                        >
+                          Topics: {selectedTopicsInThisSubject.length} / {MAX_TOPICS_PER_SUBJECT} selected
+                          {selectedTopicsInThisSubject.length >= MAX_TOPICS_PER_SUBJECT ? " (Max Reached)" : ""}
                         </Typography>
                       </Box>
                       <Box sx={neu.counterPill}>
@@ -662,7 +701,7 @@ export default function SubjectSkillPreferences({
                     <Grid container spacing={2}>
                       {subjectObj.topics.map((topicObj) => {
                         const isTopicSelected = selectedTopics.includes(topicObj.name);
-                        const isTopicDisabled = !isTopicSelected && isTopicCapReached;
+                        const isTopicDisabled = !isTopicSelected && selectedTopicsInThisSubject.length >= MAX_TOPICS_PER_SUBJECT;
 
                         const compList =
                           typeof topicObj.competencies[0] === "string"
@@ -679,7 +718,7 @@ export default function SubjectSkillPreferences({
                           if (readOnly) return;
                           if (isTopicDisabled) {
                             triggerWarning(
-                              `You can select a maximum of ${MAX_TOPICS_PER_SUBJECT} topics per subject.`
+                              `You can only select up to ${MAX_TOPICS_PER_SUBJECT} topics per subject.`
                             );
                             return;
                           }
@@ -689,13 +728,14 @@ export default function SubjectSkillPreferences({
                         return (
                           <Grid item xs={12} md={6} key={topicObj.name}>
                             <Paper
+                              className={isTopicDisabled ? "opacity-40 cursor-not-allowed" : ""}
                               sx={{
                                 ...(isTopicSelected ? neu.pressedCard : neu.elevatedCard),
                                 p: 2,
                                 display: "flex",
                                 flexDirection: "column",
                                 gap: 1.5,
-                                opacity: isTopicDisabled ? 0.45 : 1,
+                                opacity: isTopicDisabled ? 0.4 : 1,
                               }}
                             >
                               {/* Topic Header Row */}
@@ -743,9 +783,30 @@ export default function SubjectSkillPreferences({
 
                                 {/* Topic Count Tag: Competencies: [Count] / 2 selected */}
                                 {isTopicSelected && (
-                                  <Box sx={{ ...neu.counterPill, px: 1, py: 0.2 }}>
-                                    <Typography variant="caption" fontWeight={600} color={neu.accentBlue}>
-                                      Competencies: {selectedCompsInThisTopic.length} / 2 selected
+                                  <Box
+                                    sx={{
+                                      ...neu.counterPill,
+                                      px: 1,
+                                      py: 0.2,
+                                      ...(selectedCompsInThisTopic.length >= MAX_COMPETENCIES_PER_TOPIC
+                                        ? {
+                                            border: isDark ? "1px solid #F59E0B" : "1px solid #FF9800",
+                                            backgroundColor: isDark ? "rgba(245, 158, 11, 0.15)" : "#FFF3E0",
+                                          }
+                                        : {}),
+                                    }}
+                                  >
+                                    <Typography
+                                      variant="caption"
+                                      fontWeight={600}
+                                      color={
+                                        selectedCompsInThisTopic.length >= MAX_COMPETENCIES_PER_TOPIC
+                                          ? (isDark ? "#F59E0B" : "#E65100")
+                                          : neu.accentBlue
+                                      }
+                                    >
+                                      Competencies: {selectedCompsInThisTopic.length} / {MAX_COMPETENCIES_PER_TOPIC} selected
+                                      {selectedCompsInThisTopic.length >= MAX_COMPETENCIES_PER_TOPIC ? " (Max Reached)" : ""}
                                     </Typography>
                                   </Box>
                                 )}
@@ -764,25 +825,21 @@ export default function SubjectSkillPreferences({
                                 >
                                   {compList.map((compName) => {
                                     const isCompSelected = selectedCompetencies.includes(compName);
-                                    // Auto-disable remaining unchecked checkboxes once global, per-subject, or per-topic cap is reached
                                     const isCompDisabled =
                                       !isCompSelected &&
-                                      (isGlobalCompCapReached || isCompCapReachedInTopic || isSubjCompCapReached);
+                                      (selectedCompsInThisTopic.length >= MAX_COMPETENCIES_PER_TOPIC ||
+                                        selectedCompetencies.length >= MAX_COMPETENCIES_TOTAL);
 
                                     const handleCompClick = () => {
                                       if (readOnly) return;
                                       if (isCompDisabled) {
-                                        if (isGlobalCompCapReached) {
+                                        if (selectedCompetencies.length >= MAX_COMPETENCIES_TOTAL) {
                                           triggerWarning(
-                                            `You can select a maximum of ${MAX_COMPETENCIES_TOTAL} competencies total.`
-                                          );
-                                        } else if (isSubjCompCapReached) {
-                                          triggerWarning(
-                                            `You can select a maximum of ${maxCompsPerSubj} competencies for subject '${subjectObj.code}'.`
+                                            `You can only select a maximum of ${MAX_COMPETENCIES_TOTAL} competencies total.`
                                           );
                                         } else {
                                           triggerWarning(
-                                            `You can select a maximum of ${MAX_COMPETENCIES_PER_TOPIC} competencies per topic.`
+                                            `You can only select up to ${MAX_COMPETENCIES_PER_TOPIC} competencies per topic.`
                                           );
                                         }
                                         return;
@@ -793,6 +850,7 @@ export default function SubjectSkillPreferences({
                                     return (
                                       <FormControlLabel
                                         key={compName}
+                                        className={isCompDisabled ? "opacity-40 cursor-not-allowed" : ""}
                                         control={
                                           <Checkbox
                                             checked={isCompSelected}
@@ -827,9 +885,8 @@ export default function SubjectSkillPreferences({
                                         }}
                                         sx={{
                                           m: 0,
-                                          opacity: isCompDisabled ? 0.45 : 1,
-                                          cursor: readOnly ? "default" : (isCompDisabled ? "not-allowed" : "pointer"),
-                                          userSelect: "none",
+                                          opacity: isCompDisabled ? 0.4 : 1,
+                                          cursor: isCompDisabled ? "not-allowed" : "pointer",
                                         }}
                                       />
                                     );
