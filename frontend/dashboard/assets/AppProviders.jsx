@@ -4,171 +4,73 @@
   const { useEffect, useMemo, useState, useRef } = React;
   const MAIN_TABS =
     (window.DashboardApp && window.DashboardApp.MAIN_TABS) || [];
-  const { getCookie, fetchJSON, ensureCsrfToken } =
+  const {
+    getCookie,
+    fetchJSON,
+    setAuthToken,
+    setRefreshToken,
+    clearAuthTokens,
+  } =
     (window.DashboardApp && window.DashboardApp.Utils) || {};
   const AppContext =
     (window.DashboardApp && window.DashboardApp.AppContext) ||
     React.createContext(null);
   const Layout = window.DashboardApp.Layout;
+  const getAllowedTopicsForSubjects =
+    window.DashboardApp.getAllowedTopicsForSubjects || (() => []);
+  const filterTopicsForSubjects =
+    window.DashboardApp.filterTopicsForSubjects ||
+    ((subjects, topics) => (Array.isArray(topics) ? [...topics] : []));
+  const setQuestionnaireOptions =
+    window.DashboardApp.setQuestionnaireOptions || (() => {});
+
   function getIsPendingApproval(userData) {
-    if (!userData) return false;
-    if (
-      userData.is_staff ||
-      userData.role === "coordinator" ||
-      userData.role === "staff"
-    ) {
-      return false;
-    }
-    if (
-      userData.approval_status === "ACTIVE" ||
-      (userData.role === "mentor" && userData.mentor_approved === true) ||
-      (userData.role === "mentee" && userData.mentee_approved === true)
-    ) {
-      return false;
-    }
     return !!(
-      userData.approval_status === "PENDING" ||
-      userData.approval_status === "PENDING_APPROVAL" ||
-      (userData.role === "mentor" && userData.mentor_approved === false) ||
-      (userData.role === "mentee" && userData.mentee_approved === false)
+      userData &&
+      ((userData.role === "mentor" && userData.mentor_approved === false) ||
+        (userData.role === "mentee" && userData.mentee_approved === false))
     );
   }
-  function getPendingApprovalLandingTab(userData) {
-    if (!userData) return "pending-approval";
-    if (
-      userData.is_staff ||
-      userData.role === "staff" ||
-      userData.role === "coordinator"
-    ) {
-      return "home";
-    }
-    if (userData.approval_status === "REJECTED") return "account-rejected";
-    if (userData.must_change_password) return "settings";
-    if (needsCompleteProfile(userData)) return "onboarding";
-    return "pending-approval";
+
+  function normalizeText(value) {
+    return String(value || "").trim().replace(/\s+/g, " ");
   }
 
-  function needsCompleteProfile(userData) {
-    if (!userData) return false;
-    if (
-      userData.is_staff ||
-      userData.role === "staff" ||
-      userData.role === "coordinator"
-    ) {
-      return false;
-    }
-    return userData.is_onboarded === false;
+  function normalizeTopicList(topics) {
+    const deduped = [];
+    const seen = new Set();
+    (Array.isArray(topics) ? topics : []).forEach((topic) => {
+      const name = normalizeText(topic);
+      if (!name) return;
+      const key = name.toLowerCase();
+      if (seen.has(key)) return;
+      seen.add(key);
+      deduped.push(name);
+    });
+    return deduped;
   }
 
-  function isPendingApprovalMessage(message) {
-    return /pending approval by coordinator/i.test(String(message || ""));
-  }
-
-  function cloneJson(value) {
-    try {
-      return JSON.parse(JSON.stringify(value));
-    } catch (_) {
-      return value;
-    }
-  }
-
-  const EMPTY_MENTOR_PROFILE = {
-    subjects: [],
-    topics: [],
-    competency_ids: [],
-    competency_levels: {},
-    expertise_level: null,
-    years_experience: null,
-    teaching_experience_years: null,
-    role: "",
-    capacity: 5,
-    gender: "",
-    year_level: 0,
-    availability: [],
-  };
-
-  const EMPTY_MENTEE_MATCHING = {
-    subjects: [],
-    topics: [],
-    competency_ids: [],
-    competency_needs: {},
-    difficulty_level: null,
-    preferred_learning_style: "",
-    availability: [],
-  };
-
-  function getPortalAuthRole() {
-    const fromUrl = new URLSearchParams(window.location.search || "").get(
-      "role",
-    );
-    const fromStore =
-      typeof sessionStorage !== "undefined"
-        ? sessionStorage.getItem("portalRole")
-        : null;
-    const role = fromUrl || fromStore;
-    return role === "mentor" || role === "mentee" || role === "staff"
-      ? role
-      : null;
-  }
-
-  /** Hashes may carry a sub-path (e.g. "settings/password"); the tab is the first segment. */
-  function resolveTabFromHash(rawHash) {
-    const value = String(rawHash || "")
-      .replace(/^#\/?/, "")
-      .replace(/^\//, "");
-    if (!value) return null;
-    let base = value.split("/")[0];
-    if (base === "verify-email") return "verify-email";
-    if (base === "mentee-matching-profile" || base === "mentee-preferences") {
-      base = "mentoring-preferences";
-    } else if (base === "mentor-preferences") {
-      base = "mentor-matching-profile";
-    }
-    if (MAIN_TABS.some((tab) => tab.id === base)) return base;
-    const hiddenTabs =
-      (window.DashboardApp && window.DashboardApp.HIDDEN_TABS) || [];
-    return hiddenTabs.some((tab) => tab.id === base) ? base : null;
+  function normalizeSubjectForm(form) {
+    return {
+      name: normalizeText(form && form.name),
+      description: normalizeText(form && form.description),
+      topics: normalizeTopicList(form && form.topics),
+    };
   }
 
   function replaceAppUrl(tab) {
     const safeTab = tab || "signin";
-    const params = new URLSearchParams();
-    // Keep role in the URL only for signup (account creation).
-    if (safeTab === "signup") {
-      const portalRole = getPortalAuthRole();
-      if (portalRole) params.set("role", portalRole);
-    }
-    const qs = params.toString() ? `?${params.toString()}` : "";
-    window.history.replaceState(null, "", `/app/${qs}#${safeTab}`);
+    window.history.replaceState(null, "", `/app/#${safeTab}`);
   }
 
   function AppProviders() {
     const [activeTab, setActiveTab] = useState(() => {
       const path = (window.location.pathname || "").replace(/\/+$/, "");
-      const hash = window.location.hash || "";
-      if (path.includes("/verify-email") || hash.includes("verify-email")) {
-        return "verify-email";
-      }
       if (path.endsWith("/app/signin")) return "signin";
       if (path.endsWith("/app/signup")) return "signup";
-      if (
-        path.endsWith("/app/complete-profile") ||
-        path.endsWith("/app/onboarding/complete-profile")
-      ) {
-        return "complete-profile";
-      }
-      const resolvedFromHash = resolveTabFromHash(hash);
-      if (resolvedFromHash) return resolvedFromHash;
       return "home";
     });
     const [user, setUser] = useState(null);
-    const [accessToken, setAccessToken] = useState(() => {
-      try {
-        return window.sessionStorage.getItem("peerlink_access_token") || "";
-      } catch (_) {
-        return "";
-      }
-    });
     const [stats, setStats] = useState(null);
     const [unreadCount, setUnreadCount] = useState(0);
     const [authRequired, setAuthRequired] = useState(false);
@@ -189,6 +91,8 @@
       message: "",
       suggested_time_slots: [],
     });
+    const [sessionsLoading, setSessionsLoading] = useState(false);
+    const [sessionsData, setSessionsData] = useState(null);
     const [notificationsLoading, setNotificationsLoading] = useState(false);
     const [notifications, setNotifications] = useState([]);
     const [settingsSaving, setSettingsSaving] = useState(false);
@@ -209,61 +113,86 @@
       sex: "",
     });
     const [menteeProfileSaving, setMenteeProfileSaving] = useState(false);
-    const [completeProfileSaving, setCompleteProfileSaving] = useState(false);
-    const [onboardingSaving, setOnboardingSaving] = useState(false);
     const [signInLoading, setSignInLoading] = useState(false);
     const [signUpLoading, setSignUpLoading] = useState(false);
-    const [signUpSuccessEmail, setSignUpSuccessEmail] = useState("");
-    const [logoutLoading, setLogoutLoading] = useState(false);
+    const [mustChangePassword, setMustChangePassword] = useState(false);
+    const [forcePasswordLoading, setForcePasswordLoading] = useState(false);
+    const [forcePasswordForm, setForcePasswordForm] = useState({
+      current_password: "",
+      new_password1: "",
+      new_password2: "",
+    });
     const [signInForm, setSignInForm] = useState({
       identifier: "",
       password: "",
     });
-    const emptySignUpForm = {
-      display_name: "",
-      password: "",
-      confirm_password: "",
-      role: getPortalAuthRole() || "mentor",
-
-      mentor_role: "",
-      gender: "",
-      year_level: "",
+    const [signUpForm, setSignUpForm] = useState({
+      role: "mentor",
       first_name: "",
       middle_name: "",
       last_name: "",
       email: "",
       password1: "",
       password2: "",
-      letter_of_intent: [],
-      study_load: [],
-      grade: [],
-      student_verification_documents: [],
-    };
-    const [signUpForm, setSignUpForm] = useState(emptySignUpForm);
+    });
+    const [createSessionLoading, setCreateSessionLoading] = useState(false);
+    const [createForm, setCreateForm] = useState({
+      mentee_id: "",
+      subject_id: "",
+      topic_id: "",
+      scheduled_at: "",
+      duration_minutes: 60,
+      notes: "",
+    });
+    const [sessionsPairMenteeId, setSessionsPairMenteeId] = useState(null);
+    const [rescheduleId, setRescheduleId] = useState(null);
+    const [rescheduleForm, setRescheduleForm] = useState({
+      subject_id: "",
+      topic_id: "",
+      scheduled_at: "",
+      duration_minutes: 60,
+      notes: "",
+    });
+    const [subjectsLoading, setSubjectsLoading] = useState(false);
+    const [subjectsData, setSubjectsData] = useState([]);
+    const [subjectsLoaded, setSubjectsLoaded] = useState(false);
+    const [subjectSaving, setSubjectSaving] = useState(false);
+    const [subjectForm, setSubjectForm] = useState({
+      name: "",
+      description: "",
+      topics: [],
+    });
+    const [subjectEditId, setSubjectEditId] = useState(null);
+    const [subjectDeleteId, setSubjectDeleteId] = useState(null);
     const [avatarUploading, setAvatarUploading] = useState(false);
     const [approvalsLoading, setApprovalsLoading] = useState(false);
     const [approvalActionKey, setApprovalActionKey] = useState(null);
     const [pendingMentors, setPendingMentors] = useState([]);
     const [pendingMentees, setPendingMentees] = useState([]);
+    const [notificationsVisited, setNotificationsVisited] = useState(false);
     const [showMenteeInfoModal, setShowMenteeInfoModal] = useState(false);
     const [showMentorInfoModal, setShowMentorInfoModal] = useState(false);
-    const [mentorProfile, setMentorProfile] = useState(() =>
-      cloneJson(EMPTY_MENTOR_PROFILE),
-    );
+    const [mentorProfile, setMentorProfile] = useState({
+      subjects: [],
+      topics: [],
+      expertise_level: null,
+      role: "",
+      capacity: 3,
+      gender: "",
+      availability: [],
+    });
     const [mentorProfileSaving, setMentorProfileSaving] = useState(false);
-    const [menteeMatching, setMenteeMatching] = useState(() =>
-      cloneJson(EMPTY_MENTEE_MATCHING),
-    );
+    const [menteeMatching, setMenteeMatching] = useState({
+      subjects: [],
+      topics: [],
+      difficulty_level: null,
+      availability: [],
+    });
     const [menteeMatchingSaving, setMenteeMatchingSaving] = useState(false);
     const [chosenMentorId, setChosenMentorId] = useState(null);
-    const [pendingMentorIds, setPendingMentorIds] = useState([]);
     const [mentorRequestsLoading, setMentorRequestsLoading] = useState(false);
     const [mentorRequests, setMentorRequests] = useState([]);
-    const [adminPairingsLoading, setAdminPairingsLoading] = useState(false);
-    const [adminPairings, setAdminPairings] = useState([]);
     const [myMentor, setMyMentor] = useState(null);
-    const [myMentors, setMyMentors] = useState([]);
-    const [menteePairingsCount, setMenteePairingsCount] = useState(0);
     const [acceptMenteeLoading, setAcceptMenteeLoading] = useState(null);
     const [announcements, setAnnouncements] = useState([]);
     const [announcementsLoading, setAnnouncementsLoading] = useState(false);
@@ -288,12 +217,14 @@
     const [backupRestoreLoading, setBackupRestoreLoading] = useState(false);
     const [activityLogs, setActivityLogs] = useState([]);
     const [activityLogsLoading, setActivityLogsLoading] = useState(false);
-    const [activityLogsPage, setActivityLogsPage] = useState(1);
-    const [activityLogsPageSize, setActivityLogsPageSize] = useState(20);
-    const [activityLogsTotal, setActivityLogsTotal] = useState(0);
-    const [activityLogsTotalPages, setActivityLogsTotalPages] = useState(1);
-    const [activityLogsStats, setActivityLogsStats] = useState({ total_records: 0, today_records: 0 });
-    const activityLogsCacheRef = useRef(new Map());
+    const [activityLogsMeta, setActivityLogsMeta] = useState({
+      page: 1,
+      page_size: 20,
+      total: 0,
+      total_pages: 1,
+      has_previous: false,
+      has_next: false,
+    });
     const [globalSearchResults, setGlobalSearchResults] = useState([]);
     const [postsFeed, setPostsFeed] = useState([]);
     const [postsFeedLoaded, setPostsFeedLoaded] = useState(false);
@@ -304,31 +235,20 @@
     const [mentorProfileHashId, setMentorProfileHashId] = useState(null);
     const [viewedUserProfile, setViewedUserProfile] = useState(null);
     const [menteeRecUpdating, setMenteeRecUpdating] = useState(false);
-    const [isLockedOut, setIsLockedOut] = useState(false);
     const prevActiveTabRef = useRef(activeTab);
     const lastMatchingRunRef = useRef(0);
     const lockoutCountdownRef = useRef(null);
     const signInPathRef = useRef(false);
     const meInFlightRef = useRef(null);
-    const mentorRequestsInFlightRef = useRef(null);
-    const adminPairingsInFlightRef = useRef(null);
     const meLastFetchTsRef = useRef(0);
     const ME_MIN_FETCH_INTERVAL_MS = 30000;
-    const unsavedChangesDirtyRef = useRef(false);
-    const lastSavedMentorProfileRef = useRef(cloneJson(EMPTY_MENTOR_PROFILE));
-    const lastSavedMenteeMatchingRef = useRef(cloneJson(EMPTY_MENTEE_MATCHING));
-    const [leaveGuard, setLeaveGuard] = useState(null);
     const [theme, setThemeState] = useState(() => {
-      try {
-        const stored = window.localStorage.getItem("theme");
-        if (stored === "dark" || stored === "light") return stored;
-        const match = document.cookie.match(/(?:^|; )theme=([^;]*)/);
-        if (match) {
-          const cTheme = decodeURIComponent(match[1]);
-          if (cTheme === "dark" || cTheme === "light") return cTheme;
-        }
-      } catch {}
-      return "dark";
+      if (typeof window === "undefined") return "light";
+      const stored = window.localStorage.getItem("theme");
+      if (stored === "dark" || stored === "light") return stored;
+      return window.matchMedia("(prefers-color-scheme: dark)").matches
+        ? "dark"
+        : "light";
     });
 
     function toggleTheme() {
@@ -340,164 +260,14 @@
       return path.endsWith("/app/signin");
     }
 
-    const toastTimersRef = useRef(new Map());
-
-    function removeToast(id) {
-      if (toastTimersRef.current.has(id)) {
-        clearTimeout(toastTimersRef.current.get(id));
-        toastTimersRef.current.delete(id);
-      }
-      setToasts((prev) => prev.filter((t) => t.id !== id));
-    }
-
-    function addToast(itemOrMessage, defaultType = "success", options = {}) {
-      if (!itemOrMessage) return;
+    function addToast(message, type = "success") {
       const id = ++toastIdRef.current;
-      let toastItem = {};
-      if (typeof itemOrMessage === "object" && itemOrMessage !== null) {
-        toastItem = { ...itemOrMessage };
-      } else {
-        toastItem = { message: String(itemOrMessage) };
-      }
-      const type = toastItem.type || defaultType || "success";
-      const title = toastItem.title || options.title || "";
-      const message = toastItem.message || "";
-      const duration =
-        toastItem.duration ||
-        options.duration ||
-        (type === "error" || type === "warning" ? 5000 : 3500);
-
-      const newToast = {
-        id,
-        title,
-        message,
-        type,
-        createdAt: Date.now(),
-      };
-
-      // Keep at most 4 active toasts stacked
-      setToasts((prev) => [...prev.slice(-3), newToast]);
-
-      const timerId = setTimeout(() => {
-        removeToast(id);
-      }, duration);
-      toastTimersRef.current.set(id, timerId);
-      return id;
-    }
-
-    function setUnsavedChangesDirty(dirty) {
-      unsavedChangesDirtyRef.current = !!dirty;
-    }
-
-    function requestLeave(action) {
-      if (!action) return;
-      if (!unsavedChangesDirtyRef.current) {
-        if (typeof action.run === "function") action.run();
-        return;
-      }
-      setLeaveGuard(action);
-    }
-
-    function requestTabChange(tabId) {
-      if (!tabId || tabId === activeTab) return;
-      let targetTab = tabId;
-      if (
-        user &&
-        !user.is_staff &&
-        user.role !== "coordinator" &&
-        user.role !== "staff"
-      ) {
-        if (needsCompleteProfile(user) && targetTab !== "onboarding") {
-          targetTab = "onboarding";
-        } else if (
-          user.approval_status === "REJECTED" &&
-          targetTab !== "account-rejected"
-        ) {
-          targetTab = "account-rejected";
-        } else if (getIsPendingApproval(user)) {
-          const allowed = new Set([
-            "pending-approval",
-            "account-pending",
-            "profile",
-            "settings",
-          ]);
-          if (!allowed.has(targetTab)) {
-            targetTab = "pending-approval";
-          }
-        }
-      }
-      requestLeave({
-        type: "tab",
-        run: () => setActiveTab(targetTab),
-      });
-    }
-
-    function confirmDiscardLeave() {
-      const action = leaveGuard;
-      unsavedChangesDirtyRef.current = false;
-      setLeaveGuard(null);
-      setMentorProfile(
-        cloneJson(lastSavedMentorProfileRef.current || EMPTY_MENTOR_PROFILE),
+      setToasts((prev) => [...prev, { id, message, type }]);
+      setTimeout(
+        () => setToasts((prev) => prev.filter((t) => t.id !== id)),
+        3200,
       );
-      setMenteeMatching(
-        cloneJson(lastSavedMenteeMatchingRef.current || EMPTY_MENTEE_MATCHING),
-      );
-      if (action && typeof action.run === "function") action.run();
     }
-
-    function cancelLeave() {
-      setLeaveGuard(null);
-    }
-
-    useEffect(() => {
-      if (!leaveGuard) return undefined;
-      function onKeyDown(event) {
-        if (event.key === "Escape") {
-          event.preventDefault();
-          setLeaveGuard(null);
-        }
-      }
-      window.addEventListener("keydown", onKeyDown);
-      return () => window.removeEventListener("keydown", onKeyDown);
-    }, [leaveGuard]);
-
-    useEffect(() => {
-      window.DashboardApp = window.DashboardApp || {};
-      const notifyBridge = (typeOrMessage, title, text) => {
-        if (!typeOrMessage) return;
-        if (typeof typeOrMessage === "object") {
-          addToast(typeOrMessage);
-          return;
-        }
-        const str = String(typeOrMessage).toLowerCase();
-        if (["success", "error", "warning", "info"].includes(str)) {
-          const type = str;
-          const msg = text || title || "";
-          const heading = text ? title : "";
-          addToast({ title: heading, message: msg, type });
-          return;
-        }
-        const type =
-          typeof title === "string" &&
-          ["success", "error", "warning", "info"].includes(title.toLowerCase())
-            ? title.toLowerCase()
-            : "success";
-        addToast({
-          message: String(typeOrMessage),
-          type,
-          title: text || "",
-        });
-      };
-      window.DashboardApp.notify = notifyBridge;
-      return () => {
-        if (
-          window.DashboardApp &&
-          window.DashboardApp.notify === notifyBridge
-        ) {
-          delete window.DashboardApp.notify;
-        }
-      };
-    }, []);
 
     function clearLockoutCountdown() {
       if (lockoutCountdownRef.current) {
@@ -507,78 +277,19 @@
     }
 
     useEffect(() => {
-      try {
-        const storedUntil = localStorage.getItem("peerlink_lockout_until");
-        if (storedUntil) {
-          const unlockTime = new Date(storedUntil).getTime();
-          const now = Date.now();
-          if (!isNaN(unlockTime) && unlockTime > now) {
-            setIsLockedOut(true);
-            const remainingMinutes = Math.max(1, Math.ceil((unlockTime - now) / 60000));
-            setAuthAlert({
-              severity: "error",
-              title: "Account temporarily locked",
-              message: "Too many failed login attempts. Account locked.",
-              detail: `Retry available at ${new Date(unlockTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} (${remainingMinutes}m remaining).`,
-            });
-          } else {
-            localStorage.removeItem("peerlink_lockout_until");
-            setIsLockedOut(false);
-          }
-        }
-      } catch (e) {}
-    }, []);
+      const effectiveTheme = user && theme === "dark" ? "dark" : "light";
+      document.documentElement.setAttribute("data-theme", effectiveTheme);
+      if (user) window.localStorage.setItem("theme", theme);
+    }, [theme, user]);
 
     useEffect(() => {
-      const activeTheme = theme === "dark" ? "dark" : "light";
-      document.documentElement.setAttribute("data-theme", activeTheme);
-      if (document.body) {
-        document.body.setAttribute("data-theme", activeTheme);
-      }
-      if (activeTheme === "dark") {
-        document.documentElement.classList.add("dark");
-        if (document.body) document.body.classList.add("dark");
-      } else {
-        document.documentElement.classList.remove("dark");
-        if (document.body) document.body.classList.remove("dark");
-      }
-      try {
-        window.localStorage.setItem("theme", activeTheme);
-      } catch {}
-      try {
-        document.cookie =
-          "theme=" +
-          activeTheme +
-          "; path=/; max-age=31536000; SameSite=Lax";
-      } catch {}
-    }, [theme]);
-
-    useEffect(() => {
-      function onStorage(e) {
-        if (
-          e.key === "theme" &&
-          (e.newValue === "dark" || e.newValue === "light")
-        ) {
-          setThemeState(e.newValue);
-        }
-      }
-      window.addEventListener("storage", onStorage);
-      return () => window.removeEventListener("storage", onStorage);
-    }, []);
-
-    useEffect(() => {
-      if (typeof ensureCsrfToken === "function") {
-        ensureCsrfToken();
-      } else {
-        fetchJSON("/api/csrf/");
-      }
+      fetchJSON("/api/csrf/");
       loadMe({ force: false });
     }, []);
 
     useEffect(() => {
       const onPageShow = (event) => {
-        const stale =
-          Date.now() - meLastFetchTsRef.current > ME_MIN_FETCH_INTERVAL_MS;
+        const stale = Date.now() - meLastFetchTsRef.current > ME_MIN_FETCH_INTERVAL_MS;
         if (event.persisted && stale) {
           loadMe({ force: false });
         }
@@ -594,70 +305,35 @@
     }, []);
 
     useEffect(() => {
-      if (!authAlert) {
-        clearLockoutCountdown();
-        return;
-      }
-      if (authAlert.severity === "error" && !authAlert.detail?.includes("AXES lockout")) {
-        const timer = setTimeout(() => {
-          setAuthAlert(null);
-        }, 5000);
-        return () => clearTimeout(timer);
-      }
+      if (!authAlert) clearLockoutCountdown();
     }, [authAlert]);
 
     useEffect(() => {
       signInPathRef.current = isSignInPathFlow();
-      const path = (window.location.pathname || "").replace(/\/+$/, "");
-      const hash = window.location.hash || "";
-      if (path.includes("/verify-email") || hash.includes("verify-email")) {
-        setActiveTab("verify-email");
-        return;
-      }
-      const raw = window.location.hash.replace(/^#\/?/, "");
-      if (raw.startsWith("profile/mentor")) {
+      const raw = window.location.hash.replace("#", "");
+      if (raw.startsWith("sessions")) {
+        setActiveTab("sessions");
+        const m = raw.match(/sessions\/mentee\/(\d+)/);
+        setSessionsPairMenteeId(m ? parseInt(m[1], 10) : null);
+      } else if (raw.startsWith("profile/mentor")) {
         setActiveTab("profile");
         const m = raw.match(/profile\/mentor\/(\d+)/);
         setMentorProfileHashId(m ? parseInt(m[1], 10) : null);
-      } else if (resolveTabFromHash(raw)) {
-        setActiveTab(resolveTabFromHash(raw));
+      } else if (MAIN_TABS.some((tab) => tab.id === raw)) {
+        setActiveTab(raw);
       } else if (isSignInPathFlow()) {
         setActiveTab("signin");
       }
-
-      const onHashChange = () => {
-        const currentPath = (window.location.pathname || "").replace(/\/+$/, "");
-        const hashStr = window.location.hash.replace(/^#\/?/, "");
-        if (currentPath.includes("/verify-email") || hashStr.includes("verify-email")) {
-          setActiveTab("verify-email");
-          return;
-        }
-        if (hashStr.startsWith("profile/mentor")) {
-          setActiveTab("profile");
-          const m = hashStr.match(/profile\/mentor\/(\d+)/);
-          setMentorProfileHashId(m ? parseInt(m[1], 10) : null);
-        } else if (resolveTabFromHash(hashStr)) {
-          setActiveTab(resolveTabFromHash(hashStr));
-        }
-      };
-      window.addEventListener("hashchange", onHashChange);
-      return () => window.removeEventListener("hashchange", onHashChange);
     }, []);
 
     useEffect(() => {
       if (!authCheckDone) return;
-      const path = (window.location.pathname || "").replace(/\/+$/, "");
-      const hash = window.location.hash.replace(/^#\/?/, "");
-      if (path.includes("/verify-email") || hash.includes("verify-email") || activeTab === "verify-email") {
-        return;
-      }
+      const hash = window.location.hash.replace("#", "");
       const validTabs = [
         ...MAIN_TABS.map((t) => t.id),
-        ...((window.DashboardApp && window.DashboardApp.HIDDEN_TABS) || []).map(
-          (t) => t.id,
-        ),
         "signin",
         "signup",
+        "pending-approval",
       ];
       if (
         user &&
@@ -671,94 +347,23 @@
           "",
           `${window.location.pathname}#home`,
         );
+      } else if (hash.startsWith("sessions")) {
+        setActiveTab("sessions");
+        const m = hash.match(/sessions\/mentee\/(\d+)/);
+        setSessionsPairMenteeId(m ? parseInt(m[1], 10) : null);
       } else if (hash.startsWith("profile/mentor")) {
         setActiveTab("profile");
         const m = hash.match(/profile\/mentor\/(\d+)/);
         setMentorProfileHashId(m ? parseInt(m[1], 10) : null);
       } else if (validTabs.includes(hash)) {
         setActiveTab(hash);
-      } else if (resolveTabFromHash(hash)) {
-        setActiveTab(resolveTabFromHash(hash));
       }
     }, [authCheckDone, user]);
 
     useEffect(() => {
-      if (!authCheckDone || !user) return;
-      if (user.is_staff || user.role === "staff" || user.role === "coordinator") return;
-      const path = (window.location.pathname || "").replace(/\/+$/, "");
-      if (path.includes("/verify-email") || activeTab === "verify-email") return;
-
-      if (needsCompleteProfile(user)) {
-        if (activeTab !== "onboarding") {
-          setActiveTab("onboarding");
-          replaceAppUrl("onboarding");
-        }
-        return;
-      }
-
-      if (user.approval_status === "REJECTED") {
-        if (activeTab !== "account-rejected") {
-          setActiveTab("account-rejected");
-          replaceAppUrl("account-rejected");
-        }
-        return;
-      }
-
-      if (getIsPendingApproval(user)) {
-        const allowedTabs = new Set([
-          "pending-approval",
-          "account-pending",
-          "profile",
-          "settings",
-        ]);
-        if (!allowedTabs.has(activeTab)) {
-          setActiveTab("pending-approval");
-          replaceAppUrl("pending-approval");
-        }
-        return;
-      }
-    }, [authCheckDone, user, activeTab]);
-
-    useEffect(() => {
-      if (!authCheckDone) return;
-      const params = new URLSearchParams(window.location.search || "");
-      const role = params.get("role");
-      if (role === "mentor" || role === "mentee" || role === "staff") {
-        try {
-          sessionStorage.setItem("portalRole", role);
-        } catch {
-          /* ignore */
-        }
-      }
-      if (role === "staff" && activeTab === "signup") {
-        setActiveTab("signin");
-        replaceAppUrl("signin");
-      } else if (role === "mentor" || role === "mentee") {
-        if (activeTab === "signup") {
-          setSignUpForm((prev) => ({ ...prev, role }));
-        }
-      }
-    }, [authCheckDone, activeTab]);
-
-    useEffect(() => {
-      if (!authCheckDone || !authRequired) return;
-      // Role portal is only required when creating an account.
-      if (activeTab !== "signup") return;
-      const oauthError = String(
-        new URLSearchParams(window.location.search || "").get("oauth_error") ||
-          "",
-      ).toLowerCase();
-      if (oauthError === "account_exists") return;
-      if (!getPortalAuthRole()) {
-        window.location.replace("/portal/");
-      }
-    }, [authCheckDone, authRequired, activeTab]);
-
-    useEffect(() => {
       if (!authCheckDone) return;
       if (!authRequired) return;
-      const path = (window.location.pathname || "").replace(/\/+$/, "");
-      if (activeTab === "signin" || activeTab === "signup" || activeTab === "verify-email" || path.includes("/verify-email")) return;
+      if (activeTab === "signin" || activeTab === "signup") return;
       setActiveTab("signin");
       replaceAppUrl("signin");
     }, [authCheckDone, authRequired, activeTab]);
@@ -766,139 +371,30 @@
     useEffect(() => {
       if (!authCheckDone) return;
       const path = (window.location.pathname || "").replace(/\/+$/, "");
-      const search = window.location.search || "";
-      const normalizedSearch = search.replace(/^\?/, "");
       const hasOauthParams =
-        /(?:^|&)oauth=/.test(normalizedSearch) ||
-        /(?:^|&)role_required=/.test(normalizedSearch) ||
-        /(?:^|&)oauth_error=/.test(normalizedSearch) ||
-        /(?:^|&)activated=/.test(normalizedSearch) ||
-        /(?:^|&)activation_error=/.test(normalizedSearch);
-      const authPathVariant =
-        path.endsWith("/app/signin") || path.endsWith("/app/signup");
+        /(?:^|&)oauth=/.test((window.location.search || "").replace(/^\?/, "")) ||
+        /(?:^|&)role_required=/.test((window.location.search || "").replace(/^\?/, ""));
+      const authPathVariant = path.endsWith("/app/signin") || path.endsWith("/app/signup");
       if (!hasOauthParams && !authPathVariant) return;
 
-      const oauthError = new URLSearchParams(normalizedSearch).get(
-        "oauth_error",
-      );
-      if (oauthError) {
-        const code = String(oauthError).toLowerCase();
-        if (code === "account_exists" && activeTab !== "signup") {
-          setActiveTab("signup");
-        } else if (code === "no_account" && activeTab !== "signin") {
-          setActiveTab("signin");
-        }
-        return;
-      }
-
       if (authRequired || !user) {
-        // Keep OAuth query params only while on Sign In so the page can show the right UI state.
-        if (hasOauthParams) {
-          if (activeTab === "signup") {
-            replaceAppUrl("signup");
-            return;
-          }
-          window.history.replaceState(null, "", `/app/signin${search}`);
-          if (activeTab !== "signin") setActiveTab("signin");
-          return;
-        }
-        replaceAppUrl(activeTab === "signup" ? "signup" : "signin");
-        return;
-      }
-
-      if (needsCompleteProfile(user)) {
-        replaceAppUrl("onboarding");
+        replaceAppUrl("signin");
         return;
       }
 
       if (getIsPendingApproval(user)) {
-        replaceAppUrl(getPendingApprovalLandingTab(user));
+        replaceAppUrl("pending-approval");
         return;
       }
 
       const validTabIds = new Set([
         ...MAIN_TABS.map((t) => t.id),
-        ...((window.DashboardApp && window.DashboardApp.HIDDEN_TABS) || []).map(
-          (t) => t.id,
-        ),
         "complete-profile",
         "settings",
+        "notifications",
       ]);
       replaceAppUrl(validTabIds.has(activeTab) ? activeTab : "home");
     }, [authCheckDone, authRequired, user, activeTab]);
-
-    useEffect(() => {
-      if (!authCheckDone) return;
-      const params = new URLSearchParams(window.location.search || "");
-      const oauthError = (params.get("oauth_error") || "").toLowerCase();
-      if (!oauthError) return;
-
-      if (oauthError === "institutional_email") {
-        setAuthAlert({
-          severity: "error",
-          title: "Google sign-in blocked",
-          message:
-            "Use your institutional email account to continue with Google sign-in.",
-        });
-      } else if (oauthError === "missing_email") {
-        setAuthAlert({
-          severity: "error",
-          title: "Google sign-in failed",
-          message:
-            "We could not read your Google account email. Try another Google account.",
-        });
-      } else if (oauthError === "no_account") {
-        setActiveTab("signin");
-        setAuthAlert({
-          severity: "error",
-          code: "no_account",
-          title: "No Account Found",
-          message:
-            "No account found with this email. Please complete the manual registration first.",
-        });
-      } else if (oauthError === "account_exists") {
-        setActiveTab("signup");
-        setAuthAlert({
-          severity: "warning",
-          code: "account_exists",
-          title: "Account Already Exists",
-          message:
-            "An account is already registered with this Google email. Would you like to log in instead?",
-        });
-      } else {
-        return;
-      }
-
-      if (oauthError === "account_exists") {
-        replaceAppUrl("signup");
-      } else {
-        replaceAppUrl("signin");
-      }
-    }, [authCheckDone]);
-
-    useEffect(() => {
-      if (!authCheckDone) return;
-      const params = new URLSearchParams(window.location.search || "");
-      const activated = (params.get("activated") || "").toLowerCase();
-      const activationError = (
-        params.get("activation_error") || ""
-      ).toLowerCase();
-
-      const isTruthy = (v) => ["1", "true", "yes", "on"].includes(v);
-      if (isTruthy(activated)) {
-        setAuthAlert({
-          severity: "success",
-          title: "Account activated",
-          message: "Your account has been activated. You can log in now.",
-        });
-      } else if (isTruthy(activationError)) {
-        setAuthAlert({
-          severity: "error",
-          title: "Activation failed",
-          message: "Activation link is invalid or expired.",
-        });
-      }
-    }, [authCheckDone]);
 
     useEffect(() => {
       const onHashChange = () => {
@@ -907,6 +403,10 @@
           setActiveTab("profile");
           const m = hash.match(/profile\/mentor\/(\d+)/);
           setMentorProfileHashId(m ? parseInt(m[1], 10) : null);
+        } else if (hash.startsWith("sessions")) {
+          setActiveTab("sessions");
+          const m = hash.match(/sessions\/mentee\/(\d+)/);
+          setSessionsPairMenteeId(m ? parseInt(m[1], 10) : null);
         }
       };
       window.addEventListener("hashchange", onHashChange);
@@ -915,89 +415,29 @@
 
     useEffect(() => {
       if (!authCheckDone) return;
-      const currentPath = (window.location.pathname || "").replace(/\/+$/, "");
-      if (activeTab === "verify-email" || currentPath.includes("/verify-email")) {
-        return;
-      }
-      if (activeTab === "profile" && mentorProfileHashId) {
+      if (activeTab === "sessions") {
+        window.location.hash = sessionsPairMenteeId
+          ? `sessions/mentee/${sessionsPairMenteeId}`
+          : "sessions";
+      } else if (activeTab === "profile" && mentorProfileHashId) {
         window.location.hash = `profile/mentor/${mentorProfileHashId}`;
-      } else if (activeTab === "signin" || activeTab === "signup") {
-        replaceAppUrl(activeTab);
       } else {
-        const currentHash = window.location.hash.replace("#", "");
-        // Keep in-page deep links such as "settings/password" intact.
-        if (
-          currentHash !== activeTab &&
-          !currentHash.startsWith(`${activeTab}/`)
-        ) {
-          window.location.hash = activeTab;
-        }
+        window.location.hash = activeTab;
       }
-    }, [activeTab, authCheckDone, mentorProfileHashId]);
+    }, [activeTab, authCheckDone, sessionsPairMenteeId, mentorProfileHashId]);
 
     useEffect(() => {
       if (!authCheckDone || !user) return;
-      if (user.is_onboarded === true && activeTab === "onboarding") {
-        setActiveTab("matching");
-        return;
-      }
-      if (needsCompleteProfile(user)) {
-        if (activeTab !== "onboarding") {
-          setActiveTab("onboarding");
-        }
-        return;
-      }
       if (!getIsPendingApproval(user)) return;
       const allowedPendingTabs = new Set([
-        "onboarding",
+        "pending-approval",
         "complete-profile",
-        "mentoring-preferences",
-        "mentor-matching-profile",
         "settings",
       ]);
       if (!allowedPendingTabs.has(activeTab)) {
-        setActiveTab(getPendingApprovalLandingTab(user));
+        setActiveTab("pending-approval");
       }
     }, [authCheckDone, user, activeTab]);
-
-    useEffect(() => {
-      if (!authCheckDone || !user) return;
-      if (window.DashboardApp.FEATURE_NEWSFEED) return;
-      if (activeTab === "newsfeed") {
-        setActiveTab("home");
-      }
-    }, [authCheckDone, user, activeTab]);
-
-    useEffect(() => {
-      if (!authCheckDone || !user) return;
-      const isStaff = !!(
-        user.is_staff ||
-        user.role === "staff" ||
-        user.role === "coordinator"
-      );
-      if (!isStaff) return;
-      if (activeTab === "onboarding" || activeTab === "complete-profile") {
-        setActiveTab("home");
-        replaceAppUrl("home");
-        return;
-      }
-      // Staff do not have an own Profile page; keep mentor/user profile views.
-      if (
-        activeTab === "profile" &&
-        !viewedMentorProfile &&
-        !viewedUserProfile &&
-        !mentorProfileHashId
-      ) {
-        setActiveTab("settings");
-      }
-    }, [
-      authCheckDone,
-      user,
-      activeTab,
-      viewedMentorProfile,
-      viewedUserProfile,
-      mentorProfileHashId,
-    ]);
 
     useEffect(() => {
       document.title = "PeerLink";
@@ -1016,44 +456,41 @@
     }, [showMenteeInfoModal, showMentorInfoModal]);
 
     useEffect(() => {
-      if (!authCheckDone || !user) return;
+      if (activeTab === "sessions" && sessionsData === null) loadSessions();
       if (
-        (activeTab === "home" || activeTab === "mentees") &&
-        user.role === "mentor"
-      ) {
-        loadMentorRequests();
-      }
+        activeTab === "home" &&
+        user?.role === "mentee" &&
+        sessionsData === null
+      )
+        loadSessions();
       if (
-        (activeTab === "matching" || activeTab === "home") &&
-        user.role === "mentee"
-      ) {
-        loadMyMentor({ role: "mentee" });
-      }
-      if (activeTab === "home" && user.role === "mentee") {
-        loadMenteeRecommendations();
-      }
+        activeTab === "home" &&
+        user?.role === "mentor" &&
+        sessionsData === null
+      )
+        loadSessions();
+      if (activeTab === "home" && user?.role === "mentor") loadMentorRequests();
       if (
-        (activeTab === "home" || activeTab === "matching") &&
-        (user.role === "staff" || user.is_staff)
+        (activeTab === "home" || activeTab === "sessions") &&
+        user?.role === "mentee" &&
+        !myMentor
       ) {
-        loadAdminPairings();
+        loadMyMentor();
       }
       if (activeTab === "announcements" && !announcementsLoaded)
         loadAnnouncements();
-      if (activeTab === "matching" || activeTab === "mentees") {
-        if (
-          prevActiveTabRef.current !== "matching" &&
-          prevActiveTabRef.current !== "mentees"
-        ) {
-          if (user.role === "mentor") loadMentorRequests();
+      if (activeTab === "matching") {
+        if (prevActiveTabRef.current !== "matching") {
+          if (user?.role === "mentor") loadMentorRequests();
+          if (user?.role === "mentee") loadMyMentor();
         }
+        prevActiveTabRef.current = "matching";
+      } else {
+        prevActiveTabRef.current = activeTab;
       }
-      prevActiveTabRef.current = activeTab;
       if (activeTab === "notifications") {
         loadNotifications();
-      }
-      if (activeTab === "newsfeed" && !postsFeedLoaded) {
-        loadPostsFeed(0);
+        setNotificationsVisited(true);
       }
       if (
         activeTab === "profile" &&
@@ -1066,29 +503,54 @@
       }
       if (activeTab !== "profile" && viewedUserProfile)
         setViewedUserProfile(null);
+      if (activeTab === "subjects" && user?.is_staff && !subjectsLoaded)
+        loadSubjects();
       if (activeTab === "approvals" && user?.is_staff) loadApprovals();
     }, [
       activeTab,
-      authCheckDone,
-      user,
       user?.role,
       user?.is_staff,
+      subjectsLoaded,
+      sessionsData,
+      myMentor,
       mentorProfileHashId,
       viewedMentorProfile,
-      postsFeedLoaded,
     ]);
 
-    // Disabled aggressive window-focus refetching so tab switches do not trigger
-    // full API re-queries or disruptive loading spinners (refetchOnWindowFocus: false).
+    useEffect(() => {
+      if (!notificationsVisited) return;
+      if (activeTab === "notifications") return;
+      (async () => {
+        await fetchJSON("/api/notifications/mark-all-read/", {
+          method: "POST",
+          headers: { "X-CSRFToken": getCookie("csrftoken") },
+        });
+        setUnreadCount(0);
+        setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
+        setNotificationsVisited(false);
+      })();
+    }, [activeTab, notificationsVisited]);
 
+    useEffect(() => {
+      if (!user) return;
+      const onFocus = () => {
+        if (document.visibilityState !== "visible") return;
+        const stale = Date.now() - meLastFetchTsRef.current > ME_MIN_FETCH_INTERVAL_MS;
+        if (stale) loadMe({ force: false });
+      };
+      window.addEventListener("focus", onFocus);
+      return () => window.removeEventListener("focus", onFocus);
+    }, [user]);
+
+    async function refreshQuestionnaireOptions() {
+      const result = await fetchJSON("/api/questionnaire/options/");
+      if (!result.ok) return;
+      setQuestionnaireOptions(result.data || {});
+    }
 
     async function loadMe(options = {}) {
       const force = !!options.force;
-      if (
-        !force &&
-        user &&
-        Date.now() - meLastFetchTsRef.current < ME_MIN_FETCH_INTERVAL_MS
-      ) {
+      if (!force && user && Date.now() - meLastFetchTsRef.current < ME_MIN_FETCH_INTERVAL_MS) {
         return;
       }
       if (meInFlightRef.current) {
@@ -1097,46 +559,21 @@
 
       const requestPromise = fetchJSON(force ? "/api/me/?force=1" : "/api/me/");
       meInFlightRef.current = requestPromise;
-      const optionsPromise = loadQuestionnaireOptions();
-      const [result] = await Promise.all([requestPromise, optionsPromise]);
+      const result = await requestPromise;
       meInFlightRef.current = null;
+      setAuthCheckDone(true);
       if (!result.ok) {
-        setUser(null);
-        if (result.status === 403 && result.data?.code === "email_not_verified") {
-          setAuthAlert({
-            severity: "warning",
-            code: "email_not_verified",
-            title: "Email verification required",
-            message: result.data.error,
-            email: result.data.email || "",
-          });
+        if (result.status === 401 || result.status === 403) {
+          clearAuthTokens();
         }
         setAuthRequired(true);
-        setActiveTab((prev) => {
-          const currentPath = (window.location.pathname || "").replace(/\/+$/, "");
-          const currentHash = window.location.hash || "";
-          if (
-            prev === "verify-email" ||
-            currentPath.includes("/verify-email") ||
-            currentHash.includes("verify-email")
-          ) {
-            return "verify-email";
-          }
-          return prev === "signup" ? "signup" : "signin";
-        });
-        setAuthCheckDone(true);
-        return null;
+        setMustChangePassword(false);
+        setSessionsData(null);
+        setActiveTab((prev) => (prev === "signup" ? "signup" : "signin"));
+        return;
       }
       meLastFetchTsRef.current = Date.now();
-      if (result.data.access_token) {
-        setAccessToken(result.data.access_token);
-        try {
-          window.sessionStorage.setItem(
-            "peerlink_access_token",
-            result.data.access_token,
-          );
-        } catch (_) {}
-      }
+      await refreshQuestionnaireOptions();
       const unapproved = getIsPendingApproval(result.data);
       setUser(result.data);
       setStats(result.data.stats);
@@ -1151,7 +588,7 @@
       if (result.data.mentee_info) {
         const info = result.data.mentee_info || {};
         setMenteeProfile({
-          program: info.program || "BSIT",
+          program: info.program || "",
           year_level: Number(info.year_level || 0),
           campus: info.campus || "",
           student_id_no: info.student_id_no || "",
@@ -1165,129 +602,68 @@
         const mentorSubjects = Array.isArray(info.subjects)
           ? [...info.subjects]
           : [];
-        const mentorTopics = Array.isArray(info.topics) ? [...info.topics] : [];
-        const nextMentorProfile = {
+        const mentorTopics = filterTopicsForSubjects(
+          mentorSubjects,
+          info.topics,
+        );
+        setMentorProfile({
           subjects: mentorSubjects,
           topics: mentorTopics,
-          competency_ids: Array.isArray(info.competency_ids)
-            ? [...info.competency_ids]
-            : [],
-          competency_levels:
-            info.competency_levels && typeof info.competency_levels === "object"
-              ? { ...info.competency_levels }
-              : {},
           expertise_level:
             info.expertise_level != null ? info.expertise_level : null,
-          years_experience:
-            info.years_experience != null
-              ? Number(info.years_experience)
-              : null,
-          teaching_experience_years:
-            info.teaching_experience_years != null
-              ? Number(info.teaching_experience_years)
-              : null,
           role: info.role || "",
-          capacity: 5,
+          capacity:
+            info.capacity != null
+              ? Math.max(1, Math.min(5, Number(info.capacity)))
+              : 3,
           gender: info.gender || "",
-          year_level: Number(info.year_level || 0),
-          program: info.program || "BSIT",
-          student_id_no: info.student_id_no || "",
           availability: Array.isArray(info.availability)
             ? [...info.availability]
             : [],
-        };
-        lastSavedMentorProfileRef.current = cloneJson(nextMentorProfile);
-        if (!unsavedChangesDirtyRef.current) {
-          setMentorProfile(nextMentorProfile);
-        }
+        });
       }
       if (result.data.mentee_matching) {
         const mm = result.data.mentee_matching || {};
         const menteeSubjects = Array.isArray(mm.subjects)
           ? [...mm.subjects]
           : [];
-        const menteeTopics = Array.isArray(mm.topics) ? [...mm.topics] : [];
-        const nextMenteeMatching = {
+        const menteeTopics = filterTopicsForSubjects(menteeSubjects, mm.topics);
+        setMenteeMatching({
           subjects: menteeSubjects,
           topics: menteeTopics,
-          competency_ids: Array.isArray(mm.competency_ids)
-            ? [...mm.competency_ids]
-            : [],
-          competency_needs:
-            mm.competency_needs && typeof mm.competency_needs === "object"
-              ? { ...mm.competency_needs }
-              : {},
           difficulty_level:
             mm.difficulty_level != null ? mm.difficulty_level : null,
-          preferred_learning_style: mm.preferred_learning_style || "",
           availability: Array.isArray(mm.availability)
             ? [...mm.availability]
             : [],
-        };
-        lastSavedMenteeMatchingRef.current = cloneJson(nextMenteeMatching);
-        if (!unsavedChangesDirtyRef.current) {
-          setMenteeMatching(nextMenteeMatching);
-        }
+        });
       }
       const isMentee = result.data.role === "mentee";
       const isMentor = result.data.role === "mentor";
       const generalCompleted = !!result.data.mentee_general_info_completed;
       const mentorQCompleted = !!result.data.mentor_questionnaire_completed;
-      setShowMenteeInfoModal(false);
-      setShowMentorInfoModal(false);
+      setShowMenteeInfoModal(!unapproved && isMentee && !generalCompleted);
+      setShowMentorInfoModal(!unapproved && isMentor && !mentorQCompleted);
       setAuthRequired(false);
-      if (needsCompleteProfile(result.data)) {
-        setActiveTab("onboarding");
-        setAuthCheckDone(true);
-        return result.data;
+      setMustChangePassword(!!result.data.force_password_change);
+      if (result.data.force_password_change) {
+        setActiveTab("home");
       }
       if (unapproved) {
         setAuthAlert({
           severity: "warning",
           title: "Account pending approval",
           message:
-            "Review or complete your information below, then wait for coordinator approval.",
+            "Complete your required information, then wait for coordinator approval.",
         });
-        setActiveTab(getPendingApprovalLandingTab(result.data));
-        if (result.data.role === "mentee") {
-          loadMyMentor({ role: "mentee" });
-        }
-        setAuthCheckDone(true);
-        return result.data;
+        setActiveTab("pending-approval");
+        return;
       }
-      const requiredOnboardingTab =
-        !result.data.is_onboarded &&
-        (((isMentee && !generalCompleted) || (isMentor && !mentorQCompleted))
-          ? "onboarding"
-          : isMentee &&
-              !(
-                result.data.mentee_questionnaire_completed ??
-                result.data.questionnaire_completed
-              )
-            ? "onboarding"
-            : null);
-      setActiveTab((prev) => {
-        const currentPath = (window.location.pathname || "").replace(/\/+$/, "");
-        const currentHash = window.location.hash || "";
-        if (
-          prev === "verify-email" ||
-          currentPath.includes("/verify-email") ||
-          currentHash.includes("verify-email")
-        ) {
-          return "verify-email";
-        }
-        return ["signin", "signup"].includes(prev)
-          ? requiredOnboardingTab || "home"
-          : requiredOnboardingTab || prev;
-      });
-      if (result.data.role === "mentee") {
-        loadMyMentor({ role: "mentee" });
-      }
-      if (result.data.role === "staff" || result.data.is_staff) {
-        loadAdminPairings();
-      }
-      setAuthCheckDone(true);
-      return result.data;
+      setActiveTab((prev) =>
+        ["signin", "signup", "pending-approval"].includes(prev)
+          ? "home"
+          : prev,
+      );
     }
 
     async function runMatching() {
@@ -1311,69 +687,19 @@
       setMatchingLoading(false);
     }
 
-    async function loadAdminPairings() {
-      if (adminPairingsInFlightRef.current) {
-        return adminPairingsInFlightRef.current;
-      }
-      setAdminPairingsLoading(true);
-      const p = (async () => {
-        try {
-          const result = await fetchJSON("/api/matching/admin-pairings/");
-          if (result.ok && result.data && Array.isArray(result.data.results)) {
-            setAdminPairings(result.data.results);
-          } else {
-            setAdminPairings([]);
-          }
-        } catch (err) {
-          console.error("Failed to load admin pairings:", err);
-          setAdminPairings([]);
-        } finally {
-          adminPairingsInFlightRef.current = null;
-          setAdminPairingsLoading(false);
-        }
-      })();
-      adminPairingsInFlightRef.current = p;
-      return p;
-    }
-
     async function loadMentorRequests() {
-      if (mentorRequestsInFlightRef.current) {
-        return mentorRequestsInFlightRef.current;
-      }
       setMentorRequestsLoading(true);
-      const p = (async () => {
-        try {
-          const result = await fetchJSON("/api/matching/mentor-requests/");
-          if (result.ok) setMentorRequests(result.data.results || []);
-          else setMentorRequests([]);
-        } finally {
-          mentorRequestsInFlightRef.current = null;
-          setMentorRequestsLoading(false);
-        }
-      })();
-      mentorRequestsInFlightRef.current = p;
-      return p;
+      const result = await fetchJSON("/api/matching/mentor-requests/");
+      if (result.ok) setMentorRequests(result.data.results || []);
+      else setMentorRequests([]);
+      setMentorRequestsLoading(false);
     }
 
-    async function loadMyMentor(options = {}) {
-      const role = options.role || user?.role;
-      if (role !== "mentee" && role !== "both") return;
+    async function loadMyMentor() {
+      if (!user || user.role !== "mentee") return;
       const result = await fetchJSON("/api/matching/my-mentor/");
-      if (result.ok) {
-        const mentor = result.data.mentor || null;
-        const mentors = Array.isArray(result.data.mentors)
-          ? result.data.mentors
-          : (mentor ? [mentor] : []);
-        setMyMentor(mentor);
-        setMyMentors(mentors);
-        setMenteePairingsCount(result.data.paired_count ?? mentors.length);
-        setChosenMentorId(mentor?.id ?? null);
-      } else {
-        setMyMentor(null);
-        setMyMentors([]);
-        setMenteePairingsCount(0);
-        setChosenMentorId(null);
-      }
+      if (result.ok) setMyMentor(result.data.mentor || null);
+      else setMyMentor(null);
     }
 
     async function loadMentorProfileByUserId(userId) {
@@ -1413,22 +739,14 @@
       });
       setAcceptMenteeLoading(null);
       if (!result.ok) {
-        const err = result.data?.error || "Failed to accept mentee.";
-        setError(err);
-        addToast({
-          title: "Accept Failed",
-          message: err,
-          type: "error",
-        });
+        setError(result.data?.error || "Failed to accept mentee.");
         return;
       }
-      addToast({
-        title: "Mentee Accepted",
-        message: "You have accepted the mentee pairing request.",
-        type: "success",
-      });
+      addToast("Mentee accepted. Opening their sessions page.");
       loadMentorRequests();
-      setActiveTab("matching");
+      loadSessions();
+      setSessionsPairMenteeId(menteeId);
+      setActiveTab("sessions");
     }
 
     async function loadMenteeRecommendations(limit) {
@@ -1441,37 +759,29 @@
       } else {
         setMenteeRecLoading(true);
       }
-      const url =
-        typeof limit === "number" && limit > 0
-          ? `/api/matching/recommendations/?limit=${limit}`
-          : "/api/matching/recommendations/";
+      setError("");
+      const params = new URLSearchParams();
+      if (limit) params.set("limit", String(limit));
+      const url = params.toString()
+        ? `/api/matching/mentee-recommendations/?${params.toString()}`
+        : "/api/matching/mentee-recommendations/";
       const result = await fetchJSON(url);
       if (!result.ok) {
-        setMenteeRecommendations([]);
-        setPendingMentorIds([]);
+        setError(
+          result.data?.error || "Unable to load mentor recommendations.",
+        );
         setMenteeRecMeta({
-          empty_reason: result.data?.empty_reason || null,
-          message:
-            result.data?.message ||
-            result.data?.error ||
-            "Unable to load mentor recommendations.",
-          suggested_time_slots: Array.isArray(
-            result.data?.suggested_time_slots,
-          )
-            ? result.data.suggested_time_slots
-            : [],
+          empty_reason: null,
+          message: "",
+          suggested_time_slots: [],
           from_cache: false,
           elapsed_ms: 0,
-          paired_mentors_count: 0,
-          max_mentors_limit: 2,
-          can_request_pairing: true,
         });
         setMenteeRecLoading(false);
         setMenteeRecUpdating(false);
         return;
       }
       setMenteeRecommendations(result.data.results || []);
-      setPendingMentorIds(result.data.pending_mentor_ids || []);
       setMenteeRecMeta({
         empty_reason: result.data.empty_reason || null,
         message: result.data.message || "",
@@ -1483,27 +793,14 @@
           typeof result.data.elapsed_ms === "number"
             ? result.data.elapsed_ms
             : 0,
-        paired_mentors_count: result.data.paired_mentors_count ?? 0,
-        max_mentors_limit: 2,
-        can_request_pairing: result.data.can_request_pairing ?? true,
       });
       setMenteeRecLoading(false);
       setMenteeRecUpdating(false);
     }
 
     async function chooseMentor(mentorId) {
-      if (!user || user.role !== "mentee") return { ok: false };
+      if (!user || user.role !== "mentee") return;
       setError("");
-      if (myMentors.length >= 2 || (menteeRecMeta && menteeRecMeta.can_request_pairing === false)) {
-        const limitMsg = "You have reached the maximum allowed mentor pairings (2). You cannot request pairing with additional mentors.";
-        setError(limitMsg);
-        addToast({
-          title: "Pairing Limit Reached",
-          message: limitMsg,
-          type: "warning",
-        });
-        return { ok: false, code: "mentee_max_pairings_reached", error: limitMsg };
-      }
       const result = await fetchJSON("/api/matching/mentee-choose-mentor/", {
         method: "POST",
         headers: { "X-CSRFToken": getCookie("csrftoken") },
@@ -1512,105 +809,50 @@
       if (!result.ok) {
         const message = result.data?.error || "Unable to choose this mentor.";
         setError(message);
-        addToast({
-          title: "Request Failed",
-          message: message,
-          type: "error",
-        });
-        return { ok: false, code: result.data?.code || null, error: message };
+        if (window.Swal && typeof window.Swal.fire === "function")
+          window.Swal.fire("Unable to connect mentor", message, "error");
+        return;
       }
-      if (result.data?.accepted) {
-        const successMessage = "Mentor matched successfully.";
-        setAuthMessage(successMessage);
-        addToast({
-          title: "Mentor Matched",
-          message: successMessage,
-          type: "success",
-        });
-        setChosenMentorId(mentorId);
-        await loadMyMentor();
-      } else {
-        const successMessage =
-          result.data?.message ||
-          "Pairing request sent to mentor. Waiting for mentor acceptance.";
-        setAuthMessage(successMessage);
-        addToast({
-          title: "Request Sent",
-          message: successMessage,
-          type: "success",
-        });
-        setPendingMentorIds((prev) =>
-          prev.includes(mentorId) ? prev : [...prev, mentorId],
-        );
-      }
-      await loadMenteeRecommendations();
+      const successMessage = "Mentor matched successfully. You can now schedule sessions.";
+      setAuthMessage(successMessage);
+      if (window.Swal && typeof window.Swal.fire === "function")
+        window.Swal.fire("Mentor matched", successMessage, "success");
+      setChosenMentorId(mentorId);
+      loadMyMentor();
+      loadSessions();
       loadMentorRequests();
-      return { ok: true, accepted: !!result.data?.accepted, request_sent: true };
     }
 
     async function handleSignIn() {
-      if (isLockedOut) return;
       setError("");
       setAuthMessage("");
       clearLockoutCountdown();
       setAuthAlert(null);
-
-      if (!signInForm.identifier?.trim() || !signInForm.password) {
-        const guidanceMsg =
-          !signInForm.identifier?.trim() && !signInForm.password
-            ? "Please enter your username or BukSU email and password."
-            : !signInForm.identifier?.trim()
-              ? "Please enter your username or BukSU email."
-              : "Please enter your password.";
-        addToast({
-          title: "Missing Credentials",
-          message: guidanceMsg,
-          type: "warning",
-        });
-        setError(guidanceMsg);
-        return;
-      }
-
       setSignInLoading(true);
       try {
-        const loginBody = { ...signInForm };
-
         const result = await fetchJSON("/api/auth/login/", {
           method: "POST",
           headers: { "X-CSRFToken": getCookie("csrftoken") },
-          body: JSON.stringify(loginBody),
+          body: JSON.stringify(signInForm),
         });
 
-        // Handle login attempt limit (429 Too Many Requests / 423 Locked)
-        if (result.status === 429 || result.status === 423) {
+        // Handle login attempt limit (429 Too Many Requests)
+        if (result.status === 429) {
           const lockoutData = result.data || {};
-          const attemptsCount = lockoutData.attempts || 5;
+          const attemptsCount = lockoutData.attempts || 0;
           const failureLimit = lockoutData.failure_limit || 5;
           const remainingMinutes = lockoutData.remaining_minutes || 1;
-          const penaltyMinutes =
-            lockoutData.penalty_minutes || remainingMinutes;
 
-          // Parse unlock_time / locked_until from response, or calculate from cooloff_seconds / remaining_minutes
+          // Parse locked_until from response, or calculate from remaining_minutes
           let lockedUntilTime = null;
-          let unlockIso = lockoutData.unlock_time || lockoutData.locked_until;
-          if (unlockIso) {
-            lockedUntilTime = new Date(unlockIso);
-          } else if (typeof lockoutData.cooloff_seconds === "number") {
-            lockedUntilTime = new Date(Date.now() + lockoutData.cooloff_seconds * 1000);
-            unlockIso = lockedUntilTime.toISOString();
+          if (lockoutData.locked_until) {
+            lockedUntilTime = new Date(lockoutData.locked_until);
           } else if (remainingMinutes > 0) {
+            // Fallback: calculate from remaining_minutes
             lockedUntilTime = new Date(
               Date.now() + remainingMinutes * 60 * 1000,
             );
-            unlockIso = lockedUntilTime.toISOString();
           }
-
-          if (unlockIso) {
-            try {
-              localStorage.setItem("peerlink_lockout_until", unlockIso);
-            } catch (e) {}
-          }
-          setIsLockedOut(true);
 
           // Set up countdown timer for real-time updates
           function updateCountdown() {
@@ -1649,7 +891,7 @@
               prev
                 ? {
                     ...prev,
-                    detail: `AXES lockout: ${attemptsCount} of ${failureLimit} failed login attempt(s). Retry in ${remainingMinutes} minute(s) (${timeDisplay} / ${timeStr}).`,
+                    detail: `⏱️ Retry available: ${timeDisplay} (${timeStr})`,
                   }
                 : null,
             );
@@ -1657,10 +899,6 @@
             // If penalty has expired, auto-poll to check if it's been lifted
             if (diffMs <= 0) {
               clearLockoutCountdown();
-              try {
-                localStorage.removeItem("peerlink_lockout_until");
-              } catch (e) {}
-              setIsLockedOut(false);
               // Poll once to confirm lockout is lifted
               fetchJSON("/api/auth/check-lockout/", {
                 method: "POST",
@@ -1682,9 +920,9 @@
 
           setAuthAlert({
             severity: "error",
-            title: "Account temporarily locked by AXES",
+            title: "Account temporarily locked",
             message: "Too many failed login attempts.",
-            detail: `AXES locked this account after ${attemptsCount} failed attempt(s) out of ${failureLimit}. Lockout duration: ${penaltyMinutes} minute(s).`,
+            detail: `⏱️ Retry available: checking...`,
             attempts: `${attemptsCount} of ${failureLimit}`,
           });
 
@@ -1696,56 +934,14 @@
             lockoutData.detail ||
               "Account locked due to too many failed attempts.",
           );
-          addToast({
-            title: "Account Locked",
-            message: "Too many failed attempts. Please wait for the lockout countdown.",
-            type: "error",
-          });
-          return;
-        }
-
-        if (result.status === 403 && result.data?.must_change_password) {
-          window.location.replace("/accounts/settings/?must_change_password=1");
-          return;
-        }
-
-        if (result.status === 403 && result.data?.error) {
-          const errText = result.data.error;
-          const isEmailVerification =
-            result.data.code === "email_not_verified" ||
-            errText.toLowerCase().includes("verify your buksu email");
-
-          setUser(null);
-          setError(errText);
-          setAuthAlert({
-            severity: isEmailVerification ? "warning" : "error",
-            code: isEmailVerification ? "email_not_verified" : undefined,
-            title: isEmailVerification
-              ? "Email verification required"
-              : "Cannot sign in with this role",
-            message: errText,
-            email: result.data.email || signInForm.identifier,
-          });
-          addToast({
-            title: isEmailVerification ? "Verification Required" : "Sign In Blocked",
-            message: errText,
-            type: isEmailVerification ? "warning" : "error",
-          });
           return;
         }
 
         if (!result.ok) {
-          setUser(null);
           const errorMsg = result.data?.error || "Unable to sign in.";
           setError(errorMsg);
 
           // Show warning for regular failed attempts (before lockout)
-          if (result.data?.must_change_password) {
-            window.location.replace(
-              "/accounts/settings/?must_change_password=1",
-            );
-            return;
-          }
           if (result.status === 401 || result.status === 400) {
             const attemptData = result.data || {};
             if (
@@ -1761,21 +957,11 @@
                   message: "Invalid credentials.",
                   detail: `You have ${remaining} attempt(s) remaining before your account is locked.`,
                 });
-                addToast({
-                  title: "Invalid Credentials",
-                  message: `Login failed. ${remaining} attempt(s) remaining before lockout.`,
-                  type: "warning",
-                });
               } else {
                 setAuthAlert({
                   severity: "error",
                   title: "Login failed",
                   message: errorMsg,
-                });
-                addToast({
-                  title: "Login Failed",
-                  message: errorMsg,
-                  type: "error",
                 });
               }
             } else {
@@ -1784,11 +970,6 @@
                 title: "Login failed",
                 message: errorMsg,
               });
-              addToast({
-                title: "Login Failed",
-                message: errorMsg,
-                type: "error",
-              });
             }
           } else {
             setAuthAlert({
@@ -1796,37 +977,60 @@
               title: "Login failed",
               message: errorMsg,
             });
-            addToast({
-              title: "Login Failed",
-              message: errorMsg,
-              type: "error",
-            });
           }
           return;
         }
         clearLockoutCountdown();
-        try {
-          localStorage.removeItem("peerlink_lockout_until");
-        } catch (e) {}
-        setIsLockedOut(false);
         setAuthAlert(null);
-        const profile = await loadMe({ force: true });
-        if (!profile) return;
-        const displayName = profile.first_name || profile.username || "User";
-        addToast({
-          title: "Welcome back!",
-          message: `Signed in successfully as ${displayName}.`,
-          type: "success",
-        });
-        if (needsCompleteProfile(profile)) {
-          setActiveTab("onboarding");
-          replaceAppUrl("onboarding");
-        } else {
-          setActiveTab("home");
-          replaceAppUrl("home");
+        if (result.data?.access_token) {
+          setAuthToken(result.data.access_token);
         }
+        if (result.data?.refresh_token) {
+          setRefreshToken(result.data.refresh_token);
+        }
+        setMustChangePassword(!!result.data?.force_password_change);
+        await loadMe({ force: true });
+        setActiveTab("home");
       } finally {
         setSignInLoading(false);
+      }
+    }
+
+    async function handleForcePasswordChange() {
+      setError("");
+      setAuthMessage("");
+      setForcePasswordLoading(true);
+      try {
+        const result = await fetchJSON("/api/me/password-force-change/", {
+          method: "POST",
+          headers: { "X-CSRFToken": getCookie("csrftoken") },
+          body: JSON.stringify(forcePasswordForm),
+        });
+        if (!result.ok) {
+          const errs = result.data?.errors;
+          const message =
+            errs && typeof errs === "object"
+              ? Object.values(errs).flat().filter(Boolean).map(String).join(" ")
+              : result.data?.error || "Unable to update password.";
+          setError(message);
+          if (window.Swal && typeof window.Swal.fire === "function") {
+            window.Swal.fire("Action failed", message, "error");
+          }
+          return;
+        }
+        setForcePasswordForm({
+          current_password: "",
+          new_password1: "",
+          new_password2: "",
+        });
+        setMustChangePassword(false);
+        setAuthMessage(result.data?.message || "Password updated successfully.");
+        await loadMe({ force: true });
+        if (window.Swal && typeof window.Swal.fire === "function") {
+          window.Swal.fire("Success", result.data?.message || "Password updated successfully.", "success");
+        }
+      } finally {
+        setForcePasswordLoading(false);
       }
     }
 
@@ -1836,281 +1040,10 @@
       setAuthAlert(null);
       setSignUpLoading(true);
       try {
-        if (signUpForm.display_name && !signUpForm.first_name) {
-          const displayName = String(signUpForm.display_name || "").trim();
-          const email = String(signUpForm.email || "")
-            .trim()
-            .toLowerCase();
-          const password = String(signUpForm.password || "");
-          const confirmPassword = String(signUpForm.confirm_password || "");
-          const institutionalEmail = /^[^\s@]+@(student\.)?buksu\.edu\.ph$/i;
-          if (!displayName) {
-            const title = "Name Required";
-            const message = "Please enter your full name.";
-            setAuthAlert({ severity: "error", title, message });
-            addToast({ title, message, type: "warning" });
-            return;
-          }
-          if (!institutionalEmail.test(email)) {
-            const title = "Institutional Email Required";
-            const message = "Please enter your official BukSU email address (@student.buksu.edu.ph or @buksu.edu.ph).";
-            setAuthAlert({ severity: "error", title, message });
-            addToast({ title, message, type: "warning" });
-            return;
-          }
-          if (!password || password.length < 8) {
-            const title = "Password Too Short";
-            const message = "Password must be at least 8 characters long.";
-            setAuthAlert({ severity: "error", title, message });
-            addToast({ title, message, type: "warning" });
-            return;
-          }
-          if (password !== confirmPassword) {
-            const title = "Passwords Do Not Match";
-            const message = "Make sure both password fields match.";
-            setAuthAlert({ severity: "error", title, message });
-            addToast({ title, message, type: "warning" });
-            return;
-          }
-          const body = new FormData();
-          body.append("display_name", displayName);
-          body.append("email", email);
-          body.append("password", password);
-          body.append("confirm_password", confirmPassword);
-          const portalRole = getPortalAuthRole();
-          if (portalRole === "mentor" || portalRole === "mentee")
-            body.append("role", portalRole);
-          const result = await fetchJSON("/api/auth/register/", {
-            method: "POST",
-            raw: true,
-            headers: { "X-CSRFToken": getCookie("csrftoken") },
-            body,
-          });
-          if (!result.ok) {
-            const message =
-              result.data?.error ||
-              Object.values(result.data?.errors || {})?.[0]?.[0] ||
-              "Unable to create your account.";
-            setAuthAlert({
-              severity: "error",
-              title: "Sign up failed",
-              message,
-            });
-            addToast({ title: "Sign Up Failed", message, type: "error" });
-            return;
-          }
-          const message =
-            result.data?.message ||
-            "Registration successful. Please check your email to verify your account.";
-          setSignUpSuccessEmail(email);
-          setAuthAlert({
-            severity: "success",
-            code: "registration_success",
-            title: "Account Created Successfully!",
-            message,
-            email,
-          });
-          setAuthMessage(message);
-          addToast({ title: "Account Created!", message, type: "success" });
-          return;
-        }
-        const portalRole = getPortalAuthRole();
-        if (portalRole === "staff") {
-          const title = "Staff Accounts Restricted";
-          const message = "Staff accounts must be created by an administrator.";
-          setAuthAlert({
-            severity: "error",
-            title,
-            message,
-            detail: "Use Sign In with your staff credentials, or contact your coordinator.",
-          });
-          addToast({ title, message, type: "warning" });
-          return;
-        }
-        const registerRole =
-          portalRole === "mentor" || portalRole === "mentee"
-            ? portalRole
-            : signUpForm.role;
-        if (
-          portalRole &&
-          (portalRole === "mentor" || portalRole === "mentee") &&
-          signUpForm.role !== portalRole
-        ) {
-          setSignUpForm((prev) => ({ ...prev, role: portalRole }));
-        }
-
-        const firstName = String(signUpForm.first_name || "").trim();
-        const lastName = String(signUpForm.last_name || "").trim();
-        const email = String(signUpForm.email || "").trim();
-        const password1 = String(signUpForm.password1 || "");
-        const password2 = String(signUpForm.password2 || "");
-
-        if (!firstName) {
-          const title = "First Name Required";
-          const message = "Enter your first name to continue signup.";
-          setAuthAlert({ severity: "error", title, message });
-          addToast({ title, message, type: "warning" });
-          return;
-        }
-        if (!lastName) {
-          const title = "Last Name Required";
-          const message = "Enter your last name to continue signup.";
-          setAuthAlert({ severity: "error", title, message });
-          addToast({ title, message, type: "warning" });
-          return;
-        }
-        if (!email) {
-          const title = "Email Required";
-          const message = "Enter your email address to continue signup.";
-          setAuthAlert({ severity: "error", title, message });
-          addToast({ title, message, type: "warning" });
-          return;
-        }
-        const institutionalEmail = /^[^\s@]+@(student\.)?buksu\.edu\.ph$/i;
-        if (!institutionalEmail.test(email)) {
-          const title = "Institutional Email Required";
-          const message = "Please enter your official BukSU email address (@student.buksu.edu.ph or @buksu.edu.ph).";
-          setAuthAlert({ severity: "error", title, message });
-          addToast({ title, message, type: "warning" });
-          return;
-        }
-        if (!password1) {
-          const title = "Password Required";
-          const message = "Create a password to continue signup.";
-          setAuthAlert({ severity: "error", title, message });
-          addToast({ title, message, type: "warning" });
-          return;
-        }
-        if (password1.length < 8) {
-          const title = "Password Too Short";
-          const message = "Password must be at least 8 characters long.";
-          setAuthAlert({ severity: "error", title, message });
-          addToast({ title, message, type: "warning" });
-          return;
-        }
-        if (!password2) {
-          const title = "Confirm Password Required";
-          const message = "Confirm your password to continue signup.";
-          setAuthAlert({ severity: "error", title, message });
-          addToast({ title, message, type: "warning" });
-          return;
-        }
-        if (password1 !== password2) {
-          const title = "Passwords Do Not Match";
-          const message = "Make sure both password fields are the same.";
-          setAuthAlert({ severity: "error", title, message });
-          addToast({ title, message, type: "warning" });
-          return;
-        }
-
-        // File size check (>5MB)
-        const allUploadedFiles = [
-          ...(signUpForm.letter_of_intent || []),
-          ...(signUpForm.study_load || []),
-          ...(signUpForm.grade || []),
-          ...(signUpForm.student_verification_documents || []),
-        ];
-        const oversizeFile = allUploadedFiles.find(
-          (f) => f && f.size > 5 * 1024 * 1024,
-        );
-        if (oversizeFile) {
-          const title = "File Too Large";
-          const message = `"${oversizeFile.name}" exceeds the 5MB file size limit. Please upload a smaller file.`;
-          setAuthAlert({ severity: "error", title, message });
-          addToast({ title, message, type: "warning" });
-          return;
-        }
-
-        const formData = new FormData();
-        formData.append("role", registerRole || "");
-        if (portalRole === "mentor" || portalRole === "mentee") {
-          formData.append("expected_role", portalRole);
-        }
-        formData.append("first_name", firstName);
-        formData.append("middle_name", signUpForm.middle_name || "");
-        formData.append("last_name", lastName);
-        formData.append("email", email);
-        formData.append("password1", password1);
-        formData.append("password2", password2);
-        if (registerRole === "mentor") {
-          if (!signUpForm.mentor_role) {
-            const title = "Mentor Type Required";
-            const message = "Select whether you are signing up as a student mentor or an instructor.";
-            setAuthAlert({ severity: "error", title, message });
-            addToast({ title, message, type: "warning" });
-            return;
-          }
-          if (
-            !["male", "female"].includes(
-              String(signUpForm.gender || "").toLowerCase(),
-            )
-          ) {
-            const title = "Biological Sex Required";
-            const message = "Select your biological sex to continue signup.";
-            setAuthAlert({ severity: "error", title, message });
-            addToast({ title, message, type: "warning" });
-            return;
-          }
-          formData.append("mentor_role", signUpForm.mentor_role);
-          formData.append("gender", signUpForm.gender);
-          if (signUpForm.mentor_role === "Senior IT Student") {
-            const yearLevel = Number(signUpForm.year_level);
-            if (yearLevel !== 3 && yearLevel !== 4) {
-              const title = "Year Level Required";
-              const message = "Select whether you are a 3rd year or 4th year student mentor.";
-              setAuthAlert({ severity: "error", title, message });
-              addToast({ title, message, type: "warning" });
-              return;
-            }
-            formData.append("year_level", String(yearLevel));
-          }
-        }
-
-        const isStudentMentor =
-          registerRole === "mentor" &&
-          signUpForm.mentor_role === "Senior IT Student";
-        if (isStudentMentor) {
-          const requiredDocs = [
-            ["letter_of_intent", "Letter of intent"],
-            ["study_load", "Study load"],
-            ["grade", "Grade"],
-          ];
-          const missingDocs = requiredDocs.filter(
-            ([key]) => !(signUpForm[key] || []).length,
-          );
-          if (missingDocs.length) {
-            const title = "Required Documents Missing";
-            const message = `Please upload ${missingDocs.map(([, label]) => label.toLowerCase()).join(", ")}.`;
-            setAuthAlert({ severity: "error", title, message });
-            addToast({ title, message, type: "warning" });
-            return;
-          }
-          requiredDocs.forEach(([key]) => {
-            (signUpForm[key] || []).forEach((file) => {
-              formData.append(key, file);
-            });
-          });
-        } else {
-          const files = signUpForm.student_verification_documents || [];
-          if (!files.length) {
-            const title = "Application Form Required";
-            const message = "Upload your academic mentoring application form to continue signup.";
-            setAuthAlert({ severity: "error", title, message });
-            addToast({ title, message, type: "warning" });
-            return;
-          }
-          files.forEach((file) => {
-            formData.append("student_verification_document", file);
-          });
-        }
-
         const result = await fetchJSON("/api/auth/register/", {
           method: "POST",
-          headers: {
-            "X-CSRFToken": getCookie("csrftoken"),
-          },
-          body: formData,
-          raw: true,
+          headers: { "X-CSRFToken": getCookie("csrftoken") },
+          body: JSON.stringify(signUpForm),
         });
         if (!result.ok) {
           const errs = result.data?.errors;
@@ -2119,67 +1052,48 @@
               ? Object.values(errs).flat().filter(Boolean).map(String).join(" ")
               : result.data?.error || "Unable to create account.";
           setError(message);
-          setAuthAlert({
-            severity: "error",
-            title: "Sign up failed",
-            message,
-            detail: result.data?.detail || "",
-          });
-          addToast({ title: "Sign Up Failed", message, type: "error" });
+          if (window.Swal && typeof window.Swal.fire === "function")
+            window.Swal.fire("Action failed", message, "error");
+          setActiveTab("signin");
           return;
         }
-        const message =
-          result.data?.message ||
-          "Registration successful. Please check your email to verify your account.";
-        setSignUpSuccessEmail(email);
-        setAuthAlert({
-          severity: "success",
-          code: "registration_success",
-          title: "Account Created Successfully!",
-          message,
-          email,
-        });
+        const message = result.data?.message || "Account created.";
         setAuthMessage(message);
-        addToast({ title: "Account Created!", message, type: "success" });
-        const keepRole =
-          portalRole === "mentor" || portalRole === "mentee"
-            ? portalRole
-            : "mentor";
-        setSignUpForm({
-          ...emptySignUpForm,
-          role: keepRole,
-        });
+        setActiveTab("signin");
       } finally {
         setSignUpLoading(false);
       }
     }
 
-    async function handleLogout() {
-      if (logoutLoading) return;
-      if (unsavedChangesDirtyRef.current) {
-        requestLeave({
-          type: "logout",
-          run: () => {
-            unsavedChangesDirtyRef.current = false;
-            handleLogout();
-          },
+    function handleLogout() {
+      clearAuthTokens();
+      setMustChangePassword(false);
+      replaceAppUrl("signin");
+      fetch("/api/auth/logout/", {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRFToken": getCookie("csrftoken") || "",
+        },
+      }).catch(() => {});
+      window.location.replace("/");
+    }
+
+    async function loadSessions() {
+      setSessionsLoading(true);
+      const result = await fetchJSON("/api/sessions/");
+      if (result.ok) setSessionsData(result.data);
+      else {
+        setError(result.data?.error || "Unable to load sessions.");
+        setSessionsData({
+          upcoming: [],
+          history: [],
+          options: { mentees: [], subjects: [], topics: [] },
+          is_mentor: false,
         });
-        return;
       }
-      setLogoutLoading(true);
-      try {
-        await fetch("/api/auth/logout/", {
-          method: "POST",
-          credentials: "include",
-          headers: {
-            "Content-Type": "application/json",
-            "X-CSRFToken": getCookie("csrftoken") || "",
-          },
-        }).catch(() => {});
-      } finally {
-        replaceAppUrl("signin");
-        window.location.replace("/");
-      }
+      setSessionsLoading(false);
     }
 
     async function loadPostsFeed(offset = 0) {
@@ -2217,39 +1131,19 @@
       setNotificationsLoading(false);
     }
 
-    async function loadQuestionnaireOptions() {
-      const result = await fetchJSON("/api/questionnaire/options/");
-      if (!result.ok) return false;
-      const data = result.data || {};
-      const subjects = Array.isArray(data.subjects) ? data.subjects : [];
-      const categoryLabels = data.category_labels || {};
-      const categoryOrder = Array.isArray(data.category_order)
-        ? data.category_order
-        : ["major", "ge", "nstp", "pe"];
-      const topicMap = data.topic_map || {};
-      const topicSet = new Set();
-      Object.values(topicMap).forEach((values) => {
-        (Array.isArray(values) ? values : []).forEach((topic) => {
-          const text = String(topic || "").trim();
-          if (text) topicSet.add(text);
-        });
-      });
-      window.DashboardApp = window.DashboardApp || {};
-      window.DashboardApp.SUBJECT_CATALOG = subjects.map((item) => ({
-        name: item.name,
-        code: item.code || "",
-        category: item.category || "major",
-      }));
-      window.DashboardApp.SUBJECT_CATEGORY_LABELS = categoryLabels;
-      window.DashboardApp.SUBJECT_CATEGORY_ORDER = categoryOrder;
-      window.DashboardApp.MENTOR_SUBJECT_OPTIONS = subjects.map(
-        (item) => item.name,
-      );
-      window.DashboardApp.QUESTIONNAIRE_TOPIC_MAP = topicMap;
-      window.DashboardApp.MENTOR_TOPIC_OPTIONS = Array.from(topicSet).sort(
-        (a, b) => String(a).localeCompare(String(b)),
-      );
-      return true;
+    async function loadSubjects() {
+      setSubjectsLoading(true);
+      const result = await fetchJSON("/api/subjects/");
+      if (result.ok) {
+        setSubjectsData(result.data.items || []);
+        await refreshQuestionnaireOptions();
+        setSubjectsLoaded(true);
+      } else {
+        setError(result.data?.error || "Unable to load subjects.");
+        setSubjectsData([]);
+        setSubjectsLoaded(true);
+      }
+      setSubjectsLoading(false);
     }
 
     async function loadApprovals() {
@@ -2282,25 +1176,7 @@
 
     async function postAnnouncement() {
       const msg = (announcementMessage || "").trim();
-      if (!msg) {
-        addToast({
-          title: "Message Required",
-          message: "Please enter your message before posting.",
-          type: "warning",
-        });
-        return;
-      }
-      if (
-        announcementTargetType === "specific" &&
-        (!announcementRecipientIds || announcementRecipientIds.length === 0)
-      ) {
-        addToast({
-          title: "Recipient Required",
-          message: "Please select at least one mentee recipient.",
-          type: "warning",
-        });
-        return;
-      }
+      if (!msg) return;
       setError("");
       setPostAnnouncementLoading(true);
       try {
@@ -2320,21 +1196,11 @@
           body: JSON.stringify(body),
         });
         if (!result.ok) {
-          const errorMsg = result.data?.error || "Failed to post announcement.";
-          setError(errorMsg);
-          addToast({
-            title: "Post Failed",
-            message: errorMsg,
-            type: "error",
-          });
+          setError(result.data?.error || "Failed to post announcement.");
           return;
         }
         setAnnouncementMessage("");
-        addToast({
-          title: "Announcement Posted",
-          message: "Your announcement was published successfully.",
-          type: "success",
-        });
+        addToast("Announcement posted.");
         // Force refresh and keep cache in sync
         setAnnouncementsLoaded(false);
         loadAnnouncements();
@@ -2350,20 +1216,10 @@
         { method: "POST", headers: { "X-CSRFToken": getCookie("csrftoken") } },
       );
       if (!result.ok) {
-        const errorMsg = result.data?.error || "Failed to delete announcement.";
-        setError(errorMsg);
-        addToast({
-          title: "Delete Failed",
-          message: errorMsg,
-          type: "error",
-        });
+        setError(result.data?.error || "Failed to delete announcement.");
         return;
       }
-      addToast({
-        title: "Announcement Deleted",
-        message: "The announcement has been removed.",
-        type: "success",
-      });
+      addToast("Announcement removed.");
       setAnnouncementsLoaded(false);
       loadAnnouncements();
     }
@@ -2387,14 +1243,7 @@
 
     async function addComment(targetType, targetId, content) {
       const trimmed = (content || "").trim();
-      if (!trimmed) {
-        addToast({
-          title: "Comment Required",
-          message: "Please write a comment before posting.",
-          type: "warning",
-        });
-        return;
-      }
+      if (!trimmed) return;
       const result = await fetchJSON("/api/comments/create/", {
         method: "POST",
         headers: {
@@ -2408,13 +1257,7 @@
         }),
       });
       if (!result.ok) {
-        const errorMsg = result.data?.error || "Failed to add comment.";
-        setError(errorMsg);
-        addToast({
-          title: "Comment Failed",
-          message: errorMsg,
-          type: "error",
-        });
+        setError(result.data?.error || "Failed to add comment.");
         return;
       }
       const key = commentKey(targetType, targetId);
@@ -2422,11 +1265,6 @@
         ...prev,
         [key]: [...(prev[key] || []), result.data.comment],
       }));
-      addToast({
-        title: "Comment Posted",
-        message: "Your comment was added.",
-        type: "success",
-      });
     }
 
     async function handleApproveMentor(mentorId) {
@@ -2442,21 +1280,10 @@
           body: JSON.stringify({ mentor_id: mentorId }),
         });
         if (!result.ok) {
-          const errorMsg = result.data?.error || "Failed to approve mentor.";
-          setError(errorMsg);
-          addToast({
-            title: "Approval Failed",
-            message: errorMsg,
-            type: "error",
-          });
+          setError(result.data?.error || "Failed to approve mentor.");
           return;
         }
         setAuthMessage("Mentor approved.");
-        addToast({
-          title: "Mentor Approved",
-          message: "Mentor application has been approved.",
-          type: "success",
-        });
         setPendingMentors((prev) => prev.filter((m) => m.id !== mentorId));
       } finally {
         setApprovalActionKey(null);
@@ -2476,21 +1303,10 @@
           body: JSON.stringify({ mentor_id: mentorId }),
         });
         if (!result.ok) {
-          const errorMsg = result.data?.error || "Failed to reject mentor.";
-          setError(errorMsg);
-          addToast({
-            title: "Action Failed",
-            message: errorMsg,
-            type: "error",
-          });
+          setError(result.data?.error || "Failed to reject mentor.");
           return;
         }
         setAuthMessage("Mentor rejected.");
-        addToast({
-          title: "Application Rejected",
-          message: "Mentor application was rejected.",
-          type: "info",
-        });
         setPendingMentors((prev) => prev.filter((m) => m.id !== mentorId));
       } finally {
         setApprovalActionKey(null);
@@ -2510,21 +1326,10 @@
           body: JSON.stringify({ mentee_id: menteeId }),
         });
         if (!result.ok) {
-          const errorMsg = result.data?.error || "Failed to approve mentee.";
-          setError(errorMsg);
-          addToast({
-            title: "Approval Failed",
-            message: errorMsg,
-            type: "error",
-          });
+          setError(result.data?.error || "Failed to approve mentee.");
           return;
         }
         setAuthMessage("Mentee approved.");
-        addToast({
-          title: "Mentee Approved",
-          message: "Mentee application has been approved.",
-          type: "success",
-        });
         setPendingMentees((prev) => prev.filter((m) => m.id !== menteeId));
       } finally {
         setApprovalActionKey(null);
@@ -2544,84 +1349,200 @@
           body: JSON.stringify({ mentee_id: menteeId }),
         });
         if (!result.ok) {
-          const errorMsg = result.data?.error || "Failed to reject mentee.";
-          setError(errorMsg);
-          addToast({
-            title: "Action Failed",
-            message: errorMsg,
-            type: "error",
-          });
+          setError(result.data?.error || "Failed to reject mentee.");
           return;
         }
         setAuthMessage("Mentee rejected.");
-        addToast({
-          title: "Application Rejected",
-          message: "Mentee application was rejected.",
-          type: "info",
-        });
         setPendingMentees((prev) => prev.filter((m) => m.id !== menteeId));
       } finally {
         setApprovalActionKey(null);
       }
     }
 
-    async function handleMarkAllRead() {
-      const result = await fetchJSON("/api/notifications/mark-all-read/", {
+    async function handleCreateSubject(subjectOverride) {
+      setError("");
+      setSubjectSaving(true);
+      try {
+        const subjectPayload = normalizeSubjectForm(subjectOverride || subjectForm);
+        const result = await fetchJSON("/api/subjects/create/", {
+          method: "POST",
+          headers: {
+            "X-CSRFToken": getCookie("csrftoken"),
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(subjectPayload),
+        });
+        if (!result.ok) {
+          const errs = result.data?.errors;
+          setError(
+            errs && typeof errs === "object"
+              ? Object.values(errs).flat().filter(Boolean).join(" ")
+              : result.data?.error || "Unable to create subject.",
+          );
+          return;
+        }
+        setSubjectForm({ name: "", description: "", topics: [] });
+        await refreshQuestionnaireOptions();
+        loadSubjects();
+      } finally {
+        setSubjectSaving(false);
+      }
+    }
+
+    async function handleUpdateSubject(subjectOverride) {
+      if (!subjectEditId) return;
+      setError("");
+      setSubjectSaving(true);
+      try {
+        const subjectPayload = normalizeSubjectForm(subjectOverride || subjectForm);
+        const result = await fetchJSON(`/api/subjects/${subjectEditId}/update/`, {
+          method: "POST",
+          headers: {
+            "X-CSRFToken": getCookie("csrftoken"),
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(subjectPayload),
+        });
+        if (!result.ok) {
+          const errs = result.data?.errors;
+          setError(
+            errs && typeof errs === "object"
+              ? Object.values(errs).flat().filter(Boolean).join(" ")
+              : result.data?.error || "Unable to update subject.",
+          );
+          return;
+        }
+        setSubjectEditId(null);
+        setSubjectForm({ name: "", description: "", topics: [] });
+        await refreshQuestionnaireOptions();
+        loadSubjects();
+      } finally {
+        setSubjectSaving(false);
+      }
+    }
+
+    async function handleDeleteSubject(id) {
+      setError("");
+      const result = await fetchJSON(`/api/subjects/${id}/delete/`, {
         method: "POST",
         headers: { "X-CSRFToken": getCookie("csrftoken") },
       });
       if (!result.ok) {
-        const errorMsg =
-          result.data?.error || "Unable to mark notifications as read.";
-        setError(errorMsg);
-        addToast({
-          title: "Action Failed",
-          message: errorMsg,
-          type: "error",
-        });
+        setError(result.data?.error || "Unable to delete subject.");
+        setSubjectDeleteId(null);
         return;
       }
-      loadNotifications();
-      setUnreadCount(0);
-      setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
-      addToast({
-        title: "Notifications Updated",
-        message: "All notifications marked as read.",
-        type: "success",
-      });
+      setSubjectDeleteId(null);
+      await refreshQuestionnaireOptions();
+      loadSubjects();
     }
 
-    async function handleMarkRead(notificationId) {
-      const result = await fetchJSON(
-        `/api/notifications/${notificationId}/read/`,
-        {
+    async function handleCreateSession(menteeIdOverride) {
+      setError("");
+      setCreateSessionLoading(true);
+      try {
+        const payload = {
+          ...createForm,
+          mentee_id:
+            menteeIdOverride != null ? menteeIdOverride : createForm.mentee_id,
+          duration_minutes: Number(createForm.duration_minutes || 60),
+        };
+        const result = await fetchJSON("/api/sessions/create/", {
           method: "POST",
           headers: { "X-CSRFToken": getCookie("csrftoken") },
+          body: JSON.stringify(payload),
+        });
+        if (!result.ok) {
+          setError(result.data?.error || "Unable to schedule session.");
+          return;
+        }
+        setCreateForm({
+          mentee_id: "",
+          subject_id: "",
+          topic_id: "",
+          scheduled_at: "",
+          duration_minutes: 60,
+          notes: "",
+        });
+        addToast("Session scheduled.");
+        await loadSessions();
+      } finally {
+        setCreateSessionLoading(false);
+      }
+    }
+
+    async function handleReschedule(sessionId) {
+      setError("");
+      const payload = {
+        ...rescheduleForm,
+        duration_minutes: Number(rescheduleForm.duration_minutes || 60),
+      };
+      const result = await fetchJSON(`/api/sessions/${sessionId}/reschedule/`, {
+        method: "POST",
+        headers: { "X-CSRFToken": getCookie("csrftoken") },
+        body: JSON.stringify(payload),
+      });
+      if (!result.ok) {
+        setError(result.data?.error || "Unable to reschedule.");
+        return;
+      }
+      setRescheduleId(null);
+      addToast("Session rescheduled.");
+      loadSessions();
+    }
+
+    async function handleStatusUpdate(sessionId, status) {
+      setError("");
+      const result = await fetchJSON(`/api/sessions/${sessionId}/status/`, {
+        method: "POST",
+        headers: { "X-CSRFToken": getCookie("csrftoken") },
+        body: JSON.stringify({ status }),
+      });
+      if (!result.ok) {
+        setError(result.data?.error || "Unable to update status.");
+        return;
+      }
+      addToast("Session updated.");
+      loadSessions();
+    }
+
+    async function handleUpdateMeetingNotes(sessionId, meetingNotes) {
+      setError("");
+      const result = await fetchJSON(
+        `/api/sessions/${sessionId}/meeting-notes/`,
+        {
+          method: "POST",
+          headers: {
+            "X-CSRFToken": getCookie("csrftoken"),
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ meeting_notes: meetingNotes || "" }),
         },
       );
       if (!result.ok) {
-        const errorMsg =
-          result.data?.error || "Unable to mark notification as read.";
-        setError(errorMsg);
-        addToast({
-          title: "Action Failed",
-          message: errorMsg,
-          type: "error",
-        });
+        setError(result.data?.error || "Unable to save meeting notes.");
         return;
       }
+      addToast("Meeting notes saved.");
+      loadSessions();
+    }
+
+    async function handleMarkAllRead() {
+      await fetchJSON("/api/notifications/mark-all-read/", {
+        method: "POST",
+        headers: { "X-CSRFToken": getCookie("csrftoken") },
+      });
+      loadNotifications();
+      setUnreadCount(0);
+    }
+
+    async function handleMarkRead(notificationId) {
+      await fetchJSON(`/api/notifications/${notificationId}/read/`, {
+        method: "POST",
+        headers: { "X-CSRFToken": getCookie("csrftoken") },
+      });
       loadNotifications();
       setUnreadCount((prev) => Math.max(0, prev - 1));
-      setNotifications((prev) =>
-        prev.map((n) =>
-          n.id === notificationId ? { ...n, is_read: true } : n,
-        ),
-      );
-      addToast({
-        title: "Notification",
-        message: "Marked as read.",
-        type: "info",
-      });
     }
 
     async function handleSettingsSave() {
@@ -2640,32 +1561,12 @@
               "Unable to update account."
             : result.data?.error || "Unable to update account.";
         setError(message);
-        addToast({
-          title: "Save Failed",
-          message,
-          type: "error",
-        });
         setSettingsSaving(false);
-        return false;
+        return;
       }
-      addToast({
-        title: "Settings Saved",
-        message: "Your account details were updated.",
-        type: "success",
-      });
-      setUser((prev) =>
-        prev
-          ? {
-              ...prev,
-              email: result.data?.email || settingsForm.email,
-              display_name: result.data?.display_name || settingsForm.display_name,
-              full_name: result.data?.full_name || settingsForm.display_name,
-            }
-          : prev,
-      );
+      addToast("Settings saved.");
       await loadMe({ force: true });
       setSettingsSaving(false);
-      return true;
     }
 
     async function handleBioSave(bio) {
@@ -2675,22 +1576,12 @@
         body: JSON.stringify({ bio }),
       });
       if (!result.ok) {
-        const errorMsg = result.data?.error || "Unable to update bio.";
-        setError(errorMsg);
-        addToast({
-          title: "Update Failed",
-          message: errorMsg,
-          type: "error",
-        });
+        setError(result.data?.error || "Unable to update bio.");
         return false;
       }
       setUser((prev) => (prev ? { ...prev, bio: result.data.bio } : prev));
       setSettingsForm((prev) => ({ ...prev, bio: result.data.bio }));
-      addToast({
-        title: "Bio Saved",
-        message: "Your biography has been updated.",
-        type: "success",
-      });
+      addToast("Bio updated.");
       return true;
     }
 
@@ -2701,51 +1592,46 @@
         body: JSON.stringify({ tags }),
       });
       if (!result.ok) {
-        const errorMsg = result.data?.error || "Unable to update tags.";
-        setError(errorMsg);
-        addToast({
-          title: "Update Failed",
-          message: errorMsg,
-          type: "error",
-        });
+        setError(result.data?.error || "Unable to update tags.");
         return false;
       }
       setUser((prev) => (prev ? { ...prev, tags: result.data.tags } : prev));
       setSettingsForm((prev) => ({ ...prev, tags: result.data.tags }));
-      addToast({
-        title: "Interests Saved",
-        message: "Your subject interests were updated.",
-        type: "success",
-      });
+      addToast("Interests updated.");
       return true;
     }
 
     async function handleMenteeProfileSave() {
-      if (!user || (user.role !== "mentee" && user.role !== "both" && !user.mentee_profile)) return false;
+      if (!user || user.role !== "mentee") return;
       setError("");
-      const requiredFields = ["campus", "student_id_no", "contact_no", "sex"];
+      const requiredFields = [
+        "program",
+        "campus",
+        "student_id_no",
+        "contact_no",
+        "admission_type",
+        "sex",
+      ];
       const missing = requiredFields.filter(
         (field) => !String(menteeProfile[field] || "").trim(),
       );
-      if (missing.length > 0) {
+      const yearOk = Number(menteeProfile.year_level) > 0;
+      if (missing.length > 0 || !yearOk) {
         const message =
-          "Please complete all required fields (Campus, Student ID, Contact No, Sex).";
+          "Please complete all general information fields before saving.";
         setError(message);
-        addToast({
-          title: "Required Fields Missing",
-          message,
-          type: "warning",
-        });
-        return false;
+        if (window.Swal && typeof window.Swal.fire === "function")
+          window.Swal.fire("Fill in required fields", message, "warning");
+        return;
       }
       setMenteeProfileSaving(true);
       const payload = {
-        program: menteeProfile.program || "BSIT",
-        year_level: Number(menteeProfile.year_level) || 1,
+        program: menteeProfile.program,
+        year_level: menteeProfile.year_level,
         campus: menteeProfile.campus,
         student_id_no: menteeProfile.student_id_no,
         contact_no: menteeProfile.contact_no,
-        admission_type: menteeProfile.admission_type || "",
+        admission_type: menteeProfile.admission_type,
         sex: menteeProfile.sex,
       };
       const result = await fetchJSON("/api/me/mentee-profile/", {
@@ -2754,226 +1640,30 @@
         body: JSON.stringify(payload),
       });
       if (!result.ok) {
-        const errorMsg =
-          result.data?.error || "Unable to update mentee profile.";
-        setError(errorMsg);
-        addToast({
-          title: "Save Failed",
-          message: errorMsg,
-          type: "error",
-        });
+        setError(result.data?.error || "Unable to update mentee profile.");
         setMenteeProfileSaving(false);
-        return false;
+        return;
       }
       setMenteeProfile((prev) => ({ ...prev, ...result.data }));
       setUser((prev) =>
         prev ? { ...prev, mentee_general_info_completed: true } : prev,
       );
-      addToast({
-        title: "Profile Saved",
-        message: "Your general information was updated.",
-        type: "success",
-      });
+      addToast("Profile saved.");
       setShowMenteeInfoModal(false);
       setAuthMessage("Your general information was updated.");
       setMenteeProfileSaving(false);
-      setActiveTab((prev) =>
-        prev === "onboarding" || prev === "complete-profile"
-          ? "onboarding"
-          : prev,
-      );
-      return true;
     }
 
-    async function saveCompleteProfileFallback(payload) {
-      const data = payload || {};
-      const isMentor = user && user.role === "mentor";
-      if (isMentor) {
-        const mentorRes = await fetchJSON("/api/me/mentor-profile/", {
-          method: "POST",
-          headers: { "X-CSRFToken": getCookie("csrftoken") },
-          body: JSON.stringify({
-            program: data.program,
-            student_id_no: data.student_id_no,
-            year_level: data.year_level,
-            role: data.track === "faculty" ? "Instructor" : "Senior IT Student",
-          }),
-        });
-        if (!mentorRes.ok) return mentorRes;
-      } else {
-        const menteeRes = await fetchJSON("/api/me/mentee-profile/", {
-          method: "POST",
-          headers: { "X-CSRFToken": getCookie("csrftoken") },
-          body: JSON.stringify({
-            program: "BSIT",
-            year_level: 1,
-            campus: data.campus,
-            student_id_no: data.student_id_no,
-            contact_no: data.contact_no,
-            sex: data.sex,
-          }),
-        });
-        if (!menteeRes.ok) return menteeRes;
-      }
-      if (Array.isArray(data.interests) && data.interests.length) {
-        await fetchJSON("/api/me/tags/", {
-          method: "POST",
-          headers: { "X-CSRFToken": getCookie("csrftoken") },
-          body: JSON.stringify({ tags: data.interests }),
-        });
-      }
-      return {
-        ok: true,
-        status: 200,
-        data: {
-          is_profile_complete: true,
-          tags: Array.isArray(data.interests) ? data.interests : [],
-          mentee_info: isMentor ? undefined : data,
-          mentor_info: isMentor
-            ? {
-                program: data.program,
-                year_level: data.year_level,
-                student_id_no: data.student_id_no,
-                role:
-                  data.track === "faculty" ? "Instructor" : "Senior IT Student",
-              }
-            : undefined,
-        },
-      };
-    }
-
-    async function handleCompleteProfileSave(payload) {
-      setCompleteProfileSaving(true);
-      setError("");
-      let result = await fetchJSON("/api/me/complete-profile/", {
-        method: "POST",
-        headers: { "X-CSRFToken": getCookie("csrftoken") },
-        body: JSON.stringify(payload || {}),
-      });
-      if (!result.ok && (result.status === 404 || result.status === 405)) {
-        result = await saveCompleteProfileFallback(payload);
-      }
-      if (!result.ok) {
-        setCompleteProfileSaving(false);
-        const message =
-          (result.data && result.data.error) ||
-          (result.status === 404
-            ? "Could not save profile. Refresh the page and try again."
-            : "Please complete the required fields.");
-        setError(message);
-        addToast({
-          title: "Incomplete Profile",
-          message,
-          type: "warning",
-        });
-        return {
-          ok: false,
-          errors: (result.data && result.data.errors) || {},
-          message,
-        };
-      }
-      if (result.data.mentee_info) {
-        setMenteeProfile((prev) => ({ ...prev, ...result.data.mentee_info }));
-      }
-      if (result.data.mentor_info) {
-        setMentorProfile((prev) => ({ ...prev, ...result.data.mentor_info }));
-      }
-      if (Array.isArray(result.data.tags)) {
-        setSettingsForm((prev) => ({ ...prev, tags: [...result.data.tags] }));
-        setUser((prev) =>
-          prev
-            ? {
-                ...prev,
-                tags: [...result.data.tags],
-                is_profile_complete: true,
-                mentee_general_info_completed:
-                  prev.role === "mentee"
-                    ? true
-                    : prev.mentee_general_info_completed,
-              }
-            : prev,
-        );
-      } else {
-        setUser((prev) =>
-          prev ? { ...prev, is_profile_complete: true } : prev,
-        );
-      }
-      addToast({
-        title: "Profile Saved",
-        message: "Account details saved successfully.",
-        type: "success",
-      });
-      setCompleteProfileSaving(false);
-      await loadMe({ force: true });
-      return { ok: true, data: result.data };
-    }
-
-    async function handleOnboardingComplete(formData) {
-      setOnboardingSaving(true);
-      setError("");
-      const result = await fetchJSON("/api/user/complete-onboarding/", {
-        method: "POST",
-        raw: true,
-        headers: { "X-CSRFToken": getCookie("csrftoken") },
-        body: formData,
-      });
-      if (!result.ok) {
-        let message =
-          result.data?.error || result.data?.detail || result.data?.message;
-        if (!message && result.data && typeof result.data === "object") {
-          const values = Object.values(result.data).flat();
-          if (values.length > 0 && typeof values[0] === "string") {
-            message = values.join(" ");
-          }
-        }
-        if (!message && typeof result.data === "string") {
-          message = result.data;
-        }
-        if (!message) {
-          message =
-            "Unable to complete onboarding. Please verify your details and try again.";
-        }
-        setError(message);
-        addToast({
-          title: "Onboarding Incomplete",
-          message,
-          type: "warning",
-        });
-        setOnboardingSaving(false);
-        return { ok: false, message };
-      }
-      const updatedUser = {
-        ...(result.data?.user || {}),
-        is_onboarded: true,
-        is_profile_complete: true,
-        mentee_approved: true,
-        mentor_approved: true,
-      };
-      setUser((previous) => ({
-        ...(previous || {}),
-        ...updatedUser,
-      }));
-      setOnboardingSaving(false);
-      await loadMe({ force: true });
-      addToast({
-        title: "Welcome!",
-        message: "Onboarding complete! Welcome to PeerLink Matching.",
-        type: "success",
-      });
-      setActiveTab("matching");
-      replaceAppUrl("matching");
-      return { ok: true, data: result.data.user };
-    }
-
-    async function handleMentorProfileSave(overrides) {
+    async function handleMentorProfileSave() {
       if (!user || user.role !== "mentor") return;
-      const profile = { ...mentorProfile, ...(overrides || {}) };
+      const profile = mentorProfile;
       const sanitizedSubjects = Array.isArray(profile.subjects)
         ? [...profile.subjects]
         : [];
-      const sanitizedTopics = Array.isArray(profile.topics)
-        ? [...profile.topics]
-        : [];
+      const sanitizedTopics = filterTopicsForSubjects(
+        sanitizedSubjects,
+        profile.topics,
+      );
       setError("");
       const hasPrefs =
         sanitizedSubjects.length > 0 ||
@@ -2981,17 +1671,15 @@
         (profile.expertise_level != null &&
           profile.expertise_level >= 1 &&
           profile.expertise_level <= 5) ||
+        !!profile.gender ||
         (Array.isArray(profile.availability) &&
           profile.availability.length > 0);
       if (!hasPrefs) {
         const message =
-          "Please set at least one matching preference (subjects, topics, expertise, or availability).";
+          "Please set at least one matching preference (subjects, topics, expertise, gender, or availability).";
         setError(message);
-        addToast({
-          title: "Incomplete Preferences",
-          message,
-          type: "warning",
-        });
+        if (window.Swal && typeof window.Swal.fire === "function")
+          window.Swal.fire("Complete required fields", message, "warning");
         return false;
       }
       setMentorProfileSaving(true);
@@ -2999,28 +1687,10 @@
         const payload = {
           subjects: sanitizedSubjects,
           topics: sanitizedTopics,
-          competency_ids: Array.isArray(profile.competency_ids)
-            ? [...profile.competency_ids]
-            : [],
-          competency_levels: Object.entries(
-            profile.competency_levels &&
-              typeof profile.competency_levels === "object"
-              ? profile.competency_levels
-              : {},
-          ).map(([competencyId, proficiencyLevel]) => ({
-            competency_id: Number(competencyId),
-            proficiency_level: Number(proficiencyLevel),
-          })),
           expertise_level: profile.expertise_level,
-          years_experience:
-            profile.years_experience != null
-              ? Number(profile.years_experience)
-              : null,
-          teaching_experience_years:
-            profile.teaching_experience_years != null
-              ? Number(profile.teaching_experience_years)
-              : null,
-          capacity: 5,
+          role: profile.role || "",
+          capacity: Math.max(1, Math.min(5, Number(profile.capacity || 1))),
+          gender: profile.gender || "",
           availability: profile.availability || [],
         };
         const result = await fetchJSON("/api/me/mentor-profile/", {
@@ -3029,20 +1699,10 @@
           body: JSON.stringify(payload),
         });
         if (!result.ok) {
-          const err = result.data?.error || "Unable to update mentor profile.";
-          setError(err);
-          addToast({
-            title: "Update Failed",
-            message: err,
-            type: "error",
-          });
+          setError(result.data?.error || "Unable to update mentor profile.");
           return false;
         }
-        setMentorProfile((prev) => {
-          const next = { ...prev, ...result.data };
-          lastSavedMentorProfileRef.current = cloneJson(next);
-          return next;
-        });
+        setMentorProfile((prev) => ({ ...prev, ...result.data }));
         await loadMe({ force: true });
         // Invalidate any existing staff/mentor matching results to avoid stale pairs
         setMatchingResults([]);
@@ -3052,42 +1712,24 @@
           prev ? { ...prev, mentor_questionnaire_completed: true } : prev,
         );
         setShowMentorInfoModal(false);
-        if (result.data?.mentor_role_locked && result.data?.message) {
-          addToast({
-            title: "Mentor Role Locked",
-            message: result.data.message,
-            type: "warning",
-          });
-        } else {
-          setAuthMessage("Your mentor profile was updated.");
-          addToast({
-            title: "Profile Saved",
-            message: "Your mentor profile was updated successfully.",
-            type: "success",
-          });
-        }
-        setActiveTab((prev) => {
-          if (prev === "onboarding") return "onboarding";
-          const pending = user && user.mentor_approved === false;
-          const incomplete = !(user && user.mentor_questionnaire_completed);
-          if (pending || incomplete) return "onboarding";
-          return prev;
-        });
+        setAuthMessage("Your mentor profile was updated.");
+        addToast("Profile saved.");
         return true;
       } finally {
         setMentorProfileSaving(false);
       }
     }
 
-    async function handleMenteeMatchingSave(overrides) {
+    async function handleMenteeMatchingSave() {
       if (!user || user.role !== "mentee") return;
-      const matching = { ...menteeMatching, ...(overrides || {}) };
+      const matching = menteeMatching;
       const sanitizedSubjects = Array.isArray(matching.subjects)
         ? [...matching.subjects]
         : [];
-      const sanitizedTopics = Array.isArray(matching.topics)
-        ? [...matching.topics]
-        : [];
+      const sanitizedTopics = filterTopicsForSubjects(
+        sanitizedSubjects,
+        matching.topics,
+      );
       setError("");
       const hasPrefs =
         sanitizedSubjects.length > 0 ||
@@ -3101,11 +1743,8 @@
         const message =
           "Please set at least one matching preference (subjects, topics, difficulty, preferred gender, or availability).";
         setError(message);
-        addToast({
-          title: "Incomplete Preferences",
-          message,
-          type: "warning",
-        });
+        if (window.Swal && typeof window.Swal.fire === "function")
+          window.Swal.fire("Complete required fields", message, "warning");
         return false;
       }
       setMenteeMatchingSaving(true);
@@ -3113,20 +1752,7 @@
         const payload = {
           subjects: sanitizedSubjects,
           topics: sanitizedTopics,
-          competency_ids: Array.isArray(matching.competency_ids)
-            ? [...matching.competency_ids]
-            : [],
-          competency_needs: Object.entries(
-            matching.competency_needs &&
-              typeof matching.competency_needs === "object"
-              ? matching.competency_needs
-              : {},
-          ).map(([competencyId, needLevel]) => ({
-            competency_id: Number(competencyId),
-            need_level: Number(needLevel),
-          })),
           difficulty_level: matching.difficulty_level,
-          preferred_learning_style: matching.preferred_learning_style || "",
           availability: matching.availability || [],
         };
         const result = await fetchJSON("/api/me/mentee-matching/", {
@@ -3135,21 +1761,12 @@
           body: JSON.stringify(payload),
         });
         if (!result.ok) {
-          const err =
-            result.data?.error || "Unable to update mentoring preferences.";
-          setError(err);
-          addToast({
-            title: "Save Failed",
-            message: err,
-            type: "error",
-          });
+          setError(
+            result.data?.error || "Unable to update mentee questionnaire.",
+          );
           return false;
         }
-        setMenteeMatching((prev) => {
-          const next = { ...prev, ...result.data };
-          lastSavedMenteeMatchingRef.current = cloneJson(next);
-          return next;
-        });
+        setMenteeMatching((prev) => ({ ...prev, ...result.data }));
         await loadMe({ force: true });
         // Invalidate current recommendations so changes take effect immediately
         setMenteeRecommendations([]);
@@ -3163,26 +1780,8 @@
           // Refresh recommendations right away if mentee is on Matching tab
           loadMenteeRecommendations();
         }
-        setAuthMessage("Your mentoring preferences were updated.");
-        addToast({
-          title: "Preferences Saved",
-          message: "Your mentoring preferences were updated successfully.",
-          type: "success",
-        });
-        setUser((prev) =>
-          prev
-            ? {
-                ...prev,
-                mentee_questionnaire_completed: true,
-                questionnaire_completed: true,
-              }
-            : prev,
-        );
-        setActiveTab((prev) => {
-          if (prev === "onboarding") return "onboarding";
-          if (user && user.mentee_approved === false) return "onboarding";
-          return prev;
-        });
+        setAuthMessage("Your mentee questionnaire was updated.");
+        addToast("Questionnaire saved.");
         return true;
       } finally {
         setMenteeMatchingSaving(false);
@@ -3190,78 +1789,36 @@
     }
 
     async function loadActivityLogs(params = {}) {
-      const page = Math.max(1, Number.parseInt(params.page ?? 1, 10) || 1);
-      const pageSize = Math.min(
-        100,
-        Math.max(1, Number.parseInt(params.page_size ?? 20, 10) || 20),
-      );
-      const normalizedSearch = (params.search || "").trim();
-      const normalizedDateFrom = params.date_from || "";
-      const normalizedDateTo = params.date_to || "";
-      const normalizedCategory = (params.category || "").trim();
-      const normalizedRole = (params.role || "").trim();
-      const cacheKey = JSON.stringify({
-        page,
-        pageSize,
-        search: normalizedSearch,
-        date_from: normalizedDateFrom,
-        date_to: normalizedDateTo,
-        category: normalizedCategory,
-        role: normalizedRole,
-      });
-      const cached = activityLogsCacheRef.current.get(cacheKey);
-      if (cached) {
-        setActivityLogs(cached.logs);
-        setActivityLogsPage(cached.page);
-        setActivityLogsPageSize(cached.page_size);
-        setActivityLogsTotal(cached.total);
-        setActivityLogsTotalPages(cached.total_pages);
-        if (cached.stats) setActivityLogsStats(cached.stats);
-        setActivityLogsLoading(false);
-        return cached;
-      }
-
       setActivityLogsLoading(true);
       const q = new URLSearchParams();
-      q.set("page", String(page));
-      q.set("page_size", String(pageSize));
-      if (normalizedSearch) q.set("search", normalizedSearch);
-      if (normalizedDateFrom) q.set("date_from", normalizedDateFrom);
-      if (normalizedDateTo) q.set("date_to", normalizedDateTo);
-      if (normalizedCategory && normalizedCategory !== "all") q.set("category", normalizedCategory);
-      if (normalizedRole && normalizedRole !== "all") q.set("role", normalizedRole);
-
+      if (params.search) q.set("search", params.search);
+      if (params.date_from) q.set("date_from", params.date_from);
+      if (params.date_to) q.set("date_to", params.date_to);
+      if (params.page) q.set("page", String(params.page));
+      if (params.page_size) q.set("page_size", String(params.page_size));
       const result = await fetchJSON(
         "/api/activity-logs/" + (q.toString() ? "?" + q.toString() : ""),
       );
       if (result.ok) {
-        const response = result.data || {};
-        const logs = response.logs || [];
-        const resolvedPage = response.page || page;
-        const resolvedPageSize = response.page_size || pageSize;
-        const resolvedTotal = response.total || logs.length || 0;
-        const resolvedTotalPages = response.total_pages || 1;
-        const resolvedStats = response.stats || { total_records: resolvedTotal, today_records: 0 };
-        setActivityLogs(logs);
-        setActivityLogsPage(resolvedPage);
-        setActivityLogsPageSize(resolvedPageSize);
-        setActivityLogsTotal(resolvedTotal);
-        setActivityLogsTotalPages(resolvedTotalPages);
-        setActivityLogsStats(resolvedStats);
-        activityLogsCacheRef.current.set(cacheKey, {
-          logs,
-          page: resolvedPage,
-          page_size: resolvedPageSize,
-          total: resolvedTotal,
-          total_pages: resolvedTotalPages,
-          stats: resolvedStats,
+        setActivityLogs(result.data.logs || []);
+        setActivityLogsMeta({
+          page: result.data.page || 1,
+          page_size: result.data.page_size || 20,
+          total: result.data.total || 0,
+          total_pages: result.data.total_pages || 1,
+          has_previous: !!result.data.has_previous,
+          has_next: !!result.data.has_next,
         });
       } else {
         setActivityLogs([]);
-        setActivityLogsPage(page);
-        setActivityLogsPageSize(pageSize);
-        setActivityLogsTotal(0);
-        setActivityLogsTotalPages(1);
+        setActivityLogsMeta({
+          page: 1,
+          page_size: 20,
+          total: 0,
+          total_pages: 1,
+          has_previous: false,
+          has_next: false,
+        });
       }
       setActivityLogsLoading(false);
     }
@@ -3303,34 +1860,17 @@
       });
       setBackupCreateLoading(false);
       if (!result.ok) {
-        const errorMsg = result.data?.error || "Failed to create backup.";
-        setError(errorMsg);
-        addToast({
-          title: "Backup Failed",
-          message: errorMsg,
-          type: "error",
-        });
+        setError(result.data?.error || "Failed to create backup.");
         return;
       }
-      addToast({
-        title: "Backup Created",
-        message: "Database snapshot created successfully.",
-        type: "success",
-      });
+      addToast("Backup created.");
       loadBackups();
     }
 
     async function restoreBackup(file) {
       const allowed = /\.(json|gz|zip|bz2|sql|psql|dump|backup)$/i;
       if (!file || !allowed.test(file.name)) {
-        const msg =
-          "Please select a valid backup file (.json, .gz, .sql, .zip).";
-        setError(msg);
-        addToast({
-          title: "Invalid File Format",
-          message: msg,
-          type: "warning",
-        });
+        setError("Please select a valid backup file.");
         return;
       }
       setBackupRestoreLoading(true);
@@ -3346,20 +1886,10 @@
         });
         const data = await response.json().catch(() => ({}));
         if (!response.ok) {
-          const errorMsg = data.error || "Restore failed.";
-          setError(errorMsg);
-          addToast({
-            title: "Restore Failed",
-            message: errorMsg,
-            type: "error",
-          });
+          setError(data.error || "Restore failed.");
           return;
         }
-        addToast({
-          title: "Restore Completed",
-          message: "Database restored. Reloading system…",
-          type: "success",
-        });
+        addToast("Restore completed. Reloading…");
         setTimeout(() => window.location.reload(), 1500);
       } finally {
         setBackupRestoreLoading(false);
@@ -3375,20 +1905,10 @@
       });
       setBackupRestoreLoading(false);
       if (!result.ok) {
-        const errorMsg = result.data?.error || "Restore failed.";
-        setError(errorMsg);
-        addToast({
-          title: "Restore Failed",
-          message: errorMsg,
-          type: "error",
-        });
+        setError(result.data?.error || "Restore failed.");
         return;
       }
-      addToast({
-        title: "Restore Completed",
-        message: "Database restored. Reloading system…",
-        type: "success",
-      });
+      addToast("Restore completed. Reloading…");
       setTimeout(() => window.location.reload(), 1500);
     }
 
@@ -3399,20 +1919,10 @@
         headers: { "X-CSRFToken": getCookie("csrftoken") },
       });
       if (!result.ok) {
-        const errorMsg = result.data?.error || "Failed to delete backup.";
-        setError(errorMsg);
-        addToast({
-          title: "Delete Failed",
-          message: errorMsg,
-          type: "error",
-        });
+        setError(result.data?.error || "Failed to delete backup.");
         return;
       }
-      addToast({
-        title: "Backup Deleted",
-        message: "Backup snapshot removed.",
-        type: "success",
-      });
+      addToast("Backup deleted.");
       loadBackups();
     }
 
@@ -3421,14 +1931,7 @@
         const response = await fetch(`/api/backup/${backupId}/download/`, {
           credentials: "include",
         });
-        if (!response.ok) {
-          addToast({
-            title: "Download Failed",
-            message: "Unable to download backup file.",
-            type: "error",
-          });
-          return;
-        }
+        if (!response.ok) return;
         const blob = await response.blob();
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
@@ -3436,18 +1939,9 @@
         a.download = "backup_" + backupId + ".json";
         a.click();
         URL.revokeObjectURL(url);
-        addToast({
-          title: "Download Started",
-          message: "Backup archive is downloading.",
-          type: "info",
-        });
+        addToast("Download started.");
       } catch (e) {
         setError("Download failed.");
-        addToast({
-          title: "Download Failed",
-          message: "Network error while downloading backup file.",
-          type: "error",
-        });
       }
     }
 
@@ -3458,11 +1952,8 @@
       if (file.size > maxBytes) {
         const msg = "Please choose an image smaller than 2 MB.";
         setError(msg);
-        addToast({
-          title: "Image Too Large",
-          message: msg,
-          type: "warning",
-        });
+        if (window.Swal && typeof window.Swal.fire === "function")
+          window.Swal.fire("Image too large", msg, "warning");
         event.target.value = "";
         return;
       }
@@ -3481,82 +1972,47 @@
         if (!response.ok) {
           const msg = data.error || "Unable to upload profile picture.";
           setError(msg);
-          addToast({
-            title: "Upload Failed",
-            message: msg,
-            type: "error",
-          });
+          if (window.Swal && typeof window.Swal.fire === "function")
+            window.Swal.fire("Upload failed", msg, "error");
           return;
         }
         const newUrl = data.avatar_url || "";
         setUser((prev) => (prev ? { ...prev, avatar_url: newUrl } : prev));
         setSettingsForm((prev) => ({ ...prev, avatar_url: newUrl }));
-        addToast({
-          title: "Photo Updated",
-          message: "Profile picture updated successfully.",
-          type: "success",
-        });
       } catch (err) {
         const msg = "Network error while uploading profile picture.";
         setError(msg);
-        addToast({
-          title: "Upload Error",
-          message: msg,
-          type: "error",
-        });
+        if (window.Swal && typeof window.Swal.fire === "function")
+          window.Swal.fire("Network error", msg, "error");
       } finally {
         setAvatarUploading(false);
         event.target.value = "";
       }
     }
 
-    async function handleRemoveAvatar() {
-      if (!settingsForm.avatar_url && !user?.avatar_url) return;
-      try {
-        const response = await fetch("/api/me/avatar/", {
-          method: "DELETE",
-          credentials: "include",
-          headers: { "X-CSRFToken": getCookie("csrftoken") },
-        });
-        const data = (await response.json()) || {};
-        if (!response.ok) {
-          const msg = data.error || "Unable to remove profile picture.";
-          setError(msg);
-          addToast({
-            title: "Remove Failed",
-            message: msg,
-            type: "error",
-          });
-          return;
-        }
-        setUser((prev) => (prev ? { ...prev, avatar_url: "" } : prev));
-        setSettingsForm((prev) => ({ ...prev, avatar_url: "" }));
-        addToast({
-          title: "Photo Removed",
-          message: "Profile picture removed.",
-          type: "info",
-        });
-      } catch (err) {
-        const msg = "Network error while removing profile picture.";
-        setError(msg);
-        addToast({
-          title: "Remove Error",
-          message: msg,
-          type: "error",
-        });
-      }
-    }
+    const options = sessionsData?.options || {
+      mentees: [],
+      subjects: [],
+      topics: [],
+    };
+    const topicsBySubject = useMemo(() => {
+      const map = {};
+      (options.topics || []).forEach((topic) => {
+        if (!map[topic.subject_id]) map[topic.subject_id] = [];
+        map[topic.subject_id].push(topic);
+      });
+      return map;
+    }, [options.topics]);
 
     const isAuthenticated = !authRequired && user;
     const isPendingApproval = getIsPendingApproval(user);
-    const showSignInPrompt =
-      authCheckDone &&
-      authRequired &&
-      !["signin", "signup", "verify-email"].includes(activeTab) &&
-      !((window.location.pathname || "").includes("/verify-email"));
+    const showSignInPrompt = !authCheckDone
+      ? false
+      : !isAuthenticated && !["signin", "signup"].includes(activeTab);
 
     useEffect(() => {
-      const unapproved = user && getIsPendingApproval(user);
+      const unapproved =
+        user && getIsPendingApproval(user);
       if (
         isAuthenticated &&
         ["signin", "signup"].includes(activeTab) &&
@@ -3574,30 +2030,28 @@
 
     useEffect(() => {
       if (!authMessage) return;
-      addToast(authMessage, "success");
+      if (!(window.Swal && typeof window.Swal.fire === "function")) return;
+      window.Swal.fire("Success", authMessage, "success");
     }, [authMessage]);
 
     useEffect(() => {
       if (!error) return;
-      if (isPendingApprovalMessage(error)) return;
       if (["signin", "signup"].includes(activeTab)) return;
-      addToast(error, "error");
+      if (!(window.Swal && typeof window.Swal.fire === "function")) return;
+      window.Swal.fire("Action failed", error, "error");
     }, [error, activeTab]);
 
     const contextValue = {
       user,
       setUser,
       stats,
-      pendingApprovalLandingTab: getPendingApprovalLandingTab(user),
       unreadCount,
       authRequired,
       setAuthRequired,
       authCheckDone,
       setAuthCheckDone,
-      accessToken,
       activeTab,
       setActiveTab,
-      requestTabChange,
       error,
       setError,
       authMessage,
@@ -3606,7 +2060,6 @@
       setAuthAlert,
       signInLoading,
       signUpLoading,
-      logoutLoading,
       signInForm,
       setSignInForm,
       signUpForm,
@@ -3628,15 +2081,28 @@
       mentorRequestsLoading,
       mentorRequests,
       loadMentorRequests,
-      adminPairingsLoading,
-      adminPairings,
-      loadAdminPairings,
       acceptMentee,
       acceptMenteeLoading,
       myMentor,
-      myMentors,
-      menteePairingsCount,
       loadMyMentor,
+      sessionsLoading,
+      sessionsData,
+      loadSessions,
+      createForm,
+      setCreateForm,
+      createSessionLoading,
+      rescheduleId,
+      setRescheduleId,
+      rescheduleForm,
+      setRescheduleForm,
+      handleCreateSession,
+      handleReschedule,
+      handleStatusUpdate,
+      handleUpdateMeetingNotes,
+      options,
+      topicsBySubject,
+      sessionsPairMenteeId,
+      setSessionsPairMenteeId,
       notificationsLoading,
       notifications,
       loadNotifications,
@@ -3649,15 +2115,10 @@
       handleBioSave,
       handleTagsSave,
       handleAvatarChange,
-      handleRemoveAvatar,
       avatarUploading,
       menteeProfile,
       setMenteeProfile,
       menteeProfileSaving,
-      completeProfileSaving,
-      handleCompleteProfileSave,
-      onboardingSaving,
-      handleOnboardingComplete,
       handleMenteeProfileSave,
       mentorProfile,
       setMentorProfile,
@@ -3669,6 +2130,19 @@
       handleMenteeMatchingSave,
       showMenteeInfoModal,
       showMentorInfoModal,
+      subjectsLoading,
+      subjectsData,
+      subjectSaving,
+      subjectForm,
+      setSubjectForm,
+      subjectEditId,
+      setSubjectEditId,
+      subjectDeleteId,
+      setSubjectDeleteId,
+      handleCreateSubject,
+      handleUpdateSubject,
+      handleDeleteSubject,
+      loadSubjects,
       approvalsLoading,
       approvalActionKey,
       pendingMentors,
@@ -3691,11 +2165,7 @@
       downloadBackup,
       activityLogs,
       activityLogsLoading,
-      activityLogsPage,
-      activityLogsPageSize,
-      activityLogsTotal,
-      activityLogsTotalPages,
-      activityLogsStats,
+      activityLogsMeta,
       loadActivityLogs,
       postsFeed,
       postsFeedLoaded,
@@ -3705,8 +2175,6 @@
       postsFeedHasMore,
       postsFeedLoadingMore,
       chosenMentorId,
-      pendingMentorIds,
-      setPendingMentorIds,
       announcements,
       announcementsLoading,
       announcementMessage,
@@ -3727,19 +2195,14 @@
       loadMe,
       handleSignIn,
       handleSignUp,
-      signUpSuccessEmail,
-      setSignUpSuccessEmail,
       handleLogout,
       theme,
       toggleTheme,
       isAuthenticated,
       isPendingApproval,
-      isLockedOut,
       showSignInPrompt,
       menteeRecUpdating,
       addToast,
-      removeToast,
-      setUnsavedChangesDirty,
       globalSearchResults,
       loadGlobalSearch,
       viewedMentorProfile,
@@ -3753,179 +2216,60 @@
     };
 
     const LayoutComponent = Layout;
-    const ThemeProvider =
-      window.Mui && window.Mui.ThemeProvider ? window.Mui.ThemeProvider : null;
-    const muiTheme = useMemo(() => {
-      const baseTheme = (window.DashboardApp && window.DashboardApp.theme) || {};
-      const createThemeFn =
-        (window.Mui && window.Mui.createTheme) ||
-        (window.DashboardApp && window.DashboardApp.createTheme);
-      const isDark = theme === "dark";
-      if (typeof createThemeFn === "function") {
-        return createThemeFn(baseTheme, {
-          palette: {
-            mode: isDark ? "dark" : "light",
-            background: {
-              default: isDark ? "#0F172A" : "#E6ECF5",
-              paper: isDark ? "#151D2A" : "#E6ECF5",
-            },
-            text: {
-              primary: isDark ? "#F8FAFC" : "#1E293B",
-              secondary: isDark ? "#94A3B8" : "#546E7A",
-            },
-          },
-        });
-      }
-      return baseTheme;
-    }, [theme]);
-    const appTree = (
+    return (
       <AppContext.Provider value={contextValue}>
-        <LayoutComponent />
-        {leaveGuard ? (
-          <div
-            className="unsaved-leave-backdrop"
-            onClick={cancelLeave}
-            role="presentation"
-          >
-            <div
-              className="unsaved-leave-modal modal-paper-container"
-              role="dialog"
-              aria-modal="true"
-              aria-labelledby="unsaved-leave-title"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <h3 id="unsaved-leave-title" className="unsaved-leave-title">
-                Unsaved changes
-              </h3>
-              <p className="unsaved-leave-copy">
-                You have changes that have not been saved. If you leave now,
-                those changes will be lost.
+        {!mustChangePassword && <LayoutComponent />}
+        {mustChangePassword && user && (
+          <div className="session-check-overlay" role="dialog" aria-modal="true" aria-live="assertive">
+            <div className="session-check-panel force-password-panel">
+              <h2 className="session-check-title">Change your temporary password</h2>
+              <p className="session-check-subtitle">
+                Coordinator-created accounts must replace the generated password before continuing.
               </p>
-              <div className="unsaved-leave-actions">
-                <button
-                  type="button"
-                  className="btn secondary"
-                  onClick={confirmDiscardLeave}
-                >
-                  Discard changes
-                </button>
-                <button type="button" className="btn" onClick={cancelLeave}>
-                  Keep editing
+              <div className="auth-field">
+                <label>Current password</label>
+                <input
+                  type="password"
+                  value={forcePasswordForm.current_password}
+                  onChange={(e) => setForcePasswordForm({ ...forcePasswordForm, current_password: e.target.value })}
+                  autoComplete="current-password"
+                />
+              </div>
+              <div className="auth-field">
+                <label>New password</label>
+                <input
+                  type="password"
+                  value={forcePasswordForm.new_password1}
+                  onChange={(e) => setForcePasswordForm({ ...forcePasswordForm, new_password1: e.target.value })}
+                  autoComplete="new-password"
+                />
+              </div>
+              <div className="auth-field">
+                <label>Confirm new password</label>
+                <input
+                  type="password"
+                  value={forcePasswordForm.new_password2}
+                  onChange={(e) => setForcePasswordForm({ ...forcePasswordForm, new_password2: e.target.value })}
+                  autoComplete="new-password"
+                />
+              </div>
+              <div className="btn-row">
+                <button type="button" className="btn btn-primary" onClick={handleForcePasswordChange} disabled={forcePasswordLoading}>
+                  {forcePasswordLoading ? "Updating..." : "Update password"}
                 </button>
               </div>
             </div>
           </div>
-        ) : null}
-        <div
-          className="toast-container"
-          aria-live="polite"
-          role="region"
-          aria-label="Notifications"
-        >
-          {toasts.map((t) => {
-            const type = t.type || "success";
-            return (
-              <div
-                key={t.id}
-                className={"toast toast--" + type + " toast-" + type}
-                role={type === "error" ? "alert" : "status"}
-              >
-                <span className={"toast-icon-badge toast-icon-badge--" + type}>
-                  {type === "success" && (
-                    <svg
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2.5"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      aria-hidden="true"
-                    >
-                      <path d="M20 6L9 17l-5-5" />
-                    </svg>
-                  )}
-                  {type === "error" && (
-                    <svg
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2.5"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      aria-hidden="true"
-                    >
-                      <circle cx="12" cy="12" r="10" />
-                      <line x1="15" y1="9" x2="9" y2="15" />
-                      <line x1="9" y1="9" x2="15" y2="15" />
-                    </svg>
-                  )}
-                  {type === "warning" && (
-                    <svg
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2.5"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      aria-hidden="true"
-                    >
-                      <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
-                      <line x1="12" y1="9" x2="12" y2="13" />
-                      <line x1="12" y1="17" x2="12.01" y2="17" />
-                    </svg>
-                  )}
-                  {type === "info" && (
-                    <svg
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2.5"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      aria-hidden="true"
-                    >
-                      <circle cx="12" cy="12" r="10" />
-                      <line x1="12" y1="16" x2="12" y2="12" />
-                      <line x1="12" y1="8" x2="12.01" y2="8" />
-                    </svg>
-                  )}
-                </span>
-                <div className="toast-content">
-                  {t.title ? (
-                    <strong className="toast-title">{t.title}</strong>
-                  ) : null}
-                  <span className="toast-message">{t.message}</span>
-                </div>
-                <button
-                  type="button"
-                  className="toast-close-btn"
-                  onClick={() => removeToast(t.id)}
-                  aria-label="Dismiss notification"
-                  title="Dismiss"
-                >
-                  <svg
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2.2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    aria-hidden="true"
-                  >
-                    <line x1="18" y1="6" x2="6" y2="18" />
-                    <line x1="6" y1="6" x2="18" y2="18" />
-                  </svg>
-                </button>
-              </div>
-            );
-          })}
+        )}
+        <div className="toast-container" aria-live="polite">
+          {toasts.map((t) => (
+            <div key={t.id} className={"toast toast-" + (t.type || "success")}>
+              {t.message}
+            </div>
+          ))}
         </div>
       </AppContext.Provider>
     );
-    if (ThemeProvider && muiTheme) {
-      return <ThemeProvider theme={muiTheme}>{appTree}</ThemeProvider>;
-    }
-    return appTree;
   }
 
   window.DashboardApp = window.DashboardApp || {};

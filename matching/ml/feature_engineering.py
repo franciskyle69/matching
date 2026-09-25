@@ -12,6 +12,8 @@ from matching.ml.features import (  # noqa: F401
     MAX_TOPICS_TOTAL,
     MAX_COMPETENCIES_PER_TOPIC,
     MAX_COMPETENCIES_TOTAL,
+    SUBJECT_VECTOR_CLASSES,
+    SUBJECT_VECTOR_DIMENSION,
     academic_gap_score,
     availability_overlap_hours,
     availability_overlap_ratio,

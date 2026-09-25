@@ -1,110 +1,135 @@
-import Tab from "@mui/material/Tab";
-import Tabs from "@mui/material/Tabs";
-import MenteePreferencesPage from "./MenteePreferencesPage.jsx";
-
 (function () {
   "use strict";
   const React = window.React;
   const { useContext, useState, useEffect, useRef } = React;
   const AppContext = window.DashboardApp.AppContext;
-  const { getCookie, fetchJSON, DashboardIcon } =
+  const { getCookie, fetchJSON, DashboardIcon, LoadingSpinner } =
     window.DashboardApp.Utils || {};
 
   const BIO_MAX = 200;
   const MAX_TAGS = 8;
-  const OPEN_SECTION_STORAGE_KEY = "settings:open-section";
-  const TAB_IDS = ["account", "password", "academic", "preferences"];
-  const LEGACY_SECTION_MAP = { general: "academic", bio: "account", matching: "preferences" };
+  const getAllowedTopicsForSubjects =
+    window.DashboardApp.getAllowedTopicsForSubjects || (() => []);
+  const filterTopicsForSubjects =
+    window.DashboardApp.filterTopicsForSubjects ||
+    ((subjects, topics) => (Array.isArray(topics) ? [...topics] : []));
 
-  /** Reads the section from a "settings/<section>" hash so links can open one directly. */
-  function sectionFromHash() {
-    const raw = String(window.location.hash || "").replace(/^#/, "");
-    if (!raw.startsWith("settings")) return null;
-    const section = raw.split("/")[1] || "";
-    const normalized = LEGACY_SECTION_MAP[section] || section;
-    return TAB_IDS.includes(normalized) ? normalized : null;
+  function serializeMentorQuestionnaire(profile) {
+    return JSON.stringify({
+      subjects: profile.subjects || [],
+      topics: profile.topics || [],
+      expertise_level: profile.expertise_level ?? null,
+      role: profile.role || "",
+      capacity: profile.capacity ?? 3,
+      gender: profile.gender || "",
+      availability: profile.availability || [],
+    });
   }
 
-  function writeSectionHash(section) {
-    const base = window.location.pathname + window.location.search;
-    const next = section ? `${base}#settings/${section}` : `${base}#settings`;
-    window.history.replaceState(null, "", next);
+  function serializeMenteeQuestionnaire(profile) {
+    return JSON.stringify({
+      subjects: profile.subjects || [],
+      topics: profile.topics || [],
+      difficulty_level: profile.difficulty_level ?? null,
+      availability: profile.availability || [],
+    });
   }
 
-  const PASSWORD_STRENGTH_LABELS = [
-    "Too weak",
-    "Too weak",
-    "Weak",
-    "Almost there",
-    "Strong",
-  ];
-
-  function formatYearLevel(value) {
-    const level = Number(value);
-    if (!level) return "—";
-    if (level === 1) return "1st Year";
-    if (level === 2) return "2nd Year";
-    if (level === 3) return "3rd Year";
-    if (level === 4) return "4th Year";
-    return `Year ${level}`;
-  }
-
-  function getInitials(name) {
-    const parts = String(name || "").trim().split(/\s+/).filter(Boolean);
-    if (!parts.length) return "?";
-    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-  }
-
-  function SettingsTabNav({ tabs, activeTab, onChange }) {
-    const handleTabChange = (_event, value) => {
-      onChange(value);
-    };
+  /** Inline pencil (always visible; avoids cache/missing DashboardIcon on Bio card) */
+  function BioInterestsHeaderIcon() {
     return (
-      <Tabs
-        allowScrollButtonsMobile={false}
-        aria-label="Settings sections"
-        className="settings-tabs"
-        onChange={handleTabChange}
-        scrollButtons={false}
-        value={activeTab}
-        variant="scrollable"
+      <svg
+        className="settings-bio-header-icon"
+        width="20"
+        height="20"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        aria-hidden="true"
       >
-        {tabs.map((tab) => (
-          <Tab key={tab.id} label={tab.label} value={tab.id} />
-        ))}
-      </Tabs>
+        <path d="M12 20h9" />
+        <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+      </svg>
     );
   }
 
-  function getPasswordChecks(password) {
-    const value = String(password || "");
-    return [
-      { id: "length", label: "At least 10 characters", ok: value.length >= 10 },
-      { id: "lower", label: "One lowercase letter", ok: /[a-z]/.test(value) },
-      { id: "upper", label: "One uppercase letter", ok: /[A-Z]/.test(value) },
-      { id: "number", label: "One number", ok: /\d/.test(value) },
-    ];
-  }
-
-  function ReadOnlyBadge() {
-    return (
-      <span className="settings-readonly-badge" aria-label="Read only">
-        🔒 Read only
-      </span>
-    );
-  }
-
-  function BioAndInterestsCard({
-    bio,
-    tags,
-    onBioSave,
-    onTagsSave,
-    onDirtyChange,
-    registerActions,
-    onDraftChange,
-    addToast,
+  function SettingsAccordionCard({
+    id,
+    title,
+    subtitle,
+    icon,
+    isOpen,
+    onToggle,
+    className = "",
+    bodyClassName = "",
+    titleAs = "h2",
+    children,
   }) {
+    const TitleTag = titleAs;
+
+    return (
+      <div className={`settings-card settings-accordion-card ${className}`.trim()}>
+        <button
+          type="button"
+          className="settings-accordion-trigger"
+          aria-expanded={isOpen}
+          aria-controls={id + "-panel"}
+          onClick={onToggle}
+        >
+          <div className="settings-card-header-main settings-accordion-header-main">
+            <div className="settings-card-icon">{icon}</div>
+            <div>
+              <TitleTag
+                className={
+                  titleAs === "h1"
+                    ? "page-title settings-accordion-title"
+                    : "section-title settings-accordion-title"
+                }
+                style={{ borderBottom: "none", paddingBottom: 0 }}
+              >
+                {title}
+              </TitleTag>
+              {subtitle && (
+                <p className="page-subtitle settings-card-subtitle-tight settings-accordion-subtitle">
+                  {subtitle}
+                </p>
+              )}
+            </div>
+          </div>
+          <span
+            className={
+              "settings-accordion-chevron" + (isOpen ? " is-open" : "")
+            }
+            aria-hidden="true"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <polyline points="6 9 12 15 18 9" />
+            </svg>
+          </span>
+        </button>
+        {isOpen && (
+          <div
+            id={id + "-panel"}
+            className={`settings-accordion-body is-open ${bodyClassName}`.trim()}
+          >
+            <div className="settings-accordion-body-inner">{children}</div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  function BioAndInterestsCard({ bio, tags, onBioSave, onTagsSave, isOpen, onToggle }) {
     const [bioText, setBioText] = useState(bio);
     const [bioSaving, setBioSaving] = useState(false);
     const [localTags, setLocalTags] = useState(tags);
@@ -165,23 +190,15 @@ import MenteePreferencesPage from "./MenteePreferencesPage.jsx";
       }
     }
 
-    function addTag(tagName) {
-      const trimmed = tagName.trim();
+    function addTag(name) {
+      const trimmed = name.trim();
       if (!trimmed) return;
       if (localTags.length >= MAX_TAGS) {
-        const msg = "Maximum " + MAX_TAGS + " tags allowed.";
-        setTagError(msg);
-        if (typeof addToast === "function") {
-          addToast({ title: "Tag Limit", message: msg, type: "warning" });
-        }
+        setTagError("Maximum " + MAX_TAGS + " tags allowed.");
         return;
       }
       if (localTags.some((t) => t.toLowerCase() === trimmed.toLowerCase())) {
-        const msg = `Interest "${trimmed}" has already been added.`;
-        setTagError(msg);
-        if (typeof addToast === "function") {
-          addToast({ title: "Duplicate Interest", message: msg, type: "warning" });
-        }
+        setTagError("Tag already added.");
         return;
       }
       setLocalTags([...localTags, trimmed]);
@@ -204,24 +221,12 @@ import MenteePreferencesPage from "./MenteePreferencesPage.jsx";
     }
 
     async function saveBio() {
-      if (!bioChanged) {
-        if (typeof addToast === "function") {
-          addToast("Bio is already up to date.", "info");
-        }
-        return;
-      }
       setBioSaving(true);
       await onBioSave(bioText);
       setBioSaving(false);
     }
 
     async function saveTags() {
-      if (!tagsChanged) {
-        if (typeof addToast === "function") {
-          addToast("Interests are already up to date.", "info");
-        }
-        return;
-      }
       setTagsSaving(true);
       await onTagsSave(localTags);
       setTagsSaving(false);
@@ -229,58 +234,17 @@ import MenteePreferencesPage from "./MenteePreferencesPage.jsx";
 
     const bioChanged = bioText !== bio;
     const tagsChanged = JSON.stringify(localTags) !== JSON.stringify(tags);
-    const isDirty = bioChanged || tagsChanged;
-
-    useEffect(() => {
-      if (onDirtyChange) onDirtyChange(isDirty);
-    }, [isDirty]);
-
-    useEffect(() => {
-      if (typeof onDraftChange === "function") {
-        onDraftChange({ bio: bioText, tags: localTags });
-      }
-    }, [bioText, localTags]);
-
-    useEffect(() => {
-      return () => {
-        if (onDirtyChange) onDirtyChange(false);
-      };
-    }, []);
-
-    useEffect(() => {
-      if (!registerActions) return;
-      registerActions({
-        save: async () => {
-          let ok = true;
-          if (bioChanged) {
-            setBioSaving(true);
-            ok = (await onBioSave(bioText)) !== false;
-            setBioSaving(false);
-          }
-          if (ok && tagsChanged) {
-            setTagsSaving(true);
-            ok = (await onTagsSave(localTags)) !== false;
-            setTagsSaving(false);
-          }
-          return ok;
-        },
-        discard: () => {
-          setBioText(bio);
-          setLocalTags(tags);
-          setTagInput("");
-          setTagError("");
-          setSuggestions([]);
-          setShowSuggestions(false);
-        },
-      });
-    }, [bio, tags, bioText, localTags, bioChanged, tagsChanged]);
 
     return (
-      <div className="settings-bio-panel">
-        <h3 className="settings-bio-panel-title">Bio &amp; interests</h3>
-        <p className="settings-helper-text">
-          Tell others about yourself and what you&apos;re interested in.
-        </p>
+      <SettingsAccordionCard
+        id="settings-bio"
+        title="Bio & Interests"
+        subtitle="Tell others about yourself and what you\'re interested in."
+        icon={<BioInterestsHeaderIcon />}
+        isOpen={isOpen}
+        onToggle={onToggle}
+        className="settings-card--bio"
+      >
         <div className="settings-bio-section">
           <div className="settings-section-label">Bio</div>
           <div className="form-group settings-bio-form-group">
@@ -305,14 +269,15 @@ import MenteePreferencesPage from "./MenteePreferencesPage.jsx";
               </div>
               <button
                 type="button"
-                className={`btn small ${bioChanged ? "btn-primary" : "secondary"}`}
+                className="btn small"
                 onClick={saveBio}
-                disabled={bioSaving}
-                title={bioChanged ? "Save bio changes" : "Bio is up to date"}
+                disabled={bioSaving || !bioChanged}
               >
                 {bioSaving
                   ? "Saving\u2026"
-                  : "Save bio"}
+                  : bioChanged
+                    ? "Save bio"
+                    : "No changes"}
               </button>
             </div>
           </div>
@@ -381,18 +346,19 @@ import MenteePreferencesPage from "./MenteePreferencesPage.jsx";
           <div className="settings-tags-toolbar">
             <button
               type="button"
-              className={`btn small ${tagsChanged ? "btn-primary" : "secondary"}`}
+              className="btn small"
               onClick={saveTags}
-              disabled={tagsSaving}
-              title={tagsChanged ? "Save interests changes" : "Interests are up to date"}
+              disabled={tagsSaving || !tagsChanged}
             >
               {tagsSaving
                 ? "Saving\u2026"
-                : "Save interests"}
+                : tagsChanged
+                  ? "Save interests"
+                  : "No changes"}
             </button>
           </div>
         </div>
-      </div>
+      </SettingsAccordionCard>
     );
   }
 
@@ -401,7 +367,6 @@ import MenteePreferencesPage from "./MenteePreferencesPage.jsx";
     if (!ctx || !ctx.user) return null;
     const {
       user,
-      setUser,
       setError,
       addToast,
       settingsForm,
@@ -411,41 +376,34 @@ import MenteePreferencesPage from "./MenteePreferencesPage.jsx";
       handleBioSave,
       handleTagsSave,
       handleAvatarChange,
-      handleRemoveAvatar: ctxHandleRemoveAvatar,
       avatarUploading,
       menteeProfile,
       setMenteeProfile,
       menteeProfileSaving,
       handleMenteeProfileSave,
-      setUnsavedChangesDirty,
+      mentorProfile,
+      setMentorProfile,
+      mentorProfileSaving,
+      handleMentorProfileSave,
+      menteeMatching,
+      setMenteeMatching,
+      menteeMatchingSaving,
+      handleMenteeMatchingSave,
     } = ctx;
 
-    const [activeTab, setActiveTab] = useState(() => {
-      const fromHash = sectionFromHash();
-      if (fromHash) return fromHash;
-      try {
-        const stored =
-          window.sessionStorage.getItem(OPEN_SECTION_STORAGE_KEY) ?? "account";
-        return LEGACY_SECTION_MAP[stored] || stored;
-      } catch {
-        return "account";
-      }
+    const [mentorProfileSavedAt, setMentorProfileSavedAt] = useState(0);
+    const [menteeMatchingSavedAt, setMenteeMatchingSavedAt] = useState(0);
+    const [mentorAvailabilityError, setMentorAvailabilityError] = useState("");
+    const [menteeAvailabilityError, setMenteeAvailabilityError] = useState("");
+    const [openSections, setOpenSections] = useState({
+      account: false,
+      password: false,
+      bio: false,
+      general: false,
+      matching: false,
     });
-    const [bioDirty, setBioDirty] = useState(false);
-    const [bioDraft, setBioDraft] = useState({
-      bio: settingsForm.bio || "",
-      tags: Array.isArray(settingsForm.tags) ? settingsForm.tags : [],
-    });
-    const [savingAll, setSavingAll] = useState(false);
-    const [savedAt, setSavedAt] = useState(0);
-    const [showNewPassword, setShowNewPassword] = useState(false);
-    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-    const bioActionsRef = useRef({ save: null, discard: null });
-    const generalSavedRef = useRef(null);
-    const generalEditedRef = useRef(false);
     const [passwordEmail, setPasswordEmail] = useState("");
-    const [passwordVerificationCode, setPasswordVerificationCode] =
-      useState("");
+    const [passwordVerificationCode, setPasswordVerificationCode] = useState("");
     const [passwordForm, setPasswordForm] = useState({
       new_password1: "",
       new_password2: "",
@@ -462,35 +420,111 @@ import MenteePreferencesPage from "./MenteePreferencesPage.jsx";
     });
     const passwordCodeInputRef = useRef(null);
     const passwordNewPasswordRef = useRef(null);
+    const mentorQuestionnaireSavedRef = useRef(
+      serializeMentorQuestionnaire(mentorProfile),
+    );
+    const menteeQuestionnaireSavedRef = useRef(
+      serializeMenteeQuestionnaire(menteeMatching),
+    );
+
+    const mentorProfilePristine =
+      mentorQuestionnaireSavedRef.current ===
+      serializeMentorQuestionnaire(mentorProfile);
+
+    const menteeMatchingPristine =
+      menteeQuestionnaireSavedRef.current ===
+      serializeMenteeQuestionnaire(menteeMatching);
+
+    const questionnaireSaving = mentorProfileSaving || menteeMatchingSaving;
+    const questionnaireSavingText = mentorProfileSaving
+      ? "Saving mentor questionnaire..."
+      : "Saving mentee questionnaire...";
+
+    const mentorProfileJustSaved =
+      mentorProfileSavedAt > 0 && Date.now() - mentorProfileSavedAt < 2000;
+    const menteeMatchingJustSaved =
+      menteeMatchingSavedAt > 0 && Date.now() - menteeMatchingSavedAt < 2000;
+
+    const SUBJECT_CHOICES =
+      (window.DashboardApp && window.DashboardApp.MENTOR_SUBJECT_OPTIONS) || [];
+    const TOPIC_CHOICES =
+      (window.DashboardApp && window.DashboardApp.MENTOR_TOPIC_OPTIONS) || [];
+    const MIN_AVAILABLE_TIME = "08:00";
+    const MAX_AVAILABLE_TIME = "20:00";
+
+    function toMinutes(hhmm) {
+      const parts = String(hhmm || "").split(":");
+      if (parts.length !== 2) return null;
+      const h = Number(parts[0]);
+      const m = Number(parts[1]);
+      if (
+        !Number.isFinite(h) ||
+        !Number.isFinite(m) ||
+        h < 0 ||
+        h > 23 ||
+        m < 0 ||
+        m > 59
+      )
+        return null;
+      return h * 60 + m;
+    }
+
+    function firstAvailabilityRange(
+      slots,
+      fallbackStart = "08:00",
+      fallbackEnd = "17:00",
+    ) {
+      const first =
+        Array.isArray(slots) && slots.length > 0 ? String(slots[0]) : "";
+      const parts = first.split("-");
+      if (parts.length !== 2) return { start: fallbackStart, end: fallbackEnd };
+      return { start: parts[0], end: parts[1] };
+    }
+
+    function toSingleAvailabilityRange(start, end) {
+      const s = toMinutes(start);
+      const e = toMinutes(end);
+      const min = toMinutes(MIN_AVAILABLE_TIME);
+      const max = toMinutes(MAX_AVAILABLE_TIME);
+      if (s == null || e == null || min == null || max == null) return [];
+      if (s < min || e > max || s >= e) return [];
+      return [`${start}-${end}`];
+    }
+
+    function getPasswordStrengthIssues(password) {
+      const issues = [];
+      const value = String(password || "");
+      if (value.length < 8) issues.push("Use at least 8 characters.");
+      if (!/[a-z]/.test(value)) issues.push("Add a lowercase letter.");
+      if (!/[A-Z]/.test(value)) issues.push("Add an uppercase letter.");
+      if (!/\d/.test(value)) issues.push("Add at least one number.");
+      return issues;
+    }
+
+    const [mentorAvailabilityDraft, setMentorAvailabilityDraft] = useState(() =>
+      firstAvailabilityRange(mentorProfile.availability, "08:00", "17:00"),
+    );
+    const [menteeAvailabilityDraft, setMenteeAvailabilityDraft] = useState(() =>
+      firstAvailabilityRange(menteeMatching.availability, "08:00", "17:00"),
+    );
+
+    useEffect(() => {
+      setMentorAvailabilityDraft(
+        firstAvailabilityRange(mentorProfile.availability, "08:00", "17:00"),
+      );
+    }, [mentorProfile.availability]);
+
+    useEffect(() => {
+      setMenteeAvailabilityDraft(
+        firstAvailabilityRange(menteeMatching.availability, "08:00", "17:00"),
+      );
+    }, [menteeMatching.availability]);
 
     useEffect(() => {
       if (!passwordCodeSent && !passwordCodeVerified) {
         setPasswordEmail(settingsForm.email || user.email || "");
       }
-    }, [
-      settingsForm.email,
-      user.email,
-      passwordCodeSent,
-      passwordCodeVerified,
-    ]);
-
-    useEffect(() => {
-      try {
-        window.sessionStorage.setItem(OPEN_SECTION_STORAGE_KEY, activeTab);
-      } catch {
-        /* storage unavailable */
-      }
-      writeSectionHash(activeTab);
-    }, [activeTab]);
-
-    useEffect(() => {
-      function onHashChange() {
-        const section = sectionFromHash();
-        if (section) setActiveTab(section);
-      }
-      window.addEventListener("hashchange", onHashChange);
-      return () => window.removeEventListener("hashchange", onHashChange);
-    }, []);
+    }, [settingsForm.email, user.email, passwordCodeSent, passwordCodeVerified]);
 
     useEffect(() => {
       if (passwordResendSeconds <= 0) return undefined;
@@ -500,33 +534,25 @@ import MenteePreferencesPage from "./MenteePreferencesPage.jsx";
       return () => window.clearInterval(timer);
     }, [passwordResendSeconds]);
 
-    function selectTab(tabId) {
-      setActiveTab(tabId);
-    }
-
-    async function handleRemoveAvatar() {
-      if (typeof ctxHandleRemoveAvatar === "function") {
-        await ctxHandleRemoveAvatar();
-        return;
-      }
-      if (!settingsForm.avatar_url && !user?.avatar_url) return;
-      try {
-        const response = await fetch("/api/me/avatar/", {
-          method: "DELETE",
-          credentials: "include",
-          headers: { "X-CSRFToken": getCookie("csrftoken") },
-        });
-        const data = (await response.json()) || {};
-        if (!response.ok) {
-          addToast(data.error || "Unable to remove profile picture.", "error");
-          return;
+    function toggleSection(section) {
+      setOpenSections((current) => {
+        // If the clicked section is already open, close it
+        if (current[section]) {
+          return {
+            ...current,
+            [section]: false,
+          };
         }
-        setSettingsForm((prev) => ({ ...prev, avatar_url: "" }));
-        setUser((prev) => (prev ? { ...prev, avatar_url: "" } : prev));
-        addToast("Profile photo removed.");
-      } catch (err) {
-        addToast("Network error while removing profile picture.", "error");
-      }
+        // Otherwise, close all sections and open only the clicked one
+        return {
+          account: false,
+          password: false,
+          bio: false,
+          general: false,
+          matching: false,
+          [section]: true,
+        };
+      });
     }
 
     async function handleSendPasswordCode() {
@@ -534,15 +560,9 @@ import MenteePreferencesPage from "./MenteePreferencesPage.jsx";
       setPasswordStatus({ tone: "muted", message: "" });
       const email = String(passwordEmail || "").trim();
       if (!email) {
-        const msg = "Enter the email address that should receive the code.";
         setPasswordStatus({
           tone: "error",
-          message: msg,
-        });
-        addToast({
-          title: "Email Required",
-          message: msg,
-          type: "warning",
+          message: "Enter the email address that should receive the code.",
         });
         return;
       }
@@ -556,20 +576,12 @@ import MenteePreferencesPage from "./MenteePreferencesPage.jsx";
       if (!result.ok) {
         const message =
           result.data?.errors && typeof result.data.errors === "object"
-            ? Object.values(result.data.errors)
-                .flat()
-                .filter(Boolean)
-                .join(" ") ||
+            ? Object.values(result.data.errors).flat().filter(Boolean).join(" ") ||
               result.data?.error ||
               "Unable to send verification code."
             : result.data?.error || "Unable to send verification code.";
         setPasswordCodeVerified(false);
         setPasswordStatus({ tone: "error", message });
-        addToast({
-          title: "Send Failed",
-          message,
-          type: "error",
-        });
         return;
       }
       setPasswordCodeSent(true);
@@ -581,11 +593,7 @@ import MenteePreferencesPage from "./MenteePreferencesPage.jsx";
         tone: "success",
         message: result.data?.message || "Verification code sent.",
       });
-      addToast({
-        title: "Code Sent",
-        message: result.data?.message || "Verification code sent to your email.",
-        type: "success",
-      });
+      addToast(result.data?.message || "Verification code sent.");
       window.setTimeout(() => {
         passwordCodeInputRef.current?.focus();
       }, 0);
@@ -595,15 +603,9 @@ import MenteePreferencesPage from "./MenteePreferencesPage.jsx";
       setError("");
       setPasswordStatus({ tone: "muted", message: "" });
       if (String(passwordVerificationCode || "").trim().length !== 6) {
-        const msg = "Please enter the 6-digit verification code.";
         setPasswordStatus({
           tone: "error",
-          message: msg,
-        });
-        addToast({
-          title: "Invalid Code",
-          message: msg,
-          type: "warning",
+          message: "Enter the 6-digit verification code.",
         });
         return;
       }
@@ -617,20 +619,12 @@ import MenteePreferencesPage from "./MenteePreferencesPage.jsx";
       if (!result.ok) {
         const message =
           result.data?.errors && typeof result.data.errors === "object"
-            ? Object.values(result.data.errors)
-                .flat()
-                .filter(Boolean)
-                .join(" ") ||
+            ? Object.values(result.data.errors).flat().filter(Boolean).join(" ") ||
               result.data?.error ||
               "Invalid verification code."
             : result.data?.error || "Invalid verification code.";
         setPasswordCodeVerified(false);
         setPasswordStatus({ tone: "error", message });
-        addToast({
-          title: "Verification Failed",
-          message,
-          type: "error",
-        });
         return;
       }
       setPasswordCodeVerified(true);
@@ -640,11 +634,7 @@ import MenteePreferencesPage from "./MenteePreferencesPage.jsx";
           result.data?.message ||
           "Code verified. You can now set a new password.",
       });
-      addToast({
-        title: "Code Verified",
-        message: result.data?.message || "Security code verified. You can now set your new password.",
-        type: "success",
-      });
+      addToast(result.data?.message || "Code verified.");
       window.setTimeout(() => {
         passwordNewPasswordRef.current?.focus();
       }, 0);
@@ -654,37 +644,12 @@ import MenteePreferencesPage from "./MenteePreferencesPage.jsx";
       setError("");
       setPasswordStatus({ tone: "muted", message: "" });
       if (!passwordCodeVerified) {
-        const msg = "Please enter and verify the security code before updating your password.";
         setPasswordStatus({
           tone: "error",
-          message: msg,
-        });
-        addToast({
-          title: "Verification Required",
-          message: msg,
-          type: "warning",
+          message: "Verify the code before updating your password.",
         });
         return;
       }
-      if (!passwordForm.new_password1) {
-        const msg = "Please enter your new password.";
-        setPasswordStatus({ tone: "error", message: msg });
-        addToast({ title: "Password Required", message: msg, type: "warning" });
-        return;
-      }
-      if (!passwordMeetsRules) {
-        const msg = "Password must be at least 10 characters and contain uppercase, lowercase, and numbers.";
-        setPasswordStatus({ tone: "error", message: msg });
-        addToast({ title: "Password Complexity", message: msg, type: "warning" });
-        return;
-      }
-      if (!passwordsMatch) {
-        const msg = "The confirmation password does not match the new password.";
-        setPasswordStatus({ tone: "error", message: msg });
-        addToast({ title: "Passwords Mismatch", message: msg, type: "warning" });
-        return;
-      }
-
       setPasswordChanging(true);
       const result = await fetchJSON("/api/me/password-code/change/", {
         method: "POST",
@@ -703,11 +668,6 @@ import MenteePreferencesPage from "./MenteePreferencesPage.jsx";
               "Unable to change password."
             : result.data?.error || "Unable to change password.";
         setPasswordStatus({ tone: "error", message });
-        addToast({
-          title: "Update Failed",
-          message,
-          type: "error",
-        });
         return;
       }
       setPasswordForm({
@@ -722,23 +682,19 @@ import MenteePreferencesPage from "./MenteePreferencesPage.jsx";
         tone: "success",
         message: result.data?.message || "Password updated successfully.",
       });
-      addToast({
-        title: "Password Updated",
-        message: result.data?.message || "Your password has been changed successfully.",
-        type: "success",
-      });
+      addToast(result.data?.message || "Password updated successfully.");
     }
 
-    const passwordChecks = getPasswordChecks(passwordForm.new_password1);
-    const passwordScore = passwordChecks.filter((check) => check.ok).length;
-    const passwordMeetsRules = passwordScore === passwordChecks.length;
+    const passwordStrengthIssues = getPasswordStrengthIssues(
+      passwordForm.new_password1,
+    );
     const passwordsMatch =
       !!passwordForm.new_password1 &&
       !!passwordForm.new_password2 &&
       passwordForm.new_password1 === passwordForm.new_password2;
     const canUpdatePassword =
       passwordCodeVerified &&
-      passwordMeetsRules &&
+      passwordStrengthIssues.length === 0 &&
       passwordsMatch &&
       !passwordChanging;
     const resendLabel =
@@ -748,198 +704,10 @@ import MenteePreferencesPage from "./MenteePreferencesPage.jsx";
           ? "Resend code"
           : "Send code";
 
-    const accountChanged =
-      String(settingsForm.email || "").trim() !==
-        String(user.email || "").trim() ||
-      String(settingsForm.display_name || "").trim() !==
-        String(user.display_name || user.full_name || "").trim();
-
-    const generalRequiredFields = [
-      "campus",
-      "student_id_no",
-      "contact_no",
-      "admission_type",
-      "sex",
-    ];
-    const generalMissingCount = generalRequiredFields.filter(
-      (field) => !String((menteeProfile || {})[field] || "").trim(),
-    ).length;
-
-    const isStaff = Boolean(
-      user.is_staff ||
-      user.role === "staff" ||
-      user.role === "coordinator" ||
-      user.is_superuser
-    );
-    const isMentee =
-      user.role === "mentee" ||
-      user.role === "both" ||
-      Boolean(user.mentee_profile || user.mentee_info);
-    const hasPreferences =
-      !isStaff &&
-      (user.role === "mentor" ||
-        user.role === "mentee" ||
-        user.role === "both" ||
-        Boolean(user.mentor_profile || user.mentee_profile));
-
-    const serializedGeneral = JSON.stringify(menteeProfile || {});
-    if (!generalEditedRef.current) {
-      generalSavedRef.current = serializedGeneral;
-    }
-    const generalChanged =
-      isMentee && generalSavedRef.current !== serializedGeneral;
-
-    function updateMenteeProfile(patch) {
-      generalEditedRef.current = true;
-      setMenteeProfile({ ...menteeProfile, ...patch });
-    }
-
-    const dirtyLabels = [
-      accountChanged && "Account",
-      bioDirty && "Bio & interests",
-      generalChanged && "Academic & personal info",
-    ].filter(Boolean);
-    const isDirty = dirtyLabels.length > 0;
-    const justSaved = savedAt > 0 && !isDirty;
-
-    const settingsTabs = [
-      { id: "account", label: "Account Profile" },
-      { id: "password", label: "Password & Security" },
-    ];
-    if (isMentee) {
-      settingsTabs.push({
-        id: "academic",
-        label: "Academic & Personal Info",
-      });
-    }
-    if (hasPreferences) {
-      settingsTabs.push({
-        id: "preferences",
-        label: "Matching Preferences",
-      });
-    }
-
-    useEffect(() => {
-      if (
-        settingsTabs.length > 0 &&
-        !settingsTabs.some((t) => t.id === activeTab)
-      ) {
-        setActiveTab("account");
-      }
-    }, [settingsTabs.map((t) => t.id).join(","), activeTab]);
-
-    useEffect(() => {
-      if (typeof setUnsavedChangesDirty === "function") {
-        setUnsavedChangesDirty(isDirty);
-      }
-    }, [isDirty]);
-
-    // Leaving the page always goes through the leave guard, so pending edits are
-    // rolled back the same way the bio/interests draft state is.
-    const revertRef = useRef({});
-    revertRef.current = {
-      accountChanged,
-      generalChanged,
-      email: user.email || "",
-      display_name: user.display_name || user.full_name || "",
-      generalSnapshot: generalSavedRef.current,
-    };
-
-    useEffect(() => {
-      return () => {
-        if (typeof setUnsavedChangesDirty === "function") {
-          setUnsavedChangesDirty(false);
-        }
-        const pending = revertRef.current || {};
-        if (pending.accountChanged) {
-          setSettingsForm((prev) => ({
-            ...prev,
-            email: pending.email,
-            display_name: pending.display_name,
-          }));
-        }
-        if (pending.generalChanged && pending.generalSnapshot) {
-          try {
-            setMenteeProfile(JSON.parse(pending.generalSnapshot));
-          } catch {
-            /* keep current values when the snapshot is unreadable */
-          }
-        }
-      };
-    }, []);
-
-    useEffect(() => {
-      if (!isDirty) return undefined;
-      function onBeforeUnload(event) {
-        event.preventDefault();
-        event.returnValue = "";
-      }
-      window.addEventListener("beforeunload", onBeforeUnload);
-      return () => window.removeEventListener("beforeunload", onBeforeUnload);
-    }, [isDirty]);
-
-    useEffect(() => {
-      if (!savedAt) return undefined;
-      const timeoutId = window.setTimeout(() => setSavedAt(0), 2600);
-      return () => window.clearTimeout(timeoutId);
-    }, [savedAt]);
-
-    async function handleGeneralSave() {
-      const ok = (await handleMenteeProfileSave()) !== false;
-      if (ok) generalEditedRef.current = false;
-      return ok;
-    }
-
-    async function handleSaveAll() {
-      setSavingAll(true);
-      let ok = true;
-      if (accountChanged) {
-        ok = (await handleSettingsSave()) !== false;
-      }
-      if (ok && bioDirty && bioActionsRef.current.save) {
-        ok = (await bioActionsRef.current.save()) !== false;
-      }
-      if (ok && generalChanged) {
-        ok = await handleGeneralSave();
-      }
-      setSavingAll(false);
-      if (ok) setSavedAt(Date.now());
-    }
-
-    function handleDiscardAll() {
-      setSettingsForm({
-        ...settingsForm,
-        email: user.email || "",
-        display_name: user.display_name || user.full_name || "",
-      });
-      if (bioActionsRef.current.discard) bioActionsRef.current.discard();
-      if (generalChanged) {
-        generalEditedRef.current = false;
-        try {
-          setMenteeProfile(JSON.parse(generalSavedRef.current));
-        } catch {
-          /* keep current values when the snapshot is unreadable */
-        }
-      }
-      addToast({
-        title: "Changes Discarded",
-        message: "All unsaved changes were reverted.",
-        type: "info",
-      });
-    }
-
-    const displayBio = bioDraft.bio || settingsForm.bio || "";
-    const displayTags =
-      bioDraft.tags && bioDraft.tags.length
-        ? bioDraft.tags
-        : Array.isArray(settingsForm.tags)
-          ? settingsForm.tags
-          : [];
-
     return (
       <div
         className={
-          "settings-page-shell page-shell" +
+          "home-dashboard-space settings-page-shell" +
           (user.role === "mentee"
             ? " settings-page-shell--mentee"
             : user.role === "mentor"
@@ -947,96 +715,33 @@ import MenteePreferencesPage from "./MenteePreferencesPage.jsx";
               : "")
         }
       >
-        <header className="kasandigan-header">
-          <div className="kasandigan-header-content">
-            <div className="kasandigan-badge">
-              <span className="kasandigan-badge-dot" />
-              <span>Academic Mentoring Unit • Account Preferences</span>
+        {questionnaireSaving && (
+          <div
+            className="questionnaire-blocking-loader"
+            role="status"
+            aria-live="assertive"
+            aria-busy="true"
+          >
+            <div className="questionnaire-blocking-loader-content">
+              <LoadingSpinner inline={false} title={questionnaireSavingText} />
             </div>
-            <h1 className="kasandigan-title">Settings</h1>
-            <p className="kasandigan-subtitle">
-              Manage your account, security credentials, and academic preferences.
-            </p>
           </div>
-          <div className="kasandigan-header-actions">
-            <span
-              className="kasandigan-badge"
-              style={{
-                textTransform: "capitalize",
-                background: "var(--subcard-bg, #f8fafc)",
-                border: "1px solid var(--border-color, #e2e8f0)",
-                color: "var(--text-secondary, #475569)",
-                fontWeight: 600,
-              }}
-            >
-              <span
-                className="kasandigan-badge-dot"
-                style={{
-                  background: user.is_staff
-                    ? "#0284c7"
-                    : user.role === "mentor"
-                      ? "#0ea5e9"
-                      : user.role === "both"
-                        ? "#8b5cf6"
-                        : "#10b981",
-                }}
-              />
-              <span>
-                {user.is_staff
-                  ? "AMU Coordinator"
-                  : user.role === "mentor"
-                    ? "Peer Mentor"
-                    : user.role === "mentee"
-                      ? "Mentee"
-                      : user.role === "both"
-                        ? "Peer Mentor & Mentee"
-                        : "User Account"}
-              </span>
-            </span>
-          </div>
-        </header>
-
-        <SettingsTabNav
-          tabs={settingsTabs}
-          activeTab={activeTab}
-          onChange={selectTab}
-        />
-
-        <div className="settings-content-grid">
-          <div className="settings-main-column">
-            {activeTab === "account" && (
-              <div className="settings-tab-panel">
-            <h2 className="settings-tab-panel-title">Account Profile</h2>
-            <p className="settings-tab-panel-subtitle">
-              Update the email and photo used across the dashboard.
-            </p>
-            <div className="form-grid responsive-form-row">
+        )}
+        <div className="settings-page-grid">
+          <SettingsAccordionCard
+            id="settings-account"
+            title="Account settings"
+            subtitle="Update your profile details used across the dashboard."
+            icon={<DashboardIcon name="user" size={20} />}
+            isOpen={openSections.account}
+            onToggle={() => toggleSection("account")}
+            className="settings-card--account"
+            titleAs="h1"
+          >
+            <div className="form-grid">
               <div className="form-group">
-                <label htmlFor="settings-display-name" className="settings-label">
-                  Display name
-                </label>
+                <label>Email</label>
                 <input
-                  id="settings-display-name"
-                  type="text"
-                  value={settingsForm.display_name ?? ""}
-                  onChange={(e) =>
-                    setSettingsForm({
-                      ...settingsForm,
-                      display_name: e.target.value,
-                    })
-                  }
-                  placeholder="Your display name"
-                />
-                <p className="field-helper settings-helper-text">
-                  Your name as displayed to peers and coordinators across PeerLink.
-                </p>
-              </div>
-              <div className="form-group">
-                <label htmlFor="settings-email" className="settings-label">
-                  Email
-                </label>
-                <input
-                  id="settings-email"
                   type="email"
                   value={settingsForm.email}
                   onChange={(e) =>
@@ -1046,8 +751,8 @@ import MenteePreferencesPage from "./MenteePreferencesPage.jsx";
                 />
               </div>
               <div className="form-group" style={{ gridColumn: "1 / -1" }}>
-                <label className="settings-label">Profile picture</label>
-                <div className="settings-avatar-block">
+                <label>Profile picture</label>
+                <div className="settings-avatar-row">
                   <button
                     type="button"
                     className="settings-avatar-uploader"
@@ -1067,14 +772,7 @@ import MenteePreferencesPage from "./MenteePreferencesPage.jsx";
                         />
                       ) : (
                         <div className="settings-avatar-fallback">
-                          {(
-                            settingsForm.display_name ||
-                            user.display_name ||
-                            user.full_name ||
-                            settingsForm.email ||
-                            user.email ||
-                            "?"
-                          )
+                          {(settingsForm.display_name || user.display_name || user.full_name || settingsForm.email || user.email || "?")
                             .slice(0, 1)
                             .toUpperCase()}
                         </div>
@@ -1096,168 +794,91 @@ import MenteePreferencesPage from "./MenteePreferencesPage.jsx";
                     <input
                       id="settings-avatar-input"
                       type="file"
-                      accept="image/png,image/jpeg,image/jpg,image/webp"
+                      accept="image/*"
                       onChange={handleAvatarChange}
                       disabled={avatarUploading}
                       style={{ display: "none" }}
                     />
-                    <div className="settings-avatar-actions">
-                      <button
-                        type="button"
-                        className="settings-btn-upload"
-                        onClick={() => {
-                          const input = document.getElementById(
-                            "settings-avatar-input",
-                          );
-                          if (input) input.click();
-                        }}
-                        disabled={avatarUploading}
-                      >
-                        {avatarUploading ? "Uploading…" : "Upload photo"}
-                      </button>
-                      <button
-                        type="button"
-                        className="settings-btn-text"
-                        onClick={handleRemoveAvatar}
-                        disabled={avatarUploading || (!settingsForm.avatar_url && !user.avatar_url)}
-                      >
-                        Remove
-                      </button>
-                    </div>
-                    <p className="field-helper settings-helper-text">
-                      Clear front-facing photo (PNG or JPG, max 5MB).
+                    <p className="field-helper">
+                      Use a clear, front-facing photo so mentees and mentors can
+                      recognize you.
+                    </p>
+                    <p className="field-helper">
+                      Recommended: square image, at least 256×256px.
                     </p>
                   </div>
                 </div>
               </div>
             </div>
-            <div className="settings-tab-footer">
+            <div className="btn-row settings-card-footer">
               <button
-                type="button"
                 className="btn"
                 onClick={handleSettingsSave}
-                disabled={!accountChanged || settingsSaving}
+                disabled={settingsSaving}
               >
                 {settingsSaving ? "Saving..." : "Save changes"}
               </button>
-              {accountChanged && (
-                <button
-                  type="button"
-                  className="btn secondary"
-                  onClick={() => {
-                    setSettingsForm((prev) => ({
-                      ...prev,
-                      display_name: user.display_name || user.full_name || "",
-                      email: user.email || "",
-                    }));
-                  }}
-                  disabled={settingsSaving}
-                >
-                  Discard
-                </button>
-              )}
-              <span
-                className="settings-helper-text"
-                style={{
-                  marginLeft: "auto",
-                  fontSize: "13px",
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: "6px",
-                  color: accountChanged
-                    ? "var(--primary, #0284c7)"
-                    : "var(--text-muted)",
-                  fontWeight: accountChanged ? 600 : 400,
-                }}
-              >
-                {accountChanged ? "● Unsaved changes" : "✓ All changes saved"}
-              </span>
             </div>
+          </SettingsAccordionCard>
 
-
-            <BioAndInterestsCard
-              bio={settingsForm.bio || ""}
-              tags={Array.isArray(settingsForm.tags) ? settingsForm.tags : []}
-              onBioSave={handleBioSave}
-              onTagsSave={handleTagsSave}
-              onDirtyChange={setBioDirty}
-              onDraftChange={setBioDraft}
-              registerActions={(actions) => {
-                bioActionsRef.current = actions;
-              }}
-              addToast={addToast}
-            />
-          </div>
-        )}
-
-        {activeTab === "password" && (
-          <div className="settings-tab-panel">
-            <h2 className="settings-tab-panel-title">Password &amp; Security</h2>
-            <p className="settings-tab-panel-subtitle">
-              Verify your email, then set a new password.
-            </p>
-            <div className="settings-password-flow-v2">
-              <section className="settings-password-step-v2">
+          <SettingsAccordionCard
+            id="settings-password"
+            title="Change password"
+            subtitle="Request a code, verify it, then update your password in a secure step-by-step flow."
+            icon={<DashboardIcon name="lock" size={20} />}
+            isOpen={openSections.password}
+            onToggle={() => toggleSection("password")}
+            className="settings-card--account"
+          >
+            <div className="settings-password-flow">
+              <section className="settings-password-step">
                 <div className="settings-password-step-header">
                   <span className="settings-password-step-badge">1</span>
                   <div>
-                    <h3 className="settings-password-step-title">
-                      Request verification code
-                    </h3>
-                    <p className="field-helper settings-helper-text">
-                      We&apos;ll send a 6-digit code to your account email.
+                    <div className="settings-password-step-title">Request verification code</div>
+                    <p className="field-helper settings-password-step-copy">
+                      We’ll send a 6-digit code to your account email.
                     </p>
                   </div>
                 </div>
                 <div className="form-group settings-password-email-group">
-                  <label className="settings-label">Email address</label>
+                  <label>Email address</label>
                   <input
                     type="email"
-                    className="readonly-field-input"
                     value={passwordEmail}
                     readOnly
                     aria-readonly="true"
                     placeholder="you@example.com"
                     autoComplete="email"
                   />
+                  <p className="field-helper settings-password-step-copy">
+                    This must match the email on your account.
+                  </p>
                 </div>
                 <div className="settings-password-actions">
                   <button
                     type="button"
-                    className="settings-btn-upload"
+                    className="btn secondary"
                     onClick={handleSendPasswordCode}
-                    disabled={
-                      passwordCodeSending ||
-                      passwordCodeVerifying ||
-                      passwordChanging ||
-                      !passwordEmail.trim() ||
-                      passwordResendSeconds > 0
-                    }
+                    disabled={passwordCodeSending || passwordCodeVerifying || passwordChanging || !passwordEmail.trim() || passwordResendSeconds > 0}
                   >
                     {passwordCodeSending ? "Sending..." : resendLabel}
                   </button>
                 </div>
               </section>
 
-              <section
-                className={
-                  "settings-password-step-v2" +
-                  (passwordCodeSent ? "" : " is-muted")
-                }
-              >
+              <section className={"settings-password-step" + (passwordCodeSent ? "" : " is-muted")}>
                 <div className="settings-password-step-header">
                   <span className="settings-password-step-badge">2</span>
                   <div>
-                    <h3 className="settings-password-step-title">
-                      Verify &amp; update
-                    </h3>
-                    <p className="field-helper settings-helper-text">
-                      Enter the code and choose a new password.
+                    <div className="settings-password-step-title">Enter verification code</div>
+                    <p className="field-helper settings-password-step-copy">
+                      Enter the 6-digit code sent to your email address.
                     </p>
                   </div>
                 </div>
                 <div className="form-group settings-password-code-group">
-                  <label className="settings-label">Verification code</label>
+                  <label>Verification code</label>
                   <input
                     ref={passwordCodeInputRef}
                     type="text"
@@ -1266,15 +887,13 @@ import MenteePreferencesPage from "./MenteePreferencesPage.jsx";
                     placeholder="123456"
                     value={passwordVerificationCode}
                     onChange={(e) => {
-                      const nextValue = e.target.value
-                        .replace(/\D/g, "")
-                        .slice(0, 6);
+                      const nextValue = e.target.value.replace(/\D/g, "").slice(0, 6);
                       setPasswordVerificationCode(nextValue);
                       setPasswordCodeVerified(false);
                     }}
                     disabled={!passwordCodeSent}
                   />
-                  <p className="field-helper settings-helper-text">
+                  <p className="field-helper settings-password-step-copy">
                     {passwordCodeSent
                       ? "The code expires after 10 minutes."
                       : "Send a code first to unlock this step."}
@@ -1285,148 +904,72 @@ import MenteePreferencesPage from "./MenteePreferencesPage.jsx";
                     type="button"
                     className="btn secondary"
                     onClick={handleVerifyPasswordCode}
-                    disabled={
-                      !passwordCodeSent ||
-                      passwordCodeVerifying ||
-                      passwordVerificationCode.length !== 6 ||
-                      passwordCodeVerified
-                    }
+                    disabled={!passwordCodeSent || passwordCodeVerifying || passwordVerificationCode.length !== 6 || passwordCodeVerified}
                   >
-                    {passwordCodeVerifying
-                      ? "Verifying..."
-                      : passwordCodeVerified
-                        ? "Code verified"
-                        : "Verify code"}
+                    {passwordCodeVerifying ? "Verifying..." : passwordCodeVerified ? "Code verified" : "Verify code"}
                   </button>
                 </div>
+              </section>
 
-                <div
-                  className={
-                    "form-grid settings-password-grid responsive-form-row" +
-                    (passwordCodeVerified ? "" : " is-muted")
-                  }
-                  style={{ marginTop: 20 }}
-                >
-                  <div className="form-group">
-                    <label htmlFor="settings-new-password" className="settings-label">
-                      New password
-                    </label>
-                    <div className="settings-password-input">
-                      <input
-                        id="settings-new-password"
-                        ref={passwordNewPasswordRef}
-                        type={showNewPassword ? "text" : "password"}
-                        value={passwordForm.new_password1}
-                        onChange={(e) =>
-                          setPasswordForm((prev) => ({
-                            ...prev,
-                            new_password1: e.target.value,
-                          }))
-                        }
-                        placeholder="Enter new password"
-                        disabled={!passwordCodeVerified}
-                        autoComplete="new-password"
-                      />
-                      <button
-                        type="button"
-                        className="settings-password-toggle"
-                        onClick={() => setShowNewPassword((prev) => !prev)}
-                        disabled={!passwordCodeVerified}
-                        aria-pressed={showNewPassword}
-                      >
-                        {showNewPassword ? "Hide" : "Show"}
-                      </button>
-                    </div>
-                  </div>
-                  <div className="form-group">
-                    <label htmlFor="settings-confirm-password" className="settings-label">
-                      Confirm new password
-                    </label>
-                    <div className="settings-password-input">
-                      <input
-                        id="settings-confirm-password"
-                        type={showConfirmPassword ? "text" : "password"}
-                        value={passwordForm.new_password2}
-                        onChange={(e) =>
-                          setPasswordForm((prev) => ({
-                            ...prev,
-                            new_password2: e.target.value,
-                          }))
-                        }
-                        placeholder="Confirm new password"
-                        disabled={!passwordCodeVerified}
-                        autoComplete="new-password"
-                      />
-                      <button
-                        type="button"
-                        className="settings-password-toggle"
-                        onClick={() => setShowConfirmPassword((prev) => !prev)}
-                        disabled={!passwordCodeVerified}
-                        aria-pressed={showConfirmPassword}
-                      >
-                        {showConfirmPassword ? "Hide" : "Show"}
-                      </button>
-                    </div>
+              <section className={"settings-password-step" + (passwordCodeVerified ? "" : " is-muted") }>
+                <div className="settings-password-step-header">
+                  <span className="settings-password-step-badge">3</span>
+                  <div>
+                    <div className="settings-password-step-title">Set your new password</div>
+                    <p className="field-helper settings-password-step-copy">
+                      These fields remain locked until your code is verified.
+                    </p>
                   </div>
                 </div>
-                {passwordForm.new_password1 ? (
-                  <div className="settings-password-meter">
-                    <div
-                      className="settings-password-meter-track"
-                      role="progressbar"
-                      aria-valuemin={0}
-                      aria-valuemax={passwordChecks.length}
-                      aria-valuenow={passwordScore}
-                      aria-label="Password strength"
-                    >
-                      <span
-                        className={
-                          "settings-password-meter-fill is-score-" +
-                          passwordScore
-                        }
-                        style={{
-                          width: `${(passwordScore / passwordChecks.length) * 100}%`,
-                        }}
-                      />
-                    </div>
-                    <span className="settings-password-meter-label">
-                      {PASSWORD_STRENGTH_LABELS[passwordScore]}
-                    </span>
+                <div className="form-grid settings-password-grid">
+                  <div className="form-group">
+                    <label>New password</label>
+                    <input
+                      ref={passwordNewPasswordRef}
+                      type="password"
+                      value={passwordForm.new_password1}
+                      onChange={(e) =>
+                        setPasswordForm((prev) => ({
+                          ...prev,
+                          new_password1: e.target.value,
+                        }))
+                      }
+                      placeholder="Enter new password"
+                      disabled={!passwordCodeVerified}
+                    />
                   </div>
-                ) : null}
+                  <div className="form-group">
+                    <label>Confirm new password</label>
+                    <input
+                      type="password"
+                      value={passwordForm.new_password2}
+                      onChange={(e) =>
+                        setPasswordForm((prev) => ({
+                          ...prev,
+                          new_password2: e.target.value,
+                        }))
+                      }
+                      placeholder="Confirm new password"
+                      disabled={!passwordCodeVerified}
+                    />
+                  </div>
+                </div>
                 <div className="settings-password-validation">
-                  {passwordCodeVerified && (
-                    <ul
-                      className="settings-password-rules"
-                      aria-label="Password requirements"
-                    >
-                      {passwordChecks.map((check) => (
-                        <li
-                          key={check.id}
-                          className={
-                            "settings-password-check" +
-                            (check.ok ? " is-ok" : "")
-                          }
-                        >
-                          <span
-                            className="settings-password-check-icon"
-                            aria-hidden="true"
-                          >
-                            {check.ok ? "\u2713" : "\u2022"}
-                          </span>
-                          {check.label}
+                  {passwordStrengthIssues.length > 0 && (
+                    <ul className="settings-password-rules" aria-label="Password requirements">
+                      {passwordStrengthIssues.map((issue) => (
+                        <li key={issue} className="settings-password-validation-text is-error">
+                          {issue}
                         </li>
                       ))}
                     </ul>
                   )}
-                  {passwordCodeVerified &&
-                  !passwordsMatch &&
-                  passwordForm.new_password2 ? (
+                  {passwordCodeVerified && !passwordsMatch && passwordForm.new_password2 ? (
                     <p className="field-helper settings-password-validation-text is-error">
                       Passwords do not match.
                     </p>
                   ) : null}
-                  {passwordCodeVerified && passwordMeetsRules && passwordsMatch ? (
+                  {passwordCodeVerified && passwordStrengthIssues.length === 0 && passwordsMatch ? (
                     <p className="field-helper settings-password-validation-text is-success">
                       Password looks good.
                     </p>
@@ -1435,21 +978,18 @@ import MenteePreferencesPage from "./MenteePreferencesPage.jsx";
                 <div className="settings-password-actions settings-password-actions--primary">
                   <button
                     type="button"
-                    className="settings-btn-upload"
+                    className="btn"
                     onClick={handleChangePasswordWithCode}
-                    disabled={passwordChanging}
+                    disabled={!canUpdatePassword}
                   >
-                    {passwordChanging ? "Saving..." : "Save new password"}
+                    {passwordChanging ? "Updating..." : "Update password"}
                   </button>
                 </div>
               </section>
 
               {passwordStatus.message && (
                 <p
-                  className={
-                    "field-helper settings-password-feedback is-" +
-                    passwordStatus.tone
-                  }
+                  className={"field-helper settings-password-feedback is-" + passwordStatus.tone}
                   role="status"
                   aria-live="polite"
                 >
@@ -1457,428 +997,886 @@ import MenteePreferencesPage from "./MenteePreferencesPage.jsx";
                 </p>
               )}
             </div>
-          </div>
-        )}
+          </SettingsAccordionCard>
 
-        {activeTab === "academic" && isMentee && (
-          <div className="settings-tab-panel">
-            <h2 className="settings-tab-panel-title">
-              Academic &amp; Personal Info
-            </h2>
-            <p className="settings-tab-panel-subtitle">
-              Review institution-managed records and update your contact details.
-            </p>
-            <div className="settings-academic-grid">
-              <div className="settings-info-card">
-                <span className="settings-institution-badge">
-                  🔒 Managed by Institution
-                </span>
-                <h3 className="settings-info-card-title">Academic record</h3>
-                <div className="form-grid responsive-form-row">
-                  <div className="form-group">
-                    <label className="settings-label">Campus</label>
-                    <input
-                      className="readonly-field-input"
-                      value={menteeProfile.campus || "—"}
-                      readOnly
-                      disabled
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label className="settings-label">Student ID No.</label>
-                    <input
-                      className="readonly-field-input"
-                      value={menteeProfile.student_id_no || "—"}
-                      readOnly
-                      disabled
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label className="settings-label">Course / Program</label>
-                    <input
-                      className="readonly-field-input"
-                      value={menteeProfile.program || "—"}
-                      readOnly
-                      disabled
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label className="settings-label">Year level</label>
-                    <input
-                      className="readonly-field-input"
-                      value={formatYearLevel(menteeProfile.year_level)}
-                      readOnly
-                      disabled
-                    />
-                  </div>
-                </div>
-                <p className="field-helper settings-helper-text settings-helper-text--bright">
-                  These fields come from your enrolment record. Contact an
-                  administrator if anything looks incorrect.
-                </p>
-              </div>
+          <BioAndInterestsCard
+            bio={settingsForm.bio || ""}
+            tags={Array.isArray(settingsForm.tags) ? settingsForm.tags : []}
+            onBioSave={handleBioSave}
+            onTagsSave={handleTagsSave}
+            isOpen={openSections.bio}
+            onToggle={() => toggleSection("bio")}
+          />
 
-              <div className="settings-info-card">
-                <h3 className="settings-info-card-title">
-                  Personal &amp; contact information
-                </h3>
-                <div className="form-grid responsive-form-row">
-                  <div className="form-group">
-                    <label className="settings-label">Contact No. *</label>
-                    <input
-                      value={menteeProfile.contact_no}
-                      onChange={(e) =>
-                        updateMenteeProfile({
-                          contact_no: e.target.value
-                            .replace(/\D/g, "")
-                            .slice(0, 11),
-                        })
-                      }
-                      placeholder="11 digits only"
-                      inputMode="numeric"
-                      pattern="[0-9]*"
-                      maxLength={11}
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label className="settings-label">Admission type *</label>
-                    <select
-                      value={menteeProfile.admission_type || ""}
-                      onChange={(e) =>
-                        updateMenteeProfile({ admission_type: e.target.value })
-                      }
-                    >
-                      <option value="">Select admission type</option>
-                      <option value="regular">Regular</option>
-                      <option value="transferee">Transferee</option>
-                      <option value="shiftee">Shiftee</option>
-                      <option value="returnee">Returnee</option>
-                      <option value="irregular">Irregular</option>
-                      {menteeProfile.admission_type &&
-                        ![
-                          "regular",
-                          "transferee",
-                          "shiftee",
-                          "returnee",
-                          "irregular",
-                        ].includes(
-                          String(menteeProfile.admission_type).toLowerCase(),
-                        ) && (
-                          <option value={menteeProfile.admission_type}>
-                            {menteeProfile.admission_type}
-                          </option>
-                        )}
-                    </select>
-                  </div>
-                  <div className="form-group">
-                    <label className="settings-label">Biological sex *</label>
-                    <select
-                      value={menteeProfile.sex || ""}
-                      onChange={(e) =>
-                        updateMenteeProfile({ sex: e.target.value })
-                      }
-                    >
-                      <option value="">Select biological sex</option>
-                      <option value="male">Male</option>
-                      <option value="female">Female</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div className="settings-tab-footer">
-              <button
-                type="button"
-                className="btn"
-                onClick={handleGeneralSave}
-                disabled={!generalChanged || menteeProfileSaving}
-              >
-                {menteeProfileSaving ? "Saving..." : "Save changes"}
-              </button>
-              {generalChanged && (
-                <button
-                  type="button"
-                  className="btn secondary"
-                  onClick={() => {
-                    try {
-                      if (generalSavedRef.current) {
-                        setMenteeProfile(JSON.parse(generalSavedRef.current));
-                        generalEditedRef.current = false;
-                      }
-                    } catch {
-                      /* ignore */
+          {user.role === "mentee" && (
+            <SettingsAccordionCard
+              id="settings-general"
+              title="General information"
+              subtitle="Some fields are managed by the school and shown for reference only."
+              icon={<DashboardIcon name="clipboardList" size={20} />}
+              isOpen={openSections.general}
+              onToggle={() => toggleSection("general")}
+              className="settings-card--general"
+            >
+              <div className="settings-section-label">Identity</div>
+              <div className="form-grid">
+                <div className="form-group">
+                  <label>Campus *</label>
+                  <input
+                    value={menteeProfile.campus}
+                    onChange={(e) =>
+                      setMenteeProfile({
+                        ...menteeProfile,
+                        campus: e.target.value,
+                      })
                     }
-                  }}
-                  disabled={menteeProfileSaving}
-                >
-                  Discard
-                </button>
-              )}
-              {generalMissingCount > 0 ? (
-                <p
-                  className="field-helper settings-helper-text"
-                  role="status"
-                  style={{ marginLeft: "auto", color: "#e11d48", fontWeight: 500 }}
-                >
-                  {generalMissingCount} required field
-                  {generalMissingCount === 1 ? "" : "s"} still missing.
-                </p>
-              ) : (
-                <span
-                  className="settings-helper-text"
-                  style={{
-                    marginLeft: "auto",
-                    fontSize: "13px",
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: "6px",
-                    color: generalChanged
-                      ? "var(--primary, #0284c7)"
-                      : "var(--text-muted)",
-                    fontWeight: generalChanged ? 600 : 400,
-                  }}
-                >
-                  {generalChanged ? "● Unsaved changes" : "✓ All changes saved"}
-                </span>
-              )}
-            </div>
-          </div>
-        )}
-
-        {activeTab === "preferences" && (
-          <div className="settings-tab-panel" style={{ padding: 0 }}>
-            <MenteePreferencesPage defaultRole={user.role === "mentor" ? "STUDENT_MENTOR" : "MENTEE"} />
-          </div>
-        )}
-      </div>
-
-      <div className="settings-sidebar-column">
-            {/* Live Profile Directory Preview Card */}
-            <div className="settings-preview-card kasandigan-card">
-              <div className="settings-card-head">
-                <div className="kasandigan-card-head-title">
-                  <span className="settings-preview-icon-pill">
-                    <DashboardIcon name="userCircle" size={16} />
-                  </span>
-                  <div>
-                    <h3 className="settings-preview-title">Live Directory Preview</h3>
-                    <p className="settings-preview-subtitle">How peers see you on PeerLink</p>
-                  </div>
+                    placeholder="Campus"
+                  />
                 </div>
-                <span className="settings-preview-badge">Public Card</span>
+                <div className="form-group">
+                  <label>Student ID No. *</label>
+                  <input
+                    value={menteeProfile.student_id_no}
+                    onChange={(e) =>
+                      setMenteeProfile({
+                        ...menteeProfile,
+                        student_id_no: e.target.value
+                          .replace(/\D/g, "")
+                          .slice(0, 10),
+                      })
+                    }
+                    placeholder="10 digits only"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    maxLength={10}
+                  />
+                </div>
               </div>
 
-              <div className="settings-preview-body">
-                <div className="settings-preview-hero">
-                  <div className="settings-preview-avatar">
-                    {settingsForm.avatar_url ? (
-                      <img
-                        src={settingsForm.avatar_url}
-                        alt="Profile"
-                        className="settings-preview-avatar-img"
-                      />
-                    ) : (
-                      <div className="settings-preview-avatar-fallback">
-                        {getInitials(
-                          settingsForm.display_name ||
-                            user.display_name ||
-                            user.full_name ||
-                            "User",
-                        )}
-                      </div>
-                    )}
-                    <span className="settings-preview-status-dot" title="Active Account" />
-                  </div>
-                  <div className="settings-preview-info">
-                    <h4 className="settings-preview-name">
-                      {settingsForm.display_name ||
-                        user.display_name ||
-                        user.full_name ||
-                        "PeerLink User"}
-                    </h4>
-                    <p className="settings-preview-email">
-                      {settingsForm.email || user.email || "—"}
-                    </p>
-                    <div className="settings-preview-role-chip">
-                      <span className="settings-preview-role-dot" />
-                      <span>
-                        {user.is_staff
-                          ? "AMU Staff"
-                          : user.role === "mentor"
-                            ? "Mentor"
-                            : user.role === "mentee"
-                              ? "Mentee"
-                              : user.role === "both"
-                                ? "Mentor & Mentee"
-                                : "User"}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="settings-preview-section">
-                  <span className="settings-preview-section-title">About</span>
-                  <p className="settings-preview-bio">
-                    {displayBio ? (
-                      displayBio
-                    ) : (
-                      <span className="settings-preview-placeholder">
-                        No bio added yet. Write a short introduction on the left to stand out.
-                      </span>
-                    )}
+              <div className="settings-section-label">Program details</div>
+              <div className="form-grid">
+                <div className="form-group">
+                  <label>Course / Program (read only)</label>
+                  <input
+                    value={menteeProfile.program}
+                    readOnly
+                    disabled
+                    placeholder="e.g. BSIT"
+                  />
+                  <p className="field-helper">
+                    Set by your school. Contact an administrator if this is
+                    incorrect.
                   </p>
                 </div>
-
-                <div className="settings-preview-section">
-                  <span className="settings-preview-section-title">Topics &amp; Interests</span>
-                  <div className="settings-preview-tags">
-                    {displayTags && displayTags.length > 0 ? (
-                      displayTags.map((tag, idx) => (
-                        <span key={tag + idx} className="settings-preview-tag-pill">
-                          {tag}
-                        </span>
-                      ))
-                    ) : (
-                      <span className="settings-preview-placeholder">
-                        No interests added yet.
-                      </span>
-                    )}
-                  </div>
+                <div className="form-group">
+                  <label>Year level (read only)</label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="10"
+                    value={menteeProfile.year_level}
+                    readOnly
+                    disabled
+                    placeholder="1"
+                  />
+                  <p className="field-helper">
+                    Set by your school. Contact an administrator if this is
+                    incorrect.
+                  </p>
                 </div>
               </div>
 
-              <div className="settings-preview-footer">
-                <span className="settings-preview-footer-icon">✓</span>
-                <span>Updates made here directly sync across the AMU matching directory.</span>
+              <div className="settings-section-label">Contact</div>
+              <div className="form-grid">
+                <div className="form-group">
+                  <label>Contact No. *</label>
+                  <input
+                    value={menteeProfile.contact_no}
+                    onChange={(e) =>
+                      setMenteeProfile({
+                        ...menteeProfile,
+                        contact_no: e.target.value
+                          .replace(/\D/g, "")
+                          .slice(0, 11),
+                      })
+                    }
+                    placeholder="11 digits only"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    maxLength={11}
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Admission Type *</label>
+                  <input
+                    value={menteeProfile.admission_type}
+                    onChange={(e) =>
+                      setMenteeProfile({
+                        ...menteeProfile,
+                        admission_type: e.target.value,
+                      })
+                    }
+                    placeholder="e.g. Regular, Transferee"
+                  />
+                </div>
               </div>
-            </div>
 
-            {/* Contextual Card 2: Security Guidelines or Institutional Guidance */}
-            {activeTab === "password" ? (
-              <div className="settings-security-guide-card kasandigan-card">
-                <div className="settings-card-head">
-                  <div className="kasandigan-card-head-title">
-                    <span className="settings-preview-icon-pill">
-                      <DashboardIcon name="lock" size={16} />
-                    </span>
-                    <div>
-                      <h3 className="settings-preview-title">Security Guidelines</h3>
-                      <p className="settings-preview-subtitle">Protecting your account</p>
-                    </div>
-                  </div>
-                  <span className="settings-preview-badge">Protected</span>
-                </div>
-                <ul className="settings-security-tips-list">
-                  <li>
-                    <span className="settings-security-check">✓</span>
-                    <div>
-                      <strong>Two-Step Verification</strong>
-                      <p>A 6-digit confirmation code ensures credential changes are fully authorized.</p>
-                    </div>
-                  </li>
-                  <li>
-                    <span className="settings-security-check">✓</span>
-                    <div>
-                      <strong>Strong Password Criteria</strong>
-                      <p>Use at least 10 characters combining uppercase, lowercase, and numbers.</p>
-                    </div>
-                  </li>
-                  <li>
-                    <span className="settings-security-check">✓</span>
-                    <div>
-                      <strong>10-Minute Code Lifetime</strong>
-                      <p>Security verification codes expire automatically after 10 minutes.</p>
-                    </div>
-                  </li>
-                </ul>
-              </div>
-            ) : activeTab === "academic" ? (
-              <div className="settings-security-guide-card kasandigan-card">
-                <div className="settings-card-head">
-                  <div className="kasandigan-card-head-title">
-                    <span className="settings-preview-icon-pill">
-                      <DashboardIcon name="graduationCap" size={16} />
-                    </span>
-                    <div>
-                      <h3 className="settings-preview-title">Institutional Record</h3>
-                      <p className="settings-preview-subtitle">Official enrolment sync</p>
-                    </div>
-                  </div>
-                  <span className="settings-preview-badge">Official</span>
-                </div>
-                <p className="settings-security-guide-desc">
-                  Student IDs, enrolled program, and year levels are officially managed by the institution.
-                </p>
-                <div className="settings-security-guide-callout">
-                  <strong>Need to request an update?</strong>
-                  <p>Contact your AMU coordinator to verify and update official enrolment records.</p>
+              <div className="settings-section-label">Personal</div>
+              <div className="form-grid">
+                <div className="form-group">
+                  <label>Biological sex *</label>
+                  <select
+                    value={menteeProfile.sex || ""}
+                    onChange={(e) =>
+                      setMenteeProfile({
+                        ...menteeProfile,
+                        sex: e.target.value,
+                      })
+                    }
+                  >
+                    <option value="">Select biological sex</option>
+                    <option value="male">Male</option>
+                    <option value="female">Female</option>
+                  </select>
                 </div>
               </div>
-            ) : (
-              <div className="settings-security-guide-card kasandigan-card">
-                <div className="settings-card-head">
-                  <div className="kasandigan-card-head-title">
-                    <span className="settings-preview-icon-pill">
-                      <DashboardIcon name="building" size={16} />
-                    </span>
-                    <div>
-                      <h3 className="settings-preview-title">Account Integrity</h3>
-                      <p className="settings-preview-subtitle">Institutional sync</p>
-                    </div>
-                  </div>
-                  <span className="settings-preview-badge">Verified</span>
-                </div>
-                <p className="settings-security-guide-desc">
-                  Your full name and student credentials are verified against AMU enrolment records.
-                </p>
-                <div className="settings-security-guide-callout">
-                  <strong>Need to update official info?</strong>
-                  <p>Contact the Academic Mentoring Unit office if your registered details require updates.</p>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
 
-        {(isDirty || justSaved) && (
-          <div
-            className={
-              "mp-sticky-bar settings-sticky-bar" +
-              (isDirty ? " is-dirty" : " is-saved")
-            }
-            role="status"
-            aria-live="polite"
-          >
-            <div className="mp-sticky-meta">
-              <p className="mp-sticky-title">
-                {isDirty ? "Unsaved changes" : "Saved"}
-              </p>
-              <p className="mp-sticky-subtitle">
-                {isDirty ? dirtyLabels.join(", ") : "Your settings were updated."}
-              </p>
-            </div>
-            {isDirty && (
-              <div className="mp-sticky-actions">
+              <div className="btn-row" style={{ marginTop: "16px" }}>
                 <button
-                  type="button"
-                  className="btn secondary"
-                  onClick={handleDiscardAll}
-                  disabled={savingAll}
-                >
-                  Discard
-                </button>
-                <button
-                  type="button"
                   className="btn"
-                  onClick={handleSaveAll}
-                  disabled={savingAll}
+                  onClick={handleMenteeProfileSave}
+                  disabled={menteeProfileSaving}
                 >
-                  {savingAll ? "Saving..." : "Save changes"}
+                  {menteeProfileSaving
+                    ? "Saving..."
+                    : "Save general information"}
                 </button>
               </div>
-            )}
-          </div>
-        )}
+            </SettingsAccordionCard>
+          )}
+          {(user.role === "mentor" || user.role === "mentee") && (
+            <SettingsAccordionCard
+              id="settings-matching"
+              title="Matching questionnaire"
+              subtitle="Keep your mentoring preferences up to date so we can recommend the best mentors and mentees for you."
+              icon={<DashboardIcon name="sparkles" size={20} />}
+              isOpen={openSections.matching}
+              onToggle={() => toggleSection("matching")}
+              className="matching-questionnaire-card settings-card--matching settings-card--full-width"
+            >
+              {user.role === "mentor" && (
+                <div className="matching-questionnaire-flow">
+                  <section className="matching-section-card">
+                    <div className="settings-section-label">Mentor role</div>
+                    <div className="form-group">
+                      <label>Role</label>
+                      <select
+                        value={mentorProfile.role || ""}
+                        onChange={(e) =>
+                          setMentorProfile({
+                            ...mentorProfile,
+                            role: e.target.value,
+                          })
+                        }
+                      >
+                        <option value="">Select role</option>
+                        <option value="Senior IT Student">
+                          Senior IT Student
+                        </option>
+                        <option value="Instructor">Instructor</option>
+                      </select>
+                    </div>
+                  </section>
+
+                  <section className="matching-section-card">
+                    <div className="settings-section-label">
+                      Subjects you can help with
+                    </div>
+                    <p className="field-helper">
+                      Pick the subjects where you feel comfortable guiding
+                      mentees.
+                    </p>
+                    <div className="checkbox-group matching-questionnaire-pill-group">
+                      {SUBJECT_CHOICES.map((label) => {
+                        const checked =
+                          Array.isArray(mentorProfile.subjects) &&
+                          mentorProfile.subjects.includes(label);
+                        return (
+                          <label key={label} className="checkbox-row">
+                            <input
+                              type="checkbox"
+                              checked={!!checked}
+                              onChange={(e) => {
+                                const current = Array.isArray(
+                                  mentorProfile.subjects,
+                                )
+                                  ? [...mentorProfile.subjects]
+                                  : [];
+                                if (e.target.checked) {
+                                  if (!current.includes(label))
+                                    current.push(label);
+                                } else {
+                                  const idx = current.indexOf(label);
+                                  if (idx >= 0) current.splice(idx, 1);
+                                }
+                                setMentorProfile({
+                                  ...mentorProfile,
+                                  subjects: current,
+                                  topics: filterTopicsForSubjects(
+                                    current,
+                                    mentorProfile.topics || [],
+                                  ),
+                                });
+                                if (ctx.mentorProfilePristine)
+                                  ctx.mentorProfilePristine = false;
+                              }}
+                            />
+                            {label}
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </section>
+
+                  <section className="matching-section-card">
+                    <div className="settings-section-label">
+                      Topics you can mentor on
+                    </div>
+                    <p className="field-helper">
+                      Choose specific concepts you enjoy explaining the most.
+                    </p>
+                    <div className="checkbox-group matching-questionnaire-pill-group">
+                      {(() => {
+                        const allowedTopics = getAllowedTopicsForSubjects(
+                          mentorProfile.subjects || [],
+                        );
+                        const topicEnabled = allowedTopics.length > 0;
+                        return TOPIC_CHOICES.map((label) => {
+                          const checked =
+                            Array.isArray(mentorProfile.topics) &&
+                            mentorProfile.topics.includes(label);
+                          const disabled =
+                            !topicEnabled || !allowedTopics.includes(label);
+                          return (
+                            <label
+                              key={label}
+                              className={
+                                "checkbox-row" +
+                                (disabled ? " checkbox-row--disabled" : "")
+                              }
+                            >
+                              <input
+                                type="checkbox"
+                                disabled={disabled}
+                                checked={!!checked}
+                                onChange={(e) => {
+                                  if (disabled) return;
+                                  const current = Array.isArray(
+                                    mentorProfile.topics,
+                                  )
+                                    ? [...mentorProfile.topics]
+                                    : [];
+                                  if (e.target.checked) {
+                                    if (!current.includes(label))
+                                      current.push(label);
+                                  } else {
+                                    const idx = current.indexOf(label);
+                                    if (idx >= 0) current.splice(idx, 1);
+                                  }
+                                  setMentorProfile({
+                                    ...mentorProfile,
+                                    topics: filterTopicsForSubjects(
+                                      mentorProfile.subjects || [],
+                                      current,
+                                    ),
+                                  });
+                                  if (ctx.mentorProfilePristine)
+                                    ctx.mentorProfilePristine = false;
+                                }}
+                              />
+                              {label}
+                            </label>
+                          );
+                        });
+                      })()}
+                    </div>
+                    <p className="field-helper">
+                      Select one or more subjects first to unlock matching
+                      topics.
+                    </p>
+                  </section>
+
+                  <section className="matching-section-card">
+                    <div className="settings-section-label">
+                      Expertise level (1–5)
+                    </div>
+                    <p className="field-helper">
+                      1 = just starting to tutor in these subjects, 5 = very
+                      experienced and confident mentoring others.
+                    </p>
+                    <div className="checkbox-group matching-questionnaire-levels">
+                      {[1, 2, 3, 4, 5].map((n) => (
+                        <label key={n} className="checkbox-row">
+                          <input
+                            type="radio"
+                            name="mentor-expertise"
+                            checked={mentorProfile.expertise_level === n}
+                            onChange={() =>
+                              setMentorProfile({
+                                ...mentorProfile,
+                                expertise_level: n,
+                              })
+                            }
+                          />
+                          {n}
+                        </label>
+                      ))}
+                    </div>
+                  </section>
+
+                  <section className="matching-section-card">
+                    <div className="settings-section-label">
+                      Maximum mentees you can handle
+                    </div>
+                    <p className="field-helper">
+                      We will not assign you more mentees than this number.
+                    </p>
+                    <div className="form-group">
+                      <label>Max mentees</label>
+                      <input
+                        type="number"
+                        min={1}
+                        max={5}
+                        value={mentorProfile.capacity ?? 3}
+                        onChange={(e) => {
+                          const raw = Number(e.target.value || 1);
+                          const clamped = Math.max(1, Math.min(5, raw));
+                          setMentorProfile({
+                            ...mentorProfile,
+                            capacity: clamped,
+                          });
+                        }}
+                      />
+                    </div>
+                  </section>
+
+                  <section className="matching-section-card">
+                    <div className="settings-section-label">Biological sex</div>
+                    <div className="form-group">
+                      <label>Biological sex</label>
+                      <select
+                        value={mentorProfile.gender || ""}
+                        onChange={(e) =>
+                          setMentorProfile({
+                            ...mentorProfile,
+                            gender: e.target.value,
+                          })
+                        }
+                      >
+                        <option value="">Select biological sex</option>
+                        <option value="male">Male</option>
+                        <option value="female">Female</option>
+                      </select>
+                    </div>
+                  </section>
+
+                  <section className="matching-section-card">
+                    <div className="settings-section-label">Available time</div>
+                    <p className="field-helper">
+                      Add one or more time ranges between 08:00 and 20:00.
+                    </p>
+                    <div className="time-range-row">
+                      <div className="time-field">
+                        <label>Start time</label>
+                        <div className="time-input-wrapper">
+                          <input
+                            type="time"
+                            className="time-input"
+                            min={MIN_AVAILABLE_TIME}
+                            max={MAX_AVAILABLE_TIME}
+                            value={mentorAvailabilityDraft.start}
+                            onChange={(e) => {
+                              setMentorAvailabilityError("");
+                              setMentorAvailabilityDraft({
+                                ...mentorAvailabilityDraft,
+                                start: e.target.value,
+                              });
+                            }}
+                          />
+                        </div>
+                      </div>
+                      <div className="time-field">
+                        <label>End time</label>
+                        <div className="time-input-wrapper">
+                          <input
+                            type="time"
+                            className="time-input"
+                            min={MIN_AVAILABLE_TIME}
+                            max={MAX_AVAILABLE_TIME}
+                            value={mentorAvailabilityDraft.end}
+                            onChange={(e) => {
+                              setMentorAvailabilityError("");
+                              setMentorAvailabilityDraft({
+                                ...mentorAvailabilityDraft,
+                                end: e.target.value,
+                              });
+                            }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                    <div
+                      className="btn-row"
+                      style={{ marginTop: "8px", marginBottom: "4px" }}
+                    >
+                      <button
+                        type="button"
+                        className="btn secondary small"
+                        onClick={() => {
+                          const newSlots = toSingleAvailabilityRange(
+                            mentorAvailabilityDraft.start,
+                            mentorAvailabilityDraft.end,
+                          );
+                          if (
+                            !Array.isArray(newSlots) ||
+                            newSlots.length === 0
+                          ) {
+                            setMentorAvailabilityError(
+                              "Choose a valid range where start time is earlier than end time.",
+                            );
+                            return;
+                          }
+                          setMentorAvailabilityError("");
+                          const current = Array.isArray(
+                            mentorProfile.availability,
+                          )
+                            ? [...mentorProfile.availability]
+                            : [];
+                          newSlots.forEach((slot) => {
+                            if (!current.includes(slot)) current.push(slot);
+                          });
+                          const updated = {
+                            ...mentorProfile,
+                            availability: current,
+                          };
+                          setMentorProfile(updated);
+                        }}
+                      >
+                        Add timeframe
+                      </button>
+                    </div>
+                    {mentorAvailabilityError && (
+                      <p
+                        className="matching-inline-feedback matching-inline-feedback--error"
+                        role="alert"
+                      >
+                        {mentorAvailabilityError}
+                      </p>
+                    )}
+                    <p className="field-helper">
+                      You can add multiple availability ranges between 08:00 and
+                      20:00. We&apos;ll match you with people whose times
+                      overlap these ranges.
+                    </p>
+                    {Array.isArray(mentorProfile.availability) &&
+                      mentorProfile.availability.length > 0 && (
+                        <div className="availability-tags">
+                          {mentorProfile.availability.map((slot) => (
+                            <button
+                              key={slot}
+                              type="button"
+                              className="availability-tag"
+                              onClick={() => {
+                                const next = mentorProfile.availability.filter(
+                                  (s) => s !== slot,
+                                );
+                                setMentorProfile({
+                                  ...mentorProfile,
+                                  availability: next,
+                                });
+                              }}
+                            >
+                              <span>{slot}</span>
+                              <span
+                                className="availability-tag-remove"
+                                aria-hidden="true"
+                              >
+                                ×
+                              </span>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                  </section>
+
+                  <div
+                    className="btn-row matching-questionnaire-actions"
+                    style={{
+                      marginTop: "16px",
+                      alignItems: "center",
+                      gap: "8px",
+                      flexWrap: "wrap",
+                    }}
+                  >
+                    <button
+                      className="btn"
+                      onClick={async () => {
+                        const saved = await handleMentorProfileSave();
+                        if (saved) {
+                          mentorQuestionnaireSavedRef.current =
+                            serializeMentorQuestionnaire(mentorProfile);
+                          setMentorProfileSavedAt(Date.now());
+                        }
+                      }}
+                      type="button"
+                      disabled={mentorProfileSaving || mentorProfilePristine}
+                    >
+                      {mentorProfileSaving
+                        ? "Saving..."
+                        : mentorProfilePristine
+                          ? "No changes yet"
+                          : "Save mentor questionnaire"}
+                    </button>
+                  </div>
+                  <p
+                    className="matching-inline-feedback matching-inline-feedback--success"
+                    role="status"
+                    aria-live="polite"
+                  >
+                    {mentorProfileSaving
+                      ? "Saving mentor questionnaire..."
+                      : mentorProfileJustSaved
+                        ? "Mentor questionnaire saved successfully."
+                        : ""}
+                  </p>
+                </div>
+              )}
+
+              {user.role === "mentee" && (
+                <div className="matching-questionnaire-flow">
+                  {user.mentee_general_info_completed ? (
+                    <>
+                      <section className="matching-section-card">
+                        <div className="settings-section-label">
+                          Subjects you find challenging
+                        </div>
+                        <div className="checkbox-group matching-questionnaire-pill-group">
+                          {SUBJECT_CHOICES.map((label) => {
+                            const checked =
+                              Array.isArray(menteeMatching.subjects) &&
+                              menteeMatching.subjects.includes(label);
+                            return (
+                              <label key={label} className="checkbox-row">
+                                <input
+                                  type="checkbox"
+                                  checked={!!checked}
+                                  onChange={(e) => {
+                                    const current = Array.isArray(
+                                      menteeMatching.subjects,
+                                    )
+                                      ? [...menteeMatching.subjects]
+                                      : [];
+                                    if (e.target.checked) {
+                                      if (!current.includes(label))
+                                        current.push(label);
+                                    } else {
+                                      const idx = current.indexOf(label);
+                                      if (idx >= 0) current.splice(idx, 1);
+                                    }
+                                    setMenteeMatching({
+                                      ...menteeMatching,
+                                      subjects: current,
+                                      topics: filterTopicsForSubjects(
+                                        current,
+                                        menteeMatching.topics || [],
+                                      ),
+                                    });
+                                  }}
+                                />
+                                {label}
+                              </label>
+                            );
+                          })}
+                        </div>
+                      </section>
+
+                      <section className="matching-section-card">
+                        <div className="settings-section-label">
+                          Topics you have difficulty with
+                        </div>
+                        <div className="checkbox-group matching-questionnaire-pill-group">
+                          {(() => {
+                            const allowedTopics = getAllowedTopicsForSubjects(
+                              menteeMatching.subjects || [],
+                            );
+                            const topicEnabled = allowedTopics.length > 0;
+                            return TOPIC_CHOICES.map((label) => {
+                              const checked =
+                                Array.isArray(menteeMatching.topics) &&
+                                menteeMatching.topics.includes(label);
+                              const disabled =
+                                !topicEnabled || !allowedTopics.includes(label);
+                              return (
+                                <label
+                                  key={label}
+                                  className={
+                                    "checkbox-row" +
+                                    (disabled ? " checkbox-row--disabled" : "")
+                                  }
+                                >
+                                  <input
+                                    type="checkbox"
+                                    disabled={disabled}
+                                    checked={!!checked}
+                                    onChange={(e) => {
+                                      if (disabled) return;
+                                      const current = Array.isArray(
+                                        menteeMatching.topics,
+                                      )
+                                        ? [...menteeMatching.topics]
+                                        : [];
+                                      if (e.target.checked) {
+                                        if (!current.includes(label))
+                                          current.push(label);
+                                      } else {
+                                        const idx = current.indexOf(label);
+                                        if (idx >= 0) current.splice(idx, 1);
+                                      }
+                                      setMenteeMatching({
+                                        ...menteeMatching,
+                                        topics: filterTopicsForSubjects(
+                                          menteeMatching.subjects || [],
+                                          current,
+                                        ),
+                                      });
+                                    }}
+                                  />
+                                  {label}
+                                </label>
+                              );
+                            });
+                          })()}
+                        </div>
+                        <p className="field-helper">
+                          Select one or more subjects first to unlock matching
+                          topics.
+                        </p>
+                      </section>
+
+                      <section className="matching-section-card">
+                        <div className="settings-section-label">
+                          Difficulty level (1–5)
+                        </div>
+                        <p className="field-helper">
+                          1 = course feels very easy right now, 5 = you&apos;re
+                          finding it very difficult and need a lot of help.
+                        </p>
+                        <div className="checkbox-group matching-questionnaire-levels">
+                          {[1, 2, 3, 4, 5].map((n) => (
+                            <label key={n} className="checkbox-row">
+                              <input
+                                type="radio"
+                                name="mentee-difficulty"
+                                checked={menteeMatching.difficulty_level === n}
+                                onChange={() =>
+                                  setMenteeMatching({
+                                    ...menteeMatching,
+                                    difficulty_level: n,
+                                  })
+                                }
+                              />
+                              {n}
+                            </label>
+                          ))}
+                        </div>
+                      </section>
+
+                      <section className="matching-section-card">
+                        <div className="settings-section-label">
+                          Available time
+                        </div>
+                        <p className="field-helper">
+                          Add one or more time ranges between 08:00 and 20:00.
+                        </p>
+                        <div className="time-range-row">
+                          <div className="time-field">
+                            <label>Start time</label>
+                            <div className="time-input-wrapper">
+                              <input
+                                type="time"
+                                className="time-input"
+                                min={MIN_AVAILABLE_TIME}
+                                max={MAX_AVAILABLE_TIME}
+                                value={menteeAvailabilityDraft.start}
+                                onChange={(e) => {
+                                  setMenteeAvailabilityError("");
+                                  setMenteeAvailabilityDraft({
+                                    ...menteeAvailabilityDraft,
+                                    start: e.target.value,
+                                  });
+                                }}
+                              />
+                            </div>
+                          </div>
+                          <div className="time-field">
+                            <label>End time</label>
+                            <div className="time-input-wrapper">
+                              <input
+                                type="time"
+                                className="time-input"
+                                min={MIN_AVAILABLE_TIME}
+                                max={MAX_AVAILABLE_TIME}
+                                value={menteeAvailabilityDraft.end}
+                                onChange={(e) => {
+                                  setMenteeAvailabilityError("");
+                                  setMenteeAvailabilityDraft({
+                                    ...menteeAvailabilityDraft,
+                                    end: e.target.value,
+                                  });
+                                }}
+                              />
+                            </div>
+                          </div>
+                        </div>
+                        <div
+                          className="btn-row"
+                          style={{ marginTop: "8px", marginBottom: "4px" }}
+                        >
+                          <button
+                            type="button"
+                            className="btn secondary small"
+                            onClick={() => {
+                              const newSlots = toSingleAvailabilityRange(
+                                menteeAvailabilityDraft.start,
+                                menteeAvailabilityDraft.end,
+                              );
+                              if (
+                                !Array.isArray(newSlots) ||
+                                newSlots.length === 0
+                              ) {
+                                setMenteeAvailabilityError(
+                                  "Choose a valid range where start time is earlier than end time.",
+                                );
+                                return;
+                              }
+                              setMenteeAvailabilityError("");
+                              const current = Array.isArray(
+                                menteeMatching.availability,
+                              )
+                                ? [...menteeMatching.availability]
+                                : [];
+                              newSlots.forEach((slot) => {
+                                if (!current.includes(slot)) current.push(slot);
+                              });
+                              const updated = {
+                                ...menteeMatching,
+                                availability: current,
+                              };
+                              setMenteeMatching(updated);
+                            }}
+                          >
+                            Add timeframe
+                          </button>
+                        </div>
+                        {menteeAvailabilityError && (
+                          <p
+                            className="matching-inline-feedback matching-inline-feedback--error"
+                            role="alert"
+                          >
+                            {menteeAvailabilityError}
+                          </p>
+                        )}
+                        <p className="field-helper">
+                          You can add multiple availability ranges between 08:00
+                          and 20:00. We&apos;ll match you with people whose
+                          times overlap these ranges.
+                        </p>
+                        {Array.isArray(menteeMatching.availability) &&
+                          menteeMatching.availability.length > 0 && (
+                            <div className="availability-tags">
+                              {menteeMatching.availability.map((slot) => (
+                                <button
+                                  key={slot}
+                                  type="button"
+                                  className="availability-tag"
+                                  onClick={() => {
+                                    const next =
+                                      menteeMatching.availability.filter(
+                                        (s) => s !== slot,
+                                      );
+                                    setMenteeMatching({
+                                      ...menteeMatching,
+                                      availability: next,
+                                    });
+                                  }}
+                                >
+                                  <span>{slot}</span>
+                                  <span
+                                    className="availability-tag-remove"
+                                    aria-hidden="true"
+                                  >
+                                    ×
+                                  </span>
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                      </section>
+
+                      <div
+                        className="btn-row matching-questionnaire-actions"
+                        style={{
+                          marginTop: "16px",
+                          alignItems: "center",
+                          gap: "8px",
+                          flexWrap: "wrap",
+                        }}
+                      >
+                        <button
+                          className="btn"
+                          type="button"
+                          onClick={async () => {
+                            const saved = await handleMenteeMatchingSave();
+                            if (saved) {
+                              menteeQuestionnaireSavedRef.current =
+                                serializeMenteeQuestionnaire(menteeMatching);
+                              setMenteeMatchingSavedAt(Date.now());
+                            }
+                          }}
+                          disabled={
+                            menteeMatchingSaving || menteeMatchingPristine
+                          }
+                        >
+                          {menteeMatchingSaving
+                            ? "Saving..."
+                            : menteeMatchingPristine
+                              ? "No changes yet"
+                              : "Save mentee questionnaire"}
+                        </button>
+                      </div>
+                      <p
+                        className="matching-inline-feedback matching-inline-feedback--success"
+                        role="status"
+                        aria-live="polite"
+                      >
+                        {menteeMatchingSaving
+                          ? "Saving mentee questionnaire..."
+                          : menteeMatchingJustSaved
+                            ? "Mentee questionnaire saved successfully."
+                            : ""}
+                      </p>
+                    </>
+                  ) : (
+                    <p className="page-subtitle" style={{ marginBottom: 0 }}>
+                      Complete your general information above to unlock the
+                      questionnaire.
+                    </p>
+                  )}
+                </div>
+              )}
+            </SettingsAccordionCard>
+          )}
+        </div>
       </div>
     );
   }

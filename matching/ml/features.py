@@ -7,7 +7,7 @@ import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.preprocessing import MultiLabelBinarizer
 
-from profiles.subject_catalog import COMPETENCY_VOCABULARY, MAJOR_SUBJECT_NAMES
+from profiles.subject_catalog import COMPETENCY_VOCABULARY, CORE_SUBJECT_NAMES
 
 # Fixed Maximum Sparsity Bounds
 MAX_SUBJECTS = 2
@@ -15,6 +15,8 @@ MAX_TOPICS_PER_SUBJECT = 3
 MAX_TOPICS_TOTAL = 6
 MAX_COMPETENCIES_PER_TOPIC = 2
 MAX_COMPETENCIES_TOTAL = 6
+SUBJECT_VECTOR_CLASSES = tuple(name.lower() for name in CORE_SUBJECT_NAMES)
+SUBJECT_VECTOR_DIMENSION = len(SUBJECT_VECTOR_CLASSES)
 
 
 def _to_set(items: Any) -> Set[str]:
@@ -359,7 +361,7 @@ def build_features(row: Dict[str, Any]) -> Dict[str, float]:
         "subject_cosine": multilabel_cosine(
             mentee_subjects,
             mentor_subjects,
-            [name.lower() for name in MAJOR_SUBJECT_NAMES],
+            list(SUBJECT_VECTOR_CLASSES),
             max_items=MAX_SUBJECTS,
         ),
         "competencies_cosine": multilabel_cosine(

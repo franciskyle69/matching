@@ -13,8 +13,8 @@ The XGBoost matching model is trained on a CSV of **mentor–mentee pairs** with
 From the **project root** (where `manage.py` is):
 
 ```bash
-# Generate 500 rows into synthetic_pairs.csv (default)
-python -m matching.ml.generate_synthetic_data
+# Generate 500 rows into all four synthetic CSVs (default)
+python -m matching.ml.generate_synthetic_data --rows 500
 
 # Generate 2500 rows and split into train / val / test
 python -m matching.ml.generate_synthetic_data --rows 2500 --split
@@ -23,9 +23,8 @@ python -m matching.ml.generate_synthetic_data --rows 2500 --split
 python -m matching.ml.generate_synthetic_data --rows 1000 --seed 123
 ```
 
-- **Without `--split`**: writes a single file `matching/ml/synthetic_pairs.csv`.
-- **With `--split`**: overwrites `synthetic_train.csv`, `synthetic_val.csv`, and `synthetic_test.csv` (70% / 15% / 15%).
-- Includes **major IT subjects** and **minor subjects** (GE, NSTP, PE) from `profiles/subject_catalog.py`.
+- Writes `synthetic_pairs.csv` plus `synthetic_train.csv`, `synthetic_val.csv`, and `synthetic_test.csv` (70% / 15% / 15%).
+- Uses only the four core BSIT subjects from `profiles/subject_catalog.py`; GE, NSTP, and PE are excluded.
 
 Then train on the train set:
 
@@ -58,9 +57,7 @@ Your CSV must have these **column names** (and a **target_score** column):
 
 - Legacy CSVs with a binary `label` (0 or 1) are also backwards-compatible.
 
-- Subjects/topics can match the ones in `profiles/subject_catalog.py` (major IT + minor GE/NSTP/PE).
-- Minor-only rows may leave `mentee_topics` / `mentor_topics` empty; matching still uses subject overlap.
-- Example minor subject value: `GE 108: Understanding the Self`
+- Subjects/topics can match the core BSIT entries in `profiles/subject_catalog.py`.
 - Save your file (e.g. `my_data.csv`) and train:
 
 ```bash

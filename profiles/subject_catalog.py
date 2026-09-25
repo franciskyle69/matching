@@ -253,6 +253,7 @@ COMPETENCY_BY_TOPIC: dict[str, list[tuple[str, str]]] = {
 }
 
 MAJOR_SUBJECT_NAMES: list[str] = [entry["name"] for entry in CURRICULUM_MATRIX]
+CORE_SUBJECT_NAMES: list[str] = MAJOR_SUBJECT_NAMES
 TOPIC_VOCABULARY: list[str] = [
     topic["name"] for entry in CURRICULUM_MATRIX for topic in entry["topics"]
 ]
