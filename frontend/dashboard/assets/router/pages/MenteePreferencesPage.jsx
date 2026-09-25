@@ -22,6 +22,8 @@ import SubjectSkillPreferences, {
   MAX_SUBJECTS,
   MAX_TOPICS_PER_SUBJECT,
   MAX_COMPETENCIES_PER_SUBJECT,
+  MAX_COMPETENCIES_PER_TOPIC,
+  MAX_COMPETENCIES_TOTAL,
   CANONICAL_CURRICULUM,
   NEU_STYLES,
   getRoleLimits,
@@ -77,6 +79,38 @@ export default function MenteePreferencesPage({ defaultRole = "MENTEE" }) {
   const isInitialLoadRef = useRef(true);
 
   const roleLimits = getRoleLimits(role);
+
+  const isBoundsExceeded = useMemo(() => {
+    if (selectedSubjects.length > (roleLimits.maxSubjects || MAX_SUBJECTS)) return true;
+    if (selectedCompetencies.length > (roleLimits.maxGlobalCompetencies || MAX_COMPETENCIES_TOTAL)) return true;
+
+    for (const subjCode of selectedSubjects) {
+      const subjObj = CANONICAL_CURRICULUM.find((s) => s.code === subjCode);
+      if (subjObj && Array.isArray(subjObj.topics)) {
+        const topicsInSubj = subjObj.topics.map((t) => t.name);
+        const selectedTopicsInSubj = selectedTopics.filter((t) => topicsInSubj.includes(t));
+        const maxTopics = roleLimits.maxTopicsPerSubject || MAX_TOPICS_PER_SUBJECT;
+        if (selectedTopicsInSubj.length > maxTopics) return true;
+
+        for (const topicObj of subjObj.topics) {
+          const compNames = typeof topicObj.competencies[0] === "string"
+            ? topicObj.competencies
+            : topicObj.competencies.map((c) => c.name);
+          const selectedInTopic = selectedCompetencies.filter((c) => compNames.includes(c));
+          const maxCompsPerTopic = roleLimits.maxCompetenciesPerTopic || MAX_COMPETENCIES_PER_TOPIC;
+          if (selectedInTopic.length > maxCompsPerTopic) return true;
+        }
+
+        const allCompsInSubj = subjObj.topics.flatMap((t) =>
+          typeof t.competencies[0] === "string" ? t.competencies : t.competencies.map((c) => c.name)
+        );
+        const selectedCompsInSubj = selectedCompetencies.filter((c) => allCompsInSubj.includes(c));
+        const maxComps = roleLimits.maxCompetenciesPerSubject || MAX_COMPETENCIES_PER_SUBJECT;
+        if (selectedCompsInSubj.length > maxComps) return true;
+      }
+    }
+    return false;
+  }, [selectedSubjects, selectedTopics, selectedCompetencies, roleLimits]);
 
   // Fetch saved preferences on mount via GET /api/user/preferences/
   const fetchPreferences = async () => {
@@ -208,6 +242,23 @@ export default function MenteePreferencesPage({ defaultRole = "MENTEE" }) {
           return;
         }
 
+        for (const topicObj of subjObj.topics) {
+          const compNames = typeof topicObj.competencies[0] === "string"
+            ? topicObj.competencies
+            : topicObj.competencies.map((c) => c.name);
+          const selectedInTopic = selectedCompetencies.filter((c) => compNames.includes(c));
+          const maxCompsPerTopic = roleLimits.maxCompetenciesPerTopic || MAX_COMPETENCIES_PER_TOPIC;
+          if (selectedInTopic.length > maxCompsPerTopic) {
+            const msg = `You can select a maximum of ${maxCompsPerTopic} competencies for topic '${topicObj.name}'.`;
+            setError(msg);
+            if (window.DashboardApp && typeof window.DashboardApp.notify === "function") {
+              window.DashboardApp.notify("warning", "Limit Exceeded", msg);
+            }
+            setSaving(false);
+            return;
+          }
+        }
+
         const allCompsInSubj = subjObj.topics.flatMap((t) =>
           typeof t.competencies[0] === "string" ? t.competencies : t.competencies.map((c) => c.name)
         );
@@ -230,6 +281,17 @@ export default function MenteePreferencesPage({ defaultRole = "MENTEE" }) {
       setError(msg);
       if (window.DashboardApp && typeof window.DashboardApp.notify === "function") {
         window.DashboardApp.notify("warning", "Incomplete Preferences", msg);
+      }
+      setSaving(false);
+      return;
+    }
+
+    const maxGlobalComps = roleLimits.maxGlobalCompetencies || MAX_COMPETENCIES_TOTAL;
+    if (selectedCompetencies.length > maxGlobalComps) {
+      const msg = `You can select a maximum of ${maxGlobalComps} competencies total.`;
+      setError(msg);
+      if (window.DashboardApp && typeof window.DashboardApp.notify === "function") {
+        window.DashboardApp.notify("warning", "Limit Exceeded", msg);
       }
       setSaving(false);
       return;
@@ -449,7 +511,7 @@ export default function MenteePreferencesPage({ defaultRole = "MENTEE" }) {
             <Button
               variant="contained"
               onClick={handleSavePreferences}
-              disabled={loading || saving}
+              disabled={loading || saving || isBoundsExceeded}
               startIcon={saving ? <CircularProgress size={18} color="inherit" /> : <SaveIcon />}
               sx={{
                 px: 3.5,
@@ -539,7 +601,7 @@ export default function MenteePreferencesPage({ defaultRole = "MENTEE" }) {
                 variant="contained"
                 size="large"
                 onClick={handleSavePreferences}
-                disabled={loading || saving}
+                disabled={loading || saving || isBoundsExceeded}
                 startIcon={saving ? <CircularProgress size={18} color="inherit" /> : <SaveIcon />}
                 sx={{
                   px: 4,

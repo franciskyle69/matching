@@ -112,30 +112,30 @@ describe("Onboarding Component", () => {
     expect(screen.getByRole("button", { name: /Complete Onboarding/i })).toBeInTheDocument();
   });
 
-  it("Mentee Test: enforces max 5 competencies global cap by disabling remaining checkboxes and blocks submission with 0 competencies", () => {
+  it("Mentee Test: enforces max 6 competencies global cap by disabling remaining checkboxes and blocks submission with 0 competencies", () => {
     goToStep3({ role: "mentee" });
 
     // Verify visual counter chip
-    expect(screen.getByText(/Competencies: \d+ \/ 5 \(Max 5\)/i)).toBeInTheDocument();
+    expect(screen.getByText(/Competencies: \d+ \/ 6 \(Max 6\)/i)).toBeInTheDocument();
 
     // Open "History & Hardware Evolution" topic in IT 111
     const historyTopic = screen.getByRole("checkbox", { name: /History & Hardware Evolution/i });
     fireEvent.click(historyTopic);
 
-    // Select Computing Generations in IT 111 (IT 111 now has 3 comps: Figma UI Design, Flexbox & Grid, Computing Generations - Subject Cap 3 reached!)
+    // Select Computing Generations in IT 111
     const compGenBox = screen.getByRole("checkbox", { name: /Computing Generations/i });
     fireEvent.click(compGenBox);
 
-    // IT 111 subject cap of 3 reached; remaining unselected competencies in IT 111 (like Processor Architecture) are disabled
+    // Select Processor Architecture in IT 111 (topic cap of 2 reached for History & Hardware Evolution)
     const procBox = screen.getByRole("checkbox", { name: /Processor Architecture/i });
-    expect(procBox).toBeDisabled();
+    fireEvent.click(procBox);
 
-    // Select Conditional Logic in IT 112 (total 5 - Global Cap reached!)
+    // Select Conditional Logic in IT 112 (total 6 - Global Cap reached!)
     const condBox = screen.getByRole("checkbox", { name: /Conditional Logic/i });
     fireEvent.click(condBox);
 
-    // Global cap of 5 reached!
-    expect(screen.getByText(/Competencies: 5 \/ 5 \(Max 5\)/i)).toBeInTheDocument();
+    // Global cap of 6 reached!
+    expect(screen.getByText(/Competencies: 6 \/ 6 \(Max 6\)/i)).toBeInTheDocument();
 
     // Unchecked competencies across all topics should now have disabled={true}
     const html5Box = screen.getByRole("checkbox", { name: /HTML5 Semantic Structure/i });
@@ -149,12 +149,12 @@ describe("Onboarding Component", () => {
     expect(condBox).toBeChecked();
   });
 
-  it("Mentor Test: student mentor has max 10 competencies cap, up to 2 subjects, and requires at least 2 availability slots", () => {
+  it("Mentor Test: student mentor has max 6 competencies cap, up to 2 subjects, and requires at least 2 availability slots", () => {
     goToStep3({ role: "student_mentor" });
 
-    // Verify limits reflected in visual trackers (Max 2 subjects, max 10 competencies, min 2 slots)
+    // Verify limits reflected in visual trackers (Max 2 subjects, max 6 competencies, min 2 slots)
     expect(screen.getByText(/Subjects: \d+ \/ 2/i)).toBeInTheDocument();
-    expect(screen.getByText(/Competencies: \d+ \/ 10 \(Max 10\)/i)).toBeInTheDocument();
+    expect(screen.getByText(/Competencies: \d+ \/ 6 \(Max 6\)/i)).toBeInTheDocument();
     expect(screen.getByText(/Availability Slots: 2 \/ 6 \(Min 2, Max 6\)/i)).toBeInTheDocument();
 
     // Try to remove an availability slot down to 1 (min is 2 for mentors)

@@ -7,8 +7,11 @@ from api.serializers import (
     OnboardingPreferenceSerializer,
     MenteePreferenceSerializer,
     MentorPreferenceSerializer,
+    MenteeProfileUpdateSerializer,
     MAX_SUBJECTS,
     MAX_TOPICS_PER_SUBJECT,
+    MAX_COMPETENCIES_PER_TOPIC,
+    MAX_COMPETENCIES_TOTAL,
     MAX_COMPETENCIES_PER_SUBJECT,
 )
 from rest_framework import serializers
@@ -46,6 +49,9 @@ class OnboardingPreferenceSerializerTestCase(TestCase):
         self.c6, _ = Competency.objects.get_or_create(topic=self.top2_1, name="Loop Control")
         self.c7, _ = Competency.objects.get_or_create(topic=self.top2_1, name="Conditionals")
         self.c8, _ = Competency.objects.get_or_create(topic=self.top2_1, name="Iteration Patterns")
+
+        self.c9, _ = Competency.objects.get_or_create(topic=self.top2_2, name="Array Operations")
+        self.c10, _ = Competency.objects.get_or_create(topic=self.top2_2, name="Multi-dimensional Arrays")
 
         # Users
         self.mentee_user = User.objects.create_user(
@@ -96,8 +102,6 @@ class OnboardingPreferenceSerializerTestCase(TestCase):
             defaults={"program": "BSIT", "year_level": 4, "role": "Instructor"},
         )
 
-
-
     def test_mentee_valid_submission(self):
         payload = {
             "subjects": ["IT 111"],
@@ -110,17 +114,31 @@ class OnboardingPreferenceSerializerTestCase(TestCase):
         self.assertTrue(serializer.is_valid(), serializer.errors)
         self.assertEqual(len(serializer.validated_data["resolved_competencies"]), 2)
 
-    def test_mentee_max_competencies_exceeded(self):
-        payload_capped_topics = {
-            "subjects": ["IT 111", "IT 112"],
-            "topics": ["Hardware Basics", "Control Structures"],
-            "competencies": [self.c1.id, self.c2.id, self.c3.id, self.c6.id, self.c7.id, self.c8.id],  # 6 comps
+    def test_mentee_max_competencies_per_topic_exceeded(self):
+        # Hardware Basics has 3 comps requested: c1, c2, c3 (exceeds MAX_COMPETENCIES_PER_TOPIC = 2)
+        payload_capped_topic = {
+            "subjects": ["IT 111"],
+            "topics": ["Hardware Basics"],
+            "competencies": [self.c1.id, self.c2.id, self.c3.id],
             "availability_slots": ["Mon|09:00-11:00"],
             "role": "MENTEE",
         }
-        s2 = OnboardingPreferenceSerializer(data=payload_capped_topics, context={"user": self.mentee_user})
+        s = OnboardingPreferenceSerializer(data=payload_capped_topic, context={"user": self.mentee_user})
+        self.assertFalse(s.is_valid())
+        self.assertIn("maximum of 2 competencies per topic", str(s.errors))
+
+    def test_mentee_max_competencies_total_exceeded(self):
+        # 4 topics, each with 2 comps, total 7 comps (exceeds MAX_COMPETENCIES_TOTAL = 6)
+        payload_capped_total = {
+            "subjects": ["IT 111", "IT 112"],
+            "topics": ["Hardware Basics", "Digital Logic", "Control Structures", "Arrays"],
+            "competencies": [self.c1.id, self.c2.id, self.c4.id, self.c5.id, self.c6.id, self.c7.id, self.c9.id],  # 7 comps
+            "availability_slots": ["Mon|09:00-11:00"],
+            "role": "MENTEE",
+        }
+        s2 = OnboardingPreferenceSerializer(data=payload_capped_total, context={"user": self.mentee_user})
         self.assertFalse(s2.is_valid())
-        self.assertIn("Mentees cannot select more than 5 competencies total", str(s2.errors))
+        self.assertIn("maximum of 6 competencies total", str(s2.errors))
 
     def test_mentee_min_competencies_required(self):
         payload = {
@@ -260,6 +278,10 @@ class OnboardingPreferenceSerializerTestCase(TestCase):
         s_mentee = MenteePreferenceSerializer(data=mentee_payload, context={"user": self.mentee_user})
         self.assertTrue(s_mentee.is_valid(), s_mentee.errors)
 
+        # MenteeProfileUpdateSerializer enforces same unified bounds
+        s_profile = MenteeProfileUpdateSerializer(data=mentee_payload, context={"user": self.mentee_user})
+        self.assertTrue(s_profile.is_valid(), s_profile.errors)
+
         # MentorPreferenceSerializer enforces role and max 2 subjects
         mentor_payload = {
             "subjects": ["IT 111", "IT 112"],
@@ -288,11 +310,11 @@ class OnboardingPreferenceSerializerTestCase(TestCase):
         client = Client()
         client.force_login(self.mentee_user)
 
-        # Try to submit 6 competencies as mentee via API endpoint
+        # Try to submit 3 competencies in 1 topic as mentee via API endpoint
         bad_payload = {
-            "subjects": ["IT 111", "IT 112"],
-            "topics": ["Hardware Basics", "Control Structures"],
-            "competencies": [self.c1.id, self.c2.id, self.c3.id, self.c6.id, self.c7.id, self.c8.id],
+            "subjects": ["IT 111"],
+            "topics": ["Hardware Basics"],
+            "competencies": [self.c1.id, self.c2.id, self.c3.id],
             "availability": [{"day": "Monday", "start_time": "09:00", "end_time": "11:00"}],
         }
         response = client.post(
@@ -302,7 +324,7 @@ class OnboardingPreferenceSerializerTestCase(TestCase):
         )
         self.assertEqual(response.status_code, 400)
         resp_data = response.json()
-        self.assertIn("Mentees cannot select more than 5 competencies total", resp_data.get("error", ""))
+        self.assertIn("2 competencies per topic", resp_data.get("error", ""))
 
         # Now submit valid mentee payload
         good_payload = {

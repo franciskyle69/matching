@@ -31,6 +31,7 @@ import SubjectSkillPreferences, {
   MAX_TOPICS_PER_SUBJECT,
   MAX_COMPETENCIES_PER_SUBJECT,
   MAX_COMPETENCIES_PER_TOPIC,
+  MAX_COMPETENCIES_TOTAL,
   ROLE_LIMITS,
   getRoleLimits,
   CANONICAL_CURRICULUM,
@@ -43,6 +44,7 @@ export {
   MAX_TOPICS_PER_SUBJECT,
   MAX_COMPETENCIES_PER_SUBJECT,
   MAX_COMPETENCIES_PER_TOPIC,
+  MAX_COMPETENCIES_TOTAL,
   ROLE_LIMITS,
   getRoleLimits,
   CANONICAL_CURRICULUM,
@@ -162,6 +164,18 @@ export default function PreferencesForm({
           return;
         }
 
+        for (const topicObj of subjObj.topics) {
+          const compNames = typeof topicObj.competencies[0] === "string"
+            ? topicObj.competencies
+            : topicObj.competencies.map((c) => c.name);
+          const selectedInTopic = selectedCompetencies.filter((c) => compNames.includes(c));
+          const maxCompsPerTopic = currentLimits.maxCompetenciesPerTopic || MAX_COMPETENCIES_PER_TOPIC;
+          if (selectedInTopic.length > maxCompsPerTopic) {
+            setErrorMessage(`You can select a maximum of ${maxCompsPerTopic} competencies for topic '${topicObj.name}'.`);
+            return;
+          }
+        }
+
         const allCompsInSubj = subjObj.topics.flatMap((t) =>
           typeof t.competencies[0] === "string" ? t.competencies : t.competencies.map((c) => c.name)
         );
@@ -181,9 +195,10 @@ export default function PreferencesForm({
       );
       return;
     }
-    if (selectedCompetencies.length > currentLimits.maxGlobalCompetencies) {
+    const maxGlobalComps = currentLimits.maxGlobalCompetencies || MAX_COMPETENCIES_TOTAL;
+    if (selectedCompetencies.length > maxGlobalComps) {
       setErrorMessage(
-        `${currentLimits.roleLabel} cannot select more than ${currentLimits.maxGlobalCompetencies} competencies total.`
+        `You can select a maximum of ${maxGlobalComps} competencies total.`
       );
       return;
     }
@@ -214,6 +229,28 @@ export default function PreferencesForm({
       });
     }
   };
+
+  const isBoundsExceeded = useMemo(() => {
+    if (selectedSubjects.length > (currentLimits.maxSubjects || MAX_SUBJECTS)) return true;
+    for (const subjCode of selectedSubjects) {
+      const subjObj = CANONICAL_CURRICULUM.find((s) => s.code === subjCode || s.name === subjCode);
+      if (subjObj) {
+        const topicsInSubj = subjObj.topics.map((t) => t.name);
+        const selectedTopicsInSubj = selectedTopics.filter((t) => topicsInSubj.includes(t));
+        if (selectedTopicsInSubj.length > (currentLimits.maxTopicsPerSubject || MAX_TOPICS_PER_SUBJECT)) return true;
+        for (const topicObj of subjObj.topics) {
+          const compNames = typeof topicObj.competencies[0] === "string"
+            ? topicObj.competencies
+            : topicObj.competencies.map((c) => c.name);
+          const selectedInTopic = selectedCompetencies.filter((c) => compNames.includes(c));
+          if (selectedInTopic.length > (currentLimits.maxCompetenciesPerTopic || MAX_COMPETENCIES_PER_TOPIC)) return true;
+        }
+      }
+    }
+    const maxGlobal = currentLimits.maxGlobalCompetencies || MAX_COMPETENCIES_TOTAL;
+    if (selectedCompetencies.length > maxGlobal) return true;
+    return false;
+  }, [selectedSubjects, selectedTopics, selectedCompetencies, currentLimits]);
 
   return (
     <Card
@@ -502,7 +539,7 @@ export default function PreferencesForm({
               variant="contained"
               size="large"
               onClick={validateAndSubmit}
-              disabled={loading}
+              disabled={loading || isBoundsExceeded}
               sx={{
                 ml: "auto",
                 px: 5,

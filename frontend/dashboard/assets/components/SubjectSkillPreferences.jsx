@@ -23,8 +23,9 @@ import AutoStoriesIcon from "@mui/icons-material/AutoStories";
 // Global Sparsity Constants
 export const MAX_SUBJECTS = 2;
 export const MAX_TOPICS_PER_SUBJECT = 3;
-export const MAX_COMPETENCIES_PER_SUBJECT = 3;
-export const MAX_COMPETENCIES_PER_TOPIC = 3;
+export const MAX_COMPETENCIES_PER_TOPIC = 2;
+export const MAX_COMPETENCIES_TOTAL = 6;
+export const MAX_COMPETENCIES_PER_SUBJECT = 6;
 
 export const ROLE_PREFERENCE_LIMITS = {
   MENTEE: {
@@ -36,9 +37,9 @@ export const ROLE_PREFERENCE_LIMITS = {
     maxCompetenciesPerTopic: MAX_COMPETENCIES_PER_TOPIC,
     minCompetenciesPerTopic: 1,
     minTotalCompetencies: 1,
-    maxTotalCompetencies: 5,
+    maxTotalCompetencies: MAX_COMPETENCIES_TOTAL,
     minGlobalCompetencies: 1,
-    maxGlobalCompetencies: 5,
+    maxGlobalCompetencies: MAX_COMPETENCIES_TOTAL,
     minAvailabilitySlots: 1,
     maxAvailabilitySlots: 4,
     label: "Mentee",
@@ -53,9 +54,9 @@ export const ROLE_PREFERENCE_LIMITS = {
     maxCompetenciesPerTopic: MAX_COMPETENCIES_PER_TOPIC,
     minCompetenciesPerTopic: 1,
     minTotalCompetencies: 2,
-    maxTotalCompetencies: 10,
+    maxTotalCompetencies: MAX_COMPETENCIES_TOTAL,
     minGlobalCompetencies: 2,
-    maxGlobalCompetencies: 10,
+    maxGlobalCompetencies: MAX_COMPETENCIES_TOTAL,
     minAvailabilitySlots: 2,
     maxAvailabilitySlots: 6,
     label: "Student Mentor",
@@ -70,9 +71,9 @@ export const ROLE_PREFERENCE_LIMITS = {
     maxCompetenciesPerTopic: MAX_COMPETENCIES_PER_TOPIC,
     minCompetenciesPerTopic: 1,
     minTotalCompetencies: 2,
-    maxTotalCompetencies: 10,
+    maxTotalCompetencies: MAX_COMPETENCIES_TOTAL,
     minGlobalCompetencies: 2,
-    maxGlobalCompetencies: 10,
+    maxGlobalCompetencies: MAX_COMPETENCIES_TOTAL,
     minAvailabilitySlots: 2,
     maxAvailabilitySlots: 6,
     label: "Instructor Mentor",
@@ -278,7 +279,7 @@ export default function SubjectSkillPreferences({
     } else {
       if (selectedSubjects.length >= currentLimits.maxSubjects) {
         triggerWarning(
-          `${currentLimits.roleLabel} can select a maximum of ${currentLimits.maxSubjects} subjects and ${maxTotalComps} total competencies.`
+          `You can select a maximum of ${MAX_SUBJECTS} subjects.`
         );
         return;
       }
@@ -314,7 +315,7 @@ export default function SubjectSkillPreferences({
       const currentSelectedInSubj = selectedTopics.filter((t) => topicsInThisSubject.includes(t));
       if (currentSelectedInSubj.length >= currentLimits.maxTopicsPerSubject) {
         triggerWarning(
-          `${currentLimits.roleLabel} can select a maximum of ${currentLimits.maxTopicsPerSubject} topics per subject.`
+          `You can select a maximum of ${MAX_TOPICS_PER_SUBJECT} topics per subject.`
         );
         return;
       }
@@ -339,7 +340,7 @@ export default function SubjectSkillPreferences({
     } else {
       if (selectedCompetencies.length >= maxTotalComps) {
         triggerWarning(
-          `${currentLimits.roleLabel} can select a maximum of ${currentLimits.maxSubjects} subjects and ${maxTotalComps} total competencies.`
+          `You can select a maximum of ${MAX_COMPETENCIES_TOTAL} competencies total.`
         );
         return;
       }
@@ -368,7 +369,7 @@ export default function SubjectSkillPreferences({
 
       if (currentSelectedInTopic.length >= currentLimits.maxCompetenciesPerTopic) {
         triggerWarning(
-          `${currentLimits.roleLabel} can select a maximum of ${currentLimits.maxCompetenciesPerTopic} competencies per topic.`
+          `You can select a maximum of ${MAX_COMPETENCIES_PER_TOPIC} competencies per topic.`
         );
         return;
       }
@@ -414,7 +415,7 @@ export default function SubjectSkillPreferences({
               Core BSIT Subjects
             </Typography>
             <Typography variant="body2" color={theme.palette.text?.secondary || neu.textSecondary}>
-              Select academic courses to configure corresponding topics and competencies.
+              Select up to 2 subjects. Topics and competencies will load for each selected subject.
             </Typography>
           </Box>
 
@@ -429,7 +430,7 @@ export default function SubjectSkillPreferences({
                   : (isDark ? "#F87171" : "#D32F2F")
               }
             >
-              Subjects: {selectedSubjects.length} / {currentLimits.maxSubjects} (Min {currentLimits.minSubjects}, Max {currentLimits.maxSubjects})
+              Subjects: {selectedSubjects.length} / 2 selected
             </Typography>
           </Box>
         </Stack>
@@ -443,7 +444,7 @@ export default function SubjectSkillPreferences({
               if (readOnly) return;
               if (isDisabled) {
                 triggerWarning(
-                  `${currentLimits.roleLabel} can select a maximum of ${currentLimits.maxSubjects} subjects and ${maxTotalComps} total competencies.`
+                  `You can select a maximum of ${MAX_SUBJECTS} subjects.`
                 );
                 return;
               }
@@ -523,7 +524,7 @@ export default function SubjectSkillPreferences({
               Competency & Skill Tags
             </Typography>
             <Typography variant="body2" color={theme.palette.text?.secondary || neu.textSecondary}>
-              Expand each subject to select specific topics and granular competencies.
+              Select up to 3 topics per subject and up to 2 competencies per topic (maximum 6 competencies total).
             </Typography>
           </Box>
 
@@ -646,7 +647,7 @@ export default function SubjectSkillPreferences({
                     <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap", alignItems: "center" }}>
                       <Box sx={neu.counterPill}>
                         <Typography variant="caption" fontWeight={600} color={isDark ? "#60A5FA" : "#0D47A1"}>
-                          Topics: {selectedTopicsInThisSubject.length} / {currentLimits.maxTopicsPerSubject} selected
+                          Topics: {selectedTopicsInThisSubject.length} / 3 selected
                         </Typography>
                       </Box>
                       <Box sx={neu.counterPill}>
@@ -678,7 +679,7 @@ export default function SubjectSkillPreferences({
                           if (readOnly) return;
                           if (isTopicDisabled) {
                             triggerWarning(
-                              `${currentLimits.roleLabel} can select a maximum of ${currentLimits.maxTopicsPerSubject} topics per subject.`
+                              `You can select a maximum of ${MAX_TOPICS_PER_SUBJECT} topics per subject.`
                             );
                             return;
                           }
@@ -740,11 +741,11 @@ export default function SubjectSkillPreferences({
                                   }}
                                 />
 
-                                {/* Topic Count Tag: Competencies: [Count] / role limit selected */}
+                                {/* Topic Count Tag: Competencies: [Count] / 2 selected */}
                                 {isTopicSelected && (
                                   <Box sx={{ ...neu.counterPill, px: 1, py: 0.2 }}>
                                     <Typography variant="caption" fontWeight={600} color={neu.accentBlue}>
-                                      Competencies: {selectedCompsInThisTopic.length} / {currentLimits.maxCompetenciesPerTopic} selected
+                                      Competencies: {selectedCompsInThisTopic.length} / 2 selected
                                     </Typography>
                                   </Box>
                                 )}
@@ -773,7 +774,7 @@ export default function SubjectSkillPreferences({
                                       if (isCompDisabled) {
                                         if (isGlobalCompCapReached) {
                                           triggerWarning(
-                                            `${currentLimits.roleLabel} can select a maximum of ${currentLimits.maxSubjects} subjects and ${maxTotalComps} total competencies.`
+                                            `You can select a maximum of ${MAX_COMPETENCIES_TOTAL} competencies total.`
                                           );
                                         } else if (isSubjCompCapReached) {
                                           triggerWarning(
@@ -781,7 +782,7 @@ export default function SubjectSkillPreferences({
                                           );
                                         } else {
                                           triggerWarning(
-                                            `${currentLimits.roleLabel} can select a maximum of ${currentLimits.maxCompetenciesPerTopic} competencies per topic.`
+                                            `You can select a maximum of ${MAX_COMPETENCIES_PER_TOPIC} competencies per topic.`
                                           );
                                         }
                                         return;

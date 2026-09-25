@@ -433,6 +433,7 @@ from users.constants import (
     MAX_TOPICS_PER_SUBJECT,
     MAX_COMPETENCIES_PER_SUBJECT,
     MAX_COMPETENCIES_PER_TOPIC,
+    MAX_COMPETENCIES_TOTAL,
     ROLE_PREFERENCE_LIMITS,
     get_role_preference_limits,
 )
@@ -440,10 +441,14 @@ from users.serializers import (
     MAX_SUBJECTS,
     MAX_TOPICS_PER_SUBJECT,
     MAX_COMPETENCIES_PER_SUBJECT,
+    MAX_COMPETENCIES_PER_TOPIC,
+    MAX_COMPETENCIES_TOTAL,
     UserPreferenceUpdateSerializer,
     OnboardingPreferenceSerializer,
     MenteePreferenceSerializer,
     MentorPreferenceSerializer,
+    MenteeProfileUpdateSerializer,
+    MentorProfileUpdateSerializer,
 )
 
 

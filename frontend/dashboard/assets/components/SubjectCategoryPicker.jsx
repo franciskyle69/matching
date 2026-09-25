@@ -3,7 +3,7 @@
   const React = window.React;
   const { useMemo } = React;
 
-  function SubjectCategoryPicker({ selectedSubjects, onToggle, showError }) {
+  function SubjectCategoryPicker({ selectedSubjects, onToggle, showError, maxSubjects = 2 }) {
     const catalog = window.DashboardApp.SUBJECT_CATALOG || [];
     const categoryOrder = window.DashboardApp.SUBJECT_CATEGORY_ORDER || ["major"];
     const categoryLabels = window.DashboardApp.SUBJECT_CATEGORY_LABELS || {};
@@ -28,12 +28,14 @@
     }, [catalog, categoryOrder, categoryLabels]);
 
     const selected = Array.isArray(selectedSubjects) ? selectedSubjects : [];
+    const isCapReached = selected.length >= maxSubjects;
 
     return (
       <div className="subject-category-picker subject-category-picker--modern">
         <div className="complete-profile-subject-grid" role="list" aria-label="Subjects by category">
           {normalizedCatalog.map((entry) => {
             const active = selected.includes(entry.name);
+            const isDisabled = !active && isCapReached;
             return (
               <button
                 key={entry.name}
@@ -41,10 +43,16 @@
                 role="listitem"
                 className={
                   "complete-profile-subject-card mp-subject-card" +
-                  (active ? " is-active" : "")
+                  (active ? " is-active" : "") +
+                  (isDisabled ? " is-disabled" : "")
                 }
+                style={isDisabled ? { opacity: 0.5, cursor: "not-allowed", pointerEvents: "auto" } : undefined}
                 aria-pressed={active}
-                onClick={() => onToggle(entry.name)}
+                disabled={isDisabled}
+                onClick={() => {
+                  if (isDisabled) return;
+                  onToggle(entry.name);
+                }}
               >
                 <div className="mp-subject-top">
                   <span className={"mp-subject-category-badge mp-cat-" + entry.category}>

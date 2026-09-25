@@ -8,8 +8,9 @@ from typing import Dict, Any, Tuple, Optional
 # Global Sparsity Constants
 MAX_SUBJECTS = 2
 MAX_TOPICS_PER_SUBJECT = 3
-MAX_COMPETENCIES_PER_SUBJECT = 3
-MAX_COMPETENCIES_PER_TOPIC = 3
+MAX_COMPETENCIES_PER_TOPIC = 2
+MAX_COMPETENCIES_TOTAL = 6
+MAX_COMPETENCIES_PER_SUBJECT = 6
 
 ROLE_PREFERENCE_LIMITS: Dict[str, Dict[str, Any]] = {
     "MENTEE": {
@@ -20,7 +21,7 @@ ROLE_PREFERENCE_LIMITS: Dict[str, Dict[str, Any]] = {
         "maxCompetenciesPerSubject": MAX_COMPETENCIES_PER_SUBJECT,
         "maxCompetenciesPerTopic": MAX_COMPETENCIES_PER_TOPIC,
         "minTotalCompetencies": 1,
-        "maxTotalCompetencies": 5,
+        "maxTotalCompetencies": MAX_COMPETENCIES_TOTAL,
         # Snake_case aliases for backwards compatibility
         "min_subjects": 1,
         "max_subjects": MAX_SUBJECTS,
@@ -30,9 +31,9 @@ ROLE_PREFERENCE_LIMITS: Dict[str, Dict[str, Any]] = {
         "min_competencies_per_topic": 1,
         "max_competencies_per_topic": MAX_COMPETENCIES_PER_TOPIC,
         "min_total_competencies": 1,
-        "max_total_competencies": 5,
+        "max_total_competencies": MAX_COMPETENCIES_TOTAL,
         "min_global_competencies": 1,
-        "max_global_competencies": 5,
+        "max_global_competencies": MAX_COMPETENCIES_TOTAL,
         "min_availability_slots": 1,
         "max_availability_slots": 4,
         "minAvailabilitySlots": 1,
@@ -47,7 +48,7 @@ ROLE_PREFERENCE_LIMITS: Dict[str, Dict[str, Any]] = {
         "maxCompetenciesPerSubject": MAX_COMPETENCIES_PER_SUBJECT,
         "maxCompetenciesPerTopic": MAX_COMPETENCIES_PER_TOPIC,
         "minTotalCompetencies": 2,
-        "maxTotalCompetencies": 10,
+        "maxTotalCompetencies": MAX_COMPETENCIES_TOTAL,
         "min_subjects": 1,
         "max_subjects": MAX_SUBJECTS,
         "min_topics_per_subject": 1,
@@ -56,9 +57,9 @@ ROLE_PREFERENCE_LIMITS: Dict[str, Dict[str, Any]] = {
         "min_competencies_per_topic": 1,
         "max_competencies_per_topic": MAX_COMPETENCIES_PER_TOPIC,
         "min_total_competencies": 2,
-        "max_total_competencies": 10,
+        "max_total_competencies": MAX_COMPETENCIES_TOTAL,
         "min_global_competencies": 2,
-        "max_global_competencies": 10,
+        "max_global_competencies": MAX_COMPETENCIES_TOTAL,
         "min_availability_slots": 2,
         "max_availability_slots": 6,
         "minAvailabilitySlots": 2,
@@ -73,7 +74,7 @@ ROLE_PREFERENCE_LIMITS: Dict[str, Dict[str, Any]] = {
         "maxCompetenciesPerSubject": MAX_COMPETENCIES_PER_SUBJECT,
         "maxCompetenciesPerTopic": MAX_COMPETENCIES_PER_TOPIC,
         "minTotalCompetencies": 2,
-        "maxTotalCompetencies": 10,
+        "maxTotalCompetencies": MAX_COMPETENCIES_TOTAL,
         "min_subjects": 1,
         "max_subjects": MAX_SUBJECTS,
         "min_topics_per_subject": 1,
@@ -82,9 +83,9 @@ ROLE_PREFERENCE_LIMITS: Dict[str, Dict[str, Any]] = {
         "min_competencies_per_topic": 1,
         "max_competencies_per_topic": MAX_COMPETENCIES_PER_TOPIC,
         "min_total_competencies": 2,
-        "max_total_competencies": 10,
+        "max_total_competencies": MAX_COMPETENCIES_TOTAL,
         "min_global_competencies": 2,
-        "max_global_competencies": 10,
+        "max_global_competencies": MAX_COMPETENCIES_TOTAL,
         "min_availability_slots": 2,
         "max_availability_slots": 6,
         "minAvailabilitySlots": 2,

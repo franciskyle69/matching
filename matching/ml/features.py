@@ -9,6 +9,13 @@ from sklearn.preprocessing import MultiLabelBinarizer
 
 from profiles.subject_catalog import COMPETENCY_VOCABULARY, MAJOR_SUBJECT_NAMES
 
+# Fixed Maximum Sparsity Bounds
+MAX_SUBJECTS = 2
+MAX_TOPICS_PER_SUBJECT = 3
+MAX_TOPICS_TOTAL = 6
+MAX_COMPETENCIES_PER_TOPIC = 2
+MAX_COMPETENCIES_TOTAL = 6
+
 
 def _to_set(items: Any) -> Set[str]:
     """
@@ -206,8 +213,13 @@ def _fit_mlb(classes: Tuple[str, ...]) -> MultiLabelBinarizer:
     return mlb
 
 
-def multilabel_cosine(mentee_items: Iterable[str], mentor_items: Iterable[str], classes: List[str]) -> float:
-    """Cosine similarity of two binary MultiLabelBinarizer vectors."""
+def multilabel_cosine(
+    mentee_items: Iterable[str],
+    mentor_items: Iterable[str],
+    classes: List[str],
+    max_items: Optional[int] = None,
+) -> float:
+    """Cosine similarity of two binary MultiLabelBinarizer vectors with fixed maximum bounds."""
     if not classes:
         return 0.0
     vocab = tuple(classes)
@@ -216,6 +228,11 @@ def multilabel_cosine(mentee_items: Iterable[str], mentor_items: Iterable[str], 
     allowed = set(classes)
     mentee_set &= allowed
     mentor_set &= allowed
+    if max_items is not None:
+        if len(mentee_set) > max_items:
+            mentee_set = set(sorted(mentee_set)[:max_items])
+        if len(mentor_set) > max_items:
+            mentor_set = set(sorted(mentor_set)[:max_items])
     if not mentee_set and not mentor_set:
         return 0.0
     mlb = _fit_mlb(vocab)
@@ -253,6 +270,23 @@ def build_features(row: Dict[str, Any]) -> Dict[str, float]:
     mentor_subjects = _to_set(row.get("mentor_subjects"))
     mentor_topics = _to_set(row.get("mentor_topics"))
     mentor_competencies = _to_set(row.get("mentor_competencies"))
+
+    # Enforce unified sparsity bounds so array indexing and weights remain normalized
+    if len(mentee_subjects) > MAX_SUBJECTS:
+        mentee_subjects = set(sorted(mentee_subjects)[:MAX_SUBJECTS])
+    if len(mentor_subjects) > MAX_SUBJECTS:
+        mentor_subjects = set(sorted(mentor_subjects)[:MAX_SUBJECTS])
+
+    if len(mentee_topics) > MAX_TOPICS_TOTAL:
+        mentee_topics = set(sorted(mentee_topics)[:MAX_TOPICS_TOTAL])
+    if len(mentor_topics) > MAX_TOPICS_TOTAL:
+        mentor_topics = set(sorted(mentor_topics)[:MAX_TOPICS_TOTAL])
+
+    if len(mentee_competencies) > MAX_COMPETENCIES_TOTAL:
+        mentee_competencies = set(sorted(mentee_competencies)[:MAX_COMPETENCIES_TOTAL])
+    if len(mentor_competencies) > MAX_COMPETENCIES_TOTAL:
+        mentor_competencies = set(sorted(mentor_competencies)[:MAX_COMPETENCIES_TOTAL])
+
     mentee_competency_needs = _coerce_level_map(row.get("mentee_competency_needs"))
     mentor_competency_levels = _coerce_level_map(row.get("mentor_competency_levels"))
 
@@ -293,9 +327,9 @@ def build_features(row: Dict[str, Any]) -> Dict[str, float]:
         "competencies_jaccard": jaccard(mentee_competencies, mentor_competencies),
         "subject_match_binary": 1.0 if jaccard(mentee_subjects, mentor_subjects) > 0 else 0.0,
         "topic_overlap_ratio": overlap_ratio(mentee_topics, mentor_topics),
-        "topic_overlap_count": float(len(mentee_topics & mentor_topics)),
+        "topic_overlap_count": float(min(len(mentee_topics & mentor_topics), MAX_TOPICS_TOTAL)),
         "competency_overlap_ratio": overlap_ratio(mentee_competencies, mentor_competencies),
-        "competency_overlap_count": float(len(mentee_competencies & mentor_competencies)),
+        "competency_overlap_count": float(min(len(mentee_competencies & mentor_competencies), MAX_COMPETENCIES_TOTAL)),
         # Are the mentor and mentee difficulty/expertise levels aligned?
         "difficulty_alignment": rating_alignment(
             row.get("mentee_difficulty_level"), row.get("mentor_expertise_level")
@@ -326,11 +360,13 @@ def build_features(row: Dict[str, Any]) -> Dict[str, float]:
             mentee_subjects,
             mentor_subjects,
             [name.lower() for name in MAJOR_SUBJECT_NAMES],
+            max_items=MAX_SUBJECTS,
         ),
         "competencies_cosine": multilabel_cosine(
             mentee_competencies,
             mentor_competencies,
             [name.lower() for name in COMPETENCY_VOCABULARY],
+            max_items=MAX_COMPETENCIES_TOTAL,
         ),
         "academic_gap": academic_gap_score(
             row.get("mentor_year_level"),

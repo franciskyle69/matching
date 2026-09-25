@@ -9,6 +9,7 @@ from users.constants import (
     MAX_TOPICS_PER_SUBJECT,
     MAX_COMPETENCIES_PER_SUBJECT,
     MAX_COMPETENCIES_PER_TOPIC,
+    MAX_COMPETENCIES_TOTAL,
     ROLE_PREFERENCE_LIMITS,
     get_role_preference_limits,
 )
@@ -217,20 +218,54 @@ class UserPreferenceUpdateSerializer(serializers.Serializer):
             })
 
         # B. Topics per Subject
-        max_topics_per_subj = min(limits["maxTopicsPerSubject"], MAX_TOPICS_PER_SUBJECT)
+        topics_by_subject = {}
+        for topic in attrs.get("topics", []):
+            subj_id = getattr(topic, "subject_id", None)
+            if subj_id is not None:
+                topics_by_subject[subj_id] = topics_by_subject.get(subj_id, 0) + 1
+                if topics_by_subject[subj_id] > MAX_TOPICS_PER_SUBJECT:
+                    raise serializers.ValidationError({
+                        "topics": f"You can select a maximum of {MAX_TOPICS_PER_SUBJECT} topics per subject."
+                    })
+
+        max_topics_per_subj = min(limits.get("maxTopicsPerSubject", MAX_TOPICS_PER_SUBJECT), MAX_TOPICS_PER_SUBJECT)
         min_topics_per_subj = limits.get("minTopicsPerSubject", 1)
         for s_id, subject in resolved_subjects.items():
             topics_in_subj = [t for t in resolved_topics.values() if t.subject_id == s_id]
             if len(topics_in_subj) > max_topics_per_subj:
                 raise serializers.ValidationError({
-                    "topics": f"{role_label} cannot select more than {max_topics_per_subj} topics per subject."
+                    "topics": f"You can select a maximum of {MAX_TOPICS_PER_SUBJECT} topics per subject."
                 })
             if len(topics_in_subj) < min_topics_per_subj:
                 raise serializers.ValidationError({
                     "topics": f"{role_label} must select at least {min_topics_per_subj} topic{'s' if min_topics_per_subj > 1 else ''} for subject '{subject.name}'."
                 })
 
-        # C. Competencies per Subject
+        # C. Competencies per Topic
+        comps_by_topic = {}
+        for comp in attrs.get("competencies", []):
+            top_id = getattr(comp, "topic_id", None)
+            if top_id is not None:
+                comps_by_topic[top_id] = comps_by_topic.get(top_id, 0) + 1
+                if comps_by_topic[top_id] > MAX_COMPETENCIES_PER_TOPIC:
+                    raise serializers.ValidationError({
+                        "competencies": f"You can select a maximum of {MAX_COMPETENCIES_PER_TOPIC} competencies per topic."
+                    })
+
+        max_comps_per_topic = min(limits.get("maxCompetenciesPerTopic", MAX_COMPETENCIES_PER_TOPIC), MAX_COMPETENCIES_PER_TOPIC)
+        min_comps_per_topic = limits.get("minCompetenciesPerTopic", 1)
+        for t_id, topic in resolved_topics.items():
+            comps_in_topic = [c for c in resolved_competencies.values() if c.topic_id == t_id]
+            if len(comps_in_topic) > max_comps_per_topic:
+                raise serializers.ValidationError({
+                    "competencies": f"You can select a maximum of {MAX_COMPETENCIES_PER_TOPIC} competencies per topic."
+                })
+            if len(comps_in_topic) < min_comps_per_topic:
+                raise serializers.ValidationError({
+                    "competencies": f"{role_label} must select at least {min_comps_per_topic} competenc{'ies' if min_comps_per_topic > 1 else 'y'} for topic '{topic.name}'."
+                })
+
+        # D. Competencies per Subject
         max_comps_per_subj = limits.get("maxCompetenciesPerSubject", MAX_COMPETENCIES_PER_SUBJECT)
         for s_id, subject in resolved_subjects.items():
             comps_in_subj = [c for c in resolved_competencies.values() if getattr(c.topic, "subject_id", None) == s_id]
@@ -239,32 +274,18 @@ class UserPreferenceUpdateSerializer(serializers.Serializer):
                     "competencies": f"{role_label} cannot select more than {max_comps_per_subj} competencies for subject '{subject.name}'."
                 })
 
-        # D. Global Competency Limits
+        # E. Global Competency Limits
         total_competencies = len(resolved_competencies)
         min_total_comps = limits["minTotalCompetencies"]
-        max_total_comps = limits["maxTotalCompetencies"]
+        max_total_comps = min(limits.get("maxTotalCompetencies", MAX_COMPETENCIES_TOTAL), MAX_COMPETENCIES_TOTAL)
         if total_competencies > max_total_comps:
             raise serializers.ValidationError({
-                "competencies": f"{role_label} cannot select more than {max_total_comps} competencies total."
+                "competencies": f"You can select a maximum of {MAX_COMPETENCIES_TOTAL} competencies total."
             })
         if total_competencies < min_total_comps:
             raise serializers.ValidationError({
                 "competencies": f"{role_label} must select at least {min_total_comps} competenc{'ies' if min_total_comps > 1 else 'y'} total."
             })
-
-        # E. Competencies per Topic
-        max_comps_per_topic = limits["maxCompetenciesPerTopic"]
-        min_comps_per_topic = limits.get("minCompetenciesPerTopic", 1)
-        for t_id, topic in resolved_topics.items():
-            comps_in_topic = [c for c in resolved_competencies.values() if c.topic_id == t_id]
-            if len(comps_in_topic) > max_comps_per_topic:
-                raise serializers.ValidationError({
-                    "competencies": f"{role_label} cannot select more than {max_comps_per_topic} competencies per topic."
-                })
-            if len(comps_in_topic) < min_comps_per_topic:
-                raise serializers.ValidationError({
-                    "competencies": f"{role_label} must select at least {min_comps_per_topic} competenc{'ies' if min_comps_per_topic > 1 else 'y'} for topic '{topic.name}'."
-                })
 
         # F. Availability Slots (if provided in payload)
         if avail_in_attrs is not None:
@@ -310,5 +331,12 @@ class MentorPreferenceSerializer(UserPreferenceUpdateSerializer):
         return super().validate(attrs)
 
 
-# Alias OnboardingPreferenceSerializer to UserPreferenceUpdateSerializer for backwards compatibility
+class MenteeProfileUpdateSerializer(MenteePreferenceSerializer):
+    """
+    Serializer for updating mentee matching profile preferences with hard sparsity bounds.
+    """
+    pass
+
+
+MentorProfileUpdateSerializer = MentorPreferenceSerializer
 OnboardingPreferenceSerializer = UserPreferenceUpdateSerializer

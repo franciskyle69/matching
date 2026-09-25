@@ -24,6 +24,11 @@
     window.DashboardApp.filterTopicsForSubjects ||
     ((subjects, topics) => (Array.isArray(topics) ? [...topics] : []));
 
+  const MAX_SUBJECTS = 2;
+  const MAX_TOPICS_PER_SUBJECT = 3;
+  const MAX_COMPETENCIES_PER_TOPIC = 2;
+  const MAX_COMPETENCIES_TOTAL = 6;
+
   const EXPERTISE_LEVELS = [
     {
       value: 1,
@@ -470,11 +475,29 @@
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [hasSelectedSubject, selectedMajorSubjects.join(",")]);
 
+    const isTopicCapExceeded = topicGroups.some((group) => {
+      const groupTopics = group.topics || [];
+      const count = groupTopics.filter((t) => selectedTopicIds.includes(t.id)).length;
+      return count > MAX_TOPICS_PER_SUBJECT;
+    });
+
+    const isCompetencyCapExceeded =
+      selectedCompetencyIds.length > MAX_COMPETENCIES_TOTAL ||
+      selectedTopicIds.some((topicId) => {
+        const comps = competencyMap[topicId] || [];
+        const count = comps.filter((c) => selectedCompetencyIds.includes(c.id)).length;
+        return count > MAX_COMPETENCIES_PER_TOPIC;
+      });
+
+    const isSubjectCapExceeded = selectedSubjects.length > MAX_SUBJECTS;
+    const isBoundsExceeded = isSubjectCapExceeded || isTopicCapExceeded || isCompetencyCapExceeded;
+
     const canSave =
       hasSelectedSubject &&
       (!needsTopics || selectedTopicCount > 0) &&
       (!needsCompetencies || selectedCompetencyCount > 0) &&
-      expertiseLevel != null;
+      expertiseLevel != null &&
+      !isBoundsExceeded;
 
     const availabilitySummary = Array.isArray(mentorProfile.availability)
       ? mentorProfile.availability
@@ -547,7 +570,14 @@
 
     function toggleSubject(subjectName) {
       markDirty();
-      const nextSubjects = selectedSubjects.includes(subjectName)
+      const isSelected = selectedSubjects.includes(subjectName);
+      if (!isSelected && selectedSubjects.length >= MAX_SUBJECTS) {
+        if (window.DashboardApp && typeof window.DashboardApp.notify === "function") {
+          window.DashboardApp.notify("warning", "Subject limit reached", `You can select up to ${MAX_SUBJECTS} subjects.`);
+        }
+        return;
+      }
+      const nextSubjects = isSelected
         ? selectedSubjects.filter((item) => item !== subjectName)
         : [...selectedSubjects, subjectName];
       setMentorProfile({
@@ -568,7 +598,20 @@
       const topicId = Number(topic?.id || 0);
       if (!topicId) return;
       markDirty();
-      const nextTopicIds = selectedTopicIds.includes(topicId)
+      const isSelected = selectedTopicIds.includes(topicId);
+      if (!isSelected) {
+        const parentGroup = topicGroups.find((g) => (g.topics || []).some((t) => t.id === topicId));
+        if (parentGroup) {
+          const selectedInGroup = (parentGroup.topics || []).filter((t) => selectedTopicIds.includes(t.id)).length;
+          if (selectedInGroup >= MAX_TOPICS_PER_SUBJECT) {
+            if (window.DashboardApp && typeof window.DashboardApp.notify === "function") {
+              window.DashboardApp.notify("warning", "Topic limit reached", `You can select up to ${MAX_TOPICS_PER_SUBJECT} topics per subject.`);
+            }
+            return;
+          }
+        }
+      }
+      const nextTopicIds = isSelected
         ? selectedTopicIds.filter((item) => item !== topicId)
         : [...selectedTopicIds, topicId];
       const allowedCompetencyIds = new Set(
@@ -588,9 +631,27 @@
     function toggleCompetency(competency) {
       const competencyId = Number(competency?.id || 0);
       if (!competencyId) return;
-      if (!selectedTopicIds.includes(Number(competency.topic_id || 0))) return;
+      const topicId = Number(competency.topic_id || 0);
+      if (!selectedTopicIds.includes(topicId)) return;
       markDirty();
-      const nextCompetencyIds = selectedCompetencyIds.includes(competencyId)
+      const isSelected = selectedCompetencyIds.includes(competencyId);
+      if (!isSelected) {
+        if (selectedCompetencyIds.length >= MAX_COMPETENCIES_TOTAL) {
+          if (window.DashboardApp && typeof window.DashboardApp.notify === "function") {
+            window.DashboardApp.notify("warning", "Competency limit reached", `You can select a maximum of ${MAX_COMPETENCIES_TOTAL} competencies total.`);
+          }
+          return;
+        }
+        const topicComps = competencyMap[topicId] || [];
+        const selectedInTopic = topicComps.filter((c) => selectedCompetencyIds.includes(c.id)).length;
+        if (selectedInTopic >= MAX_COMPETENCIES_PER_TOPIC) {
+          if (window.DashboardApp && typeof window.DashboardApp.notify === "function") {
+            window.DashboardApp.notify("warning", "Competency limit reached", `You can select up to ${MAX_COMPETENCIES_PER_TOPIC} competencies per topic.`);
+          }
+          return;
+        }
+      }
+      const nextCompetencyIds = isSelected
         ? selectedCompetencyIds.filter((item) => item !== competencyId)
         : [...selectedCompetencyIds, competencyId];
       applyCompetencySelection(nextCompetencyIds);
@@ -598,6 +659,12 @@
 
     async function handleSave() {
       setSubmitAttempted(true);
+      if (isBoundsExceeded) {
+        if (window.DashboardApp && typeof window.DashboardApp.notify === "function") {
+          window.DashboardApp.notify("error", "Limits Exceeded", "Please ensure your selections do not exceed the allowed limits.");
+        }
+        return;
+      }
       let availability = Array.isArray(mentorProfile.availability)
         ? mentorProfile.availability
         : [];
@@ -730,16 +797,17 @@
           <div className="mp-main">
         <SectionCard
           title="Subject"
-          description="Select every subject you can mentor. Topics and competencies will load for each selected subject."
+          description="Select up to 2 subjects. Topics and competencies will load for each selected subject."
         >
           <div className="mp-inline-meta" aria-live="polite">
-            {selectedMajorSubjects.length} selected
+            {selectedMajorSubjects.length} / {MAX_SUBJECTS} selected
           </div>
           {SubjectCategoryPicker ? (
             <SubjectCategoryPicker
               selectedSubjects={selectedSubjects}
               onToggle={toggleSubject}
               showError={showSubjectError}
+              maxSubjects={MAX_SUBJECTS}
             />
           ) : (
             <p className="field-helper">Subject picker is unavailable.</p>
@@ -754,7 +822,7 @@
         {hasSelectedSubject && (
           <SectionCard
             title="Topics"
-            description="Select the topics connected to your selected subjects."
+            description="Select up to 3 topics per subject connected to your selected subjects."
           >
             <div className="mp-inline-meta" aria-live="polite">
               {selectedTopicCount} selected
@@ -799,7 +867,7 @@
                           {group.subjectName}
                         </span>
                         <span className="mp-subject-accordion-count">
-                          {selectedInGroup} / {groupTopics.length} selected
+                          {selectedInGroup} / {MAX_TOPICS_PER_SUBJECT} selected
                         </span>
                       </button>
                       {open && (
@@ -811,16 +879,22 @@
                         >
                           {groupTopics.map((topic) => {
                             const active = selectedTopicIds.includes(topic.id);
+                            const isTopicDisabled = !active && selectedInGroup >= MAX_TOPICS_PER_SUBJECT;
                             return (
                               <button
                                 key={topic.id}
                                 type="button"
                                 role="listitem"
                                 className={
-                                  "mp-pill" + (active ? " is-active" : "")
+                                  "mp-pill" + (active ? " is-active" : "") + (isTopicDisabled ? " is-disabled" : "")
                                 }
+                                style={isTopicDisabled ? { opacity: 0.5, cursor: "not-allowed" } : undefined}
+                                disabled={isTopicDisabled}
                                 aria-pressed={active}
-                                onClick={() => toggleTopic(topic)}
+                                onClick={() => {
+                                  if (isTopicDisabled) return;
+                                  toggleTopic(topic);
+                                }}
                               >
                                 {active ? (
                                   <span className="mp-chip-check">✓</span>
@@ -868,19 +942,30 @@
         {selectedTopicCount > 0 && (
           <SectionCard
             title="Competencies"
-            description="Select the specific competencies you can mentor under each chosen topic."
+            description="Select up to 2 competencies per chosen topic (maximum 6 competencies total)."
           >
             <div className="mp-inline-meta" aria-live="polite">
-              {selectedCompetencyCount} selected
+              {selectedCompetencyCount} / {MAX_COMPETENCIES_TOTAL} selected
             </div>
             <div className="mp-competency-groups">
               {selectedTopicIds.map((topicId) => {
                 const topic = selectedTopicLookup.get(topicId);
                 const competencies = competencyMap[topicId] || [];
                 if (!topic) return null;
+                const selectedInTopic = competencies.filter((c) =>
+                  selectedCompetencyIds.includes(c.id),
+                ).length;
+                const isTopicCompCapReached =
+                  selectedInTopic >= MAX_COMPETENCIES_PER_TOPIC ||
+                  selectedCompetencyIds.length >= MAX_COMPETENCIES_TOTAL;
                 return (
                   <section key={topicId} className="mp-competency-group">
-                    <h3 className="mp-competency-group-title">{topic.name}</h3>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+                      <h3 className="mp-competency-group-title" style={{ margin: 0 }}>{topic.name}</h3>
+                      <span className="mp-competency-count" style={{ fontSize: "0.85rem", opacity: 0.85 }}>
+                        {selectedInTopic} / {MAX_COMPETENCIES_PER_TOPIC} selected
+                      </span>
+                    </div>
                     <div
                       className="mp-chip-row"
                       role="list"
@@ -891,15 +976,21 @@
                           const active = selectedCompetencyIds.includes(
                             competency.id,
                           );
+                          const isCompDisabled = !active && isTopicCompCapReached;
                           return (
                             <button
                               key={competency.id}
                               type="button"
                               role="listitem"
-                              className={"mp-pill" + (active ? " is-active" : "")}
+                              className={"mp-pill" + (active ? " is-active" : "") + (isCompDisabled ? " is-disabled" : "")}
+                              style={isCompDisabled ? { opacity: 0.5, cursor: "not-allowed" } : undefined}
+                              disabled={isCompDisabled}
                               aria-pressed={active}
                               title={competency.description || competency.name}
-                              onClick={() => toggleCompetency(competency)}
+                              onClick={() => {
+                                if (isCompDisabled) return;
+                                toggleCompetency(competency);
+                              }}
                             >
                               {active ? (
                                 <span className="mp-chip-check">✓</span>
@@ -1258,7 +1349,7 @@
                 type="button"
                 className="btn mp-save-preferences"
                 onClick={handleSave}
-                disabled={mentorProfileSaving}
+                disabled={mentorProfileSaving || !canSave}
               >
                 {mentorProfileSaving
                   ? "Saving…"
@@ -1309,11 +1400,13 @@
                 className="complete-profile-error complete-profile-error-summary"
                 role="alert"
               >
-                {needsTopics
-                  ? needsCompetencies
-                    ? "Select a subject, a topic, a competency, and an expertise level before saving."
-                    : "Select a subject, a topic, and an expertise level before saving."
-                  : "Select at least one subject and an expertise level before saving."}
+                {isBoundsExceeded
+                  ? "Please ensure selections do not exceed limits (up to 2 subjects, 3 topics per subject, and 2 competencies per topic)."
+                  : needsTopics
+                    ? needsCompetencies
+                      ? "Select a subject, a topic, a competency, and an expertise level before saving."
+                      : "Select a subject, a topic, and an expertise level before saving."
+                    : "Select at least one subject and an expertise level before saving."}
               </p>
             )}
           </div>
