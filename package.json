@@ -1,4 +1,11 @@
 {
+  "name": "matching",
+  "private": true,
+  "scripts": {
+    "build": "npm --prefix frontend/dashboard run build",
+    "build:bundle": "npm --prefix frontend/dashboard run build:bundle",
+    "test": "npm --prefix frontend/dashboard test"
+  },
   "dependencies": {
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.1",
