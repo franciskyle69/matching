@@ -48,27 +48,21 @@
                   "complete-profile-subject-card mp-subject-card" +
                   (isSelected ? " is-active" : "") +
                   (isSubjectDisabled
-                    ? " is-disabled opacity-50 cursor-not-allowed pointer-events-none hover:border-gray-700"
+                    ? " opacity-50 cursor-not-allowed pointer-events-none is-disabled"
                     : "")
                 }
                 style={
                   isSubjectDisabled
-                    ? { opacity: 0.5, cursor: "not-allowed", pointerEvents: "auto" }
+                    ? { opacity: 0.5, cursor: "not-allowed", pointerEvents: "none" }
                     : undefined
                 }
                 aria-pressed={isSelected}
                 aria-disabled={isSubjectDisabled}
                 disabled={isSubjectDisabled}
                 onClick={(e) => {
-                  if (isSubjectDisabled) {
+                  if (!isSelected && selected.length >= maxSubjects) {
                     e.preventDefault();
                     e.stopPropagation();
-                    const msg = `You can only select up to ${maxSubjects} subjects.`;
-                    if (window.DashboardApp && typeof window.DashboardApp.notify === "function") {
-                      window.DashboardApp.notify("warning", "Subject Limit Reached", msg);
-                    } else {
-                      alert(msg);
-                    }
                     return;
                   }
                   onToggle(entry.name);

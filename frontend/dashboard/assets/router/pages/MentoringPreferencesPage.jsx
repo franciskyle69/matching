@@ -157,6 +157,10 @@ import Slider from "@mui/material/Slider";
   }
 
   function MentoringPreferencesPage(props) {
+    const MAX_SUBJECTS = 2;
+    const MAX_TOPICS_PER_SUBJECT = 3;
+    const MAX_COMPETENCIES_PER_TOPIC = 2;
+
     const embedded = !!(props && props.embedded);
     const ctx = useContext(AppContext);
     const user = ctx && ctx.user;
@@ -877,7 +881,7 @@ import Slider from "@mui/material/Slider";
           <div className="mp-main">
             <SectionCard
               title="Subject"
-              description="Select up to 2 subjects. Topics and competencies will load for each selected subject."
+              description="Select up to 2 subjects."
             >
               <div
                 className={
@@ -899,7 +903,7 @@ import Slider from "@mui/material/Slider";
                 }
                 aria-live="polite"
               >
-                {selectedMajorSubjects.length} / {MAX_SUBJECTS} selected
+                {selectedMajorSubjects.length} / {MAX_SUBJECTS} max
                 {selectedMajorSubjects.length >= MAX_SUBJECTS ? " (Max Reached)" : ""}
               </div>
               {SubjectCategoryPicker ? (
@@ -995,7 +999,7 @@ import Slider from "@mui/material/Slider";
                                   : undefined
                               }
                             >
-                              {selectedInGroup} / {MAX_TOPICS_PER_SUBJECT} selected
+                              {selectedInGroup} / {MAX_TOPICS_PER_SUBJECT} max
                               {selectedInGroup >= MAX_TOPICS_PER_SUBJECT ? " (Max Reached)" : ""}
                             </span>
                           </button>
@@ -1019,26 +1023,20 @@ import Slider from "@mui/material/Slider";
                                     className={
                                       "mp-pill" +
                                       (active ? " is-active" : "") +
-                                      (isTopicDisabled ? " is-disabled opacity-40 cursor-not-allowed pointer-events-none" : "")
+                                      (isTopicDisabled ? " opacity-50 cursor-not-allowed pointer-events-none is-disabled" : "")
                                     }
                                     style={
                                       isTopicDisabled
-                                        ? { opacity: 0.4, cursor: "not-allowed", pointerEvents: "auto" }
+                                        ? { opacity: 0.5, cursor: "not-allowed", pointerEvents: "none" }
                                         : undefined
                                     }
                                     disabled={isTopicDisabled}
                                     aria-pressed={active}
                                     aria-disabled={isTopicDisabled}
                                     onClick={(e) => {
-                                      if (isTopicDisabled) {
+                                      if (!active && selectedInGroup >= MAX_TOPICS_PER_SUBJECT) {
                                         e.preventDefault();
                                         e.stopPropagation();
-                                        const msg = `You can only select up to ${MAX_TOPICS_PER_SUBJECT} topics per subject.`;
-                                        if (window.DashboardApp && typeof window.DashboardApp.notify === "function") {
-                                          window.DashboardApp.notify("warning", "Topic Limit Reached", msg);
-                                        } else {
-                                          alert(msg);
-                                        }
                                         return;
                                       }
                                       toggleTopic(topic);
@@ -1065,14 +1063,33 @@ import Slider from "@mui/material/Slider";
                   >
                     {topicOptions.map((topic) => {
                       const active = selectedTopicIds.includes(topic.id);
+                      const isTopicDisabled = !active && selectedTopicIds.length >= MAX_TOPICS_PER_SUBJECT;
                       return (
                         <button
                           key={topic.id}
                           type="button"
                           role="listitem"
-                          className={"mp-pill" + (active ? " is-active" : "")}
+                          className={
+                            "mp-pill" +
+                            (active ? " is-active" : "") +
+                            (isTopicDisabled ? " opacity-50 cursor-not-allowed pointer-events-none is-disabled" : "")
+                          }
+                          style={
+                            isTopicDisabled
+                              ? { opacity: 0.5, cursor: "not-allowed", pointerEvents: "none" }
+                              : undefined
+                          }
+                          disabled={isTopicDisabled}
                           aria-pressed={active}
-                          onClick={() => toggleTopic(topic)}
+                          aria-disabled={isTopicDisabled}
+                          onClick={(e) => {
+                            if (!active && selectedTopicIds.length >= MAX_TOPICS_PER_SUBJECT) {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              return;
+                            }
+                            toggleTopic(topic);
+                          }}
                         >
                           {active ? (
                             <span className="mp-chip-check">✓</span>
@@ -1135,7 +1152,7 @@ import Slider from "@mui/material/Slider";
                                 : { fontSize: "0.85rem", opacity: 0.85 }
                             }
                           >
-                            {selectedInTopic} / {MAX_COMPETENCIES_PER_TOPIC} selected
+                            {selectedInTopic} / {MAX_COMPETENCIES_PER_TOPIC} max
                             {selectedInTopic >= MAX_COMPETENCIES_PER_TOPIC ? " (Max Reached)" : ""}
                           </span>
                         </div>
@@ -1158,11 +1175,11 @@ import Slider from "@mui/material/Slider";
                                   className={
                                     "mp-pill" +
                                     (active ? " is-active" : "") +
-                                    (isCompDisabled ? " is-disabled opacity-40 cursor-not-allowed pointer-events-none" : "")
+                                    (isCompDisabled ? " opacity-50 cursor-not-allowed pointer-events-none is-disabled" : "")
                                   }
                                   style={
                                     isCompDisabled
-                                      ? { opacity: 0.4, cursor: "not-allowed", pointerEvents: "auto" }
+                                      ? { opacity: 0.5, cursor: "not-allowed", pointerEvents: "none" }
                                       : undefined
                                   }
                                   disabled={isCompDisabled}
@@ -1174,18 +1191,9 @@ import Slider from "@mui/material/Slider";
                                       : competency.description || competency.name
                                   }
                                   onClick={(e) => {
-                                    if (isCompDisabled) {
+                                    if (!active && isTopicCompCapReached) {
                                       e.preventDefault();
                                       e.stopPropagation();
-                                      const msg =
-                                        selectedInTopic >= MAX_COMPETENCIES_PER_TOPIC
-                                          ? `You can only select up to ${MAX_COMPETENCIES_PER_TOPIC} competencies per topic.`
-                                          : `You can only select up to ${MAX_COMPETENCIES_TOTAL} competencies total.`;
-                                      if (window.DashboardApp && typeof window.DashboardApp.notify === "function") {
-                                        window.DashboardApp.notify("warning", "Competency Limit Reached", msg);
-                                      } else {
-                                        alert(msg);
-                                      }
                                       return;
                                     }
                                     toggleCompetency(competency);
