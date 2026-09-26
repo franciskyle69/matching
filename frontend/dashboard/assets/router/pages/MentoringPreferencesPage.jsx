@@ -768,15 +768,6 @@ import Slider from "@mui/material/Slider";
                 />
                 <span>Student Mentee</span>
               </span>
-              <button
-                type="button"
-                className="btn primary small mp-header-save-btn"
-                onClick={handleSave}
-                disabled={menteeMatchingSaving || isPristine || !canSave || isFormInvalid}
-                title={saveTooltip}
-              >
-                {menteeMatchingSaving ? "Saving…" : "Save Preferences"}
-              </button>
             </div>
           </header>
         )}
