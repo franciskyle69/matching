@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import {
   Box,
   Container,
@@ -58,8 +58,42 @@ function useSafeLocation() {
   }
 }
 
+function useSafeNavigate() {
+  try {
+    const nav = useNavigate();
+    return (to, options) => {
+      try {
+        nav(to, options);
+      } catch (_) {
+        if (typeof window !== "undefined") {
+          if (to === "/dashboard" || to === "/") {
+            window.location.hash = "#home";
+          } else if (to.startsWith("#")) {
+            window.location.hash = to;
+          } else {
+            window.location.pathname = to;
+          }
+        }
+      }
+    };
+  } catch (e) {
+    return (to) => {
+      if (typeof window !== "undefined") {
+        if (to === "/dashboard" || to === "/") {
+          window.location.hash = "#home";
+        } else if (to.startsWith("#")) {
+          window.location.hash = to;
+        } else {
+          window.location.pathname = to;
+        }
+      }
+    };
+  }
+}
+
 export default function Login({ onLoginSuccess, onNavigateRegister }) {
   const location = useSafeLocation();
+  const navigate = useSafeNavigate();
   const [successBanner, setSuccessBanner] = useState(
     location?.state?.message || ""
   );
@@ -261,16 +295,21 @@ export default function Login({ onLoginSuccess, onNavigateRegister }) {
       setLockoutRemainingSeconds(0);
 
       if (data.access_token) {
+        localStorage.setItem("access_token", data.access_token);
         localStorage.setItem("accessToken", data.access_token);
         localStorage.setItem("token", data.access_token);
       }
       if (data.refresh_token) {
+        localStorage.setItem("refresh_token", data.refresh_token);
         localStorage.setItem("refreshToken", data.refresh_token);
       }
 
       if (onLoginSuccess) {
         onLoginSuccess(data);
-      } else {
+      }
+      try {
+        navigate("/dashboard");
+      } catch (_) {
         window.location.hash = "#home";
       }
     } catch (err) {
@@ -357,16 +396,21 @@ export default function Login({ onLoginSuccess, onNavigateRegister }) {
         setLockoutRemainingSeconds(0);
 
         if (data.access_token) {
+          localStorage.setItem("access_token", data.access_token);
           localStorage.setItem("accessToken", data.access_token);
           localStorage.setItem("token", data.access_token);
         }
         if (data.refresh_token) {
+          localStorage.setItem("refresh_token", data.refresh_token);
           localStorage.setItem("refreshToken", data.refresh_token);
         }
 
         if (onLoginSuccess) {
           onLoginSuccess(data);
-        } else {
+        }
+        try {
+          navigate("/dashboard");
+        } catch (_) {
           window.location.hash = "#home";
         }
       } catch (err) {

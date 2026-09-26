@@ -335,6 +335,11 @@
       return () => window.removeEventListener("pageshow", onPageShow);
     }, []);
 
+    function isSignInPathFlow() {
+      const path = (window.location.pathname || "").replace(/\/+$/, "");
+      return path.endsWith("/app/signin") || path.endsWith("/signin") || path.endsWith("/login");
+    }
+
     useEffect(() => {
       return () => {
         clearLockoutCountdown();
@@ -356,6 +361,8 @@
         setActiveTab("profile");
         const m = raw.match(/profile\/mentor\/(\d+)/);
         setMentorProfileHashId(m ? parseInt(m[1], 10) : null);
+      } else if (raw === "signin" || raw === "signup" || raw === "pending-approval") {
+        setActiveTab(raw);
       } else if (MAIN_TABS.some((tab) => tab.id === raw)) {
         setActiveTab(raw);
       } else if (isSignInPathFlow()) {
@@ -701,6 +708,7 @@
           ? "home"
           : prev,
       );
+      replaceAppUrl("home");
     }
 
     async function runMatching() {
@@ -1020,14 +1028,28 @@
         clearLockoutCountdown();
         setAuthAlert(null);
         if (result.data?.access_token) {
-          setAuthToken(result.data.access_token);
+          try {
+            window.localStorage.setItem("access_token", result.data.access_token);
+            window.localStorage.setItem("accessToken", result.data.access_token);
+            window.localStorage.setItem("token", result.data.access_token);
+          } catch (_) {}
+          if (typeof setAuthToken === "function") {
+            setAuthToken(result.data.access_token);
+          }
         }
         if (result.data?.refresh_token) {
-          setRefreshToken(result.data.refresh_token);
+          try {
+            window.localStorage.setItem("refresh_token", result.data.refresh_token);
+            window.localStorage.setItem("refreshToken", result.data.refresh_token);
+          } catch (_) {}
+          if (typeof setRefreshToken === "function") {
+            setRefreshToken(result.data.refresh_token);
+          }
         }
         setMustChangePassword(!!result.data?.force_password_change);
         await loadMe({ force: true });
         setActiveTab("home");
+        replaceAppUrl("home");
       } finally {
         setSignInLoading(false);
       }

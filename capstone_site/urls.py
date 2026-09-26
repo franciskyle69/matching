@@ -21,6 +21,9 @@ from .views import react_app, landing_page, portal_page, public_landing_page, _m
 urlpatterns = [
     path('', landing_page, name='home'),
     path('login/', RedirectView.as_view(url='/app/#signin', permanent=False), name='login_redirect'),
+    path('dashboard/', RedirectView.as_view(url='/app/#home', permanent=False), name='dashboard_redirect'),
+    path('signup/', RedirectView.as_view(url='/app/#signup', permanent=False), name='signup_redirect'),
+    path('register/', RedirectView.as_view(url='/app/#signup', permanent=False), name='register_redirect'),
     path('portal/', portal_page, name='portal'),
     path('landing/', public_landing_page, name='public_landing'),
     path(getattr(settings, "ADMIN_URL", "admin/"), admin.site.urls),

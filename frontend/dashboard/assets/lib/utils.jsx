@@ -36,6 +36,61 @@
     return "";
   }
 
+  function getAuthToken() {
+    try {
+      return (
+        window.localStorage.getItem("access_token") ||
+        window.localStorage.getItem("accessToken") ||
+        window.localStorage.getItem("token") ||
+        ""
+      );
+    } catch {
+      return "";
+    }
+  }
+
+  function getRefreshToken() {
+    try {
+      return (
+        window.localStorage.getItem("refresh_token") ||
+        window.localStorage.getItem("refreshToken") ||
+        ""
+      );
+    } catch {
+      return "";
+    }
+  }
+
+  function setAuthToken(token) {
+    try {
+      if (!token) {
+        window.localStorage.removeItem("access_token");
+        window.localStorage.removeItem("accessToken");
+        window.localStorage.removeItem("token");
+        return;
+      }
+      window.localStorage.setItem("access_token", token);
+      window.localStorage.setItem("accessToken", token);
+      window.localStorage.setItem("token", token);
+    } catch {
+      // Ignore storage failures in privacy-restricted browsers.
+    }
+  }
+
+  function setRefreshToken(token) {
+    try {
+      if (!token) {
+        window.localStorage.removeItem("refresh_token");
+        window.localStorage.removeItem("refreshToken");
+        return;
+      }
+      window.localStorage.setItem("refresh_token", token);
+      window.localStorage.setItem("refreshToken", token);
+    } catch {
+      // Ignore storage failures in privacy-restricted browsers.
+    }
+  }
+
   function clearAuthTokens() {
     try {
       window.localStorage.removeItem("auth_access_token");
@@ -58,7 +113,14 @@
   }
 
   function purgeLegacyAuthTokens() {
-    clearAuthTokens();
+    try {
+      window.localStorage.removeItem("auth_access_token");
+      window.localStorage.removeItem("auth_refresh_token");
+      window.sessionStorage.removeItem("auth_access_token");
+      window.sessionStorage.removeItem("auth_refresh_token");
+    } catch {
+      // Ignore storage failures in privacy-restricted browsers.
+    }
   }
 
   purgeLegacyAuthTokens();
@@ -67,8 +129,10 @@
 
   async function refreshSession() {
     if (refreshInFlight) return refreshInFlight;
+    const refreshToken = getRefreshToken();
     refreshInFlight = (async () => {
       try {
+        const bodyPayload = refreshToken ? { refresh_token: refreshToken } : {};
         const response = await fetch("/api/auth/refresh/", {
           method: "POST",
           credentials: "include",
@@ -76,9 +140,17 @@
             "Content-Type": "application/json",
             "X-CSRFToken": getCookie("csrftoken"),
           },
-          body: "{}",
+          body: JSON.stringify(bodyPayload),
         });
-        return response.ok;
+        if (!response.ok) return false;
+        const data = await response.json().catch(() => null);
+        if (data?.access_token) {
+          setAuthToken(data.access_token);
+        }
+        if (data?.refresh_token) {
+          setRefreshToken(data.refresh_token);
+        }
+        return true;
       } catch {
         return false;
       } finally {
@@ -228,6 +300,10 @@
           fetchOpts.headers["X-CSRFToken"] = token;
         }
       }
+      const authToken = getAuthToken();
+      if (authToken && isApiPath && !isPublicAuthPath && !fetchOpts.headers.Authorization && !fetchOpts.headers.authorization) {
+        fetchOpts.headers.Authorization = `Bearer ${authToken}`;
+      }
       let response = await fetch(url, fetchOpts);
       if (response.status === 403 && !isCsrfUrl && method !== "GET" && method !== "HEAD") {
         const retryToken = await ensureCsrfToken(true);
@@ -244,6 +320,10 @@
       if (sessionRejected) {
         const refreshed = await refreshSession();
         if (refreshed) {
+          const newAuthToken = getAuthToken();
+          if (newAuthToken) {
+            fetchOpts.headers.Authorization = `Bearer ${newAuthToken}`;
+          }
           response = await fetch(url, fetchOpts);
         }
       }
@@ -639,6 +719,10 @@
     categoryIconName,
     getMentorRoleBadgeMeta,
     getAvatarInitials,
+    getAuthToken,
+    getRefreshToken,
+    setAuthToken,
+    setRefreshToken,
     clearAuthTokens,
     MentorRoleBadge,
     MentorMatchTitle,
