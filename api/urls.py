@@ -142,6 +142,7 @@ urlpatterns = [
     path('auth/google/login/', auth_google, name='api-auth-google-login'),
     path('auth/refresh/', auth_refresh, name='api-auth-refresh'),
     path('auth/logout/', auth_logout, name='api-auth-logout'),
+    path('logout/', auth_logout, name='api-logout'),
     path('auth/check-lockout/', check_lockout, name='api-auth-check-lockout'),
     path('auth/register/', unified_auth_register, name='api-auth-register'),
     re_path(r'^verify-email/?$', VerifyEmailView.as_view(), name='api-verify-email'),

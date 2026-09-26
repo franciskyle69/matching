@@ -114,21 +114,21 @@ class OnboardingPreferenceSerializerTestCase(TestCase):
         self.assertTrue(serializer.is_valid(), serializer.errors)
         self.assertEqual(len(serializer.validated_data["resolved_competencies"]), 2)
 
-    def test_mentee_max_competencies_per_topic_exceeded(self):
-        # Hardware Basics has 3 comps requested: c1, c2, c3 (exceeds MAX_COMPETENCIES_PER_TOPIC = 2)
-        payload_capped_topic = {
+    def test_mentee_global_competencies_within_topic_allowed(self):
+        # Hardware Basics has 3 comps requested: c1, c2, c3 (allowed under GLOBAL limit since 3 <= MAX_TOTAL_COMPETENCIES = 6)
+        payload = {
             "subjects": ["IT 111"],
             "topics": ["Hardware Basics"],
             "competencies": [self.c1.id, self.c2.id, self.c3.id],
             "availability_slots": ["Mon|09:00-11:00"],
             "role": "MENTEE",
         }
-        s = OnboardingPreferenceSerializer(data=payload_capped_topic, context={"user": self.mentee_user})
-        self.assertFalse(s.is_valid())
-        self.assertIn("maximum of 2 competencies per topic", str(s.errors))
+        s = OnboardingPreferenceSerializer(data=payload, context={"user": self.mentee_user})
+        self.assertTrue(s.is_valid(), s.errors)
+        self.assertEqual(len(s.validated_data["resolved_competencies"]), 3)
 
     def test_mentee_max_competencies_total_exceeded(self):
-        # 4 topics, each with 2 comps, total 7 comps (exceeds MAX_COMPETENCIES_TOTAL = 6)
+        # 4 topics, total 7 comps (exceeds MAX_TOTAL_COMPETENCIES = 6)
         payload_capped_total = {
             "subjects": ["IT 111", "IT 112"],
             "topics": ["Hardware Basics", "Digital Logic", "Control Structures", "Arrays"],
@@ -229,8 +229,8 @@ class OnboardingPreferenceSerializerTestCase(TestCase):
         self.assertFalse(s_invalid.is_valid())
         self.assertTrue("maximum of 2 subjects" in str(s_invalid.errors) or "cannot select more than 2 subjects" in str(s_invalid.errors))
 
-    def test_mentee_topics_per_subject_limit(self):
-        # 4 topics under IT 111 exceeds the maxTopicsPerSubject limit
+    def test_mentee_topics_global_limit(self):
+        # 4 topics under IT 111 is valid under global limit (4 <= MAX_TOTAL_TOPICS = 6)
         Top1_4, _ = Topic.objects.get_or_create(subject=self.subject1, name="Network Basics")
         payload = {
             "subjects": ["IT 111"],
@@ -240,11 +240,28 @@ class OnboardingPreferenceSerializerTestCase(TestCase):
             "role": "MENTEE",
         }
         s = OnboardingPreferenceSerializer(data=payload, context={"user": self.mentee_user})
-        self.assertFalse(s.is_valid())
-        self.assertTrue("topics per subject" in str(s.errors))
+        self.assertTrue(s.is_valid(), s.errors)
 
-    def test_mentee_competencies_per_subject_limit(self):
-        # Max competencies per subject is 3
+        # 7 topics exceeds MAX_TOTAL_TOPICS = 6
+        Top2_3, _ = Topic.objects.get_or_create(subject=self.subject2, name="Functions")
+        Top2_4, _ = Topic.objects.get_or_create(subject=self.subject2, name="Pointers")
+        Top2_5, _ = Topic.objects.get_or_create(subject=self.subject2, name="Recursion")
+        payload_7_topics = {
+            "subjects": ["IT 111", "IT 112"],
+            "topics": [
+                "Hardware Basics", "Digital Logic", "OS Fundamentals", "Network Basics",
+                "Control Structures", "Arrays", "Functions"
+            ],
+            "competencies": [self.c1.id, self.c6.id],
+            "availability_slots": ["Mon|09:00-11:00"],
+            "role": "MENTEE",
+        }
+        s2 = OnboardingPreferenceSerializer(data=payload_7_topics, context={"user": self.mentee_user})
+        self.assertFalse(s2.is_valid())
+        self.assertIn("maximum of 6 topics total", str(s2.errors))
+
+    def test_mentee_competencies_within_subject_allowed(self):
+        # 4 comps in IT 111 is valid because global cap is 6
         c_extra, _ = Competency.objects.get_or_create(topic=self.top1_1, name="Bus Architecture")
         payload = {
             "subjects": ["IT 111"],
@@ -254,8 +271,7 @@ class OnboardingPreferenceSerializerTestCase(TestCase):
             "role": "MENTEE",
         }
         s = OnboardingPreferenceSerializer(data=payload, context={"user": self.mentee_user})
-        self.assertFalse(s.is_valid())
-        self.assertTrue("competencies" in str(s.errors))
+        self.assertTrue(s.is_valid(), s.errors)
 
     def test_field_level_validate_subjects(self):
         # Test validate_subjects directly
@@ -310,11 +326,11 @@ class OnboardingPreferenceSerializerTestCase(TestCase):
         client = Client()
         client.force_login(self.mentee_user)
 
-        # Try to submit 3 competencies in 1 topic as mentee via API endpoint
+        # Try to submit 7 competencies total (exceeds global MAX_TOTAL_COMPETENCIES = 6)
         bad_payload = {
-            "subjects": ["IT 111"],
-            "topics": ["Hardware Basics"],
-            "competencies": [self.c1.id, self.c2.id, self.c3.id],
+            "subjects": ["IT 111", "IT 112"],
+            "topics": ["Hardware Basics", "Digital Logic", "Control Structures", "Arrays"],
+            "competencies": [self.c1.id, self.c2.id, self.c4.id, self.c5.id, self.c6.id, self.c7.id, self.c9.id],
             "availability": [{"day": "Monday", "start_time": "09:00", "end_time": "11:00"}],
         }
         response = client.post(
@@ -324,13 +340,13 @@ class OnboardingPreferenceSerializerTestCase(TestCase):
         )
         self.assertEqual(response.status_code, 400)
         resp_data = response.json()
-        self.assertIn("2 competencies per topic", resp_data.get("error", ""))
+        self.assertIn("6 competencies total", resp_data.get("error", ""))
 
-        # Now submit valid mentee payload
+        # Now submit valid mentee payload (3 competencies in 1 topic allowed under global limit)
         good_payload = {
             "subjects": ["IT 111"],
             "topics": ["Hardware Basics"],
-            "competencies": [self.c1.id, self.c2.id],
+            "competencies": [self.c1.id, self.c2.id, self.c3.id],
             "availability": [{"day": "Monday", "start_time": "09:00", "end_time": "11:00"}],
         }
         ok_response = client.post(

@@ -30,10 +30,14 @@ import Slider from "@mui/material/Slider";
     buildAvailabilityUpdate,
   } = Availability;
 
-  const MAX_SUBJECTS = 2;
-  const MAX_TOPICS_PER_SUBJECT = 3;
-  const MAX_COMPETENCIES_PER_TOPIC = 2;
-  const MAX_COMPETENCIES_TOTAL = 6;
+  const MAX_TOTAL_SUBJECTS = 2;
+  const MAX_TOTAL_TOPICS = 6;
+  const MAX_TOTAL_COMPETENCIES = 6;
+
+  const MAX_SUBJECTS = MAX_TOTAL_SUBJECTS;
+  const MAX_TOPICS_PER_SUBJECT = MAX_TOTAL_TOPICS;
+  const MAX_COMPETENCIES_PER_TOPIC = MAX_TOTAL_COMPETENCIES;
+  const MAX_COMPETENCIES_TOTAL = MAX_TOTAL_COMPETENCIES;
 
   const DIFFICULTY_OPTIONS = [
     {
@@ -157,9 +161,13 @@ import Slider from "@mui/material/Slider";
   }
 
   function MentoringPreferencesPage(props) {
-    const MAX_SUBJECTS = 2;
-    const MAX_TOPICS_PER_SUBJECT = 3;
-    const MAX_COMPETENCIES_PER_TOPIC = 2;
+    const MAX_TOTAL_SUBJECTS = 2;
+    const MAX_TOTAL_TOPICS = 6;
+    const MAX_TOTAL_COMPETENCIES = 6;
+    const MAX_SUBJECTS = MAX_TOTAL_SUBJECTS;
+    const MAX_TOPICS_PER_SUBJECT = MAX_TOTAL_TOPICS;
+    const MAX_COMPETENCIES_PER_TOPIC = MAX_TOTAL_COMPETENCIES;
+    const MAX_COMPETENCIES_TOTAL = MAX_TOTAL_COMPETENCIES;
 
     const embedded = !!(props && props.embedded);
     const ctx = useContext(AppContext);
@@ -478,25 +486,16 @@ import Slider from "@mui/material/Slider";
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [hasSelectedSubject, selectedMajorSubjects.join(",")]);
 
-    const isTopicCapExceeded = topicGroups.some((group) => {
-      const groupTopics = group.topics || [];
-      const count = groupTopics.filter((t) => selectedTopicIds.includes(t.id)).length;
-      return count > MAX_TOPICS_PER_SUBJECT;
-    });
+    const isTopicCapExceeded = selectedTopicIds.length > MAX_TOTAL_TOPICS;
 
     const isCompetencyCapExceeded =
-      selectedCompetencyIds.length > MAX_COMPETENCIES_TOTAL ||
-      selectedTopicIds.some((topicId) => {
-        const comps = competencyMap[topicId] || [];
-        const count = comps.filter((c) => selectedCompetencyIds.includes(c.id)).length;
-        return count > MAX_COMPETENCIES_PER_TOPIC;
-      });
+      selectedCompetencyIds.length > MAX_TOTAL_COMPETENCIES;
 
-    const isSubjectCapExceeded = selectedSubjects.length > MAX_SUBJECTS;
+    const isSubjectCapExceeded = selectedSubjects.length > MAX_TOTAL_SUBJECTS;
     const isBoundsExceeded = isSubjectCapExceeded || isTopicCapExceeded || isCompetencyCapExceeded;
     const isFormInvalid = isBoundsExceeded || isSubjectCapExceeded;
     const saveTooltip = isFormInvalid
-      ? "Cannot save: selections exceed permitted limits (Max 2 subjects, 3 topics per subject, 2 competencies per topic, max 6 total)."
+      ? "Cannot save: selections exceed permitted limits (Max 2 subjects, 6 topics total, 6 competencies total)."
       : "Click to save your preferences";
 
     const selectedDifficulty = DIFFICULTY_OPTIONS.find(
@@ -563,13 +562,7 @@ import Slider from "@mui/material/Slider";
     function toggleSubject(subjectName) {
       markDirty();
       const isSelected = selectedSubjects.includes(subjectName);
-      if (!isSelected && selectedSubjects.length >= MAX_SUBJECTS) {
-        const msg = `You can only select up to ${MAX_SUBJECTS} subjects.`;
-        if (window.DashboardApp && typeof window.DashboardApp.notify === "function") {
-          window.DashboardApp.notify("warning", "Subject Limit Reached", msg);
-        } else {
-          alert(msg);
-        }
+      if (!isSelected && selectedSubjects.length >= MAX_TOTAL_SUBJECTS) {
         return;
       }
       const nextSubjects = isSelected
@@ -594,20 +587,8 @@ import Slider from "@mui/material/Slider";
       if (!topicId) return;
       markDirty();
       const isSelected = selectedTopicIds.includes(topicId);
-      if (!isSelected) {
-        const parentGroup = topicGroups.find((g) => (g.topics || []).some((t) => t.id === topicId));
-        if (parentGroup) {
-          const selectedInGroup = (parentGroup.topics || []).filter((t) => selectedTopicIds.includes(t.id)).length;
-          if (selectedInGroup >= MAX_TOPICS_PER_SUBJECT) {
-            const msg = `You can only select up to ${MAX_TOPICS_PER_SUBJECT} topics per subject.`;
-            if (window.DashboardApp && typeof window.DashboardApp.notify === "function") {
-              window.DashboardApp.notify("warning", "Topic Limit Reached", msg);
-            } else {
-              alert(msg);
-            }
-            return;
-          }
-        }
+      if (!isSelected && selectedTopicIds.length >= MAX_TOTAL_TOPICS) {
+        return;
       }
       const nextTopicIds = isSelected
         ? selectedTopicIds.filter((item) => item !== topicId)
@@ -633,27 +614,8 @@ import Slider from "@mui/material/Slider";
       if (!selectedTopicIds.includes(topicId)) return;
       markDirty();
       const isSelected = selectedCompetencyIds.includes(competencyId);
-      if (!isSelected) {
-        if (selectedCompetencyIds.length >= MAX_COMPETENCIES_TOTAL) {
-          const msg = `You can only select a maximum of ${MAX_COMPETENCIES_TOTAL} competencies total.`;
-          if (window.DashboardApp && typeof window.DashboardApp.notify === "function") {
-            window.DashboardApp.notify("warning", "Competency Limit Reached", msg);
-          } else {
-            alert(msg);
-          }
-          return;
-        }
-        const topicComps = competencyMap[topicId] || [];
-        const selectedInTopic = topicComps.filter((c) => selectedCompetencyIds.includes(c.id)).length;
-        if (selectedInTopic >= MAX_COMPETENCIES_PER_TOPIC) {
-          const msg = `You can only select up to ${MAX_COMPETENCIES_PER_TOPIC} competencies per topic.`;
-          if (window.DashboardApp && typeof window.DashboardApp.notify === "function") {
-            window.DashboardApp.notify("warning", "Competency Limit Reached", msg);
-          } else {
-            alert(msg);
-          }
-          return;
-        }
+      if (!isSelected && selectedCompetencyIds.length >= MAX_TOTAL_COMPETENCIES) {
+        return;
       }
       const nextCompetencyIds = isSelected
         ? selectedCompetencyIds.filter((item) => item !== competencyId)
@@ -926,10 +888,30 @@ import Slider from "@mui/material/Slider";
             {hasSelectedSubject && (
               <SectionCard
                 title="Topics"
-                description="Select up to 3 topics per subject connected to your selected subjects."
+                description="Select up to 6 topics connected to your selected subjects."
               >
-                <div className="mp-inline-meta" aria-live="polite">
-                  {selectedTopicCount} selected
+                <div
+                  className={
+                    "mp-inline-meta" +
+                    (selectedTopicCount >= MAX_TOTAL_TOPICS ? " is-max-reached" : "")
+                  }
+                  style={
+                    selectedTopicCount >= MAX_TOTAL_TOPICS
+                      ? {
+                          color: "#f59e0b",
+                          fontWeight: 700,
+                          backgroundColor: "rgba(245, 158, 11, 0.15)",
+                          border: "1px solid rgba(245, 158, 11, 0.4)",
+                          borderRadius: "20px",
+                          padding: "3px 10px",
+                          display: "inline-block",
+                        }
+                      : undefined
+                  }
+                  aria-live="polite"
+                >
+                  {selectedTopicCount} / {MAX_TOTAL_TOPICS} max
+                  {selectedTopicCount >= MAX_TOTAL_TOPICS ? " (Max Reached)" : ""}
                 </div>
                 {selectionLoading && (
                   <p
@@ -981,26 +963,8 @@ import Slider from "@mui/material/Slider";
                             <span className="mp-subject-accordion-title">
                               {group.subjectName}
                             </span>
-                            <span
-                              className={
-                                "mp-subject-accordion-count" +
-                                (selectedInGroup >= MAX_TOPICS_PER_SUBJECT ? " is-max-reached" : "")
-                              }
-                              style={
-                                selectedInGroup >= MAX_TOPICS_PER_SUBJECT
-                                  ? {
-                                      color: "#f59e0b",
-                                      fontWeight: 700,
-                                      backgroundColor: "rgba(245, 158, 11, 0.15)",
-                                      border: "1px solid rgba(245, 158, 11, 0.4)",
-                                      borderRadius: "20px",
-                                      padding: "2px 8px",
-                                    }
-                                  : undefined
-                              }
-                            >
-                              {selectedInGroup} / {MAX_TOPICS_PER_SUBJECT} max
-                              {selectedInGroup >= MAX_TOPICS_PER_SUBJECT ? " (Max Reached)" : ""}
+                            <span className="mp-subject-accordion-count">
+                              {selectedInGroup} selected
                             </span>
                           </button>
                           {open && (
@@ -1014,7 +978,7 @@ import Slider from "@mui/material/Slider";
                                 const active = selectedTopicIds.includes(
                                   topic.id,
                                 );
-                                const isTopicDisabled = !active && selectedInGroup >= MAX_TOPICS_PER_SUBJECT;
+                                const isTopicDisabled = !active && selectedTopicIds.length >= MAX_TOTAL_TOPICS;
                                 return (
                                   <button
                                     key={topic.id}
@@ -1034,7 +998,7 @@ import Slider from "@mui/material/Slider";
                                     aria-pressed={active}
                                     aria-disabled={isTopicDisabled}
                                     onClick={(e) => {
-                                      if (!active && selectedInGroup >= MAX_TOPICS_PER_SUBJECT) {
+                                      if (!active && selectedTopicIds.length >= MAX_TOTAL_TOPICS) {
                                         e.preventDefault();
                                         e.stopPropagation();
                                         return;
@@ -1063,7 +1027,7 @@ import Slider from "@mui/material/Slider";
                   >
                     {topicOptions.map((topic) => {
                       const active = selectedTopicIds.includes(topic.id);
-                      const isTopicDisabled = !active && selectedTopicIds.length >= MAX_TOPICS_PER_SUBJECT;
+                      const isTopicDisabled = !active && selectedTopicIds.length >= MAX_TOTAL_TOPICS;
                       return (
                         <button
                           key={topic.id}
@@ -1083,7 +1047,7 @@ import Slider from "@mui/material/Slider";
                           aria-pressed={active}
                           aria-disabled={isTopicDisabled}
                           onClick={(e) => {
-                            if (!active && selectedTopicIds.length >= MAX_TOPICS_PER_SUBJECT) {
+                            if (!active && selectedTopicIds.length >= MAX_TOTAL_TOPICS) {
                               e.preventDefault();
                               e.stopPropagation();
                               return;
@@ -1111,10 +1075,30 @@ import Slider from "@mui/material/Slider";
             {selectedTopicCount > 0 && (
               <SectionCard
                 title="Competencies"
-                description="Select up to 2 competencies per chosen topic (maximum 6 competencies total)."
+                description="Select up to 6 competencies total across your chosen topics."
               >
-                <div className="mp-inline-meta" aria-live="polite">
-                  {selectedCompetencyCount} / {MAX_COMPETENCIES_TOTAL} selected
+                <div
+                  className={
+                    "mp-inline-meta" +
+                    (selectedCompetencyCount >= MAX_TOTAL_COMPETENCIES ? " is-max-reached" : "")
+                  }
+                  style={
+                    selectedCompetencyCount >= MAX_TOTAL_COMPETENCIES
+                      ? {
+                          color: "#f59e0b",
+                          fontWeight: 700,
+                          backgroundColor: "rgba(245, 158, 11, 0.15)",
+                          border: "1px solid rgba(245, 158, 11, 0.4)",
+                          borderRadius: "20px",
+                          padding: "3px 10px",
+                          display: "inline-block",
+                        }
+                      : undefined
+                  }
+                  aria-live="polite"
+                >
+                  {selectedCompetencyCount} / {MAX_TOTAL_COMPETENCIES} max
+                  {selectedCompetencyCount >= MAX_TOTAL_COMPETENCIES ? " (Max Reached)" : ""}
                 </div>
                 <div className="mp-competency-groups">
                   {selectedTopicIds.map((topicId) => {
@@ -1124,9 +1108,6 @@ import Slider from "@mui/material/Slider";
                     const selectedInTopic = competencies.filter((c) =>
                       selectedCompetencyIds.includes(c.id),
                     ).length;
-                    const isTopicCompCapReached =
-                      selectedInTopic >= MAX_COMPETENCIES_PER_TOPIC ||
-                      selectedCompetencyIds.length >= MAX_COMPETENCIES_TOTAL;
                     return (
                       <section key={topicId} className="mp-competency-group">
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
@@ -1134,26 +1115,10 @@ import Slider from "@mui/material/Slider";
                             {topic.name}
                           </h3>
                           <span
-                            className={
-                              "mp-competency-count" +
-                              (selectedInTopic >= MAX_COMPETENCIES_PER_TOPIC ? " is-max-reached" : "")
-                            }
-                            style={
-                              selectedInTopic >= MAX_COMPETENCIES_PER_TOPIC
-                                ? {
-                                    fontSize: "0.85rem",
-                                    color: "#f59e0b",
-                                    fontWeight: 700,
-                                    backgroundColor: "rgba(245, 158, 11, 0.15)",
-                                    border: "1px solid rgba(245, 158, 11, 0.4)",
-                                    borderRadius: "20px",
-                                    padding: "2px 8px",
-                                  }
-                                : { fontSize: "0.85rem", opacity: 0.85 }
-                            }
+                            className="mp-competency-count"
+                            style={{ fontSize: "0.85rem", opacity: 0.85 }}
                           >
-                            {selectedInTopic} / {MAX_COMPETENCIES_PER_TOPIC} max
-                            {selectedInTopic >= MAX_COMPETENCIES_PER_TOPIC ? " (Max Reached)" : ""}
+                            {selectedInTopic} selected
                           </span>
                         </div>
                         <div
@@ -1166,7 +1131,9 @@ import Slider from "@mui/material/Slider";
                               const active = selectedCompetencyIds.includes(
                                 competency.id,
                               );
-                              const isCompDisabled = !active && isTopicCompCapReached;
+                              const isCompDisabled =
+                                !active &&
+                                selectedCompetencyIds.length >= MAX_TOTAL_COMPETENCIES;
                               return (
                                 <button
                                   key={competency.id}
@@ -1187,11 +1154,11 @@ import Slider from "@mui/material/Slider";
                                   aria-disabled={isCompDisabled}
                                   title={
                                     isCompDisabled
-                                      ? `Limit reached: Maximum ${MAX_COMPETENCIES_PER_TOPIC} competencies per topic.`
+                                      ? `Limit reached: Maximum ${MAX_TOTAL_COMPETENCIES} competencies total.`
                                       : competency.description || competency.name
                                   }
                                   onClick={(e) => {
-                                    if (!active && isTopicCompCapReached) {
+                                    if (!active && selectedCompetencyIds.length >= MAX_TOTAL_COMPETENCIES) {
                                       e.preventDefault();
                                       e.stopPropagation();
                                       return;
@@ -1548,39 +1515,6 @@ import Slider from "@mui/material/Slider";
                 ))}
               </ul>
             )}
-
-            <div className="mp-preview-actions">
-              <button
-                type="button"
-                className="btn mp-save-preferences"
-                onClick={handleSave}
-                disabled={menteeMatchingSaving || !canSave || isFormInvalid}
-                title={saveTooltip}
-              >
-                {menteeMatchingSaving
-                  ? "Saving…"
-                  : embedded
-                    ? "Save & finish"
-                    : "Save Preferences"}
-              </button>
-              {!isPristine && (
-                <button
-                  type="button"
-                  className="btn secondary small mp-preview-discard"
-                  onClick={handleReset}
-                  disabled={menteeMatchingSaving}
-                >
-                  Discard changes
-                </button>
-              )}
-              <p className="mp-preview-status" aria-live="polite">
-                {justSaved && isPristine
-                  ? "All changes saved."
-                  : isPristine
-                    ? "No unsaved changes."
-                    : "You have unsaved changes."}
-              </p>
-            </div>
           </aside>
         </div>
 
@@ -1607,7 +1541,7 @@ import Slider from "@mui/material/Slider";
                   role="alert"
                 >
                   {isBoundsExceeded
-                    ? "Please ensure selections do not exceed limits (up to 2 subjects, 3 topics per subject, and 2 competencies per topic)."
+                    ? "Please ensure selections do not exceed limits (up to 2 subjects, 6 topics total, and 6 competencies total)."
                     : needsTopics
                       ? needsCompetencies
                         ? "Select a subject, a topic, a competency, and a support need before saving."
@@ -1650,4 +1584,6 @@ import Slider from "@mui/material/Slider";
   window.DashboardApp = window.DashboardApp || {};
   window.DashboardApp.Pages = window.DashboardApp.Pages || {};
   window.DashboardApp.Pages["mentoring-preferences"] = MentoringPreferencesPage;
+  window.DashboardApp.Pages["mentee-matching-profile"] = MentoringPreferencesPage;
+  window.DashboardApp.MenteeMatchingProfile = MentoringPreferencesPage;
 })();

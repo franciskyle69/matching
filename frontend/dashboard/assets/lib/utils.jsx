@@ -36,13 +36,29 @@
     return "";
   }
 
-  function purgeLegacyAuthTokens() {
+  function clearAuthTokens() {
     try {
       window.localStorage.removeItem("auth_access_token");
       window.localStorage.removeItem("auth_refresh_token");
+      window.localStorage.removeItem("access_token");
+      window.localStorage.removeItem("refresh_token");
+      window.localStorage.removeItem("accessToken");
+      window.localStorage.removeItem("refreshToken");
+      window.localStorage.removeItem("token");
+      window.sessionStorage.removeItem("auth_access_token");
+      window.sessionStorage.removeItem("auth_refresh_token");
+      window.sessionStorage.removeItem("access_token");
+      window.sessionStorage.removeItem("refresh_token");
+      window.sessionStorage.removeItem("accessToken");
+      window.sessionStorage.removeItem("refreshToken");
+      window.sessionStorage.removeItem("token");
     } catch {
       // Ignore storage failures in privacy-restricted browsers.
     }
+  }
+
+  function purgeLegacyAuthTokens() {
+    clearAuthTokens();
   }
 
   purgeLegacyAuthTokens();
@@ -623,6 +639,7 @@
     categoryIconName,
     getMentorRoleBadgeMeta,
     getAvatarInitials,
+    clearAuthTokens,
     MentorRoleBadge,
     MentorMatchTitle,
   };

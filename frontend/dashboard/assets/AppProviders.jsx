@@ -15,6 +15,11 @@
   const AppContext =
     (window.DashboardApp && window.DashboardApp.AppContext) ||
     React.createContext(null);
+  const ThemeContext =
+    (window.DashboardApp && window.DashboardApp.ThemeContext) ||
+    React.createContext({ theme: "dark", toggleTheme: () => {} });
+  window.DashboardApp = window.DashboardApp || {};
+  window.DashboardApp.ThemeContext = ThemeContext;
   const Layout = window.DashboardApp.Layout;
   const getAllowedTopicsForSubjects =
     window.DashboardApp.getAllowedTopicsForSubjects || (() => []);
@@ -242,6 +247,7 @@
     const meInFlightRef = useRef(null);
     const meLastFetchTsRef = useRef(0);
     const ME_MIN_FETCH_INTERVAL_MS = 30000;
+    const [logoutLoading, setLogoutLoading] = useState(false);
     const [theme, setThemeState] = useState(() => {
       if (typeof window === "undefined") return "light";
       const stored = window.localStorage.getItem("theme");
@@ -254,6 +260,30 @@
     function toggleTheme() {
       setThemeState((prev) => (prev === "dark" ? "light" : "dark"));
     }
+
+    const muiTheme = useMemo(() => {
+      const isDark = theme === "dark";
+      const createThemeFn =
+        (window.Mui && window.Mui.createTheme) ||
+        (window.DashboardApp && window.DashboardApp.createTheme);
+      if (!createThemeFn) return null;
+      return createThemeFn({
+        palette: {
+          mode: isDark ? "dark" : "light",
+          background: {
+            default: isDark ? "#0f172a" : "#f0f3f8",
+            paper: isDark ? "#1e293b" : "#ffffff",
+          },
+          text: {
+            primary: isDark ? "#f8fafc" : "#0f172a",
+            secondary: isDark ? "#94a3b8" : "#475569",
+          },
+        },
+        typography: {
+          fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+        },
+      });
+    }, [theme]);
 
     function isSignInPathFlow() {
       const path = (window.location.pathname || "").replace(/\/+$/, "");
@@ -277,10 +307,17 @@
     }
 
     useEffect(() => {
-      const effectiveTheme = user && theme === "dark" ? "dark" : "light";
-      document.documentElement.setAttribute("data-theme", effectiveTheme);
-      if (user) window.localStorage.setItem("theme", theme);
-    }, [theme, user]);
+      const mode = theme === "dark" ? "dark" : "light";
+      document.documentElement.setAttribute("data-theme", mode);
+      document.documentElement.classList.toggle("dark", mode === "dark");
+      if (document.body) {
+        document.body.classList.toggle("dark", mode === "dark");
+      }
+      try {
+        window.localStorage.setItem("theme", mode);
+        document.cookie = `theme=${mode}; path=/; max-age=31536000; SameSite=Lax`;
+      } catch (_) {}
+    }, [theme]);
 
     useEffect(() => {
       fetchJSON("/api/csrf/");
@@ -1065,19 +1102,70 @@
       }
     }
 
-    function handleLogout() {
-      clearAuthTokens();
+    async function handleLogout() {
+      setLogoutLoading(true);
+      const utilsClear = window.DashboardApp?.Utils?.clearAuthTokens;
+      if (typeof utilsClear === "function") {
+        utilsClear();
+      }
+      try {
+        window.localStorage.removeItem("auth_access_token");
+        window.localStorage.removeItem("auth_refresh_token");
+        window.localStorage.removeItem("access_token");
+        window.localStorage.removeItem("accessToken");
+        window.localStorage.removeItem("token");
+        window.localStorage.removeItem("refresh_token");
+        window.localStorage.removeItem("refreshToken");
+        window.sessionStorage.removeItem("auth_access_token");
+        window.sessionStorage.removeItem("auth_refresh_token");
+        window.sessionStorage.removeItem("access_token");
+        window.sessionStorage.removeItem("accessToken");
+        window.sessionStorage.removeItem("token");
+        window.sessionStorage.removeItem("refresh_token");
+        window.sessionStorage.removeItem("refreshToken");
+      } catch (_) {}
+
+      // Reset React AuthContext state to null/logged out
+      setUser(null);
+      setStats(null);
+      setAuthRequired(true);
       setMustChangePassword(false);
+      setMyMentor(null);
+      setPendingMentors([]);
+      setPendingMentees([]);
+      setMentorRequests([]);
+      setSessionsData(null);
+      setActiveTab("signin");
       replaceAppUrl("signin");
-      fetch("/api/auth/logout/", {
-        method: "POST",
-        credentials: "include",
-        headers: {
-          "Content-Type": "application/json",
-          "X-CSRFToken": getCookie("csrftoken") || "",
-        },
-      }).catch(() => {});
-      window.location.replace("/");
+
+      try {
+        const csrfToken = getCookie("csrftoken") || "";
+        await Promise.allSettled([
+          fetch("/api/auth/logout/", {
+            method: "POST",
+            credentials: "include",
+            headers: {
+              "Content-Type": "application/json",
+              "X-CSRFToken": csrfToken,
+            },
+          }),
+          fetch("/api/logout/", {
+            method: "POST",
+            credentials: "include",
+            headers: {
+              "Content-Type": "application/json",
+              "X-CSRFToken": csrfToken,
+            },
+          }),
+        ]);
+      } catch (_) {
+      } finally {
+        setLogoutLoading(false);
+      }
+
+      if (typeof window !== "undefined") {
+        window.location.replace("/accounts/login/");
+      }
     }
 
     async function loadSessions() {
@@ -2196,6 +2284,7 @@
       handleSignIn,
       handleSignUp,
       handleLogout,
+      logoutLoading,
       theme,
       toggleTheme,
       isAuthenticated,
@@ -2216,7 +2305,11 @@
     };
 
     const LayoutComponent = Layout;
-    return (
+    const MuiThemeProvider = (window.Mui && window.Mui.ThemeProvider) || React.Fragment;
+    const themeContextValue = useMemo(() => ({ theme, toggleTheme }), [theme]);
+
+    const hasMuiTheme = Boolean(window.Mui && window.Mui.ThemeProvider);
+    const content = (
       <AppContext.Provider value={contextValue}>
         {!mustChangePassword && <LayoutComponent />}
         {mustChangePassword && user && (
@@ -2269,6 +2362,18 @@
           ))}
         </div>
       </AppContext.Provider>
+    );
+
+    return (
+      <ThemeContext.Provider value={themeContextValue}>
+        {hasMuiTheme ? (
+          <window.Mui.ThemeProvider theme={muiTheme || window.DashboardApp.theme}>
+            {content}
+          </window.Mui.ThemeProvider>
+        ) : (
+          content
+        )}
+      </ThemeContext.Provider>
     );
   }
 

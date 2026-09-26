@@ -75,11 +75,11 @@
 
 [data-theme="dark"] .mp-pill.is-active,
 .dark .mp-pill.is-active {
-  background: #192434 !important;
-  border: 1.5px solid rgba(56, 189, 248, 0.5) !important;
+  background: rgba(56, 189, 248, 0.12) !important;
+  border: 1.5px solid #38bdf8 !important;
   color: #7dd3fc !important;
   padding: 10px 17px !important;
-  box-shadow: inset 1px 1px 3px rgba(0, 0, 0, 0.6) !important;
+  box-shadow: inset 2px 2px 5px rgba(0, 0, 0, 0.4) !important;
 }
 
 [data-theme="dark"] .mp-pill.is-active .mp-chip-check,

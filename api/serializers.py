@@ -438,6 +438,9 @@ from users.constants import (
     get_role_preference_limits,
 )
 from users.serializers import (
+    MAX_TOTAL_SUBJECTS,
+    MAX_TOTAL_TOPICS,
+    MAX_TOTAL_COMPETENCIES,
     MAX_SUBJECTS,
     MAX_TOPICS_PER_SUBJECT,
     MAX_COMPETENCIES_PER_SUBJECT,

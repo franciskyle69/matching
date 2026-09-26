@@ -15,10 +15,12 @@ from django.contrib import admin
 from django.urls import path, include, re_path
 from django.conf import settings
 from django.conf.urls.static import static
+from django.views.generic import RedirectView
 from .views import react_app, landing_page, portal_page, public_landing_page, _matching_redirect
 
 urlpatterns = [
     path('', landing_page, name='home'),
+    path('login/', RedirectView.as_view(url='/app/#signin', permanent=False), name='login_redirect'),
     path('portal/', portal_page, name='portal'),
     path('landing/', public_landing_page, name='public_landing'),
     path(getattr(settings, "ADMIN_URL", "admin/"), admin.site.urls),

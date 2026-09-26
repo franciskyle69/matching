@@ -177,7 +177,7 @@
 
   --card-bg: #181b20;
   --card-border: 1.5px solid rgba(255, 255, 255, 0.08);
-  --card-shadow: 0 10px 28px rgba(0, 0, 0, 0.65), 0 2px 8px rgba(0, 0, 0, 0.45);
+  --card-shadow: 4px 4px 10px rgba(0, 0, 0, 0.5), -4px -4px 10px rgba(255, 255, 255, 0.05);
   --card-shadow-hover: 0 14px 36px rgba(0, 0, 0, 0.75), 0 4px 12px rgba(0, 0, 0, 0.5);
   --card-blur: none;
   --card-radius: 16px;
